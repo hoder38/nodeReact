@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "build": "babel src/back --out-dir build; webpack -p --config config/webpack.release.config.js; git commit -a",
-    "dev-back": "sudo service nodejs-file.sh stop; sudo service nodejs-file.sh start; sleep 10; sudo service nodejs.sh start",
+    "dev-back": "sudo service babel-nodejs-file.sh stop; sudo service babel-nodejs-file.sh start; sleep 5; sudo service babel-nodejs.sh start",
     "dev-front": "webpack --watch --config config/webpack.dev.config.js",
     "release": "git pull; sudo service release-nodejs.sh stop; sudo service release-nodejs.sh start",
     "release file": "git pull; sudo service release-nodejs-file.sh stop; sudo service release-nodejs-file.sh start"
@@ -42,6 +42,8 @@
     "babel-runtime": ">=6.20.0",
     "babel-preset-es2015": ">=6.9.0",
     "babel-preset-react": ">=6.5.0",
+    "body-parser": ">=1.15.2",
+    "file-loader": ">=0.9.0",
     "url-loader": ">=0.5.7",
     "css-loader": ">=0.18.0",
     "style-loader": ">=0.13.1",
@@ -51,6 +53,7 @@
     "react-redux": ">=4.4.5",
     "react-router": ">=2.6.1",
     "react-router-redux": ">4.0.5",
+    "chartjs": ">=0.3.24",
     "babel-cli": ">=6.18.0"
   },
   "author": {
