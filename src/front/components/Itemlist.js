@@ -48,7 +48,7 @@ const Itemlist = React.createClass({
     _tagRow: function(tag, className) {
         const td3 = this.props.itemType === STOCK ? <td style={{width: '15%', minWidth: '68px'}}></td> : null
         return (
-            <tr key={tag}>
+            <tr key={`${tag}${className}`}>
                 <td className="text-center" style={{width: '56px'}}>
                     <button type="button" className="btn btn-default" onClick={() => this.props.sendglbcf(() => this._handleTag((className === 'item-point') ? 'del' : 'add', tag), (className === 'item-point') ? `刪除此共同TAG ${tag}` : `增加此 ${tag} 為共同TAG?`)}>
                         <Tooltip tip={(className === 'item-point') ? '刪除TAG' : '增加TAG'} place="right" />
@@ -81,7 +81,7 @@ const Itemlist = React.createClass({
             relative: new Set(),
         })) : this.setState(Object.assign({}, this.state, {allTag: true}), () => {
             if (this.state.relative.size === 0) {
-                api(`/api/${this.props.itemType}/getOptionTag`, {tags: this._tags}).then(result => this.setState(Object.assign({}, this.state, {relative: new Set(result.relative.filter(x => (!this._tags.has(x) && !this._except.has(x))))})))
+                api(`/api/${this.props.itemType}/getOptionTag`, {tags: this._tags}).then(result => this.setState(Object.assign({}, this.state, {relative: new Set(result.relative.filter(x => (!this._tags.has(x) && !this._except.has(x))))}))).catch(err => this.props.addalert(err))
             }
         })
     },
@@ -120,6 +120,14 @@ const Itemlist = React.createClass({
         })
         if (this.props.select.size > 0) {
             if (this.state.allTag) {
+                tagRows.push(
+                    <tr key="?">
+                        <td className="text-center" style={{width: '56px'}}></td>
+                        <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
+                            <button type="button" className="btn btn-default" onClick={this._toggleTags}>Less</button>
+                        </td>
+                    </tr>
+                )
                 tags.forEach(tag => tagRows.push(this._tagRow(tag, 'item-point')))
                 exceptTags.forEach(tag => tagRows.push(this._tagRow(tag, 'history-point')))
                 this.state.relative.forEach(tag => tagRows.push(this._tagRow(tag, 'relative-point')))
@@ -131,17 +139,17 @@ const Itemlist = React.createClass({
                         break
                     }
                 }
+                tagRows.push(
+                    <tr key="?">
+                        <td className="text-center" style={{width: '56px'}}></td>
+                        <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
+                            <button type="button" className="btn btn-default" onClick={this._toggleTags}>All</button>
+                        </td>
+                    </tr>
+                )
             }
             this._tags = tags
             this._except = exceptTags
-            tagRows.push(
-                <tr key="?">
-                    <td className="text-center" style={{width: '56px'}}></td>
-                    <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
-                        <button type="button" className="btn btn-default" onClick={this._toggleTags}>{this.state.allTag ? 'Less' : 'All'}</button>
-                    </td>
-                </tr>
-            )
             rows.splice(this._first, 0, ...tagRows)
         } else {
             this._first = 0

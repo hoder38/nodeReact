@@ -16,7 +16,6 @@ import ExpressSession from 'express-session'
 import { urlencoded as BodyParserUrlencoded, json as BodyParserJson } from 'body-parser'
 import Passport from 'passport'
 import ConnectMultiparty from 'connect-multiparty'
-import Ws from 'ws'
 import { createServer as NetCreateServer } from 'net'
 
 //model
@@ -25,9 +24,14 @@ import SessionStore from '../models/session-tool'
 //router
 import LoginRouter from './login-router'
 import BasicRouter from './file-basic-router'
+import OtherRouter from './file-other-router'
+import FileRouter from './file-router'
+import ExternalRouter from './external-router'
+import PlaylistRouter from './playlist-router'
 
 //util
-import { handleError, HoError, isValidString, showLog, checkLogin } from '../util/utility'
+import { handleError, HoError, showLog } from '../util/utility'
+import sendWs, { mainInit } from '../util/sendWs'
 
 //global
 const credentials = {
@@ -57,6 +61,7 @@ const credentials = {
 credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
+mainInit(server);
 
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
@@ -73,73 +78,52 @@ app.use(function(req, res, next) {
 })
 
 app.use(function(req, res, next) {
-    showLog(req, next)
-})
+    showLog(req, next);
+});
 
-app.use('/api/basic', BasicRouter)
-
+app.use('/api', BasicRouter);
+//torrent
+app.use('/api/torrent', PlaylistRouter);
+//external&subtitle&upload
+app.use('/api/external', ExternalRouter);
+//file&media
+app.use('/api/file', FileRouter);
+//other&stock
+app.use('/', OtherRouter);
 //login
-app.use('/', LoginRouter())
+app.use('/', LoginRouter());
 
 //view
 app.all('*', function(req, res, next) {
-    handleError(new HoError('page not found', 404))
-})
+    handleError(new HoError('page not found', {code: 404}));
+});
 
 //error handle
 app.use(function(err, req, res, next) {
-    handleError(err, 'Send')
-    err.name === 'HoError' ? res.status(err.code).send(err.message) : res.status(500).send('server error occur')
-})
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
-process.on('uncaughtException', function(err) {
-    handleError(err, 'Threw exception')
-})
-
-server.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE))
+    handleError(err, 'Send');
+    err.name === 'HoError' ? res.status(err.code).send(err.message.toString()) : res.status(500).send('server error occur');
+});
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.on('uncaughtException', err => handleError(err, 'Threw exception'));
 
 //client
-var server0 = NetCreateServer(function(c) {
+const server0 = NetCreateServer(function(c) {
     console.log('client connected');
     c.on('end', function() {
         console.log('client disconnected');
-    })
+    });
     c.on('data', function(data) {
         try {
-            const recvData = JSON.parse(data.toString())
+            const recvData = JSON.parse(data.toString());
             console.log(`websocket: ${recvData.send}`);
-            sendWs(recvData.data, recvData.adultonly, recvData.auth)
+            sendWs(recvData.data, recvData.adultonly, recvData.auth);
         } catch (e) {
-            handleError(e, 'Client')
+            handleError(e, 'Client');
             console.log(data);
         }
     });
-}).listen(COM_PORT(ENV_TYPE))
+}).listen(COM_PORT(ENV_TYPE));
 
-const wsServer = new Ws.Server({server: server})
-function onWsConnMessage(message) {
-    console.log(message);
-    try {
-        console.log(JSON.parse(message));
-    } catch (e) {
-        handleError(e, 'Web socket')
-    }
-}
-function onWsConnClose(reasonCode, description) {
-    console.log(`Peer disconnected with reason: ${reasonCode}`);
-}
-wsServer.on('connection', function(ws) {
-    ws.on('message', onWsConnMessage)
-    ws.on('close', onWsConnClose)
-})
-
-function sendWs(data, adultonly, auth) {
-    data.level = (auth && adultonly) ? 2 : adultonly ? 1 : 0
-    const sendData = JSON.stringify(data)
-    wsServer.clients.forEach(function each(client) {
-        client.send(sendData)
-    })
-}
-
-console.log('start express server\n')
-console.log(`Server running at https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)} ${new Date()}`)
+server.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
+console.log('start express server\n');
+console.log(`Server running at https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)} ${new Date()}`);

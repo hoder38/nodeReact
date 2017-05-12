@@ -5,9 +5,12 @@ if(!FsExistsSync(PathJoin(__dirname, '../../../ver.js'))) {
     throw new Error('can not find ver.js')
 }
 
+//constant
+import { STATIC_PATH } from '../constants'
+
 //config
 import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, FILE_IP, COM_PORT } from '../config'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT } from '../config'
 
 //external
 import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
@@ -15,7 +18,6 @@ import Express from 'express'
 import ExpressSession from 'express-session'
 import { urlencoded as BodyParserUrlencoded, json as BodyParserJson } from 'body-parser'
 import Passport from 'passport'
-import { connect as NetConnect } from 'net'
 
 //model
 import Mongo, { objectID } from '../models/mongo-tool'
@@ -26,9 +28,14 @@ import LoginRouter from './login-router'
 import HomeRouter from './home-router'
 import BasicRouter from './basic-router'
 import UserRouter from './user-router'
+import StorageRouter from './storage-router'
+import BookmarkRouter from './bookmark-router'
+import ParentRouter from './parent-router'
+import OtherRouter from './other-router'
 
 //util
-import { handleError, showLog, checkLogin } from '../util/utility'
+import { handleError, showLog } from '../util/utility'
+import { init as WsInit } from '../util/sendWs'
 
 //global
 const credentials = {
@@ -58,69 +65,57 @@ const credentials = {
 credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
-const staticPath = PathJoin(__dirname, '../../../public')
+WsInit();
 
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))
 app.use(Passport.initialize())
 app.use(Passport.session())
-app.use(Express.static(staticPath))
+app.use(Express.static(STATIC_PATH))
 
 app.use(function(req, res, next) {
-    showLog(req, next)
-})
+    showLog(req, next);
+});
 
-app.use('/api/homepage', HomeRouter)
+app.use('/api', BasicRouter);
 
-app.use('/api/basic', BasicRouter)
+app.use('/api/homepage', HomeRouter);
 
-app.use('/api/user', UserRouter)
+app.use('/api/user', UserRouter);
 
-app.get('/refresh', function (req, res, next) {
-    console.log('refresh');
-    res.end('refresh')
-})
+app.use('/api/storage', StorageRouter);
 
+app.use('/api/bookmark', BookmarkRouter);
+
+app.use('/api/parent', ParentRouter);
+
+//password
+//stock
+
+//other
+app.use('/', OtherRouter);
 //login
-app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}`))
+app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}`));
 
 //view
 app.get('*', function(req, res, next) {
     console.log('view');
-    const stream = FsCreateReadStream(`${staticPath}/app.html`)
-    stream.on('error', function(err){
-        handleError(err)
-    })
-    stream.pipe(res)
+    const stream = FsCreateReadStream(`${STATIC_PATH}/app.html`);
+    stream.on('error', function(err) {
+        handleError(err);
+    });
+    stream.pipe(res);
 })
 
 //error handle
 app.use(function(err, req, res, next) {
-    handleError(err, 'Send')
-    err.name === 'HoError' ? res.status(err.code).send(err.message) : res.status(500).send('server error occur')
-})
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-process.on('uncaughtException', function(err) {
-    handleError(err, 'Threw exception')
-})
+    handleError(err, 'Send');
+    err.name === 'HoError' ? res.status(err.code).send(err.message.toString()) : res.status(500).send('server error occur');
+});
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.on('uncaughtException', err => handleError(err, 'Threw exception'));
 
-server.listen(PORT(ENV_TYPE), IP(ENV_TYPE))
-
-//client
-const client = NetConnect(COM_PORT(ENV_TYPE), FILE_IP(ENV_TYPE), function() {
-    console.log('connected to server!');
-})
-client.on('end', function() {
-    console.log('disconnected from server');
-})
-const sendWs = (data, adultonly, auth) => client.write(JSON.stringify({
-    send: 'web',
-    data: data,
-    adultonly: adultonly ? 1 : 0,
-    auth: auth ? 1 : 0,
-}))
-
+server.listen(PORT(ENV_TYPE), IP(ENV_TYPE));
 console.log('start express server\n');
 console.log(`Server running at https://${EXTENT_IP(ENV_TYPE)}:${EXTENT_PORT(ENV_TYPE)} ${new Date()}`);
-

@@ -44,3 +44,5 @@ youtube-dl: sudo ln -s /usr/bin/youtube-dl youtube-dl
 
 googleapis: ?
 
+pdftk
+

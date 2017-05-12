@@ -1,5 +1,6 @@
 import React from 'react'
 import Tooltip from './Tooltip'
+import pdfjs from 'pdfjs-dist'
 import UserInput from './UserInput'
 import { killEvent, api, randomFloor, arrayObjectIndexOf, isValidString } from '../utility'
 
@@ -77,7 +78,7 @@ const MediaWidget = React.createClass({
                 this._video.onended = () => this._nextMedia(false)
                 this._video.onpause = () => this._recordMedia(true)
                 this._video.onplay = () => {
-                    api(`${this.props.mainUrl}/api/basic/testLogin`).catch(err => this.props.addalert(err))
+                    api(`${this.props.mainUrl}/api/testLogin`).catch(err => this.props.addalert(err))
                     this._video.focus()
                 }
                 this._video.onloadedmetadata = () => {
@@ -154,7 +155,7 @@ const MediaWidget = React.createClass({
                 this._audio.onended = () => this._nextMedia(false)
                 this._audio.onpause = () => this._recordMedia(true)
                 this._audio.onplay = () => {
-                    api(`${this.props.mainUrl}/api/basic/testLogin`).catch(err => this.props.addalert(err))
+                    api(`${this.props.mainUrl}/api/testLogin`).catch(err => this.props.addalert(err))
                     this._audio.focus()
                 }
                 this._audio.onloadedmetadata = () => {
@@ -201,20 +202,43 @@ const MediaWidget = React.createClass({
         if (nextProps.count !== this.props.count) {
             if (nextProps.mediaType === 9) {
                 let index = 0
+                let subIndex = 0;
                 if (nextProps.index) {
                     let setTime = nextProps.index.toString().match(/^(\d+)(&(\d+))?$/)
                     this._startTime = setTime && setTime[1] ? Number(setTime[1]) : 0
+                    subIndex = setTime && setTime[1] ? Number(setTime[1]) : 0
                     index = setTime && setTime[3] ? Number(setTime[3]) : 0
                 }
-                this._playlistItem(index, nextProps.list)
+                this._playlistItem(index, nextProps.list, subIndex);
             } else {
-                api(`/api/media/saveParent/${nextProps.sortName}/${nextProps.sortType}`, {name: this._type}, 'POST').then(result => this._loadMedia(nextProps.index - 1, nextProps.list)).then(result => this.props.toggleShow(true)).catch(err => this.props.addalert(err))
+                api(`/api/storage/media/saveParent/${nextProps.sortName}/${nextProps.sortType}`, {name: this._type}, 'POST').then(result => this._loadMedia(nextProps.index - 1, nextProps.list)).then(result => this.props.toggleShow(true)).catch(err => this.props.addalert(err))
             }
         }
         if (nextProps.show === false && this.props.show === true) {
             if (this._video) {
                 this._video.pause()
             }
+        }
+    },
+    componentDidUpdate : function(prevProps, prevState) {
+        if (this._item.doc === 3 && (this.state.src !== prevState.src || this.props.full !== prevProps.full)) {
+            PDFJS.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+            const pid = (this.props.mediaType === 2) ? 'pdf1' : 'pdf2';
+            const full = this.props.full;
+            console.log(this.state.src);
+            PDFJS.getDocument({
+                url: this.state.src,
+                withCredentials: true,
+            }).then(pdf => pdf.getPage(1).then(function(page) {
+                const viewport = page.getViewport(full ? 2 : 1);
+                let canvas = document.getElementById(pid);
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                page.render({
+                    canvasContext: canvas.getContext('2d'),
+                    viewport,
+                });
+            }));
         }
     },
     componentWillUnmount: function() {
@@ -225,15 +249,17 @@ const MediaWidget = React.createClass({
             })
         }
     },
-    _playlistItem: function(index, list) {
+    _playlistItem: function(index, list, subIndex=0) {
         this._item = list[index]
+        this._total = this._item.present ? this._item.present : 1;
         this._media = this._item.type === 3 ? this._video : this._item.type === 4 ? this._audio : null
         this._fix = 0
         this._start = false
         this._removeCue()
         this.setState(Object.assign({}, this.state, {
             index: index,
-            src: `${this.props.mainUrl}/torrent/${index}/${this._item.id}`,
+            subIndex: subIndex ? subIndex : 1,
+            src: `${this.props.mainUrl}/torrent/${index}/${this._item.id}/${(subIndex > 1) ? subIndex : 0}`,
             subCh: `/subtitle/${this._item.id}/ch/${index}`,
             subEn: `/subtitle/${this._item.id}/en/${index}`,
             cue: '',
@@ -247,7 +273,7 @@ const MediaWidget = React.createClass({
             if (this._item.id && this._media.duration) {
                 let xmlhttp = new XMLHttpRequest()
                 const index = this.props.mediaType === 9 ? `&${this.state.index}` : ''
-                xmlhttp.open("GET", `/api/media/record/${this._playlist ? this._playlist.obj.id : this._item.id}/${parseInt(this._media.currentTime)}${index}`, false)
+                xmlhttp.open("GET", `/api/storage/media/record/${this._playlist ? this._playlist.obj.id : this._item.id}/${parseInt(this._media.currentTime)}${index}`, false)
                 xmlhttp.setRequestHeader("Content-type", "application/json")
                 xmlhttp.send('')
             }
@@ -255,14 +281,14 @@ const MediaWidget = React.createClass({
     },
     _recordMedia: function(pause=false, image=false) {
         if (image) {
-            api(`/api/media/record/${this._item.id}/${this.state.subIndex}`).catch(err => this.props.addalert(err))
+            api(`/api/storage/media/record/${this._item.id}/${this.state.subIndex}`).catch(err => this.props.addalert(err))
         } else {
             if ((!this._media && this.props.mediaType !== 9) || (this._playlist && !this._playlist.obj.id)) {
                 return true
             }
             const time = (this._media && this._media.currentTime < this._media.duration - 3) ? parseInt(this._media.currentTime) : 0
             const index = this.props.mediaType === 9 ? `&${this.state.index}` : ''
-            api(`/api/media/record/${this._playlist ? this._playlist.obj.id : this._item.id}/${time}${index}${(!pause && this._playlist && this._playlist.total === this._playlist.obj.index) ? `/${this._item.id}` : ''}`).catch(err => this.props.addalert(err))
+            api(`/api/storage/media/record/${this._playlist ? this._playlist.obj.id : this._item.id}/${time}${index}${(!pause && this._playlist && this._playlist.total === this._playlist.obj.index) ? `/${this._item.id}` : ''}`).catch(err => this.props.addalert(err))
         }
     },
     _loadMedia: function(index, list, subIndex=0, direction=0) {
@@ -307,7 +333,7 @@ const MediaWidget = React.createClass({
                 append = `/${subIndex}`
             }
         }
-        return api(`/api/media/setTime/${this._item.id}/${this._type}${append}`).then(result => {
+        return api(`/api/storage/media/setTime/${this._item.id}/${this._type}${append}`).then(result => {
             this.props.setLatest(this._item.id, this.props.bookmark)
             if (result.time) {
                 let setTime = result.time.toString().match(/^(\d+)(&(\d+))?$/)
@@ -334,7 +360,7 @@ const MediaWidget = React.createClass({
             }
             this._removeCue()
             this.setState(Object.assign({}, this.state, {
-                src: this._playlist && this._playlist.obj.is_magnet && this._playlist.obj.id ? `${this.props.mainUrl}/torrent/v/${mediaId}` : this._playlist && this._playlist.obj.pre_url ? `${this._playlist.obj.pre_url}${this._playlist.obj.pre_obj[Math.round(this._playlist.obj.index * 1000) % 1000 - 1]}` : this._item.thumb ? this._item.thumb : `${this.props.mainUrl}/${this._preType}/${mediaId}`,
+                src: this._playlist && this._playlist.obj.is_magnet && this._playlist.obj.id ? `${this.props.mainUrl}/torrent/v/${mediaId}/0` : this._playlist && this._playlist.obj.pre_url ? `${this._playlist.obj.pre_url}${this._playlist.obj.pre_obj[Math.round(this._playlist.obj.index * 1000) % 1000 - 1]}` : this._item.thumb ? this._item.thumb : `${this.props.mainUrl}/${this._preType}/${mediaId}/file`,
                 index: index,
                 subIndex: subIndex ? subIndex : 1,
                 loading: false,
@@ -356,7 +382,7 @@ const MediaWidget = React.createClass({
                             mediaId = this._playlist.obj.id = result.id
                             this._removeCue()
                             this.setState(Object.assign({}, this.state, {
-                                src: `${this.props.mainUrl}/torrent/v/${mediaId}`,
+                                src: `${this.props.mainUrl}/torrent/v/${mediaId}/0`,
                                 subCh: `/subtitle/${mediaId}/ch`,
                                 subEn: `/subtitle/${mediaId}/en`,
                                 cue: '',
@@ -418,10 +444,10 @@ const MediaWidget = React.createClass({
                         this.setState(Object.assign({}, this.state, {
                             loading: true,
                         }))
-                        return api(`/api/media/more/${this.props.mediaType}/${this.props.page}`).then(result => {
+                        return api(`/api/storage/media/more/${this.props.mediaType}/${this.props.page}`).then(result => {
                             this.props.set(result.itemList, this.props.mediaType)
                             parentList = result.parentList
-                            return api(`/api/youtube/get/${this.props.sortName}/${this.props.pageToken}`)
+                            return api(`/api/storage/external/get/${this.props.sortName}/${this.props.pageToken}`)
                         }).then(result => {
                             this.props.set(result.itemList, this.props.mediaType, parentList, result.pageToken)
                             return (index < 0) ? this.props.list.length - 1 : (index > this.props.list.length - 1) ? 0 : index
@@ -473,13 +499,17 @@ const MediaWidget = React.createClass({
             } else {
                 this._loadMedia(this.state.index, this.props.list, newIndex, direction).catch(err => this.props.addalert(err))
             }
-        } else if (this.props.mediaType === 2) {
+        } else if (this.props.mediaType === 2 || this.props.mediaType === 9) {
             let newIndex = direction ? Math.floor(this.state.subIndex) + direction : Math.floor(this.state.subIndex)
             newIndex = newIndex < 1 ? 1 : newIndex > this._total ? this._total : newIndex
-            this.setState(Object.assign({}, this.state, {
-                src: `${this.props.mainUrl}/image/${this._item.id}/${newIndex}`,
-                subIndex: newIndex,
-            }))
+            if (this.props.mediaType === 2) {
+                this.setState(Object.assign({}, this.state, {
+                    src: `${this.props.mainUrl}/image/${this._item.id}/${newIndex}`,
+                    subIndex: newIndex,
+                }))
+            } else {
+                this._playlistItem(this.state.index, this.props.list, newIndex);
+            }
         }
     },
     _nextMedia: function(previous=false) {
@@ -519,7 +549,7 @@ const MediaWidget = React.createClass({
             if (!this._playlist.end) {
                 return true
             }
-        } else if (this.props.mediaType === 2) {
+        } else if (this.props.mediaType === 2 || this.props.mediaType === 9) {
             if (previous) {
                 if (this.state.subIndex > 0) {
                     this._movePlaylist(-1)
@@ -574,7 +604,7 @@ const MediaWidget = React.createClass({
             }
             break
             case '2':
-            this.props.opt.subscript(this._item.cid, this._item.ctitle, this.props.mediaType === 4 ? true : false)
+            this.props.opt.subscript(this._item.id, this._item.cid, this._item.ctitle, this.props.mediaType === 4 ? true : false)
             break
             case '3':
             const id = this._playlist ? this._playlist.obj.id : this.props.mediaType === 9 ? `${this._item.id}/${this.state.index}` : this._item.id
@@ -589,6 +619,10 @@ const MediaWidget = React.createClass({
             case '5':
             this._fixCue()
             break
+            case '6':
+            const id3 = this._playlist ? this._playlist.obj.id : this.props.mediaType === 9 ? `${this._item.id}/${this.state.index}` : this._item.id;
+            this.props.opt.handleMedia(id3, this._item.name);
+            break;
         }
     },
     _fixCue: function() {
@@ -682,7 +716,7 @@ const MediaWidget = React.createClass({
                     }
                     let urlmatch = this.state.src.match(/(.*)\/(0+)$/)
                     this.setState(Object.assign({}, this.state, {
-                        src: urlmatch ? `${matchEn[1]}/${matchEn[2]}0` : `${this.state.src}/0`,
+                        src: urlmatch ? `${urlmatch[1]}/${urlmatch[2]}0` : `${this.state.src}/0`,
                     }))
                 }
             }
@@ -701,7 +735,7 @@ const MediaWidget = React.createClass({
         }
     },
     render: function() {
-        const show = this.props.show ? this.props.full && this.props.mediaType === 2 ? {visibility: 'hidden'} : {} : {display: 'none'}
+        const show = this.props.show ? (this.props.full && this._item.doc !== 2 && this._item.doc !== 3 && (this.props.mediaType === 2 || (this.props.mediaType === 9 && this._item.type === 2))) ? {visibility: 'hidden'} : {} : {display: 'none'}
         let option = null
         const ulClass = this.props.full ? 'pager pull-left' : 'pager pull-right'
         if (this.state.option) {
@@ -726,6 +760,7 @@ const MediaWidget = React.createClass({
             const search = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="3">search subtitle</option> : null
             const upload = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="4">upload subtitle</option> : null
             const fix = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="5">fix subtitle</option> : null
+            const handle = (this.props.level === 2 && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? <option value="6">handle media</option> : null
             const subOption = (this._item.noDb || this._item.cid || this.props.mediaType === 3 || this.props.mediaType === 9) ? (
                 <li>
                     <select onChange={this._handleOpt} value="0">
@@ -735,6 +770,7 @@ const MediaWidget = React.createClass({
                         {search}
                         {upload}
                         {fix}
+                        {handle}
                     </select>
                 </li>
             ) : null
@@ -815,37 +851,43 @@ const MediaWidget = React.createClass({
         }
         let media = null
         if (this.props.mediaType === 2 || (this.props.mediaType === 9 && this._item.type === 2)) {
-            media = this.props.full ? this.state.extend? (
-                <div>
-                    <a href="#" style={{position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, () => this._nextMedia(true))}>
-                        {this.state.subIndex}
-                    </a>
-                    <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
-                        <i className="glyphicon glyphicon-resize-small"></i>
-                    </a>
-                    <div id="extend" style={{top: '-90px', visibility: 'visible', position: 'relative', height: '100vh', width: '98vw', overflow: 'auto',cursor: 'pointer', zIndex: -1}}>
-                        <img style={{visibility: 'visible', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '0px', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} onLoad={() => {
-                            let extNode = document.getElementById('extend')
-                            extNode.scrollTop = 0
-                            if (extNode.scrollLeft < 100) {
-                                extNode.scrollLeft = extNode.scrollWidth
-                            } else {
-                                extNode.scrollLeft = 0
-                            }
-                        }} />
+            if (this._item.doc === 2) {
+                media = this.props.full ? <iframe src={this.state.src} style={{border: 0, visibility: 'visible', width: '98vw', height: '80vh'}}></iframe> : <iframe src={this.state.src} style={{border: 0, visibility: 'visible', width: '50vw', height: '60vh'}}></iframe>
+            } else if (this._item.doc === 3) {
+                media = this.props.full ? <div style={{visibility: 'visible', width: '98vw', height: '80vh', overflow: 'scroll'}}><canvas id={(this.props.mediaType === 2) ? 'pdf1' : 'pdf2'}></canvas></div> : <div style={{visibility: 'visible', width: '50vw', height: '60vh', overflow: 'scroll'}}><canvas id={(this.props.mediaType === 2) ? 'pdf1' : 'pdf2'}></canvas></div>
+            } else {
+                media = this.props.full ? this.state.extend? (
+                    <div>
+                        <a href="#" style={{position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, () => this._nextMedia(true))}>
+                            {this.state.subIndex}
+                        </a>
+                        <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
+                            <i className="glyphicon glyphicon-resize-small"></i>
+                        </a>
+                        <div id="extend" style={{top: '-90px', visibility: 'visible', position: 'relative', height: '100vh', width: '98vw', overflow: 'auto',cursor: 'pointer', zIndex: -1}}>
+                            <img style={{visibility: 'visible', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '0px', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} onLoad={() => {
+                                let extNode = document.getElementById('extend')
+                                extNode.scrollTop = 0
+                                if (extNode.scrollLeft < 100) {
+                                    extNode.scrollLeft = extNode.scrollWidth
+                                } else {
+                                    extNode.scrollLeft = 0
+                                }
+                            }} />
+                        </div>
                     </div>
-                </div>
-            ) : (
-                <div>
-                    <a href="#" style={{position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, () => this._nextMedia(true))}>
-                        {this.state.subIndex}
-                    </a>
-                    <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
-                        <i className="glyphicon glyphicon-resize-full"></i>
-                    </a>
-                    <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '-90px', maxHeight: '100vh', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
-                </div>
-            ) : <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto',cursor: 'pointer'}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
+                ) : (
+                    <div>
+                        <a href="#" style={{position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, () => this._nextMedia(true))}>
+                            {this.state.subIndex}
+                        </a>
+                        <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
+                            <i className="glyphicon glyphicon-resize-full"></i>
+                        </a>
+                        <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '-90px', maxHeight: '100vh', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
+                    </div>
+                ) : <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer'}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
+            }
         }
         let media2 = null
         if (this.props.mediaType === 3 || this.props.mediaType === 9) {

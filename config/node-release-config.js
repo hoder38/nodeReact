@@ -26,5 +26,6 @@ export default {
     CHECK_MEDIA: true,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
+    ZIP_LIMIT: 1,
     STREAM_LIMIT: 300,
 }

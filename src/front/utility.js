@@ -175,7 +175,7 @@ export const doLogout = (url = '') => api(`${url}/api/logout`).then(info => {
     }
 })
 
-export const testLogin = () => api('/api/basic/testLogin', null, 'GET', false)
+export const testLogin = () => api('/api/testLogin', null, 'GET', false)
 
 //array object
 export const arrayObject = (action, myArray, term, property=null, rest=item=>item) => {
@@ -220,7 +220,7 @@ export const arrayObjectIndexOf = (myArray, searchTerm, property) => {
 }
 
 //itemlist
-const youtubeList = (pageToken, set, parentList, sortname) => api(`/api/youtube/get/${sortname}/${pageToken}`).then(result => set(result.itemList, parentList, null, null, null, null, result.pageToken))
+const externalList = (pageToken, set, parentList, sortname) => api(`/api/storage/external/get/${sortname}/${pageToken}`).then(result => set(result.itemList, parentList, null, null, null, null, result.pageToken))
 
 export const getItemList = (itemType, sortname, type, set, page=0, pageToken='', push=false, name=null, index=0, exact=false, multi=false, random=false) => {
     const rest = result => push ? set(result.itemList) : set(result.itemList, result.parentList, result.bookmarkID, result.latest, sortname, type)
@@ -236,7 +236,7 @@ export const getItemList = (itemType, sortname, type, set, page=0, pageToken='',
     return queryItem.then(result => {
         rest(result)
         if (itemType === STORAGE) {
-            return youtubeList(pageToken, set, result.parentList, sortname)
+            return externalList(pageToken, set, result.parentList, sortname)
         }
     })
 }
@@ -244,7 +244,7 @@ export const getItemList = (itemType, sortname, type, set, page=0, pageToken='',
 export const resetItemList = (itemType, sortname, type, set) => api(`/api/${itemType}/reset/${sortname}/${type}`).then(result => {
     set(result.itemList, result.parentList, result.bookmarkID, result.latest, sortname, type)
     if (itemType === STORAGE) {
-        return youtubeList('', set, result.parentList, sortname)
+        return externalList('', set, result.parentList, sortname)
     }
 })
 
@@ -253,7 +253,7 @@ export const dirItemList = (itemType, sortname, type, set, id, multi) => {
     return queryItem.then(result => {
         set(result.itemList, result.parentList, result.bookmarkID, result.latest, sortname, type)
         if (itemType === STORAGE) {
-            return youtubeList('', set, result.parentList, sortname)
+            return externalList('', set, result.parentList, sortname)
         }
     })
 }
@@ -261,6 +261,6 @@ export const dirItemList = (itemType, sortname, type, set, id, multi) => {
 export const bookmarkItemList = (itemType, type, sortname, sorttype, set, id) => api(`/api/bookmark/${itemType}/${type}/${id}/${sortname}/${sorttype}`).then(result => {
     set(result.itemList, result.parentList, result.bookmarkID, result.latest, sortname, sorttype)
     if (itemType === STORAGE) {
-        return youtubeList('', set, result.parentList, sortname)
+        return externalList('', set, result.parentList, sortname)
     }
 })

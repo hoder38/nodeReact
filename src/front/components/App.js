@@ -30,7 +30,7 @@ const App = React.createClass({
         }
     },
     componentWillMount: function() {
-        api('/api/basic').then(userInfo => {
+        api('/api/getuser').then(userInfo => {
             if (isValidString(userInfo.id, 'name') && isValidString(userInfo.main_url, 'url') && isValidString(userInfo.ws_url, 'url') && isValidString(userInfo.level, 'perm')) {
                 this.setState(Object.assign({}, this.state, {
                     navlist: [
@@ -82,14 +82,15 @@ const App = React.createClass({
                         }
                     }
                 }
+                return api('/api/parent/storage/list')
                 //return api(`${userInfo.main_url}/api/feedback`)
             } else {
                 throw Error('Invalid user data!!!')
             }
-        })/*.then(result => {
+        /*}).then(result => {
             this.props.feedbackset(result.feedbacks)
-            return api('/api/parent/storage/list')
-        }).then(result => this.props.dirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/storage/add', {name: dir.name, tag: tag}).then(result => this.props.pushdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)})))*/.catch(err => {
+            return api('/api/parent/storage/list')*/
+        }).then(result => this.props.dirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/storage/add', {name: dir.name, tag: tag}).then(result => this.props.pushdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)}))).catch(err => {
             this.props.addalert(err)
             this._doLogout()
         })

@@ -13,10 +13,13 @@ const mapStateToProps = (state, ownProps) => state.itemDataHandle[ownProps.media
     pageToken: state.itemDataHandle[ownProps.mediaType].pageToken,
     count: state.itemDataHandle[ownProps.mediaType].count,
     mainUrl: state.basicDataHandle.url,
+    level: state.basicDataHandle.level,
 }, ownProps.mediaType === 9 ? {
-    list: state.itemDataHandle[ownProps.mediaType].list
+    list: state.itemDataHandle[ownProps.mediaType].list,
+    level: state.basicDataHandle.level,
 } : {
-    list: [...arrayMerge(state.itemDataHandle[ownProps.mediaType].list, state.itemDataHandle.list).values()]
+    list: [...arrayMerge(state.itemDataHandle[ownProps.mediaType].list, state.itemDataHandle.list).values()],
+    level: state.basicDataHandle.level,
 }) : {
     list: [],
     index: 0,
@@ -28,6 +31,7 @@ const mapStateToProps = (state, ownProps) => state.itemDataHandle[ownProps.media
     pageToken: '',
     count: -1,
     mainUrl: state.basicDataHandle.url,
+    level: state.basicDataHandle.level,
 }
 
 const mapDispatchToProps = dispatch => ({

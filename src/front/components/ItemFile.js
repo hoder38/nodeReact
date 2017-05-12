@@ -11,31 +11,33 @@ const ItemFile = React.createClass({
         }, `Would you sure to download ${name}?`)
     },
     _save2drive: function(id, name) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/download2drive/${id}`).then(result => {
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/external/2drive/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark)
             this.props.addalert('start saving to drive')
         }).catch(err => this.props.addalert(err)) , `Would you sure to download ${name} to drive?`)
     },
     _edit: function(id, name) {
-        this.props.globalinput(1, new_name => isValidString(new_name, 'name') ? api(`${this.props.mainUrl}/api/editFile/${id}`, {name: new_name}, 'PUT').then(result => {
+        this.props.globalinput(1, new_name => isValidString(new_name, 'name') ? api(`${this.props.mainUrl}/api/file/edit/${id}`, {name: new_name}, 'PUT').then(result => {
             if (result.name) {
+                this.props.setLatest(id, this.props.bookmark);
                 this.props.pushfeedback(result)
             }
         }) : this.props.addalert('name not vaild!!!'), 'info', 'New Name...', name)
     },
     _delete: function(id, name, recycle) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/delFile/${id}/${recycle}`, null, 'DELETE').catch(err => this.props.addalert(err)), `Would you sure to delete ${name}?`)
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/file/del/${id}/${recycle}`, null, 'DELETE').catch(err => this.props.addalert(err)), `Would you sure to delete ${name}?`)
     },
     _recover: function(id, name) {
-        this.props.sendglbcf(() => api(`/api/recoverFile/${id}`, null, 'PUT').catch(err => this.props.addalert(err)), `Would you sure to recover ${name}?`)
+        this.props.sendglbcf(() => api(`/api/storage/recover/${id}`, null, 'PUT').catch(err => this.props.addalert(err)), `Would you sure to recover ${name}?`)
     },
-    _subscript: function(id, name, isMusic=false) {
+    _subscript: function(id, cid, name, isMusic=false) {
         this.props.sendglbcf(() => {
-            isValidString(name, 'name') ? api(`/api/bookmark/${STORAGE}/subscipt`, {
+            isValidString(name, 'name') ? api(`/api/bookmark/${STORAGE}/subscript/${id}`, {
                 name: name,
-                path: ['ych_' + id, 'no local', 'youtube playlist', isMusic ? 'youtube music' : 'youtube video'],
-                exactly: [false, false]
+                path: [`ych_${cid}`, 'no local', 'youtube playlist', isMusic ? 'youtube music' : 'youtube video'],
+                exactly: [false, false],
             }).then(result => {
+                this.props.setLatest(id, this.props.bookmark);
                 if (result.id) {
                     this.props.pushbookmark({id: result.id, name: result.name})
                 }
@@ -69,9 +71,6 @@ const ItemFile = React.createClass({
                 case 'mad_':
                 url = `http://www.cartoonmad.com/comic/${extId}.html`
                 break
-                case 'c99_':
-                url = `http://www.99comic.com/comic/${extId}/`
-                break
                 case 'bbl_':
                 url = extId.match(/^av/) ? `http://www.bilibili.com/video/${extId}/` : `http://bangumi.bilibili.com/anime/${extId}/`
                 break
@@ -91,13 +90,16 @@ const ItemFile = React.createClass({
         }, `確定要儲存 ${name} 到網站?`)
     },
     _handleMedia: function(id, name, isDel=false) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/handleMedia/${id}/${isDel ? 'del' : 'act'}`).catch(err => this.props.addalert(err)), `Would you sure to clear ${name}?`)
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/file/media/${isDel ? 'del' : 'act'}/${id}`).catch(err => this.props.addalert(err)), `Would you sure to ${isDel ? 'clear' : 'handle'} ${name}?`)
     },
     _downloadAll: function(id, name) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/all/download/${id}`).then(result => result.complete ? this.props.addalert('download complete!!!') : this.props.addalert('starting download')).catch(err => this.props.addalert(err)), `Would you sure to save all of ${name}?`)
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/all/download/${id}`).then(result => {
+            this.props.setLatest(id, this.props.bookmark);
+            return result.complete ? this.props.addalert('download complete!!!') : this.props.addalert('starting download');
+        }).catch(err => this.props.addalert(err)), `Would you sure to save all of ${name}?`)
     },
-    _convert: function(id, name) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/convert/${id}`).then(result => {
+    _convert: function(id, name, type) {
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/convert/${id}/${type}`).then(result => {
             if (result.name) {
                 this.props.pushfeedback(result)
             }
@@ -105,7 +107,10 @@ const ItemFile = React.createClass({
     },
     _join: function() {
         this.props.sendglbcf(() => {
-            (this.props.select.size > 1) ? api(`${this.props.mainUrl}/api/joinFile`, {uids: [...this.props.select]}, 'PUT').then(result => this.props.addalert('joining completed')).catch(err => this.props.addalert(err)) : this.props.addalert('Please selects multiple items!!!')
+            (this.props.select.size > 1) ? api(`${this.props.mainUrl}/api/torrent/join`, {uids: [...this.props.select]}, 'PUT').then(result => {
+                this.props.setLatest(result.id, this.props.bookmark);
+                this.props.addalert(`join to ${result.name} completed`);
+            }).catch(err => this.props.addalert(err)) : this.props.addalert('Please selects multiple items!!!')
         }, 'Would you sure to join the split zips?')
     },
     _searchSub: function(id) {
@@ -140,38 +145,41 @@ const ItemFile = React.createClass({
             }
             dropList.push({title: 'delete', onclick: () => this._delete(item.id, item.name, item.recycle), key: 3})
         }
-        if (item.recycle === 1 || item.recycle === 2 || item.recycle === 3 || item.recycle === 4) {
+        if (item.recycle === 1) {
             dropList.push({title: 'recover', onclick: () => this._recover(item.id, item.name), key: 4})
         }
         if (item.status === 3) {
             if (!item.thumb) {
                 dropList.push({title: 'search subtitle', onclick: () => this._searchSub(item.id), key: 5})
                 dropList.push({title: 'upload subtitle', onclick: () => this._uploadSub(item.id), key: 6})
+                if (this.props.level === 2) {
+                    dropList.push({title: 'handle media', onclick: () => this._handleMedia(item.id, item.name), key: 7})
+                }
             }
             if (item.cid) {
-                dropList.push({title: `訂閱${item.ctitle}`, onclick: () => this._subscript(item.cid, item.ctitle), key: 7})
+                dropList.push({title: `訂閱${item.ctitle}`, onclick: () => this._subscript(item.id, item.cid, item.ctitle), key: 8})
             }
             if (item.noDb) {
-                dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name), key: 8})
+                dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name), key: 9})
             }
         }
         if (item.status === 4) {
             if (item.cid) {
-                dropList.push({title: `訂閱${item.ctitle}`, onclick: () => this._subscript(item.cid, item.ctitle, true), key: 9})
+                dropList.push({title: `訂閱${item.ctitle}`, onclick: () => this._subscript(item.id, item.cid, item.ctitle, true), key: 10})
             }
             if (item.noDb) {
-                dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name, true), key: 10})
+                dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name, true), key: 11})
             }
         }
         if (item.media) {
-            dropList.push({title: 'clear media', onclick: () => this._handleMedia(item.id, item.name, true), key: 11})
+            dropList.push({title: 'handle media', onclick: () => this._handleMedia(item.id, item.name), key: 12})
+            dropList.push({title: 'clear media', onclick: () => this._handleMedia(item.id, item.name, true), key: 13})
         }
         if (item.status === 0 || item.status === 1 || item.status === 9) {
-            dropList.push({title: 'join zips', onclick: this._join, key: 12})
+            dropList.push({title: 'join zips', onclick: this._join, key: 14})
         }
         if (item.status === 9) {
-            dropList.push({title: 'save playlist', onclick: () => this._downloadAll(item.id, item.name), key: 13})
-            dropList.push({title: 'convert zip', onclick: () => this._convert(item.id, item.name), key: 14})
+            dropList.push({title: 'save playlist', onclick: () => this._downloadAll(item.id, item.name), key: 15})
         }
         let content = (
             <a href="#" className="item-point">
@@ -189,9 +197,11 @@ const ItemFile = React.createClass({
                     {item.name}<br />
                     type: {item.media.type}<br />
                     key: {item.media.key}<br />
-                    err: {error}
+                    err: {error}<br />
+                    complete: {item.media.complete}
                 </span>
             )
+            click = () => this._handleMedia(item.id, item.name)
         } else {
             switch(item.status) {
                 case 2:
@@ -223,6 +233,7 @@ const ItemFile = React.createClass({
                     subscript: this._subscript,
                     searchSub: this._searchSub,
                     uploadSub: this._uploadSub,
+                    handleMedia: this._handleMedia,
                 })
                 break
                 case 4:
@@ -258,10 +269,11 @@ const ItemFile = React.createClass({
                         <i className="glyphicon glyphicon-th-list" style={{height: '42px', width: '42px', fontSize: '35px'}}></i>{item.name}
                     </a>
                 )
-                click = () => api(`/api/torrent/query/preview/${item.id}`).then(result => this.props.setMedia(result.list, item.id, {
+                click = () => api(`/api/storage/torrent/query/${item.id}`).then(result => this.props.setMedia(result.list, item.id, {
                     save2local: this._save2local,
                     searchSub: this._searchSub,
                     uploadSub: this._uploadSub,
+                    handleMedia: this._handleMedia,
                 }, result.time ? result.time : 0)).catch(err => this.props.addalert(err))
                 break
             }
@@ -269,17 +281,8 @@ const ItemFile = React.createClass({
         let fileType = item.thumb ? 'external' : ''
         if (item.noDb) {
             fileType = 'outside'
-        } else {
-            switch(item.recycle) {
-                case 1:
-                case 2:
-                case 3:
-                fileType = 'recycling'
-                break
-                case 4:
-                fileType = 'recycled'
-                break
-            }
+        } else if (item.recycle) {
+            fileType = 'recycled'
         }
         fileType = (this.props.latest === item.id) ? `${fileType} info` : fileType
         return (

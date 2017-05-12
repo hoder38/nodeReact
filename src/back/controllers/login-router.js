@@ -11,18 +11,9 @@ const router = Express.Router()
 //passport
 Passport.use(new Strategy(function(username, password, done){
     console.log('login');
-    console.log(username);
-    const name = isValidString(username, 'name')
-    const pwd = isValidString(password, 'passwd')
-    if (name === false) {
-        handleError(new HoError('username is not vaild', 401))
-    }
-    if (pwd === false) {
-        handleError(new HoError('passwd is not vaild', 401))
-    }
-    Mongo('find', USERDB, {username: name}, {limit: 1}).then(users => {
-        if (users.length < 1 || createHash('md5').update(pwd).digest('hex') !== users[0].password) {
-            throw new HoError('Incorrect username or password', 401)
+    Mongo('find', USERDB, {username: isValidString(username, 'name', 'username is not vaild', 401)}, {limit: 1}).then(users => {
+        if (users.length < 1 || createHash('md5').update(isValidString(password, 'passwd', 'passwd is not vaild', 401)).digest('hex') !== users[0].password) {
+            handleError(new HoError('Incorrect username or password', {cdoe: 401}))
         }
         done(null, users[0])
     }).catch(err => handleError(err, done))
@@ -31,7 +22,14 @@ Passport.serializeUser(function(user, done) {
     done(null, user._id)
 })
 Passport.deserializeUser(function(id, done) {
-    Mongo('find', USERDB, {_id: objectID(id)}, {limit: 1}).then(users => done(null,users[0])).catch(err => handleError(err, done))
+    Mongo('find', USERDB, {_id: objectID(id)}, {limit: 1}).then(users => done(null, {
+        _id: users[0]._id,
+        auto: users[0].auto,
+        perm: users[0].perm,
+        unDay: users[0].unDay,
+        unHit: users[0].unHit,
+        username: users[0].username,
+    })).catch(err => handleError(err, done))
 })
 
 //login
@@ -44,9 +42,7 @@ export default function(url=null) {
         res.json(url ? {
             apiOK: true,
             url: url,
-        } : {
-            apiOK: true,
-        })
+        } : {apiOK: true})
     })
     router.post('/api/login', Passport.authenticate('local'), function(req, res) {
         req.logIn(req.user, function(err) {

@@ -38,7 +38,7 @@ const UserInfo = React.createClass({
                         return Promise.reject('User password not vaild!!!')
                     } else {
                         set_obj['userPW'] = userPW
-                        return api('/api/adduser', set_obj)
+                        return api('/api/user/act', set_obj)
                         .then(user => {
                             this.props.addUser(user)
                             this.setState(Object.assign({}, this.state, this._input.initValue(this.props.user)))
@@ -57,7 +57,7 @@ const UserInfo = React.createClass({
                         return Promise.reject('User password not vaild!!!')
                     } else {
                         set_obj['userPW'] = userPW
-                        return api(`/api/user/${this.props.user.id}`, set_obj, 'PUT')
+                        return api(`/api/user/act/${this.props.user.id}`, set_obj, 'PUT')
                         .then(info => {
                             if (info.hasOwnProperty('owner')) {
                                 this.props.setbasic(info.owner)
@@ -89,7 +89,7 @@ const UserInfo = React.createClass({
                 this.props.addalert('User password not vaild!!!')
                 return Promise.reject('User password not vaild!!!')
             } else {
-                return api(`/api/deluser/${this.props.user.id}`, {userPW}, 'PUT')
+                return api(`/api/user/del/${this.props.user.id}`, {userPW}, 'PUT')
                 .then(info => {
                     this.props.delUser(this.props.user.id)
                 }).catch(err => {

@@ -8,6 +8,7 @@ const mapStateToProps = state => ({
     sortType: state.itemDataHandle.item.sortType,
     bookmark: state.itemDataHandle.item.bookmark,
     mainUrl: state.basicDataHandle.url,
+    level: state.basicDataHandle.level,
 })
 
 const mapDispatchToProps = dispatch => ({
