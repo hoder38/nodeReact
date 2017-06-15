@@ -34080,7 +34080,7 @@
 	                                                    _this.props.addalert('Zip password not vaild!!!');
 	                                                    return _promise2.default.reject('Zip password not vaild!!!');
 	                                                } else {
-	                                                    return (0, _utility.api)('/api/zipPassword/' + wsmsg.zip, { pwd: pwd }, 'PUT').then(function (result) {
+	                                                    return (0, _utility.api)('/api/storage/zipPassword/' + wsmsg.zip, { pwd: pwd }, 'PUT').then(function (result) {
 	                                                        return _this.props.addalert('password update completed, please unzip again');
 	                                                    }).catch(function (err) {
 	                                                        _this.props.addalert(err);
@@ -34096,14 +34096,13 @@
 	                        }
 	                    }
 	                };
-	                return (0, _utility.api)('/api/parent/storage/list');
-	                //return api(`${userInfo.main_url}/api/feedback`)
+	                return (0, _utility.api)(userInfo.main_url + '/api/file/feedback');
 	            } else {
 	                throw Error('Invalid user data!!!');
 	            }
-	            /*}).then(result => {
-	                this.props.feedbackset(result.feedbacks)
-	                return api('/api/parent/storage/list')*/
+	        }).then(function (result) {
+	            _this.props.feedbackset(result.feedbacks);
+	            return (0, _utility.api)('/api/parent/storage/list');
 	        }).then(function (result) {
 	            return _this.props.dirsset(result.parentList, function (dir, i) {
 	                return { title: dir.show, name: dir.name, key: i, onclick: function onclick(tag) {
@@ -36294,7 +36293,7 @@
 	                var url = _this4.state.url;
 	                _this4.setState((0, _assign2.default)({}, _this4.state, _this4._input.initValue()));
 	                (0, _utility.api)('/api/getPath').then(function (ret) {
-	                    return (0, _utility.api)(_this4.props.mainUrl + '/api/upload/url', (0, _assign2.default)({
+	                    return (0, _utility.api)(_this4.props.mainUrl + '/api/external/upload/url', (0, _assign2.default)({
 	                        type: _this4.state.type ? 1 : 0,
 	                        url: url
 	                    }, ret));
@@ -37062,7 +37061,7 @@
 	        });
 	        if ((0, _utility.isValidString)(this.props.name, 'name')) {
 	            this.setState((0, _assign2.default)({}, this.state, { sending: true }));
-	            (0, _utility.api)('/api/sendTag/' + this.props.id, {
+	            (0, _utility.api)('/api/storage/sendTag/' + this.props.id, {
 	                tags: send_tag,
 	                name: this.props.name
 	            }, 'PUT').then(function (result) {
@@ -38001,7 +38000,7 @@
 	                switch (!_this7._item.thumb || _this7._playlist && _this7._playlist.obj.pre_url ? 0 : _this7._playlist && _this7._playlist.obj.is_magnet ? _this7._playlist.obj.id ? 0 : 1 : 2) {
 	                    case 1:
 	                        (0, _utility.isValidString)(_this7._playlist.obj.magnet, 'url') ? (0, _utility.api)('/api/getPath').then(function (result) {
-	                            return (0, _utility.api)(_this7.props.mainUrl + '/api/upload/url', {
+	                            return (0, _utility.api)(_this7.props.mainUrl + '/api/external/upload/url', {
 	                                url: _this7._playlist.obj.magnet,
 	                                hide: true,
 	                                path: result.path,
@@ -38291,12 +38290,13 @@
 	                (function () {
 	                    var index = _this11.props.mediaType === 9 ? '/' + _this11.state.index : '';
 	                    var adjust = Math.ceil((_this11._video.currentTime - _this11._fixtime) * 10) / 10;
+	                    var fix = _this11._fix;
 	                    _this11._fix = 0;
 	                    _this11.setState((0, _assign2.default)({}, _this11.state, {
 	                        cue: ''
 	                    }), function () {
 	                        return _this11.props.sendglbcf(function () {
-	                            return (0, _utility.api)(_this11.props.mainUrl + '/api/subtitle/fix/' + (_this11._playlist ? _this11._playlist.obj.id : _this11._item.id) + '/' + (_this11.fix === 1 ? 'ch' : 'en') + '/' + adjust + index).then(function (result) {
+	                            return (0, _utility.api)(_this11.props.mainUrl + '/api/external/subtitle/fix/' + (_this11._playlist ? _this11._playlist.obj.id : _this11._item.id) + '/' + (fix === 1 ? 'ch' : 'en') + '/' + adjust + index).then(function (result) {
 	                                return _this11.props.addalert('字幕校準成功');
 	                            }).catch(function (err) {
 	                                return _this11.props.addalert(err);
@@ -51059,9 +51059,6 @@
 	                case 'ypl_':
 	                    url = 'https://www.youtube.com/watch?list=' + extId;
 	                    break;
-	                case 'kub_':
-	                    url = 'http://www.123kubo.com/vod-read-id-' + extId + '.html';
-	                    break;
 	                case 'yif_':
 	                    url = 'https://yts.ag/movie/' + extId;
 	                    break;
@@ -51077,7 +51074,7 @@
 	            }
 	            url = isMusic ? url + ':music' : url;
 	            (0, _utility.isValidString)(url, 'url') ? (0, _utility.api)('/api/getPath').then(function (ret) {
-	                return (0, _utility.api)(_this7.props.mainUrl + '/api/upload/url', (0, _assign2.default)({
+	                return (0, _utility.api)(_this7.props.mainUrl + '/api/external/upload/url', (0, _assign2.default)({
 	                    type: 0,
 	                    url: url
 	                }, ret));
@@ -51113,141 +51110,128 @@
 	            });
 	        }, 'Would you sure to save all of ' + name + '?');
 	    },
-	    _convert: function _convert(id, name, type) {
+	    _join: function _join() {
 	        var _this10 = this;
 
 	        this.props.sendglbcf(function () {
-	            return (0, _utility.api)(_this10.props.mainUrl + '/api/torrent/convert/' + id + '/' + type).then(function (result) {
-	                if (result.name) {
-	                    _this10.props.pushfeedback(result);
-	                }
+	            _this10.props.select.size > 1 ? (0, _utility.api)(_this10.props.mainUrl + '/api/torrent/join', { uids: [].concat((0, _toConsumableArray3.default)(_this10.props.select)) }, 'PUT').then(function (result) {
+	                _this10.props.setLatest(result.id, _this10.props.bookmark);
+	                _this10.props.addalert('join to ' + result.name + ' completed');
 	            }).catch(function (err) {
 	                return _this10.props.addalert(err);
-	            });
-	        }, 'Would you sure to convert ' + name + ' to image book?');
-	    },
-	    _join: function _join() {
-	        var _this11 = this;
-
-	        this.props.sendglbcf(function () {
-	            _this11.props.select.size > 1 ? (0, _utility.api)(_this11.props.mainUrl + '/api/torrent/join', { uids: [].concat((0, _toConsumableArray3.default)(_this11.props.select)) }, 'PUT').then(function (result) {
-	                _this11.props.setLatest(result.id, _this11.props.bookmark);
-	                _this11.props.addalert('join to ' + result.name + ' completed');
-	            }).catch(function (err) {
-	                return _this11.props.addalert(err);
-	            }) : _this11.props.addalert('Please selects multiple items!!!');
+	            }) : _this10.props.addalert('Please selects multiple items!!!');
 	        }, 'Would you sure to join the split zips?');
 	    },
 	    _searchSub: function _searchSub(id) {
-	        var _this12 = this;
+	        var _this11 = this;
 
 	        this.props.globalinput(2, function (subName, exact, subEpisode) {
 	            if (subName) {
-	                return (0, _utility.isValidString)(subName, 'name') ? (0, _utility.api)(_this12.props.mainUrl + '/api/subtitle/search/' + id, subEpisode && (0, _utility.isValidString)(subEpisode, 'name') ? { name: subName, episode: subEpisode } : { name: subName }).then(function (result) {
-	                    return _this12.props.addalert('subtitle get');
+	                return (0, _utility.isValidString)(subName, 'name') ? (0, _utility.api)(_this11.props.mainUrl + '/api/external/subtitle/search/' + id, subEpisode && (0, _utility.isValidString)(subEpisode, 'name') ? { name: subName, episode: subEpisode } : { name: subName }).then(function (result) {
+	                    return _this11.props.addalert('subtitle get');
 	                }) : _promise2.default.reject('search name is not vaild!!!');
 	            } else {
-	                return (0, _utility.api)(_this12.props.mainUrl + '/api/external/getSubtitle/' + id).then(function (result) {
-	                    return _this12.props.addalert('subtitle get');
+	                return (0, _utility.api)(_this11.props.mainUrl + '/api/external/getSubtitle/' + id).then(function (result) {
+	                    return _this11.props.addalert('subtitle get');
 	                });
 	            }
 	        }, 'warning', 'Search Name or IMDBID: tt1638355', null, 'Episode: S01E01');
 	    },
 	    _uploadSub: function _uploadSub(id) {
-	        var _this13 = this;
+	        var _this12 = this;
 
 	        this.props.globalinput(2, function () {
-	            return _promise2.default.resolve(_this13.props.addalert('subtitle upload success'));
+	            return _promise2.default.resolve(_this12.props.addalert('subtitle upload success'));
 	        }, 'warning', this.props.mainUrl + '/upload/subtitle/' + id);
 	    },
 	    _showUrl: function _showUrl(id, url) {
-	        var _this14 = this;
+	        var _this13 = this;
 
 	        window.open(decodeURIComponent(url));
-	        (0, _utility.api)('/api/media/setTime/' + id + '/url').then(function (result) {
-	            return _this14.props.setLatest(id, _this14.props.bookmark);
+	        (0, _utility.api)('/api/storage/media/setTime/' + id + '/url').then(function (result) {
+	            return _this13.props.setLatest(id, _this13.props.bookmark);
 	        }).catch(function (err) {
-	            return _this14.props.addalert(err);
+	            return _this13.props.addalert(err);
 	        });
 	    },
 	    _bookmark: function _bookmark(id) {
-	        var _this15 = this;
+	        var _this14 = this;
 
 	        (0, _utility.bookmarkItemList)(_constants.STORAGE, 'set', this.props.sortName, this.props.sortType, this.props.set, id).catch(function (err) {
-	            return _this15.props.addalert(err);
+	            return _this14.props.addalert(err);
 	        });
 	    },
 	    render: function render() {
-	        var _this16 = this;
+	        var _this15 = this;
 
 	        var item = this.props.item;
 	        var dropList = [];
 	        if (!item.thumb && item.status !== 7 && item.status !== 8) {
 	            dropList.push({ title: 'download', onclick: function onclick() {
-	                    return _this16._download(item.id, item.name);
+	                    return _this15._download(item.id, item.name);
 	                }, key: 0 });
 	            dropList.push({ title: 'download to drive', onclick: function onclick() {
-	                    return _this16._save2drive(item.id, item.name);
+	                    return _this15._save2drive(item.id, item.name);
 	                }, key: 1 });
 	        }
 	        if (item.isOwn) {
 	            if (!item.thumb) {
 	                dropList.push({ title: 'edit', onclick: function onclick() {
-	                        return _this16._edit(item.id, item.name);
+	                        return _this15._edit(item.id, item.name);
 	                    }, key: 2 });
 	            }
 	            dropList.push({ title: 'delete', onclick: function onclick() {
-	                    return _this16._delete(item.id, item.name, item.recycle);
+	                    return _this15._delete(item.id, item.name, item.recycle);
 	                }, key: 3 });
 	        }
 	        if (item.recycle === 1) {
 	            dropList.push({ title: 'recover', onclick: function onclick() {
-	                    return _this16._recover(item.id, item.name);
+	                    return _this15._recover(item.id, item.name);
 	                }, key: 4 });
 	        }
 	        if (item.status === 3) {
 	            if (!item.thumb) {
 	                dropList.push({ title: 'search subtitle', onclick: function onclick() {
-	                        return _this16._searchSub(item.id);
+	                        return _this15._searchSub(item.id);
 	                    }, key: 5 });
 	                dropList.push({ title: 'upload subtitle', onclick: function onclick() {
-	                        return _this16._uploadSub(item.id);
+	                        return _this15._uploadSub(item.id);
 	                    }, key: 6 });
 	                if (this.props.level === 2) {
 	                    dropList.push({ title: 'handle media', onclick: function onclick() {
-	                            return _this16._handleMedia(item.id, item.name);
+	                            return _this15._handleMedia(item.id, item.name);
 	                        }, key: 7 });
 	                }
 	            }
 	            if (item.cid) {
 	                dropList.push({ title: '\u8A02\u95B1' + item.ctitle, onclick: function onclick() {
-	                        return _this16._subscript(item.id, item.cid, item.ctitle);
+	                        return _this15._subscript(item.id, item.cid, item.ctitle);
 	                    }, key: 8 });
 	            }
 	            if (item.noDb) {
 	                dropList.push({ title: '儲存到local', onclick: function onclick() {
-	                        return _this16._save2local(item.id, item.name);
+	                        return _this15._save2local(item.id, item.name);
 	                    }, key: 9 });
 	            }
 	        }
 	        if (item.status === 4) {
 	            if (item.cid) {
 	                dropList.push({ title: '\u8A02\u95B1' + item.ctitle, onclick: function onclick() {
-	                        return _this16._subscript(item.id, item.cid, item.ctitle, true);
+	                        return _this15._subscript(item.id, item.cid, item.ctitle, true);
 	                    }, key: 10 });
 	            }
 	            if (item.noDb) {
 	                dropList.push({ title: '儲存到local', onclick: function onclick() {
-	                        return _this16._save2local(item.id, item.name, true);
+	                        return _this15._save2local(item.id, item.name, true);
 	                    }, key: 11 });
 	            }
 	        }
 	        if (item.media) {
 	            dropList.push({ title: 'handle media', onclick: function onclick() {
-	                    return _this16._handleMedia(item.id, item.name);
+	                    return _this15._handleMedia(item.id, item.name);
 	                }, key: 12 });
 	            dropList.push({ title: 'clear media', onclick: function onclick() {
-	                    return _this16._handleMedia(item.id, item.name, true);
+	                    return _this15._handleMedia(item.id, item.name, true);
 	                }, key: 13 });
 	        }
 	        if (item.status === 0 || item.status === 1 || item.status === 9) {
@@ -51255,7 +51239,7 @@
 	        }
 	        if (item.status === 9) {
 	            dropList.push({ title: 'save playlist', onclick: function onclick() {
-	                    return _this16._downloadAll(item.id, item.name);
+	                    return _this15._downloadAll(item.id, item.name);
 	                }, key: 15 });
 	        }
 	        var content = _react2.default.createElement(
@@ -51265,7 +51249,7 @@
 	            item.name
 	        );
 	        var click = function click() {
-	            return _this16._download(item.id, item.name);
+	            return _this15._download(item.id, item.name);
 	        };
 	        if (item.media) {
 	            (function () {
@@ -51293,7 +51277,7 @@
 	                    item.media.complete
 	                );
 	                click = function click() {
-	                    return _this16._handleMedia(item.id, item.name);
+	                    return _this15._handleMedia(item.id, item.name);
 	                };
 	            })();
 	        } else {
@@ -51311,8 +51295,8 @@
 	                        item.name
 	                    );
 	                    click = function click() {
-	                        return _this16.props.setMedia(2, item.id, {
-	                            save2local: _this16._save2local
+	                        return _this15.props.setMedia(2, item.id, {
+	                            save2local: _this15._save2local
 	                        });
 	                    };
 	                    break;
@@ -51329,12 +51313,12 @@
 	                        item.name
 	                    );
 	                    click = function click() {
-	                        return _this16.props.setMedia(3, item.id, {
-	                            save2local: _this16._save2local,
-	                            subscript: _this16._subscript,
-	                            searchSub: _this16._searchSub,
-	                            uploadSub: _this16._uploadSub,
-	                            handleMedia: _this16._handleMedia
+	                        return _this15.props.setMedia(3, item.id, {
+	                            save2local: _this15._save2local,
+	                            subscript: _this15._subscript,
+	                            searchSub: _this15._searchSub,
+	                            uploadSub: _this15._uploadSub,
+	                            handleMedia: _this15._handleMedia
 	                        });
 	                    };
 	                    break;
@@ -51346,9 +51330,9 @@
 	                        item.name
 	                    );
 	                    click = function click() {
-	                        return _this16.props.setMedia(4, item.id, {
-	                            save2local: _this16._save2local,
-	                            subscript: _this16._subscript
+	                        return _this15.props.setMedia(4, item.id, {
+	                            save2local: _this15._save2local,
+	                            subscript: _this15._subscript
 	                        });
 	                    };
 	                    break;
@@ -51360,7 +51344,7 @@
 	                        item.name
 	                    );
 	                    click = function click() {
-	                        return _this16._showUrl(item.id, item.url);
+	                        return _this15._showUrl(item.id, item.url);
 	                    };
 	                    break;
 	                case 8:
@@ -51371,7 +51355,7 @@
 	                        item.name
 	                    );
 	                    click = function click() {
-	                        return _this16._bookmark(item.id);
+	                        return _this15._bookmark(item.id);
 	                    };
 	                    break;
 	                case 9:
@@ -51383,14 +51367,14 @@
 	                    );
 	                    click = function click() {
 	                        return (0, _utility.api)('/api/storage/torrent/query/' + item.id).then(function (result) {
-	                            return _this16.props.setMedia(result.list, item.id, {
-	                                save2local: _this16._save2local,
-	                                searchSub: _this16._searchSub,
-	                                uploadSub: _this16._uploadSub,
-	                                handleMedia: _this16._handleMedia
+	                            return _this15.props.setMedia(result.list, item.id, {
+	                                save2local: _this15._save2local,
+	                                searchSub: _this15._searchSub,
+	                                uploadSub: _this15._uploadSub,
+	                                handleMedia: _this15._handleMedia
 	                            }, result.time ? result.time : 0);
 	                        }).catch(function (err) {
-	                            return _this16.props.addalert(err);
+	                            return _this15.props.addalert(err);
 	                        });
 	                    };
 	                    break;
@@ -51413,7 +51397,7 @@
 	                    type: 'checkbox',
 	                    checked: this.props.check,
 	                    ref: function ref(_ref) {
-	                        return _this16.props.getRef(_ref);
+	                        return _this15.props.getRef(_ref);
 	                    },
 	                    onChange: this.props.onchange })
 	            ),

@@ -57,7 +57,7 @@ const FileAdd = React.createClass({
         if (isValidString(this.state.url, 'url')) {
             const url = this.state.url
             this.setState(Object.assign({}, this.state, this._input.initValue()))
-            api('/api/getPath').then(ret => api(`${this.props.mainUrl}/api/upload/url`, Object.assign({
+            api('/api/getPath').then(ret => api(`${this.props.mainUrl}/api/external/upload/url`, Object.assign({
                 type: this.state.type ? 1 : 0,
                 url: url,
             }, ret))).then(result => {

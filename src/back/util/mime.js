@@ -1,4 +1,4 @@
-import { GENRE_LIST_CH, MEDIA_LIST_CH, MUSIC_LIST, ADULT_LIST, GAME_LIST_CH, EXT_FILENAME, MEDIA_TAG, IMAGE_EXT, ZIP_EXT, VIDEO_EXT, MUSIC_EXT, RAW_DOC_EXT, DOC_EXT, MIME_EXT, TORRENT_EXT, SUB_EXT } from '../constants'
+import { GENRE_LIST_CH, MEDIA_LIST_CH, MUSIC_LIST, ADULT_LIST, GAME_LIST_CH, EXT_FILENAME, MEDIA_TAG, IMAGE_EXT, ZIP_EXT, VIDEO_EXT, MUSIC_EXT, DOC_EXT, MIME_EXT, TORRENT_EXT, SUB_EXT } from '../constants'
 
 export const getOptionTag = () => [
     ...MEDIA_LIST_CH,
@@ -98,7 +98,7 @@ export const extType = name => {
             type: 'pdf',
             ext: extName,
         };
-    } else if (RAW_DOC_EXT.includes(extName)) {
+    } else if (DOC_EXT.rawdoc.includes(extName)) {
         return {
             type: 'rawdoc',
             ext: extName,

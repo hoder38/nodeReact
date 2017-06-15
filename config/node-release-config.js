@@ -16,7 +16,7 @@ export default {
     SESS_PORT: 6379,
     GOOGLE_MEDIA_FOLDER: '0B_BstyDfOj4Rfk54SHNvU2ExV3RJTGlvWHljWTRHSXprcU0tM0o5QXR6c1dfWlNiVTV6VlE',
     GOOGLE_BACKUP_FOLDER: '0B_BstyDfOj4RfmJqUkJINGpVS0RhMm1qNlR5WE9FTlo2RUVQY3RIOXhlY3RRU0Vtb2NaeWc',
-    NAS_TMP: "/mnt/tmp",
+    NAS_TMP: '/mnt/tmp',
     NAS_PREFIX: '/mnt/release/storage',
     HINT: true,
     AUTO_UPLOAD: true,
@@ -26,6 +26,7 @@ export default {
     CHECK_MEDIA: true,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
+    MEGA_LIMIT: 1,
     ZIP_LIMIT: 1,
     STREAM_LIMIT: 300,
 }

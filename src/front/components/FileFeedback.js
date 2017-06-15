@@ -133,7 +133,7 @@ const FileFeedback = React.createClass({
         })
         if (isValidString(this.props.name, 'name')) {
             this.setState(Object.assign({}, this.state, {sending: true}))
-            api(`/api/sendTag/${this.props.id}`, {
+            api(`/api/storage/sendTag/${this.props.id}`, {
                 tags: send_tag,
                 name: this.props.name,
             }, 'PUT').then(result => {

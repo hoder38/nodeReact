@@ -9,12 +9,12 @@ export const DEV = 'dev'
 export const USERDB = 'user'
 export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
+export const DOCDB = 'docUpdate'
 
 //basic set
 export const UNACTIVE_DAY = 5
 export const UNACTIVE_HIT = 10
-//export const HANDLE_TIME = 7200
-export const HANDLE_TIME = 10
+export const HANDLE_TIME = 7200
 export const NOISE_TIME = 172800;
 export const QUERY_LIMIT = 20
 export const MAX_RETRY = 10
@@ -22,11 +22,27 @@ export const RELATIVE_LIMIT = 100;
 export const RELATIVE_UNION = 2;
 export const RELATIVE_INTER = 3;
 export const BOOKMARK_LIMIT = 100;
-export const RECORD_LIMIT = 100;
 export const DRIVE_LIMIT = 100;
 export const TORRENT_CONNECT = 100;
 export const TORRENT_UPLOAD = 5;
 export const CACHE_EXPIRE = 86400;
+export const DRIVE_INTERVAL = 3600;
+export const MEDIA_INTERVAl = 7200;
+export const OATH_WAITING = 60;
+export const TORRENT_DURATION = 172800;
+export const ZIP_DURATION = 21600;
+export const MEGA_DURATION = 86400;
+export const EXTERNAL_INTERVAL = 604800;
+export const DOC_INTERVAL = 3600;
+
+export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export const DOC_TYPE = {
+    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
+    jp: ['sea'],
+    tw: ['tri', 'ndc', 'sta', 'mof', 'moe', 'cbc'],
+}
 
 //regex
 export const RE_WEBURL = new RegExp(
@@ -79,10 +95,6 @@ export const DEFAULT_TAGS = [
     'youtube music',
     'youtube music playlist',
     'playlist unactive',
-    'kubo movie',
-    'kubo tv series',
-    'kubo tv show',
-    'kubo animation',
     'yify movie',
     'cartoonmad comic',
     'bilibili animation',
@@ -136,18 +148,6 @@ export const ADULTONLY_PARENT = [
     },
 ]
 //tag list
-export const KUBO_COUNTRY = [
-    '香港',
-    '台灣',
-    '大陸',
-    '日本',
-    '韓國',
-    '歐美',
-    '泰國',
-    '新馬',
-    '印度',
-    '海外',
-]
 export const MEDIA_LIST = [
     'image',
     'photo',
@@ -438,42 +438,6 @@ export const BILI_TYPE = [
     '德國',
     '海外',
     '完結',
-]
-export const KUBO_TYPE = [
-    [
-        '動作片',
-        '喜劇片',
-        '愛情片',
-        '科幻片',
-        '恐怖片',
-        '劇情片',
-        '戰爭片',
-        '動畫片',
-        '微電影',
-    ],
-    [
-        '台灣劇',
-        '港劇',
-        '大陸劇',
-        '歐美劇',
-        '韓劇',
-        '日劇',
-        '新/馬/泰/其他劇',
-        '布袋戲',
-        '綜藝',
-        '美食旅遊',
-        '訪談節目',
-        '男女交友',
-        '選秀競賽',
-        '典禮晚會',
-        '新聞時事',
-        '投資理財',
-        '歌劇戲曲',
-    ],
-    [
-        '動漫',
-        '電影動畫片',
-    ]
 ]
 export const BILI_INDEX = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16]
 export const MAD_INDEX = ['01', '02', '03', '04', '10', '07', '08', '09', '16', '17', '13', '14', '18', '21', '22']

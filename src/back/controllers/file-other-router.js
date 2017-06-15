@@ -1,4 +1,4 @@
-import { STORAGEDB, RECORD_LIMIT, GENRE_LIST_CH, STATIC_PATH } from '../constants'
+import { STORAGEDB, STATIC_PATH } from '../constants'
 import { ENV_TYPE } from '../../../ver'
 import { STREAM_LIMIT } from '../config'
 import Express from 'express'
@@ -19,7 +19,14 @@ import sendWs from '../util/sendWs'
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
 
+//1小時refresh一次
 let stream_count = 0;
+const stream_fresh = 3600;
+const loop_fresh = () => new Promise((resolve, reject) => {
+    stream_count = 0;
+    setTimeout(() => resolve(), stream_fresh * 1000);
+}).then(() => loop_fresh());
+loop_fresh();
 
 router.get('/preview/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
@@ -97,7 +104,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function(req, res, 
             res.writeHead(200, {'Content-Type': 'text/vtt'});
             FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : '/home/pi/app/public/123.vtt').pipe(res);
         }
-        const id = req.params.uid.match(/^(you|dym|dri|bil|soh|let|vqq|fun|kdr|yuk|tud|fc1)_/);
+        const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope)_/);
         if (id) {
             const id_valid = isValidString(req.params.uid, 'name', 'external is not vaild');
             let filePath = null;
@@ -105,35 +112,17 @@ router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function(req, res, 
                 case 'dym':
                 filePath = getFileLocation('dailymotion', id_valid);
                 break;
-                case 'dri':
-                filePath = getFileLocation('drive', id_valid);
-                break;
                 case 'bil':
                 filePath = getFileLocation('bilibili', id_valid);
                 break;
-                case 'soh':
-                filePath = getFileLocation('sohu', id_valid);
-                break;
-                case 'let':
-                filePath = getFileLocation('letv', id_valid);
-                break;
-                case 'vqq':
-                filePath = getFileLocation('vqq', id_valid);
-                break;
-                case 'fun':
-                filePath = getFileLocation('funshion', id_valid);
-                break;
-                case 'kdr':
-                filePath = getFileLocation('kubodrive', id_valid);
+                case 'yif':
+                filePath = getFileLocation('yify', id_valid);
                 break;
                 case 'yuk':
                 filePath = getFileLocation('youku', id_valid);
                 break;
-                case 'tud':
-                filePath = getFileLocation('tudou', id_valid);
-                break;
-                case 'fc1':
-                filePath = getFileLocation('funcnd1', id_valid);
+                case 'ope':
+                filePath = getFileLocation('openload', id_valid);
                 break;
                 default:
                 filePath = getFileLocation('youtube', id_valid);
@@ -570,42 +559,21 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 }).then(() => convertSub(filePath));
             });
         }
-        const idMatch = req.params.uid.match(/^(you|dym|dri|bil|soh|let|vqq|fun|kdr|yuk|tud|fc1)_/);
+        const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
         if (idMatch) {
             let ex_type = 'youtube';
             switch(idMatch[1]) {
                 case 'dym':
                 ex_type = 'dailymotion';
                 break;
-                case 'dri':
-                ex_type = 'drive';
-                break;
                 case 'bil':
                 ex_type = 'bilibili';
-                break;
-                case 'soh':
-                ex_type = 'sohu';
-                break;
-                case 'let':
-                ex_type = 'letv';
-                break;
-                case 'vqq':
-                ex_type = 'vqq';
-                break;
-                case 'fun':
-                ex_type = 'funshion';
-                break;
-                case 'kdr':
-                ex_type = 'kubodrive';
                 break;
                 case 'yuk':
                 ex_type = 'youku';
                 break;
-                case 'tud':
-                ex_type = 'tudou';
-                break;
-                case 'fc1':
-                ex_type = 'funcnd1';
+                case 'ope':
+                ex_type = 'openload';
                 break;
             }
             const filePath = getFileLocation(ex_type, isValidString(req.params.uid, 'name', 'external is not vaild'));

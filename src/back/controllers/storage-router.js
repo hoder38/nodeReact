@@ -1,6 +1,6 @@
 import { STORAGEDB, RELATIVE_LIMIT, ADULT_LIST, GENRE_LIST_CH, GAME_LIST_CH, MUSIC_LIST } from '../constants'
 import Express from 'express'
-import { checkLogin, handleError, checkAdmin, isValidString, selectRandom, getStorageItem } from '../util/utility'
+import { checkLogin, handleError, checkAdmin, isValidString, selectRandom, getStorageItem, HoError } from '../util/utility'
 import TagTool from '../models/tag-tool'
 import GoogleApi from '../models/api-tool-google'
 import External from '../models/external-tool'
@@ -164,33 +164,22 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
         if (random_tag[0] === '影片') {
             let mtype = 0;
             if (random_tag[1] === '電影') {
-                mtype = selectRandom([10, 1, 1, 1, 1, 1]);
+                mtype = selectRandom([10, 1, 1, 1, 1]);
                 if (mtype === 3) {
                     //yify
                     random_tag = ['yify movie', 'no local', random_tag.splice(random_tag.length -1, 1)[0]];
                 } else if (mtype === 4) {
-                    //kubo
-                    random_tag = ['kubo movie', 'no local'];
-                } else if (mtype === 5) {
                     //bilibili
                     random_tag = ['bilibili movie', 'no local'];
                 }
             } else if (random_tag[1] === '動畫') {
-                mtype = selectRandom([8, 1, 1, 1, 1]);
+                mtype = selectRandom([8, 1, 1, 1]);
                 if (mtype === 3) {
-                    //kubo
-                    random_tag = ['kubo animation', 'no local'];
-                } else if (mtype === 4) {
                     //bilibili
                     random_tag = ['bilibili animation', 'no local'];
                 }
             } else if (random_tag[1] === '電視劇') {
-                mtype = selectRandom([8, 1, 1, 1, 1]);
-                if (mtype === 3) {
-                    random_tag = ['kubo tv series', 'no local'];
-                } else if (mtype === 4) {
-                    random_tag = ['kubo tv show', 'no local'];
-                }
+                mtype = selectRandom([8, 1, 1]);
             }
             if (mtype === 1) {
                 random_tag = ['youtube video', 'no local'];
@@ -233,18 +222,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
     const index = req.params.pageToken ? Number(req.params.pageToken.match(/^\d+/)) : 1;
     const pageToken = req.params.pageToken ? req.params.pageToken.match(/[^\d]+$/) : false;
     let itemList = [];
-    External.getSingleList('kubo', StorageTagTool.getKuboQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
-        name: item.name,
-        id: `kub_${item.id}`,
-        tags: [...item.tags, 'first item'],
-        recycle: 0,
-        isOwn: false,
-        utime: new Date(item.date).getTime()/1000,
-        thumb: item.thumb,
-        noDb: true,
-        status: 3,
-        count: item.count,
-    }))).then(() => External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+    External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
         name: item.name,
         id: `yif_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -255,7 +233,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.rating,
-    }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+    }))).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `bbl_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -266,7 +244,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.count,
-    }))],).then(() => {
+    }))]).then(() => {
         const query = StorageTagTool.getMadQuery(parentList.cur, req.params.sortName, index);
         return query.post ? External.getSingleList('cartoonmad', query.url, query.post) : External.getSingleList('cartoonmad', query);
     }).then(list => itemList = [...itemList, ...list.map(item => ({
@@ -351,6 +329,17 @@ router.put('/addTag/:tag', function(req, res, next) {
             }
         });
         res.json({apiOK: true});
+    }).catch(err => handleError(err, next));
+});
+
+router.put('/sendTag/:uid', function(req, res, next){
+    console.log('storage sendTag');
+    StorageTagTool.sendTag(req.params.uid, req.body.name, req.body.tags, req.user).then(result => {
+        sendWs({
+            type: 'file',
+            data: result.id,
+        }, result.adultonly);
+        res.json(result);
     }).catch(err => handleError(err, next));
 });
 
@@ -443,7 +432,7 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(req, res, next){
     console.log('media setTime');
-    let id = req.params.id.match(/^(you|ypl|kub|yif|mad|bbl)_(.*)$/);
+    let id = req.params.id.match(/^(you|ypl|yif|mad|bbl)_(.*)$/);
     let playlist = 0;
     let playlistId = null;
     let obj = req.params.obj;
@@ -541,8 +530,8 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                     return External.getSingleId(items1[0].owner, decodeURIComponent(items1[0].url), recordTime, rPageToken, req.params.back).then(([obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new]) => ret_rest(obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new));
                 });
             } else if (playlist > 2) {
-                let playurl = `http://www.123kubo.com/vod-read-id-${playlistId}.html`;
-                let playtype = 'kubo';
+                let playurl = null;
+                let playtype = null;
                 if (playlist === 4) {
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;
                     playtype = 'yify';
@@ -570,7 +559,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         handleError(new HoError('timestamp is not vaild'));
     }
-    const id = req.params.id.match(/^(you|dym|dri|bil|soh|let|vqq|fun|kdr|yuk|tud|mad|fc1)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
+    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
     const data = req.params.time === '0' ? [
         'hdel',
         id.toString(),
@@ -644,6 +633,24 @@ router.get('/torrent/query/:id', function (req, res,next) {
                 }),
             }, item ? {time: item} : {}))
         });
+    }).catch(err => handleError(err, next));
+});
+
+router.put('/zipPassword/:uid', function (req, res, next){
+    console.log('zip password');
+    const id = isValidString(req.params.uid, 'uid', 'file is not vaild');
+    const pwd = isValidString(req.body.pwd, 'altpwd', 'password is not vaild');
+    Mongo('find', STORAGEDB, {
+        _id: id,
+        status: 9,
+    }, {limit: 1}).then(items => {
+        if (items.length < 1) {
+            handleError(new HoError('zip can not be fund!!!'));
+        }
+        return Mongo('update', STORAGEDB, {
+            _id: id,
+            status: 9,
+        }, {$set: {pwd}}).then(item => res.json({apiOk: true}));
     }).catch(err => handleError(err, next));
 });
 

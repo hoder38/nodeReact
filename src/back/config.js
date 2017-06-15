@@ -30,4 +30,5 @@ export const CHECK_MEDIA = env => env === RELEASE ? ReleaseConfig.CHECK_MEDIA : 
 export const API_LIMIT = env => env === RELEASE ? ReleaseConfig.API_LIMIT : DevConfig.API_LIMIT
 export const TORRENT_LIMIT = env => env === RELEASE ? ReleaseConfig.TORRENT_LIMIT : DevConfig.TORRENT_LIMIT
 export const ZIP_LIMIT = env => env === RELEASE ? ReleaseConfig.ZIP_LIMIT : DevConfig.ZIP_LIMIT
+export const MEGA_LIMIT = env => env === RELEASE ? ReleaseConfig.MEGA_LIMIT : DevConfig.MEGA_LIMIT
 export const STREAM_LIMIT = env => env === RELEASE ? ReleaseConfig.STREAM_LIMIT : DevConfig.STREAM_LIMIT

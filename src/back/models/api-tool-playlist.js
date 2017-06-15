@@ -1,23 +1,26 @@
 import { ENV_TYPE } from '../../../ver'
-import { TORRENT_LIMIT, ZIP_LIMIT, NAS_TMP } from '../config'
-import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB } from '../constants'
-import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, renameSync as FsRenameSync } from 'fs'
-import { basename as PathBasename, join as PathJoin } from 'path'
+import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config'
+import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION } from '../constants'
+import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, renameSync as FsRenameSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync } from 'fs'
+import { basename as PathBasename, join as PathJoin, dirname as PathDirname } from 'path'
 import Child_process from 'child_process'
 import TorrentStream from 'torrent-stream'
+import Mkdirp from 'mkdirp'
 import OpenSubtitle from 'opensubtitles-api'
 import Mongo from '../models/mongo-tool'
 import Api from './api-tool'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import { handleError, HoError, getFileLocation, checkAdmin, SRT2VTT } from '../util/utility'
-import { isVideo, isDoc, isZipbook } from '../util/mime'
+import { handleError, HoError, getFileLocation, checkAdmin, SRT2VTT, deleteFolderRecursive, sortList } from '../util/utility'
+import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime'
 import { computeHash } from '../util/os-torrent-hash.js'
 import sendWs from '../util/sendWs'
 
 let torrent_pool = [];
 let zip_pool = [];
+let mega_pool = [];
 let torrent_lock = false;
 let zip_lock = false;
+let mega_lock = false;
 
 const setLock = type => {
     switch (type) {
@@ -27,11 +30,63 @@ const setLock = type => {
         case 'zip':
         console.log(zip_lock);
         return zip_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock(type)), 500)) : Promise.resolve(zip_lock = true);
+        case 'mega':
+        console.log(mega_lock);
+        return mega_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock(type)), 500)) : Promise.resolve(mega_lock = true);
         default:
         console.log('unknown lock');
         return Promise.resolve(false);
     }
 }
+
+const megaGet = (rest=null) => setLock('mega').then(go => {
+    if (!go) {
+        return Promise.resolve();
+    }
+    console.log('mega get');
+    if (rest && typeof rest === 'function') {
+        rest().catch(err => handleError(err, 'Mega api rest'));
+    }
+    let time = 0;
+    let choose = -1;
+    for (let i in mega_pool) {
+        if (!time) {
+            time = mega_pool[i].time;
+            choose = i;
+        } else {
+            if (time > mega_pool[i].time) {
+                time = mega_pool[i].time;
+                choose = i;
+            }
+        }
+    }
+    console.log(choose);
+    console.log(time);
+    if (!time) {
+        mega_lock = false;
+        return Promise.resolve();
+    }
+    let runNum = 0;
+    mega_pool.forEach(v => {
+        if (v.run) {
+            runNum++;
+        }
+    });
+    const is_run = (runNum < MEGA_LIMIT(ENV_TYPE)) ? true : false;
+    if (is_run) {
+        mega_pool[choose].start = Math.round(new Date().getTime() / 1000);
+        mega_pool[choose].run = true;
+        const runUser = mega_pool[choose].user;
+        const runUrl = mega_pool[choose].url;
+        const runPath= mega_pool[choose].filePath;
+        const runData= mega_pool[choose].data;
+        mega_lock = false;
+        return startMega(runUser, runUrl, runPath, runData).catch(err => handle_err(err, runUser, 'Mega api')).then(rest => megaGet(rest));
+    } else {
+        mega_lock = false;
+        return Promise.resolve();
+    }
+});
 
 const zipGet = () => setLock('zip').then(go => {
     if (!go) {
@@ -75,7 +130,7 @@ const zipGet = () => setLock('zip').then(go => {
         const runType = zip_pool[choose].type;
         const runUser = zip_pool[choose].user;
         zip_lock = false;
-        return startZip(runUser, runIndex, runId, runOwner, runName, runPwd, runType).catch(err => handle_err(err, runUser, 'Zip api')).then(() => zipGet());
+        return startZip(runUser, runIndex, runId, runOwner, runName, runPwd, runType).catch(err => handle_err(err, runUser, 'Zip api', runId)).then(() => zipGet());
     } else {
         zip_lock = false;
         return Promise.resolve();
@@ -158,32 +213,209 @@ const torrentGet = () => setLock('torrent').then(go => {
     }
 });
 
-export default function(action, ...args) {
+export default function process(action, ...args) {
     console.log(`torrent: ${torrent_pool.length}`);
     console.log(`zip: ${zip_pool.length}`);
+    console.log(`mega: ${mega_pool.length}`);
     console.log(action);
     console.log(args);
     switch (action) {
+        case 'playlist kick':
+        return playlistKick(...args);
         case 'torrent info':
         return torrentInfo(...args);
         case 'torrent add':
         torrentAdd(...args).catch(err => handle_err(err, args[0], 'Torrent api')).then(() => torrentGet()).catch(err => handleError(err, 'Torrent api'));
         return Promise.resolve();
+        case 'torrent stop':
+        torrentStop(...args).catch(err => handle_err(err, args[0], 'Torrent api')).then(() => torrentGet()).catch(err => handleError(err, 'Torrent api'));
+        return Promise.resolve();
         case 'zip add':
-        zipAdd(...args).catch((err) => handle_err(err, args[0], 'Zip api')).then(() => zipGet()).catch(err => handleError(err, 'Zip api'));
+        zipAdd(...args).catch((err) => handle_err(err, args[0], 'Zip api', args[2])).then(() => zipGet()).catch(err => handleError(err, 'Zip api'));
+        return Promise.resolve();
+        case 'zip stop':
+        zipStop(...args).catch((err) => handle_err(err, args[0], 'Zip api')).then(() => zipGet()).catch(err => handleError(err, 'Zip api'));
+        return Promise.resolve();
+        case 'mega add':
+        megaAdd(...args).catch((err) => handle_err(err, args[0], 'Mega api')).then(rest => megaGet(rest)).catch(err => handleError(err, 'Mega api'));
+        return Promise.resolve();
+        case 'mega stop':
+        megaStop(...args).catch((err) => handle_err(err, args[0], 'Mega api')).then(rest => megaGet(rest)).catch(err => handleError(err, 'Mega api'));
         return Promise.resolve();
         default:
         return Promise.reject(handleError(new HoError('unknown playlist action!!!')));
     }
 }
 
-function handle_err(err, user, type) {
+function handle_err(err, user, type, id=false) {
     handleError(err, type);
-    sendWs({
+    sendWs(Object.assign({
         type: user.username,
         data: `${type} fail: ${err.message}`,
-    }, 0);
+    }, id ? {zip: id} : {}), 0);
 }
+
+const startMega = (user, url, filePath, data) => {
+    const real = `${filePath}/real`;
+    console.log(real);
+    return new Promise((resolve, reject) => Mkdirp(real, err => err ? megaComplete().then(() => reject(err)) : resolve())).then(() => {
+        const cmdline = `megadl --no-progress --path "${real}" "${url}"`;
+        console.log(cmdline);
+        return new Promise((resolve, reject) => {
+            const chp = Child_process.exec(cmdline, (err, output) => err ? megaComplete().then(() => reject(err)) : resolve(output));
+            return setLock('mega').then(go => {
+                if (!go) {
+                    return Promise.resolve();
+                }
+                for (let i in mega_pool) {
+                    if (url === mega_pool[i].url) {
+                        mega_pool[i].chp = chp;
+                        break;
+                    }
+                }
+                mega_lock = false;
+            }).then(() => chp);
+        }).then(output => {
+            let playList = [];
+            const megaFolder = previous => FsReaddirSync(`${real}/${previous}`).forEach((file,index) => {
+                const next = (previous === '') ? file : `${previous}/${file}`;
+                const curPath = `${real}/${next}`;
+                if (FsLstatSync(curPath).isDirectory()) {
+                    megaFolder(next);
+                } else {
+                    playList.push(next);
+                }
+            });
+            megaFolder('');
+            playList = sortList(playList);
+            if (playList.length < 1) {
+                megaComplete();
+                handleError(new HoError('mega empty'));
+            }
+            if (playList.length === 1) {
+                FsRenameSync(`${real}/${playList[0]}`, `${filePath}_t`);
+                deleteFolderRecursive(filePath);
+                FsRenameSync(`${filePath}_t`, filePath);
+                megaComplete(true);
+                if (data['rest']) {
+                    return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']([PathBasename(playList[0]), new Set(['mega upload']), new Set()])).catch(err => data['errhandle'](err));
+                }
+            } else {
+                let setTag = new Set(['mega upload', 'playlist', '播放列表']);
+                let optTag = new Set();
+                const recur_media = index => new Promise((resolve, reject) => {
+                    const stream = FsCreateReadStream(`${real}/${playList[index]}`);
+                    stream.on('error', err => {
+                        console.log('save mega error!!!');
+                        return megaComplete().then(() => reject(err))
+                    });
+                    stream.on('close', () => resolve());
+                    stream.pipe(FsCreateWriteStream(`${filePath}/${index}_complete`));
+                }).then(() => {
+                    const mediaType = extType(playList[index]);
+                    if (mediaType) {
+                        const mediaTag = extTag(mediaType['type']);
+                        mediaTag.def.forEach(i => setTag.add(i));
+                        mediaTag.opt.forEach(i => optTag.add(i));
+                    }
+                    index++;
+                    if (index < playList.length) {
+                        return recur_media(index);
+                    } else {
+                        deleteFolderRecursive(`${PathDirname(filePath)}/mega`);
+                        megaComplete(true);
+                        if (data['rest']) {
+                            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']([PathBasename(playList[0]), setTag, optTag, {
+                                mega: encodeURIComponent(url),
+                                playList,
+                            }])).catch(err => data['errhandle'](err));
+                        }
+                    }
+                });
+                return recur_media(0);
+            }
+        });
+    });
+    function megaComplete(is_success=false) {
+        return setLock('mega').then(go => {
+            if (!go) {
+                return Promise.resolve();
+            }
+            console.log('mega kill');
+            for (let i in mega_pool) {
+                if (url === mega_pool[i].url) {
+                    mega_pool[i].chp.kill('SIGKILL');
+                    mega_pool.splice(i, 1);
+                    if (!is_success) {
+                        deleteFolderRecursive(mega_pool[i].filePath);
+                    }
+                    break;
+                }
+            }
+            mega_lock = false;
+            return Promise.resolve();
+        });
+    }
+}
+
+const megaAdd = (user, url, filePath, data={})  => setLock('mega').then(go => {
+    if (!go) {
+        return Promise.resolve();
+    }
+    let is_queue = false;
+    let runNum = 0;
+    for (let i of mega_pool) {
+        if (i.url === url) {
+            is_queue = true;
+            filePath = i.filePath;
+            data = i.data;
+            const real = `${filePath}/real`;
+            console.log(real);
+            let filename = 'Mega file';
+            let size = 0;
+            const recur_size = previous => FsReaddirSync(`${real}/${previous}`).forEach((file,index) => {
+                const next = (previous === '') ? file : `${previous}/${file}`;
+                const curPath = `${real}/${next}`;
+                if (FsLstatSync(curPath).isDirectory()) {
+                    recur_size(next);
+                } else {
+                    size += FsStatSync(curPath).size;
+                    if (filename === 'Mega file') {
+                        filename = next;
+                    }
+                }
+            });
+            if (FsExistsSync(real)) {
+                recur_size('');
+                sendWs({
+                    type: user.username,
+                    data: `${filename}: ${Math.floor(size / 1024 / 1024 * 100) / 100}MB`,
+                }, 0);
+            }
+        }
+        if (i.run) {
+            runNum++;
+        }
+    }
+    const is_run = (runNum < MEGA_LIMIT(ENV_TYPE)) ? true : false;
+    if (!is_run) {
+        console.log('mega wait');
+    }
+    if (!is_queue) {
+        mega_pool.push(Object.assign({
+            user,
+            url,
+            filePath,
+            time: Math.round(new Date().getTime() / 1000),
+            data,
+        }, is_run ? {
+            start: Math.round(new Date().getTime() / 1000),
+            run: true,
+        } : {run: false}));
+    }
+    mega_lock = false;
+    return is_run ? startMega(user, url, filePath, data) : Promise.resolve();
+});
 
 const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update', STORAGEDB, {_id: id}, {$set: {utime: Math.round(new Date().getTime() / 1000)}}).then(item => {
     const filePath = getFileLocation(owner, id);
@@ -283,10 +515,12 @@ function zipAdd(user, index, id, owner, name, pwd='') {
             }
             if (i.run) {
                 runNum++;
-                console.log('zip wait');
             }
         }
         const is_run = (runNum < ZIP_LIMIT(ENV_TYPE)) ? true : false;
+        if (!is_run) {
+            console.log('zip wait');
+        }
         if (!is_queue) {
             zip_pool.push(Object.assign({
                 index: index,
@@ -476,7 +710,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                                 type: user.username,
                                 data: `${torrent_pool[i].engine.torrent.name ? `Playlist ${torrent_pool[i].engine.torrent.name}` : 'Playlist torrent'}: ${percent}%`,
                             }, 0);
-                        } else if (pType === 2) {
+                        } else if (!pType) {
                             let percent = 0;
                             if (FsExistsSync(bufferPath)) {
                                 if (torrent_pool[i].engine.files[fileIndex].length > 0) {
@@ -630,4 +864,133 @@ function torrentInfo(magnet, filePath) {
         engine.destroy();
         return resolve(data);
     }));
+}
+
+function torrentStop(user, index=false) {
+    if (user) {
+        torrent_pool.forEach(i => {
+            if (user._id.equals(i.user._id)) {
+                console.log('engine stop');
+                console.log(i);
+                if (i.engine) {
+                    i.engine.destroy();
+                }
+                for (let j in torrent_pool) {
+                    if (torrent_pool[j].hash === i.hash) {
+                        torrent_pool.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+        });
+    } else {
+        console.log(torrent_pool[index]);
+        if (torrent_pool[index].engine) {
+            torrent_pool[index].engine.destroy();
+        }
+        for (let j in torrent_pool) {
+            if (torrent_pool[j].hash === torrent_pool[index].hash) {
+                torrent_pool.splice(j, 1);
+                break;
+            }
+        }
+    }
+    return Promise.resolve();
+}
+
+function zipStop(user, index=false) {
+    if (user) {
+        zip_pool.forEach(i => {
+            if (user._id.equals(i.user._id)) {
+                console.log('zip stop');
+                console.log(i);
+                if (i.run) {
+                    i.chp.kill('SIGKILL');
+                }
+                for (let j in zip_pool) {
+                    if (i.fileId.equals(zip_pool[j].fileId)) {
+                        zip_pool.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+        });
+    } else {
+        console.log(zip_pool[index]);
+        if (zip_pool[index].run) {
+            zip_pool[index].chp.kill('SIGKILL');
+        }
+        for (let j in zip_pool) {
+            if (zip_pool[index].fileId.equals(zip_pool[j].fileId)) {
+                zip_pool.splice(j, 1);
+                break;
+            }
+        }
+    }
+    return Promise.resolve();
+}
+
+function megaStop(user, index=false) {
+    if (user) {
+        mega_pool.forEach(i => {
+            if (user._id.equals(i.user._id)) {
+                console.log('mega stop');
+                console.log(i);
+                if (i.run) {
+                    i.chp.kill('SIGKILL');
+                }
+                deleteFolderRecursive(i.filePath);
+                for (let j in mega_pool) {
+                    if (i.url === mega_pool[j].url) {
+                        mega_pool.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+        });
+    } else {
+        console.log(mega_pool[index]);
+        if (mega_pool[index].run) {
+            mega_pool[index].chp.kill('SIGKILL');
+            deleteFolderRecursive(mega_pool[index].filePath);
+        }
+        for (let j in mega_pool) {
+            if (mega_pool[index].url === mega_pool[j].url) {
+                mega_pool.splice(j, 1);
+                break;
+            }
+        }
+    }
+    return Promise.resolve();
+}
+
+function playlistKick() {
+    const kickTorrent = () => {
+        const kick_time = Math.round((new Date().getTime() - TORRENT_DURATION * 1000)/ 1000);
+        for (let i in torrent_pool) {
+            if (torrent_pool[i].engine && torrent_pool[i].start < kick_time) {
+                return process('torrent stop', null, i);
+            }
+        }
+        return Promise.resolve();
+    }
+    const kickZip = () => {
+        const kick_time = Math.round((new Date().getTime() - ZIP_DURATION * 1000)/ 1000);
+        for (let i in zip_pool) {
+            if (zip_pool[i].run && zip_pool[i].time < kick_time) {
+                return process('zip stop', null, i);
+            }
+        }
+        return Promise.resolve();
+    }
+    const kickMega = () => {
+        const kick_time = Math.round((new Date().getTime() - MEGA_DURATION * 1000)/ 1000);
+        for (let i in mega_pool) {
+            if (mega_pool[i].run && mega_pool[i].time < kick_time) {
+                return process('mega stop', null, i);
+            }
+        }
+        return Promise.resolve();
+    }
+    return kickTorrent().then(() => kickZip()).then(() => kickMega());
 }

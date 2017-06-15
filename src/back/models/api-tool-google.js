@@ -1,4 +1,4 @@
-import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT } from '../constants'
+import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE } from '../constants'
 import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
 import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT } from '../config'
 import googleapis from 'googleapis'
@@ -9,8 +9,10 @@ import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
 import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unlink as FsUnlink, renameSync as FsRenameSync, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, appendFileSync as FsAppendFileSync } from 'fs'
 import Mongo from '../models/mongo-tool'
-import { handleError, HoError } from '../util/utility'
-import { mediaMIME } from '../util/mime'
+import MediaHandleTool from '../models/mediaHandle-tool'
+import External from '../models/external-tool'
+import { handleError, HoError, deleteFolderRecursive, SRT2VTT } from '../util/utility'
+import { mediaMIME, isSub } from '../util/mime'
 import sendWs from '../util/sendWs'
 
 const OAuth2 = googleapis.auth.OAuth2;
@@ -34,14 +36,22 @@ export default function api(name, data) {
             return youtubeAPI(name, data);
         }
         switch (name) {
+            case 'stop':
+            return stopApi();
             case 'list folder':
             return list(data);
+            case 'list file':
+            return listFile(data);
             case 'create':
             return create(data);
             case 'delete':
             return deleteFile(data);
             case 'get':
             return getFile(data);
+            case 'copy':
+            return copyFile(data);
+            case 'move parent':
+            return moveParent(data);
             case 'upload':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
@@ -381,6 +391,11 @@ function upload(data) {
     return proc(1);
 }
 
+function stopApi() {
+    api_ing = 0;
+    return Promise.resolve();
+}
+
 function list(data) {
     if (!data['folderId']) {
         handleError(new HoError('list parameter lost!!!'));
@@ -405,6 +420,23 @@ function list(data) {
     return proc(1);
 }
 
+function listFile(data) {
+    if (!data['folderId']) {
+        handleError(new HoError('list parameter lost!!!'));
+    }
+    if (data['max']) {
+        max = data['max'];
+    }
+    const proc = index => new Promise((resolve, reject) => googleapis.drive({
+        version: 'v2',
+        auth: oauth2Client,
+    }).files.list({
+        q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
+        maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (index > MAX_RETRY) ? Promise.reject(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), OATH_WAITING * 1000)) : Promise.reject(err));
+    return proc(1);
+}
+
 function create(data) {
     if (!data['name'] || !data['parent']) {
         handleError(new HoError('create parameter lost!!!'));
@@ -423,11 +455,13 @@ function download(data) {
     if (!data['url'] || !data['filePath']) {
         handleError(new HoError('download parameter lost!!!'));
     }
+    const temp = `${data['filePath']}_t`;
+    const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
     const proc = index => Fetch(data['url'], {headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
-    }}).then(res => new Promise((resolve, reject) => {
-        const dest = FsCreateWriteStream(data['filePath']);
+    }}).then(res => checkTmp().then(() => new Promise((resolve, reject) => {
+        const dest = FsCreateWriteStream(temp);
         res.body.pipe(dest);
         dest.on('finish', () => {
             if ((res.headers['content-length'] && Number(res.headers['content-length']) !== FsStatSync(data['filePath'])['size'])) {
@@ -435,7 +469,8 @@ function download(data) {
             }
             return resolve();
         }).on('error', err => reject(err));
-    })).then(() => {
+    }))).then(() => {
+        FsRenameSync(temp, data['filePath']);
         if (data['rest']) {
             return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']()).catch(err => data['errhandle'](err));
         }
@@ -469,6 +504,30 @@ function getFile(data) {
         version: 'v2',
         auth: oauth2Client,
     }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata)));
+}
+
+function copyFile(data) {
+    if (!data['fileId']) {
+        handleError(new HoError('copy parameter lost!!!'));
+    }
+    return new Promise((resolve, reject) => googleapis.drive({
+        version: 'v2',
+        auth: oauth2Client,
+    }).files.copy({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
+}
+
+function moveParent(data) {
+    if (!data['fileId'] || !data['rmFolderId'] || !data['addFolderId']) {
+        handleError(new HoError('move parent parameter lost!!!'));
+    }
+    return new Promise((resolve, reject) => googleapis.drive({
+        version: 'v2',
+        auth: oauth2Client,
+    }).files.patch({
+        fileId: data['fileId'],
+        removeParents: data['rmFolderId'],
+        addParents: data['addFolderId'],
+    }, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()));
 }
 
 function downloadMedia(data) {
@@ -555,7 +614,9 @@ function downloadPresent(data) {
     }).catch(err => {
         if (number > 0) {
             handleError(err, 'Google Present');
-            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](number)).catch(err => data['errhandle'](err));
+            if (data['rest']) {
+                return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](number)).catch(err => data['errhandle'](err));
+            }
         } else {
             return Promise.reject(err);
         }
@@ -600,7 +661,9 @@ function downloadDoc(data) {
                     }
                 });
             }
-            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](doc_index)).catch(err => data['errhandle'](err));
+            if (data['rest']) {
+                return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](doc_index)).catch(err => data['errhandle'](err));
+            }
         });
     });
 }
@@ -641,4 +704,235 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
         default:
         handleError(new HoError(`recycle ${recycle} denied!!!`));
     }
+}
+
+export function googleDownloadSubtitle(url, filePath) {
+    const sub_location = `${filePath}_sub/youtube`;
+    console.log(sub_location);
+    const mkfolder = () => FsExistsSync(sub_location) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(sub_location, err => err ? reject(err) : resolve()));
+    return mkfolder().then(() => new Promise((resolve, reject) => Youtubedl.getSubs(url, {
+            auto: true,
+            all: false,
+            lang: 'zh-TW,zh-Hant,zh-CN,zh-Hans,zh-HK,zh-SG,en',
+            cwd: sub_location,
+        }, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+        let choose = null;
+        let en = null;
+        let pri = 0;
+        FsReaddirSync(sub_location).forEach(file => {
+            const sub_match = file.match(/\.([a-zA-Z\-]+)\.[a-zA-Z]{3}$/);
+            if (sub_match) {
+                switch (sub_match[1]) {
+                    case 'zh-TW':
+                    if (pri < 7) {
+                        pri = 7;
+                        choose = file;
+                    }
+                    break;
+                    case 'zh-Hant':
+                    if (pri < 6) {
+                        pri = 6;
+                        choose = file;
+                    }
+                    break;
+                    case 'zh-CN':
+                    if (pri < 5) {
+                        pri = 5;
+                        choose = file;
+                    }
+                    break;
+                    case 'zh-Hans':
+                    if (pri < 4) {
+                        pri = 4;
+                        choose = file;
+                    }
+                    break;
+                    case 'zh-HK':
+                    if (pri < 3) {
+                        pri = 3;
+                        choose = file;
+                    }
+                    break;
+                    case 'zh-SG':
+                    if (pri < 2) {
+                        pri = 2;
+                        choose = file;
+                    }
+                    break;
+                    case 'en':
+                    en = file;
+                    break;
+                }
+            }
+        });
+        if (!choose && !en) {
+            handleError(new HoError('sub donot have chinese and english!!!'));
+        }
+        const preSub = (sub, lang) => {
+            if (sub) {
+                const sub_ext = isSub(sub);
+                if (sub_ext) {
+                    if (FsExistsSync(`${filePath}${lang}.srt`)) {
+                        FsRenameSync(`${filePath}${lang}.srt`, `${filePath}${lang}.srt1`);
+                    }
+                    if (FsExistsSync(`${filePath}${lang}.ass`)) {
+                        FsRenameSync(`${filePath}${lang}.ass`, `${filePath}${lang}.ass1`);
+                    }
+                    if (FsExistsSync(`${filePath}${lang}.ssa`)) {
+                        FsRenameSync(`${filePath}${lang}.ssa`, `${filePath}${lang}.ssa1`);
+                    }
+                }
+                return sub_ext;
+            } else {
+                return false;
+            }
+        }
+        const ext = preSub(choose, '');
+        const en_ext = preSub(en, '.en');
+        if (!ext && !en_ext) {
+            handleError(new HoError('sub ext not support!!!'));
+        }
+        const renameSub = (sub, lang, sub_ext) => {
+            if (sub_ext) {
+                FsRenameSync(`${sub_location}/${sub}`, `${filePath}${lang}.${sub_ext}`);
+                return (sub_ext === 'vtt') ? Promise.resolve() : SRT2VTT(`${filePath}}${lang}`, sub_ext);
+            } else {
+                return Promise.resolve();
+            }
+        }
+        return renameSub(choose, '', ext).then(() => renameSub(en, '.en', en_ext).then(() => deleteFolderRecursive(sub_location)));
+    }));
+}
+
+export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
+    console.log('userDrive');
+    console.log(new Date());
+    console.log(userlist[index].username);
+    let folderlist = [{
+        id: userlist[index].auto,
+        title: 'drive upload',
+    }];
+    let dirpath = [];
+    let is_root = true;
+    let uploaded = null;
+    let handling = null;
+    let file_count = 0;
+    const getFolder = data => api('list folder', data).then(folder_metadataList => {
+        if (is_root) {
+            let templist = [];
+            folder_metadataList.forEach(i => {
+                if (i.title !== 'uploaded' && i.title !== 'downloaded' && i.title !== 'handling') {
+                    templist.push(i);
+                }
+            });
+            folder_metadataList = templist;
+        }
+        if (folder_metadataList.length > 0) {
+            folderlist.push({id:null});
+            folderlist = folderlist.concat(folder_metadataList);
+        } else {
+            dirpath.pop();
+        }
+        is_root = false;
+        return getDriveList();
+    });
+    return getDriveList().then(() => {
+        index++;
+        if (index < userlist.length) {
+            return userDrive(userlist, index);
+        }
+    });
+    function getDriveList() {
+        let current = folderlist.pop();
+        while (folderlist.length !== 0 && !current.id) {
+            dirpath.pop();
+            current = folderlist.pop();
+        }
+        if (!current || !current.id) {
+            return Promise.resolve();
+        }
+        dirpath.push(current.title);
+        const data = {folderId: current.id};
+        return api('list file', data).then(metadataList => {
+            if (metadataList.length > 0) {
+                if (metadataList.length > (drive_batch - file_count)) {
+                    metadataList.splice(drive_batch - file_count);
+                }
+                const getUpload = () => uploaded ? Promise.resolve() : api('list folder', {
+                    folderId: userlist[index].auto,
+                    name: 'uploaded',
+                }).then(uploadedList =>  {
+                    if (uploadedList.length < 1 ) {
+                        handleError(new HoError('do not have uploaded folder!!!'));
+                    }
+                    uploaded = uploadedList[0].id;
+                });
+                const getHandle = () => handling ? Promise.resolve() : api('list folder', {
+                    folderId: userlist[index].auto,
+                    name: 'handling',
+                }).then(handlingList =>  {
+                    if (handlingList.length < 1 ) {
+                        handleError(new HoError('do not have handling folder!!!'));
+                    }
+                    handling = handlingList[0].id;
+                });
+                return getUpload().then(() => getHandle()).then(() => MediaHandleTool.singleDrive(metadataList, 0, userlist[index], data['folderId'], uploaded, handling, dirpath).then(() => {
+                    file_count += metadataList.length;
+                    return (file_count < drive_batch) ? getFolder(data) : Promise.resolve();
+                }));
+            } else {
+                return getFolder(data);
+            }
+        });
+    }
+}
+
+export function autoDoc(userlist, index, type, date=null) {
+    console.log('autoDoc');
+    console.log(new Date());
+    console.log(userlist[index].username);
+    date = date ? date : new Date();
+    if (!DOC_TYPE.hasOwnProperty(type)) {
+        handleError(new HoError('do not have this country!!!'));
+    }
+    let downloaded = null;
+    let downloaded_data = {
+        folderId: userlist[index].auto,
+        name: 'downloaded',
+    };
+    return api('list folder', downloaded_data).then(downloadedList => {
+        if (downloadedList.length < 1) {
+            handleError(new HoError('do not have downloaded folder!!!'));
+        }
+        downloaded = downloadedList[0].id;
+        const download_ext_doc = (tIndex, doc_type) => External.getSingleList(doc_type[tIndex], date).then(doclist => {
+            console.log(doclist);
+            const recur_download = dIndex => {
+                const single_download = () => (dIndex < doclist.length) ? External.save2Drive(doc_type[tIndex], doclist[dIndex], downloaded) : Promise.resolve();
+                return single_download().then(() => {
+                    dIndex++;
+                    if (dIndex < doclist.length) {
+                        return recur_download(dIndex);
+                    } else {
+                        tIndex++;
+                        if (tIndex < doc_type.length) {
+                            return download_ext_doc(tIndex, doc_type);
+                        } else {
+                            index++;
+                            if (index < userlist.length) {
+                                return autoDoc(userlist, index, type, date);
+                            }
+                        }
+                    }
+                });
+            }
+            return recur_download(0);
+        });
+        return download_ext_doc(0, DOC_TYPE[type]).then(() => {
+            index++;
+            if (index < userlist.length) {
+                autoDoc(userlist, index, type, date);
+            }
+        });
+    });
 }

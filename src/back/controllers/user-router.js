@@ -129,7 +129,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         Mongo('update', USERDB, {_id: id}, {$set: data}).then(user => Object.getOwnPropertyNames(ret).length === 0 ? res.json({apiOK: true}) : res.json(ret)).catch(err => handleError(err, next));
     }
 }).post(function(req, res, next) {
-    console.log('adduser');
+    console.log('add user');
     if (!checkAdmin(1, req.user)) {
         handleError(new HoError('unknown type in edituser', {code: 403}));
     }

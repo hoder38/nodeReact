@@ -1,12 +1,12 @@
 import { STORAGEDB, STATIC_PATH } from '../constants'
 import Mkdirp from 'mkdirp'
 import { existsSync as FsExistsSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, renameSync as FsRenameSync } from 'fs'
-import { join as PathJoin } from 'path'
+import { join as PathJoin, dirname as PathDirname } from 'path'
 import Child_process from 'child_process'
-import Mongo from '../models/mongo-tool'
+import Mongo, { objectID } from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { normalize, isDefaultTag } from '../models/tag-tool'
-import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList } from '../util/utility'
+import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName, addPost } from '../util/utility'
 import { extTag, extType, isZip, isImage, changeExt } from '../util/mime'
 import Transcoder from '../util/stream-transcoder.js'
 import sendWs from '../util/sendWs'
@@ -182,7 +182,7 @@ export default {
                         });
                     } else {
                         handleRest(first);
-                        return [mediaType, mediaTag, DBdata];
+                        return Promise.resolve([mediaType, mediaTag, DBdata]);
                     }
                     break;
                     case 'image':
@@ -463,7 +463,7 @@ export default {
                 url: thumbnail,
                 filePath: `${filePath}.jpg`,
                 rest: () => {
-                    const rest1 = () => mediaType['notOwner'] ? Promise.resolve() : GoogleApi('delete', {fileId: key});
+                    const rest1 = () => GoogleApi('delete', {fileId: key});
                     return rest1().then(() => completeMedia(fileID, 2, mediaType['fileIndex']));
                 },
                 errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
@@ -513,6 +513,198 @@ export default {
             }));
         }
     },
+    singleDrive: function(metadatalist, index, user, folderId, uploaded, handling, dirpath) {
+        console.log('singleDrive');
+        console.log(new Date());
+        const metadata = metadatalist[index];
+        console.log(metadata);
+        const oOID = objectID();
+        const filePath = getFileLocation(user._id, oOID);
+        const mkFolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const handleDelete = () => (!metadata.userPermission || metadata.userPermission.role !== 'owner') ? GoogleApi('move parent', {
+            fileId: metadata.id,
+            rmFolderId: handling,
+            addFolderId: uploaded,
+        }) : GoogleApi('delete', {fileId: metadata.id});
+        const handleRest = (data, name, status=false, key=false, is_handled=false) => this.handleTag(filePath, data, name, '', 0).then(([mediaType, mediaTag, DBdata]) => {
+            if (key) {
+                mediaType['key'] = key;
+            }
+            let setTag = new Set();
+            setTag.add(normalize(DBdata['name'])).add(normalize(user.username));
+            if (dirpath) {
+                dirpath.forEach(p => setTag.add(normalize(p)));
+            }
+            mediaTag.def.forEach(i => setTag.add(normalize(i)));
+            let setArr = [];
+            setTag.forEach(s => {
+                const is_d = isDefaultTag(s);
+                if (!is_d) {
+                    setArr.push(s);
+                } else if (is_d.index === 0) {
+                    DBdata['adultonly'] = 1;
+                }
+            });
+            return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                tags: setArr,
+                [user._id]: setArr,
+            }, status ? {status} : {})).then(item => {
+                console.log(item);
+                console.log('save end');
+                sendWs({
+                    type: 'file',
+                    data: item[0]._id,
+                }, item[0].adultonly);
+                return is_handled ? handleDelete() : this.handleMediaUpload(mediaType, filePath, item[0]['_id'], user).then(() => handleDelete()).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+            });
+        });
+        const handleFile = () => {
+            let name = toValidName(metadata.title);
+            if (isDefaultTag(normalize(name))) {
+                name = addPost(name, '1');
+            }
+            let adultonly = 0;
+            if (checkAdmin(2 ,user)) {
+                for (let i in dirpath) {
+                    if (isDefaultTag(normalize(i)).index === 0) {
+                        adultonly = 1;
+                        break;
+                    }
+                }
+            }
+            let data = {
+                _id: oOID,
+                name,
+                owner: user._id,
+                utime: Math.round(new Date().getTime() / 1000),
+                size: metadata.fileSize,
+                count: 0,
+                first: 1,
+                recycle: 0,
+                status: 0,
+                adultonly,
+                untag: 0,
+            };
+            const mediaType = extType(name);
+            switch(mediaType['type']) {
+                case 'video':
+                if (!metadata.videoMediaMetadata) {
+                    handleError(new HoError('not transcode yet'));
+                    /*if (!metadata.userPermission || metadata.userPermission.role === 'owner') {
+                        handleError(new HoError('not transcode yet'));
+                    }
+                    return GoogleApi('copy', {fileId: metadata.id});*/
+                }
+                return GoogleApi('move parent', {
+                    fileId: metadata.id,
+                    rmFolderId: folderId,
+                    addFolderId: handling,
+                }).then(() => FsExistsSync(filePath) ? GoogleApi('download media', {
+                    key: metadata.id,
+                    filePath: `${filePath}_complete`,
+                    hd: getHd(metadata.videoMediaMetadata.height),
+                    rest: () => handleRest(data, name, 3, metadata.id, true),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
+                }) : GoogleApi('download', {
+                    url: metadata.downloadUrl,
+                    filePath,
+                    rest: () => GoogleApi('download media', {
+                        key: metadata.id,
+                        filePath: `${filePath}_complete`,
+                        hd: getHd(metadata.videoMediaMetadata.height),
+                        rest: () => handleRest(data, name, 3, metadata.id, true),
+                        errhandle: err => handleError(err, errDrive, metadata.id, folderId),
+                    }),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
+                })).catch(err => errDrive(err, metadata.id, folderId));
+                default:
+                return GoogleApi('move parent', {
+                    fileId: metadata.id,
+                    rmFolderId: folderId,
+                    addFolderId: handling,
+                }).then(() => FsExistsSync(filePath) ? handleRest(data, name) : GoogleApi('download', {
+                    url: metadata.downloadUrl,
+                    filePath,
+                    rest: () => handleRest(data, name),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
+                })).catch(err => errDrive(err, metadata.id, folderId));
+            }
+        }
+        const handleNext = () => {
+            index++;
+            if (index < metadatalist.length) {
+                this.singleDrive(metadatalist, index, user, folderId, uploaded, handling, dirpath);
+            }
+        }
+        return mkFolder(PathDirname(filePath)).then(() => handleFile()).then(() => handleNext()).catch(err => {
+            handleError(err, 'Single Drive');
+            return handleNext();
+        });
+    },
+    checkMedia: function() {
+        return Mongo('find', STORAGEDB, {mediaType: {$exists: true}}).then(items => {
+            if (items.length > 0) {
+                let timeoutItems = [];
+                items.forEach(i => {
+                    if (i.mediaType.type) {
+                        if (i.mediaType.timeout) {
+                            timeoutItems.push({
+                                item: i,
+                                mediaType: i.mediaType,
+                            });
+                        }
+                    } else {
+                        let is_empty = true;
+                        for (let j in i.mediaType) {
+                            is_empty = false;
+                            if (i.mediaType[j].timeout) {
+                                timeoutItems.push({
+                                    item: i,
+                                    mediaType: i.mediaType[j],
+                                });
+                            }
+                        }
+                        if (is_empty) {
+                            Mongo('update', STORAGEDB, {_id: i._id}, {$unset: {mediaType: ''}}).catch(err => handleError(err, 'Clean playlist'));
+                        }
+                    }
+                });
+                console.log(timeoutItems);
+                if (timeoutItems.length > 0) {
+                    const recur_check = index => {
+                        const single_check = () => {
+                            const filePath = getFileLocation(timeoutItems[index].item.owner, timeoutItems[index].item._id);
+                            if (timeoutItems[index].mediaType.key) {
+                                return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
+                                    _id: timeoutItems[index].item.owner,
+                                    perm: 1,
+                                }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                            } else if (timeoutItems[index].mediaType['realPath']) {
+                                if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
+                                    return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${fileIndex}.timeout`]: false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
+                                        _id: timeoutItems[index].item.owner,
+                                        perm: 1,
+                                    }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                }
+                            } else {
+                                return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
+                                    _id: timeoutItems[index].item.owner,
+                                    perm: 1,
+                                }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                            }
+                        }
+                        return single_check().then(() => {
+                            index++;
+                            if (index < timeoutItems.length) {
+                                return recur_check(index);
+                            }
+                        });
+                    }
+                    return recur_check(0);
+                }
+            }
+        });
+    },
 }
 
 export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('update', STORAGEDB, {_id: fileID}, Object.assign({
@@ -546,3 +738,9 @@ const getTimeTag = (time, opt) => {
         return opt.splice(0, 2);
     }
 }
+
+const errDrive = (err, key, folderId) => GoogleApi('move parent', {
+    fileId: key,
+    rmFolderId: handling,
+    addFolderId: folderId,
+}).then(() => Promise.reject(err));

@@ -1,18 +1,23 @@
 import { USERDB, STORAGEDB } from '../constants'
 import Express from 'express'
 import { getInfo as YouGetInfo} from 'youtube-dl'
-import { existsSync as FsExistsSync } from 'fs'
-import { dirname as PathDirname, basename as PathBasename } from 'path'
+import { existsSync as FsExistsSync, unlink as FsUnlink, statSync as FsStatSync, renameSync as FsRenameSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, createReadStream as FsCreateReadStream, writeFile as FsWriteFile } from 'fs'
+import { dirname as PathDirname, basename as PathBasename, join as PathJoin } from 'path'
 import Mkdirp from 'mkdirp'
+import { createInterface } from 'readline'
+import ReadTorrent from 'read-torrent'
+import OpenSubtitle from 'opensubtitles-api'
+import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool'
-import MediaHandleTool from '../models/mediaHandle-tool'
-import GoogleApi from '../models/api-tool-google'
+import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
+import GoogleApi, { googleDownloadSubtitle } from '../models/api-tool-google'
+import PlaylistApi from '../models/api-tool-playlist'
 import Api from '../models/api-tool'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { bilibiliVideoUrl, youtubeVideoUrl, kuboVideoUrl } from '../models/external-tool'
-import { addPost, extType, extTag, supplyTag } from '../util/mime'
-import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList } from '../util/utility'
-
+import External, { bilibiliVideoUrl, youtubeVideoUrl, subHdUrl } from '../models/external-tool'
+import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime'
+import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility'
+import sendWs from '../util/sendWs'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -175,7 +180,7 @@ router.get('/2drive/:uid', function(req, res, next){
 
 router.get('/getSingle/:uid', function(req, res, next) {
     console.log('external getSingle');
-    const id = req.params.uid.match(/^(you|dym|bil|soh|let|vqq|fun|kdr|yuk|tud)_(.*)/);
+    const id = req.params.uid.match(/^(you|dym|bil|yuk|ope)_(.*)/);
     if (!id) {
         handleError(new HoError('file is not youtube video!!!'));
     }
@@ -190,42 +195,872 @@ router.get('/getSingle/:uid', function(req, res, next) {
         idsub = id[2].match(/^([^_]+)_(\d+)$/);
         url = idsub ? `http://www.bilibili.com/video/${idsub[1]}/index_${idsub[2]}.html` : `http://www.bilibili.com/video/${id[2]}/`;
         break;
-        case 'soh':
-        idsub = id[2].match(/^([^_]+)_(\d)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://tv.sohu.com/${idsub[1]}`;
-        break;
-        case 'let':
-        url = `http://www.letv.com/ptv/vplay/${id[2]}`;
-        break;
-        case 'vqq':
-        idsub = id[2].match(/^([^_]+)_(\d)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://v.qq.com/${idsub[1]}`;
-        break;
-        case 'fun':
-        idsub = id[2].match(/^([^_]+)_([^_]+)$/);
-        url = `http://www.funshion.com/vplay/${idsub[1]}-${idsub[2]}`;
-        break;
-        case 'kdr':
-        url = id[2];
-        break;
         case 'yuk':
-        idsub = id[2].match(/^([^_]+)_(\d+)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://v.youku.com/v_show/id_${idsub[1]}.html`;
+        url = `http://v.youku.com/v_show/id_${id[2]}.html`;
         break;
-        case 'tud':
-        idsub = id[2].match(/^([^_]+)_(\d+)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://www.tudou.com/albumplay/${idsub[1]}.html`;
+        case 'ope':
+        url = `https://openload.co/embed/${id[2]}/`;
         break;
         default:
         url = `http://www.youtube.com/watch?v=${id[2]}`;
         break;
     }
-    const getUrl = () => (id[1] === 'soh' || id[1] === 'let' || id[1] === 'vqq' || id[1] === 'fun' || id[1] === 'yuk' || id[1] === 'tud' || id[1] === 'kdr') ? kuboVideoUrl(id[1], url, subIndex) : (id[1] === 'bil') ? bilibiliVideoUrl(url) : youtubeVideoUrl(id[1], url);
+    const getUrl = () => (id[1] === 'bil') ? bilibiliVideoUrl(url) : youtubeVideoUrl(id[1], url);
     getUrl().then(ret_obj => res.json(ret_obj)).catch(err => handleError(err, next));
+});
+
+router.post('/upload/url', function(req, res, next) {
+    console.log('externel upload url');
+    const url = isValidString(req.body.url, 'url', 'url is not vaild');
+    const addurl = url.match(/^url%3A(.*)/);
+    if (addurl) {
+        let url_name = toValidName(addurl[1]);
+        if (isDefaultTag(normalize(url_name))) {
+            url_name = addPost(url_name, '1');
+        }
+        MediaHandleTool.handleTag('', {
+            _id: objectID(),
+            name: url_name,
+            owner: req.user._id,
+            utime: Math.round(new Date().getTime() / 1000),
+            url: addurl[1],
+            size: 0,
+            count: 0,
+            first: 1,
+            recycle: 0,
+            adultonly: (checkAdmin(2 ,req.user) && getJson(req.body.type) === 1) ? 1 : 0,
+            untag: 1,
+            status: 7,
+        }, url_name, '', 7).then(([mediaType, mediaTag, DBdata]) => {
+            let setTag = new Set();
+            setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
+            if (req.body.path) {
+                req.body.path.forEach(p => setTag.add(normalize(p)));
+            }
+            let optTag = new Set();
+            mediaTag.def.forEach(i => setTag.add(normalize(i)));
+            mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+            let setArr = [];
+            setTag.forEach(s => {
+                const is_d = isDefaultTag(s);
+                if (!is_d) {
+                    setArr.push(s);
+                } else if (is_d.index === 0) {
+                    DBdata['adultonly'] = 1;
+                }
+            });
+            let optArr = [];
+            optTag.forEach(o => {
+                if (!isDefaultTag(o) && !setArr.includes(o)) {
+                    optArr.push(o);
+                }
+            });
+            return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                tags: setArr,
+                [req.user._id]: setArr,
+            })).then(item => {
+                console.log(item);
+                console.log('save end');
+                sendWs({
+                    type: 'file',
+                    data: item[0]._id,
+                }, item[0].adultonly);
+                return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                    const reli = relative.length < 5 ? relative.length : 5;
+                    if (checkAdmin(2 ,req.user)) {
+                        (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
+                    }
+                    (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                    for (let i = 0; i < reli; i++) {
+                        const normal = normalize(relative[i]);
+                        if (!isDefaultTag(normal)) {
+                            if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                optArr.push(normal);
+                            }
+                        }
+                    }
+                    res.json({
+                        id: item[0]._id,
+                        name: item[0].name,
+                        select: setArr,
+                        option: supplyTag(setArr, optArr),
+                        other: [],
+                    });
+                });
+            });
+        }).catch(err => handleError(err, next));
+    } else {
+        let decodeUrl = decodeURIComponent(url);
+        const oOID = objectID();
+        const filePath = getFileLocation(req.user._id, oOID);
+        const shortTorrentMatch = decodeUrl.match(/^magnet:[^&]+/);
+        const folderPath = shortTorrentMatch ? filePath : PathDirname(filePath);
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        let is_media = 0;
+        mkfolder().then(() => {
+            if (shortTorrentMatch) {
+                const shortTorrent = shortTorrentMatch[0];
+                if (shortTorrent === 'magnet:stop') {
+                    return PlaylistApi('torrent stop', req.user).then(() => res.json({stop: true}));
+                } else if (shortTorrent === 'magnet:stopzip') {
+                    return PlaylistApi('zip stop', req.user).then(() => res.json({stop: true}));
+                } else if (shortTorrent === 'magnet:stopmega') {
+                    return PlaylistApi('mega stop', req.user).then(() => res.json({stop: true}));
+                } else if (shortTorrent === 'magnet:stopapi') {
+                    if (!checkAdmin(1 ,req.user)) {
+                        handleError(new HoError('permission denied!'));
+                    }
+                    return Api('stop').then(() => res.json({stop: true}));
+                } else if (shortTorrent === 'magnet:stopgoogle') {
+                    if (!checkAdmin(1 ,req.user)) {
+                        handleError(new HoError('permission denied!'));
+                    }
+                    return GoogleApi('stop').then(() => res.json({stop: true}));
+                } else {
+                    return Mongo('find', STORAGEDB, {magnet: {
+                        $regex: shortTorrent.match(/[^:]+$/)[0],
+                        $options: 'i',
+                    }}, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            handleError(new HoError('already has one'));
+                        }
+                        return PlaylistApi('torrent info', decodeUrl, filePath).then(info => {
+                            let setTag = new Set(['torrent', 'playlist', '播放列表']);
+                            let optTag = new Set();
+                            let playList = info.files.map(file => {
+                                console.log(file.name);
+                                const mediaType = extType(file.name);
+                                if (mediaType) {
+                                    const mediaTag = extTag(mediaType['type']);
+                                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                                }
+                                return file.path;
+                            });
+                            if (playList.length < 1) {
+                                handleError(new HoError('empty content!!!'));
+                            }
+                            playList = sortList(playList);
+                            return [`Playlist ${info.name}`, setTag, optTag, {
+                                magnet: url,
+                                playList: playList,
+                            }];
+                        });
+                    });
+                }
+            } else {
+                if (decodeUrl.match(/^(https|http):\/\/(www\.youtube\.com|youtu\.be)\//)) {
+                    const is_music = decodeUrl.match(/^(.*):music$/);
+                    if (is_music) {
+                        is_media = 4;
+                        console.log('youtube music');
+                        decodeUrl = is_music[1];
+                        isValidString(decodeUrl, 'url', 'url is not vaild');
+                    } else {
+                        is_media = 3;
+                        console.log('youtube');
+                    }
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'youtube',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 2}).then(items => {
+                        if (items.length > 0) {
+                            for (let i of items) {
+                                console.log(i);
+                                if (i.thumb && i.status === is_media) {
+                                    handleError(new HoError('already has one'));
+                                    break;
+                                }
+                            }
+                        }
+                        const getYoutubeInfo = detaildata => {
+                            if (detaildata.length < 1) {
+                                handleError(new HoError('can not find playlist'));
+                            }
+                            const media_name = detaildata[0].snippet.title;
+                            const ctitle = detaildata[0].snippet.channelTitle;
+                            console.log(media_name);
+                            let setTag = new Set();
+                            let optTag = new Set();
+                            setTag.add(normalize('youtube'));
+                            if (ctitle) {
+                                setTag.add(normalize(ctitle));
+                            }
+                            if (detaildata[0].snippet.tags) {
+                                detaildata[0].snippet.tags.forEach(i => setTag.add(normalize(i)));
+                            }
+                            const mediaTag = extTag(is_music ? 'music' : 'video');
+                            mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                            mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                            return [media_name, setTag, optTag, {
+                                owner: 'youtube',
+                                untag: 0,
+                                thumb: detaildata[0].snippet.thumbnails.default.url,
+                                cid: detaildata[0].snippet.channelId,
+                                ctitle,
+                                url: decodeUrl,
+                            }];
+                        }
+                        let youtube_id = decodeUrl.match(/list=([^&]+)/);
+                        if (youtube_id) {
+                            return GoogleApi('y playlist', {
+                                id: youtube_id[1],
+                                caption: true,
+                            }).then(detaildata => getYoutubeInfo(detaildata));
+                        } else {
+                            youtube_id = decodeUrl.match(/v=([^&]+)/);
+                            if (!youtube_id) {
+                                handleError(new HoError('can not find youtube id!!!'));
+                            }
+                            return GoogleApi('y video', {
+                                id: youtube_id[1],
+                                caption: true,
+                            }).then(detaildata => getYoutubeInfo(detaildata));
+                        }
+                    });
+                } else if (decodeUrl.match(/^(https|http):\/\/yts\.ag\/movie\//)) {
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'yify',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            handleError(new HoError('already has one'));
+                        }
+                        const yify_id = decodeUrl.match(/[^\/]+$/);
+                        if (!yify_id) {
+                            handleError(new HoError('yify url invalid'));
+                        }
+                        is_media = 3;
+                        return External.saveSingle('yify', yify_id[0]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                            owner: owner,
+                            untag: 0,
+                            thumb: thumb,
+                            url: url,
+                        }]);
+                    });
+                } else if (decodeUrl.match(/^(https|http):\/\/www\.cartoonmad\.com\/comic\//)) {
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'cartoonmad',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            handleError(new HoError('already has one'));
+                        }
+                        const cartoonmad_id = decodeUrl.match(/([^\/]+)\.html$/);
+                        if (!cartoonmad_id) {
+                            handleError(new HoError('cartoonmad url invalid'));
+                        }
+                        is_media = 2;
+                        return External.saveSingle('cartoonmad', cartoonmad_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                            owner: owner,
+                            untag: 0,
+                            thumb: thumb,
+                            url: url,
+                        }]);
+                    });
+                } else if (decodeUrl.match(/^(https|http):\/\/www\.bilibili\.com\//) || decodeUrl.match(/^(https|http):\/\/bangumi\.bilibili\.com\//)) {
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'bilibili',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            handleError(new HoError('already has one'));
+                        }
+                        const bili_id = decodeUrl.match(/([^\/]+)\/?$/);
+                        if (!bili_id) {
+                            handleError(new HoError('bilibili url invalid'));
+                        }
+                        is_media = 3;
+                        return External.saveSingle('bilibili', bili_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                            owner: owner,
+                            untag: 0,
+                            thumb: thumb,
+                            url: url,
+                        }]);
+                    });
+                } else if (decodeUrl.match(/^(https|http):\/\/mega\./)) {
+                    return PlaylistApi('mega add', req.user, decodeUrl, filePath, {
+                        rest: ([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj),
+                        errhandle: err => pureDownload(err),
+                    });
+                } else {
+                    return Promise.reject(new HoError('unknown type'));
+                }
+            }
+        }).catch(err => pureDownload(err)).then(result => Array.isArray(result) ? result : []).then(([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj)).catch(err => handleError(err, next));
+        function pureDownload(err) {
+            handleError(err, 'Url upload');
+            return Api('download', req.user, decodeUrl, {
+                is_check: false,
+                filePath,
+                rest: ([pathname, filename]) => {
+                    console.log(filename);
+                    const getFile = () => !isTorrent(filename) ? Promise.resolve([filename, new Set(), new Set()]) : new Promise((resolve, reject) => ReadTorrent(filePath, (err, torrent) => err ? reject(err) : resolve(torrent))).then(torrent => {
+                        const magnet = torrent2Magnet(torrent);
+                        if (!magnet) {
+                            handleError(new HoError('magnet create fail'));
+                        }
+                        console.log(magnet);
+                        const encodeTorrent = isValidString(magnet, 'url');
+                        if (encodeTorrent === false) {
+                            handleError(new HoError('magnet is not vaild'));
+                        }
+                        const shortTorrent = magnet.match(/^magnet:[^&]+/);
+                        if (!shortTorrent) {
+                            handleError(new HoError('magnet create fail'));
+                        }
+                        return new Promise((resolve, reject) => FsUnlink(filePath, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Mkdirp(filePath, err => err ? reject(err) : resolve()))).then(() => Mongo('find', STORAGEDB, {magnet: {
+                            $regex: shortTorrent[0].match(/[^:]+$/)[0],
+                            $options: 'i',
+                        }}, {limit: 1})).then(items => {
+                            if (items.length > 0) {
+                                handleError(new HoError('already has one'));
+                            }
+                            return PlaylistApi('torrent info', magnet, filePath).then(info => {
+                                let setTag = new Set(['torrent', 'playlist', '播放列表']);
+                                let optTag = new Set();
+                                let playList = info.files.map(file => {
+                                    console.log(file.name);
+                                    const mediaType = extType(file.name);
+                                    if (mediaType) {
+                                        const mediaTag = extTag(mediaType['type']);
+                                        mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                                        mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                                    }
+                                    return file.path;
+                                });
+                                if (playList.length < 1) {
+                                    handleError(new HoError('empty content!!!'));
+                                }
+                                playList = sortList(playList);
+                                return [`Playlist ${info.name}`, setTag, optTag, {
+                                    magnet: encodeTorrent,
+                                    playList: playList,
+                                }];
+                            });
+                        });
+                    });
+                    return getFile().then(([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj));
+                },
+                errHandle: err => Promise.reject(err),
+            });
+        }
+        function streamClose(filename, setTag, optTag, db_obj={}) {
+            if (!filename) {
+                return Promise.resolve();
+            }
+            let name = toValidName(filename);
+            if (isDefaultTag(normalize(name))) {
+                name = addPost(name, '1');
+            }
+            let size = 0;
+            if (FsExistsSync(filePath)) {
+                const stats = FsStatSync(filePath);
+                if (stats.isFile()) {
+                    size = stats['size'];
+                }
+            }
+            const data = {
+                _id: oOID,
+                name,
+                owner: req.user._id,
+                utime: Math.round(new Date().getTime() / 1000),
+                size,
+                count: 0,
+                recycle: 0,
+                adultonly: (checkAdmin(2 ,req.user) && getJson(req.body.type) === 1) ? 1 : 0,
+                untag: req.body.hide ? 0 : 1,
+                first: req.body.hide ? 0 : 1,
+                status: (db_obj && (db_obj['magnet'] || db_obj['mega'])) ? 9 : 0,
+            };
+            return MediaHandleTool.handleTag(filePath, data, name, '', data['status']).then(([mediaType, mediaTag, DBdata]) => {
+                if (is_media) {
+                    DBdata['status'] = is_media;
+                    let tmp = {}
+                    for (let i in DBdata) {
+                        if (i !== 'mediaType') {
+                            tmp[i] = DBdata[i];
+                        }
+                    }
+                    DBdata = tmp;
+                }
+                const isPreview = () => (mediaType.type === 'video' && DBdata['status'] === 1) ? new Promise((resolve, reject) => {
+                    let is_preview = true;
+                    Avconv(['-i', filePath]).once('exit', function(exitCode, signal, metadata2) {
+                        if (metadata2 && metadata2.input && metadata2.input.stream) {
+                            for (let m of metadata2.input.stream[0]) {
+                                console.log(m.type);
+                                console.log(m.codec);
+                                if (m.type === 'video' && m.codec !== 'h264') {
+                                    is_preview = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (is_preview) {
+                            DBdata['status'] = 3;
+                        }
+                        return resolve();
+                    });
+                }) : Promise.resolve();
+                return isPreview().then(() => {
+                    setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username)).add('url upload');
+                    if (req.body.path) {
+                        req.body.path.forEach(p => setTag.add(normalize(p)));
+                    }
+                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                    let setArr = [];
+                    setTag.forEach(s => {
+                        const is_d = isDefaultTag(s);
+                        if (!is_d) {
+                            setArr.push(s);
+                        } else if (is_d.index === 0) {
+                            DBdata['adultonly'] = 1;
+                        }
+                    });
+                    let optArr = [];
+                    optTag.forEach(o => {
+                        if (!isDefaultTag(o) && !setArr.includes(o)) {
+                            optArr.push(o);
+                        }
+                    });
+                    return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                        tags: setArr,
+                        [req.user._id]: setArr,
+                    }, db_obj)).then(item => {
+                        console.log(item);
+                        console.log('save end');
+                        sendWs({
+                            type: 'file',
+                            data: item[0]._id,
+                        }, item[0].adultonly);
+                        sendWs({
+                            type: req.user.username,
+                            data: `${item[0]['name']} upload complete`,
+                        }, item[0].adultonly);
+                        return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                            const reli = relative.length < 5 ? relative.length : 5;
+                            if (checkAdmin(2 ,req.user)) {
+                                (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
+                            }
+                            (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                            for (let i = 0; i < reli; i++) {
+                                const normal = normalize(relative[i]);
+                                if (!isDefaultTag(normal)) {
+                                    if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                        optArr.push(normal);
+                                    }
+                                }
+                            }
+                            const recur_mhandle = index => {
+                                const singel_mhandle = () => {
+                                    if (!isVideo(db_obj['playList'][index]) && !isDoc(db_obj['playList'][index]) && !isZipbook(db_obj['playList'][index])) {
+                                        return Promise.resolve();
+                                    }
+                                    return MediaHandleTool.handleTag(`${filePath}/real/${db_obj['playList'][index]}`, {}, PathBasename(db_obj['playList'][index]), '', 0).then(([mediaType, mediaTag, DBdata]) => {
+                                        mediaType['fileIndex'] = index;
+                                        mediaType['realPath'] = db_obj['playList'][index];
+                                        DBdata['status'] = 9;
+                                        DBdata[`mediaType.${index}`] = mediaType;
+                                        console.log(DBdata);
+                                        return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
+                                    });
+                                }
+                                return singel_mhandle().then(() => {
+                                    index++;
+                                    if (index < db_obj['playList'].length) {
+                                        return recur_mhandle(index);
+                                    }
+                                });
+                            }
+                            const rest_handle = () => (db_obj && db_obj['mega'] && db_obj['playList']) ? recur_mhandle(0) : is_media ? Promise.resolve() : MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex']));
+                            return rest_handle().then(() => DBdata['untag'] ? res.json({
+                                id: item[0]._id,
+                                name: item[0].name,
+                                select: setArr,
+                                option: supplyTag(setArr, optArr),
+                                other: [],
+                            }) : res.json({id: item[0]._id}));
+                        });
+                    });
+                });
+            });
+        }
+    }
+});
+
+router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
+    console.log('subtitle search');
+    let name = isValidString(req.body.name, 'name', 'name is not vaild');
+    const episode_match = req.body.episode ? req.body.episode.match(/^(s(\d*))?(e)?(\d+)$/i) : false;
+    let episode = 0;
+    let season = 0;
+    let episode_1 = null;
+    let episode_2 = null;
+    let episode_3 = null;
+    let episode_4 = null;
+    if (episode_match) {
+        if (!episode_match[1] && !episode_match[3]) {
+            episode = Number(episode_match[4]);
+            season = 1;
+        } else if (!episode_match[1]){
+            episode = Number(episode_match[4]);
+            season = 1;
+        } else if (!episode_match[3]){
+            episode = 1;
+            season = Number(`${episode_match[2]}${episode_match[4]}`);
+        } else if (episode_match[2] === ''){
+            episode = Number(episode_match[4]);
+            season = 1;
+        } else {
+            episode = Number(episode_match[4]);
+            season = Number(episode_match[2]);
+        }
+        if (episode < 10) {
+            if (season < 10) {
+                episode_1 = ` s0${season}e0${episode}`;
+                episode_2 = ` s${season}e0${episode}`;
+                episode_3 = ` s0${season}`;
+                episode_4 = ` s${season}`;
+            } else {
+                episode_1 = ` s${season}e0${episode}`;
+                episode_2 = ` s${season}`;
+            }
+        } else {
+            if (season < 10) {
+                episode_1 = ` s0${season}e${episode}`;
+                episode_2 = ` s${season}e${episode}`;
+                episode_3 = ` s0${season}`;
+                episode_4 = ` s${season}`;
+            } else {
+                episode_1 = ` s${season}e${episode}`;
+                episode_2 = ` s${season}`;
+            }
+        }
+    }
+    console.log(season);
+    console.log(episode);
+    const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
+    let type = 'youtube';
+    switch(idMatch[1]) {
+        case 'dym':
+        type = 'dailymotion';
+        break;
+        case 'bil':
+        type = 'bilibili';
+        break;
+        case 'yuk':
+        type = 'youku';
+        break;
+        case 'ope':
+        type = 'openload';
+        break;
+    }
+    const getId = () => idMatch ? Promise.resolve([isValidString(req.params.uid, 'name', 'external is not vaild'), getFileLocation(type, id)]) : Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        if (items.length < 1) {
+            handleError(new HoError('cannot find file!!!'));
+        }
+        if (items[0].status !== 3 && items[0].status !== 9) {
+            handleError(new HoError('file type error!!!'));
+        }
+        if (items[0].thumb) {
+            handleError(new HoError('external file, please open video'));
+        }
+        let filePath = getFileLocation(items[0].owner, items[0]._id);
+        if (items[0].status === 9) {
+            let fileIndex = 0;
+            if (req.params.index) {
+                fileIndex = Number(req.params.index);
+            } else {
+                for (let i in items[0]['playList']) {
+                    if (isVideo(items[0]['playList'][i])) {
+                        fileIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (!isVideo(items[0]['playList'][fileIndex])) {
+                handleError(new HoError('file type error!!!'));
+            }
+            filePath = `${filePath}/${fileIndex}`;
+        }
+        return [items[0]._id, filePath];
+    });
+    getId().then(([id, filePath]) => {
+        const folderPath = PathDirname(filePath);
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();
+        const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
+        const OpenSubtitles = new OpenSubtitle('hoder agent v0.1');
+        return name.match(/^tt\d+$/i) ? OpenSubtitles.search(Object.assign({
+            extensions: 'srt',
+            imdbid: name,
+        }, episode ? {
+            episode,
+            season,
+        } : {})).then(subtitles => {
+            console.log(subtitles);
+            const sub_en_url = subtitles.en ? subtitles.en.url : null;
+            const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
+            if (!sub_url && !sub_en_url) {
+                handleError(new HoError('cannot find subtitle!!!'));
+            }
+            return mkfolder().then(() => getZh(sub_url)).then(() => getEn(sub_en_url)).then(() => {
+                sendWs({
+                    type: 'sub',
+                    data: id,
+                }, 0, 0);
+                res.json({apiOK: true});
+            });
+        }) : OpenSubtitles.search(Object.assign({
+            extensions: 'srt',
+            query: name,
+        }, episode ? {
+            episode,
+            season,
+        } : {})).then(subtitles => {
+            console.log(subtitles);
+            const sub_en_url = subtitles.en ? subtitles.en.url : null;
+            const restSub = () => sub_en_url ? mkfolder().then(() => getEn(sub_en_url)) : Promise.resolve();
+            const getSub = name => subHdUrl(name).then(subtitles2 => {
+                const zip_ext = isZip(subtitles2);
+                if (!zip_ext) {
+                    handleError(new HoError('is not zip!!!'));
+                }
+                const sub_location = `${filePath}_sub`;
+                const mkfolder2 = () => FsExistsSync(sub_location) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(sub_location, err => err ? reject(err) : resolve()));
+                return mkfolder2().then(() => {
+                    let sub_temp_location = `${sub_location}/0`;
+                    let sub_zip_location = `${sub_location}/0.${zip_ext}`;
+                    let i
+                    for (let i = 0; i <= 10; i++) {
+                        if (i >= 10) {
+                            handleError(new HoError('too many sub!!!'));
+                        }
+                        sub_temp_location = `${sub_location}/${i}`;
+                        sub_zip_location = `${sub_location}/${i}.${zip_ext}`;
+                        if (!FsExistsSync(sub_temp_location)) {
+                            break;
+                        }
+                    }
+                    return Api('url', subtitles2, {filePath: sub_zip_location}).then(() => new Promise((resolve, reject) => Mkdirp(sub_temp_location, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Child_process.exec((zip_ext === 'rar' || zip_ext === 'cbr') ? `unrar x ${sub_zip_location} ${sub_temp_location}` : (zip_ext === '7z') ? `7za x ${sub_zip_location} -o${sub_temp_location}` : `${PathJoin(__dirname, '../util/myuzip.py')} ${sub_zip_location} ${sub_temp_location}`, (err, output) => err ? reject(err) : resolve())).then(output => {
+                        let choose = null;
+                        let pri_choose = 9;
+                        let pri_choose_temp = 8;
+                        const pri_choose_arr = ['big5', 'cht', '繁體', '繁体', 'gb', 'chs', '簡體', '简体'];
+                        const episode_pattern = new RegExp('(第0*' + episode + '集|ep?0*' + episode + ')', 'i');
+                        let episode_choose = null;
+                        let episode_pri_choose = 9;
+                        let episode_pri_choose_temp = 8;
+                        recur_dir(sub_temp_location);
+                        function recur_dir(dir) {
+                            FsReaddirSync(dir).forEach((file,index) => {
+                                const curPath = `${dir}/${file}`;
+                                if (FsLstatSync(curPath).isDirectory()) {
+                                    recur_dir(curPath);
+                                } else {
+                                    if (isSub(file)) {
+                                        if (episode && file.match(episode_pattern)) {
+                                            const pri_match = file.match(/(big5|cht|繁體|繁体|gb|chs|簡體|简体)/);
+                                            if (pri_match) {
+                                                episode_pri_choose_temp = pri_choose_arr.indexOf(pri_match[1]);
+                                            }
+                                            if (episode_pri_choose > episode_pri_choose_temp) {
+                                                episode_pri_choose = episode_pri_choose_temp;
+                                                episode_choose = curPath;
+                                            }
+                                        }
+                                        const pri_match2 = file.match(/(big5|cht|繁體|繁体|gb|chs|簡體|简体)/);
+                                        if (pri_match2) {
+                                            pri_choose_temp = pri_choose_arr.indexOf(pri_match2[1]);
+                                        }
+                                        if (pri_choose > pri_choose_temp) {
+                                            pri_choose = pri_choose_temp;
+                                            choose = curPath;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        if (episode_choose) {
+                            choose = episode_choose;
+                        }
+                        console.log('choose');
+                        console.log(choose);
+                        return SUB2VTT(choose, filePath, true).then(() => {
+                            deleteFolderRecursive(sub_temp_location);
+                            return new Promise((resolve, reject) => FsUnlink(sub_zip_location, err => err ? reject(err) : resolve())).then(() => {
+                                sendWs({
+                                    type: 'sub',
+                                    data: id,
+                                }, 0, 0);
+                                res.json({apiOK: true});
+                            });
+                        });
+                    })));
+                });
+            });
+            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : Promise.reject(err)) : (season === 1) ? getSub(name) : Promise.reject(err)) : getSub(name));
+        });
+        function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
+            if (!choose_subtitle) {
+                handleError(new HoError('donot have sub!!!'));
+            }
+            let ext = false;
+            if (is_file) {
+                ext = isSub(choose_subtitle);
+                if (!ext) {
+                    handleError(new HoError('is not sub!!!'));
+                }
+            } else {
+                ext = 'srt';
+            }
+            if (lang === 'en') {
+                subPath = `${subPath}.en`;
+            }
+            if (FsExistsSync(`${subPath}.srt`)) {
+                FsRenameSync(`${subPath}.srt`, `${subPath}.srt1`);
+            }
+            if (FsExistsSync(`${subPath}.ass`)) {
+                FsRenameSync(`${subPath}.ass`, `${subPath}.ass1`);
+            }
+            if (FsExistsSync(`${subPath}.ssa`)) {
+                FsRenameSync(`${subPath}.ssa`, `${subPath}.ssa1`);
+            }
+            if (is_file) {
+                FsRenameSync(choose_subtitle, `${subPath}.${ext}`);
+                return SRT2VTT(subPath, ext);
+            } else {
+                return Api('url', choose_subtitle, {filePath: `${subPath}.${ext}`}).then(() => SRT2VTT(subPath, ext));
+            }
+        }
+    }).catch(err => handleError(err, next));
+});
+
+router.get('/getSubtitle/:uid', function(req, res, next) {
+    console.log('external getSub');
+    const idMatch = req.params.uid.match(/^you_(.*)/);
+    if (!idMatch) {
+        handleError(new HoError('file is not youtube video!!!'));
+    }
+    const id = isValidString(req.params.uid, 'name', 'external is not vaild');
+    googleDownloadSubtitle(`http://www.youtube.com/watch?v=${idMatch[1]}`, getFileLocation('youtube', id)).then(() => {
+        sendWs({
+            type: 'sub',
+            data: id,
+        }, 0, 0);
+        res.json({apiOK: true});
+    }).catch(err => handleError(err, next));
+});
+
+router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, next) {
+    console.log('subtitle fix');
+    if (!req.params.adjust.match(/^\-?\d+(\.\d+)?$/)) {
+        handleError(new HoError('adjust time is not vaild'));
+    }
+    const getId = () => {
+        const idMatch = req.params.uid.match(/^(you|dym)_/);
+        if (idMatch) {
+            const ex_type = (idMatch[1] === 'dym') ? 'dailymotion' : (idMatch[1] === 'bil') ? 'bilibili' : 'youtube';
+            const id = isValidString(req.params.uid, 'name', 'external is not vaild');
+            let filePath = getFileLocation(ex_type, id);
+            filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
+            return Promise.resolve([id, filePath]);
+        } else {
+            return Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+                if (items.length < 1) {
+                    handleError(new HoError('cannot find file!!!'));
+                }
+                if (items[0].status !== 3 && items[0].status !== 9) {
+                    handleError(new HoError('file type error!!!'));
+                }
+                let fileIndex = 0;
+                if (items[0].status === 9) {
+                    if (req.params.index) {
+                        fileIndex = Number(req.params.index);
+                    } else {
+                        for (let i in items[0]['playList']) {
+                            if (isVideo(items[0]['playList'][i])) {
+                                fileIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (!isVideo(items[0]['playList'][fileIndex])) {
+                        handleError(new HoError('file type error!!!'));
+                    }
+                }
+                let filePath = getFileLocation(items[0].owner, items[0]._id);
+                if (items[0].status === 9) {
+                    filePath = `${filePath}/${fileIndex}`;
+                }
+                filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
+                return Promise.resolve([items[0]._id, filePath]);
+            });
+        }
+    }
+    getId().then(([id, filePath]) => {
+        const vtt = `${filePath}.vtt`;
+        if (!FsExistsSync(vtt)) {
+            handleError(new HoError('do not have subtitle!!!'));
+        }
+        return new Promise((resolve, reject) => {
+            const adjust = Number(req.params.adjust) * 1000;
+            let write_data = '';
+            const rl = createInterface({
+                input: FsCreateReadStream(vtt),
+                terminal: false,
+            });
+            rl.on('line', line => {
+                const time_match = line.match(/^(\d\d):(\d\d):(\d\d)\.(\d\d\d) --> (\d\d):(\d\d):(\d\d)\.(\d\d\d)$/);
+                if (time_match) {
+                    let stime = Number(time_match[1]) * 3600000 + Number(time_match[2]) * 60000 + Number(time_match[3]) * 1000 + Number(time_match[4]);
+                    let etime = Number(time_match[5]) * 3600000 + Number(time_match[6]) * 60000 + Number(time_match[7]) * 1000 + Number(time_match[8]);
+                    stime = stime + adjust;
+                    if (stime < 0) {
+                        stime = 0;
+                    }
+                    etime = etime + adjust;
+                    if (etime < 0) {
+                        etime = 0;
+                    }
+                    let temp = completeZero(Math.floor(stime/3600000), 2);
+                    stime = stime % 3600000;
+                    let atime = `${temp}:`;
+                    temp = completeZero(Math.floor(stime/60000), 2);
+                    stime = stime % 60000;
+                    atime = `${atime}${temp}:`;
+                    temp = completeZero(Math.floor(stime/1000), 2);
+                    stime = completeZero(stime % 1000, 3);
+                    atime = `${atime}${temp}.${stime} --> `;
+                    temp = completeZero(Math.floor(etime/3600000), 2);
+                    etime = etime % 3600000;
+                    atime = `${atime}${temp}:`;
+                    temp = completeZero(Math.floor(etime/60000), 2);
+                    etime = etime % 60000;
+                    atime = `${atime}${temp}:`;
+                    temp = completeZero(Math.floor(etime/1000), 2);
+                    etime = completeZero(etime % 1000, 3);
+                    atime = `${atime}${temp}.${etime}`;
+                    //console.log(atime);
+                    write_data = `${write_data}${atime}` + "\r\n";
+                } else {
+                    write_data = `${write_data}${line}` + "\r\n";
+                }
+            }).on('close', () => resolve(write_data));
+        }).then(write_data => new Promise((resolve, reject) => {
+            console.log(vtt);
+            //console.log(write_data);
+            FsWriteFile(vtt, write_data, 'utf8', err => err ? reject(err) : resolve())
+        })).then(() => {
+            sendWs({
+                type: 'sub',
+                data: id,
+            }, 0, 0);
+            res.json({apiOK: true});
+        });
+    }).catch(err => handleError(err, next));
 });
 
 export default router

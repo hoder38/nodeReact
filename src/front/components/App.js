@@ -69,7 +69,7 @@ const App = React.createClass({
                                         this.props.addalert('Zip password not vaild!!!')
                                         return Promise.reject('Zip password not vaild!!!')
                                     } else {
-                                        return api(`/api/zipPassword/${wsmsg.zip}`, {pwd}, 'PUT').then(result => this.props.addalert('password update completed, please unzip again')).catch(err => {
+                                        return api(`/api/storage/zipPassword/${wsmsg.zip}`, {pwd}, 'PUT').then(result => this.props.addalert('password update completed, please unzip again')).catch(err => {
                                             this.props.addalert(err)
                                             throw err
                                         })
@@ -82,14 +82,13 @@ const App = React.createClass({
                         }
                     }
                 }
-                return api('/api/parent/storage/list')
-                //return api(`${userInfo.main_url}/api/feedback`)
+                return api(`${userInfo.main_url}/api/file/feedback`)
             } else {
                 throw Error('Invalid user data!!!')
             }
-        /*}).then(result => {
+        }).then(result => {
             this.props.feedbackset(result.feedbacks)
-            return api('/api/parent/storage/list')*/
+            return api('/api/parent/storage/list');
         }).then(result => this.props.dirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/storage/add', {name: dir.name, tag: tag}).then(result => this.props.pushdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)}))).catch(err => {
             this.props.addalert(err)
             this._doLogout()

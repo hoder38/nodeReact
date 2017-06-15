@@ -370,7 +370,7 @@ const MediaWidget = React.createClass({
             }), () => {
                 switch (!this._item.thumb || (this._playlist && this._playlist.obj.pre_url) ? 0 : this._playlist && this._playlist.obj.is_magnet ? this._playlist.obj.id ? 0 : 1 : 2) {
                     case 1:
-                    isValidString(this._playlist.obj.magnet, 'url') ? api('/api/getPath').then(result => api(`${this.props.mainUrl}/api/upload/url`, {
+                    isValidString(this._playlist.obj.magnet, 'url') ? api('/api/getPath').then(result => api(`${this.props.mainUrl}/api/external/upload/url`, {
                         url: this._playlist.obj.magnet,
                         hide: true,
                         path: result.path,
@@ -630,10 +630,11 @@ const MediaWidget = React.createClass({
             if (this._fix) {
                 const index = this.props.mediaType === 9 ? `/${this.state.index}` : ''
                 let adjust = Math.ceil((this._video.currentTime - this._fixtime) * 10) / 10
-                this._fix = 0
+                const fix = this._fix;
+                this._fix = 0;
                 this.setState(Object.assign({}, this.state, {
                     cue: '',
-                }), () => this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/subtitle/fix/${this._playlist ? this._playlist.obj.id : this._item.id}/${this.fix === 1 ? 'ch' : 'en'}/${adjust}${index}`).then(result => this.props.addalert('字幕校準成功')).catch(err => this.props.addalert(err)), `確定校準此字幕到${adjust}秒？`))
+                }), () => this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/external/subtitle/fix/${this._playlist ? this._playlist.obj.id : this._item.id}/${fix === 1 ? 'ch' : 'en'}/${adjust}${index}`).then(result => this.props.addalert('字幕校準成功')).catch(err => this.props.addalert(err)), `確定校準此字幕到${adjust}秒？`))
             } else {
                 if (this._video.textTracks[0] && this._video.textTracks[0].activeCues && this._video.textTracks[0].activeCues[0] && this._video.textTracks[0].activeCues[0].text) {
                     this._fix = 1

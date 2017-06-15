@@ -62,9 +62,6 @@ const ItemFile = React.createClass({
                 case 'ypl_':
                 url = `https://www.youtube.com/watch?list=${extId}`
                 break
-                case 'kub_':
-                url = `http://www.123kubo.com/vod-read-id-${extId}.html`
-                break
                 case 'yif_':
                 url = `https://yts.ag/movie/${extId}`
                 break
@@ -79,7 +76,7 @@ const ItemFile = React.createClass({
                 return false
             }
             url = isMusic ? `${url}:music` : url
-            isValidString(url, 'url') ? api('/api/getPath').then(ret => api(`${this.props.mainUrl}/api/upload/url`, Object.assign({
+            isValidString(url, 'url') ? api('/api/getPath').then(ret => api(`${this.props.mainUrl}/api/external/upload/url`, Object.assign({
                 type: 0,
                 url: url,
             }, ret))).then(result => {
@@ -98,13 +95,6 @@ const ItemFile = React.createClass({
             return result.complete ? this.props.addalert('download complete!!!') : this.props.addalert('starting download');
         }).catch(err => this.props.addalert(err)), `Would you sure to save all of ${name}?`)
     },
-    _convert: function(id, name, type) {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/convert/${id}/${type}`).then(result => {
-            if (result.name) {
-                this.props.pushfeedback(result)
-            }
-        }).catch(err => this.props.addalert(err)), `Would you sure to convert ${name} to image book?`)
-    },
     _join: function() {
         this.props.sendglbcf(() => {
             (this.props.select.size > 1) ? api(`${this.props.mainUrl}/api/torrent/join`, {uids: [...this.props.select]}, 'PUT').then(result => {
@@ -116,7 +106,7 @@ const ItemFile = React.createClass({
     _searchSub: function(id) {
         this.props.globalinput(2, (subName, exact, subEpisode) => {
             if (subName) {
-                return isValidString(subName, 'name') ? api(`${this.props.mainUrl}/api/subtitle/search/${id}`, (subEpisode && isValidString(subEpisode, 'name')) ? {name: subName, episode: subEpisode} : {name: subName}).then(result => this.props.addalert('subtitle get')) : Promise.reject('search name is not vaild!!!')
+                return isValidString(subName, 'name') ? api(`${this.props.mainUrl}/api/external/subtitle/search/${id}`, (subEpisode && isValidString(subEpisode, 'name')) ? {name: subName, episode: subEpisode} : {name: subName}).then(result => this.props.addalert('subtitle get')) : Promise.reject('search name is not vaild!!!')
             } else {
                 return api(`${this.props.mainUrl}/api/external/getSubtitle/${id}`).then(result => this.props.addalert('subtitle get'))
             }
@@ -127,7 +117,7 @@ const ItemFile = React.createClass({
     },
     _showUrl: function(id, url) {
         window.open(decodeURIComponent(url))
-        api(`/api/media/setTime/${id}/url`).then(result => this.props.setLatest(id, this.props.bookmark)).catch(err => this.props.addalert(err))
+        api(`/api/storage/media/setTime/${id}/url`).then(result => this.props.setLatest(id, this.props.bookmark)).catch(err => this.props.addalert(err))
     },
     _bookmark: function(id) {
         bookmarkItemList(STORAGE, 'set', this.props.sortName, this.props.sortType, this.props.set, id).catch(err => this.props.addalert(err))

@@ -46,3 +46,5 @@ googleapis: ?
 
 pdftk
 
+sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/cmd.js
+記得等db connect

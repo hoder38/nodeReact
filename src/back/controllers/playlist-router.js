@@ -3,13 +3,15 @@ import { ENV_TYPE } from '../../../ver'
 import { STREAM_LIMIT } from '../config'
 import Express from 'express'
 import Child_process from 'child_process'
+import Avconv from 'avconv'
+import { basename as PathBasename, dirname as PathDirname } from 'path'
 import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync } from 'fs'
-import Mongo from '../models/mongo-tool'
+import Mongo, { objectID } from '../models/mongo-tool'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
 import PlaylistApi from '../models/api-tool-playlist'
-import TagTool from '../models/tag-tool'
-import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin } from '../util/utility'
-import { extType, isVideo, supplyTag } from '../util/mime'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
+import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility'
+import { extType, isVideo, supplyTag, addPost } from '../util/mime'
 import sendWs from '../util/sendWs'
 
 const router = Express.Router();
@@ -125,6 +127,149 @@ router.put('/join', function(req, res, next){
                 name: order_items[1].name,
             })).catch(err => handleError(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
         }
+    }).catch(err => handleError(err, next));
+});
+
+router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
+    console.log('torrent copy');
+    const index = Number(req.params.index);
+    Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        if (items.length < 1) {
+            handleError(new HoError('torrent can not be found!!!'));
+        }
+        if (items[0].status !== 9) {
+            handleError(new HoError('file type error!!!'));
+        }
+        if (!items[0].playList[index]) {
+            handleError(new HoError('torrent index can not be found!!!'));
+        }
+        const origPath = `${getFileLocation(items[0].owner, items[0]._id)}/${index}_complete`;
+        if (!FsExistsSync(origPath)) {
+            handleError(new HoError('please download first!!!'));
+        }
+        const oOID = objectID();
+        const filePath = getFileLocation(req.user._id, oOID);
+        const folderPath = PathDirname(filePath);
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        return mkfolder().then(() => new Promise((resolve, reject) => {
+            const stream = FsCreateReadStream(origPath);
+            stream.on('error', err => reject(err));
+            stream.on('close', () => resolve());
+            stream.pipe(FsCreateWriteStream(filePath));
+        })).then(() => {
+            let name = toValidName(PathBasename(items[0].playList[index]));
+            if (isDefaultTag(normalize(name))) {
+                name = addPost(name, '1');
+            }
+            return MediaHandleTool.handleTag(filePath, {
+                _id: oOID,
+                name: name,
+                owner: req.user._id,
+                utime: Math.round(new Date().getTime() / 1000),
+                size: FsStatSync(origPath)['size'],
+                count: 0,
+                first: 1,
+                recycle: 0,
+                adultonly: (checkAdmin(2 ,req.user) && items[0]['adultonly'] === 1) ? 1 : 0,
+                untag: 1,
+                status: 0,
+            }, name, '', 0).then(([mediaType, mediaTag, DBdata]) => {
+                const isPreview = () => (mediaType.type === 'video') ? new Promise((resolve, reject) => {
+                    let is_preview = true;
+                    Avconv(['-i', filePath]).once('exit', function(exitCode, signal, metadata2) {
+                        if (metadata2 && metadata2.input && metadata2.input.stream) {
+                            for (let m of metadata2.input.stream[0]) {
+                                console.log(m.type);
+                                console.log(m.codec);
+                                if (m.type === 'video' && m.codec !== 'h264') {
+                                    is_preview = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (is_preview) {
+                            DBdata['status'] = 3;
+                            if (mediaType.ext === 'mp4') {
+                                mediaType = false;
+                                if (FsExistsSync(origPath + '_s.jpg')) {
+                                    new Promise((resolve, reject) => {
+                                        const streamJpg = FsCreateReadStream(`${origPath}_s.jpg`);
+                                        streamJpg.on('error', err => reject(err));
+                                        streamJpg.pipe(FsCreateWriteStream(`${filePath}_s.jpg`));
+                                    }).catch(err => handleError(err, 'Save jpg'));
+                                }
+                            }
+                        }
+                        return resolve();
+                    });
+                }) : Promise.resolve();
+                return isPreview().then(() => {
+                    let setTag = new Set();
+                    let optTag = new Set();
+                    setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
+                    if (req.body.path) {
+                        req.body.path.forEach(p => setTag.add(normalize(p)));
+                    }
+                    if (items[0].tags) {
+                        items[0].tags.forEach(i => {
+                            if (i !== '壓縮檔' && i !== 'zip'&& i !== '播放列表' && i !== 'playlist') {
+                                setTag.add(normalize(i));
+                            }
+                        });
+                    }
+                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                    let setArr = [];
+                    setTag.forEach(s => {
+                        const is_d = isDefaultTag(s);
+                        if (!is_d) {
+                            setArr.push(s);
+                        } else if (is_d.index === 0) {
+                            DBdata['adultonly'] = 1;
+                        }
+                    });
+                    let optArr = [];
+                    optTag.forEach(o => {
+                        if (!isDefaultTag(o) && !setArr.includes(o)) {
+                            optArr.push(o);
+                        }
+                    });
+                    return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                        tags: setArr,
+                        [req.user._id]: setArr,
+                    })).then(item => {
+                        console.log(item);
+                        console.log('save end');
+                        sendWs({
+                            type: 'file',
+                            data: item[0]._id,
+                        }, item[0].adultonly);
+                        return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                            const reli = relative.length < 5 ? relative.length : 5;
+                            if (checkAdmin(2 ,req.user)) {
+                                (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
+                            }
+                            (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                            for (let i = 0; i < reli; i++) {
+                                const normal = normalize(relative[i]);
+                                if (!isDefaultTag(normal)) {
+                                    if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                        optArr.push(normal);
+                                    }
+                                }
+                            }
+                            return MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]['_id'], req.user).then(() => res.json({
+                                id: item[0]._id,
+                                name: item[0].name,
+                                select: setArr,
+                                option: supplyTag(setArr, optArr),
+                                other: [],
+                            })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                        });
+                    });
+                });
+            });
+        });
     }).catch(err => handleError(err, next));
 });
 

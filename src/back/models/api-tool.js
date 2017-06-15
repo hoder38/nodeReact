@@ -3,7 +3,8 @@ import { API_LIMIT } from '../config'
 import { API_EXPIRE, MAX_RETRY } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
-import { createWriteStream as FsCreateWriteStream, statSync as FsStatSync } from 'fs'
+import { createWriteStream as FsCreateWriteStream, statSync as FsStatSync, unlink as FsUnlink, existsSync as FsExistsSync, renameSync as FsRenameSync } from 'fs'
+import { basename as PathBasename } from 'path'
 import { parse as UrlParse } from 'url'
 import { handleError, HoError, big5Encode } from '../util/utility'
 import sendWs from '../util/sendWs'
@@ -22,6 +23,8 @@ export default function(name, ...args) {
     console.log(name);
     console.log(args);
     switch (name) {
+        case 'stop':
+        return stopApi();
         case 'url':
         return download(false, ...args);
         case 'download':
@@ -31,7 +34,7 @@ export default function(name, ...args) {
         } else {
             api_ing++;
             console.log(`go ${api_ing} ${api_pool.length}`);
-            download(...args).catch(err => handle_err(err, args[0])).then(() => get()).catch(err => handleError(err, 'Api'));
+            download(...args).catch(err => handle_err(err, args[0])).then(rest => get(rest)).catch(err => handleError(err, 'Api'));
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
         default:
@@ -39,20 +42,23 @@ export default function(name, ...args) {
     }
 }
 
-function get() {
+function get(rest=null) {
     api_duration = 0;
     if (api_ing > 0) {
         api_ing--;
     }
     console.log(`get ${api_ing} ${api_pool.length}`);
+    if (rest && typeof rest === 'function') {
+        rest().catch(err => handleError(err, 'Api rest'));
+    }
     if (api_pool.length > 0) {
         const fun = api_pool.splice(0, 1)[0];
         if (fun) {
             switch (fun.name) {
                 case 'download':
-                return download(...fun.args).catch(err => handle_err(err, fun.args[0])).then(() => get());
+                return download(...fun.args).catch(err => handle_err(err, fun.args[0])).then(rest => get(rest));
                 default:
-                return Promise.reject(handleError(new HoError('unknown api'))).catch(err => handleError(err, 'Api')).then(() => get());
+                return Promise.reject(handleError(new HoError('unknown api'))).catch(err => handleError(err, 'Api')).then(rest => get(rest));
             }
         }
     }
@@ -89,9 +95,9 @@ function expire() {
                     api_lock = false;
                     switch (fun.name) {
                         case 'download':
-                        return download(...fun.args).catch(err => handle_err(err, args[0])).then(() => get());
+                        return download(...fun.args).catch(err => handle_err(err, args[0])).then(rest => get(rest));
                         default:
-                        return Promise.reject(handleError(new HoError('unknown api'))).catch(err => handleError(err, 'Api')).then(() => get());
+                        return Promise.reject(handleError(new HoError('unknown api'))).catch(err => handleError(err, 'Api')).then(rest => get(rest));
                     }
                 }
             }
@@ -102,45 +108,56 @@ function expire() {
     });
 }
 
-function download(is_file, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null } = {}) {
+function stopApi() {
+    api_ing = 0;
+    return Promise.resolve();
+}
+
+function download(user, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null, rest=null, errHandle=null } = {}) {
     let qspost = null;
     if (post) {
         not_utf8 ? Object.entries(post).forEach(f => qspost = qspost ? `${qspost}&${f[0]}=${big5Encode(f[1])}` : `${f[0]}=${big5Encode(f[1])}`) : qspost = QStringify(post);
     }
-    const proc = index => Fetch(url, Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, is_file ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
+    const temp = `${filePath}_t`;
+    const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
+    const proc = index => Fetch(url, Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Content-Length': qspost.length,
         } : {}, fake_ip ? {
             'X-Forwarded-For': fake_ip,
             'Client-IP': fake_ip,
-        } : {})}, qspost ? {
+        } : {})}, post ? {
         method: 'POST',
         body: qspost,
     } : {})).then(res => {
-        if (is_file) {
+        if (user) {
             if (!filePath) {
                 handleError(new HoError('file path empty!'));
             }
-            return new Promise((resolve, reject) => {
-                const dest = FsCreateWriteStream(filePath);
+            return checkTmp().then(() => new Promise((resolve, reject) => {
+                const dest = FsCreateWriteStream(temp);
                 res.body.pipe(dest);
-                dest.on('finish', () => {
-                    if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== FsStatSync(filePath)['size'])) {
-                        handleError(new HoError('incomplete download'));
-                    }
-                    const filename = res.headers['content-disposition'] ? res.headers['content-disposition'].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : null;
+                dest.on('finish', () => resolve());
+                dest.on('error', err => reject(err));
+            }).then(() => {
+                if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== FsStatSync(filePath)['size'])) {
+                    handleError(new HoError('incomplete download'));
+                }
+                FsRenameSync(temp, filePath);
+                if (rest) {
+                    const filename = res.headers['content-disposition'] ? res.headers['content-disposition'].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : res.headers['_headers']['content-disposition'] ? res.headers['_headers']['content-disposition'][0].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : null;
                     const pathname = UrlParse(url).pathname;
-                    return filename ? resolve(pathname, filename[1]) : resolve(pathname);
-                }).on('error', err => reject(err));
-            });
+                    return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => rest([pathname, filename ? filename[1] : PathBasename(pathname)])).catch(err => errHandle(err));
+                    }
+            }));
         } else if (is_json) {
             return res.json();
         } else {
-            return filePath ? new Promise((resolve, reject) => {
-                const dest = FsCreateWriteStream(filePath);
+            return filePath ? checkTmp().then(() => new Promise((resolve, reject) => {
+                const dest = FsCreateWriteStream(temp);
                 res.body.pipe(dest);
                 dest.on('finish', () => resolve());
-            }) : res.text();
+            })).then(() => FsRenameSync(temp, filePath)) : res.text();
         }
     }).catch(err => {
         console.log(index);

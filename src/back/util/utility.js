@@ -53,6 +53,11 @@ export function isValidString(str, type, msg=null, code=400) {
                 return str
             }
             break
+            case 'altpwd':
+            if (str.match(/^[0-9a-zA-Z\._!@#$%;\u4e00-\u9fa5]{2,30}$/)) {
+                return str;
+            }
+            break;
             case 'url':
             if (str.match(RE_WEBURL) || str.match(/^magnet:(\?xt=urn:btih:[a-z0-9]{20,50}|stop)/i)) {
                 return encodeURIComponent(str)
@@ -100,7 +105,7 @@ export function userPWCheck (user, pw) {
 export const checkAdmin = (perm, user) => (user.perm > 0 && user.perm <= perm) ? true : false
 
 //errorhandle
-export function HoError(message, { code=400 } = {}, ) {
+export function HoError(message, { code=400 } = {}) {
     this.name = 'HoError'
     this.message = message || 'Hoder Message'
     this.code = code
@@ -324,7 +329,7 @@ export const sortList = list => {
             return -1;
         }
         for (let i in a.number) {
-            if (!b.number[i]) {
+            if (!b.number || !b.number[i]) {
                 return 1;
             }
             if (Number(a.number[i]) !== Number(b.number[i])) {

@@ -255,4 +255,84 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
     }).catch(err => handleError(err, next));
 });
 
+router.get('/feedback', function (req, res, next) {
+    console.log('file feedback');
+    Mongo('find', STORAGEDB, {
+        untag: 1,
+        owner: req.user._id,
+    }, {
+        sort: ['utime','desc'],
+        limit: 20,
+    }).then(items => {
+        const getItem = () => (items.length < 1 && checkAdmin(1, req.user)) ? Mongo('find', STORAGEDB, {untag: 1}, {
+            sort: ['utime','desc'],
+            limit: 20,
+        }) : Promise.resolve(items);
+        return getItem().then(items => {
+            let feedback_arr = [];
+            const getFeedback = item => MediaHandleTool.handleTag(getFileLocation(item.owner, item._id), {
+                time: item.time,
+                height: item.height,
+            }, item.name, '', item.status).then(([mediaType, mediaTag, DBdata]) => {
+                let temp_tag = [];
+                if (item.first === 1) {
+                    item.tags.push('first item');
+                } else {
+                    temp_tag.push('first item');
+                }
+                if (item.adultonly === 1) {
+                    item.tags.push('18+');
+                } else {
+                    if (checkAdmin(2, req.user)) {
+                        temp_tag.push('18+');
+                    }
+                }
+                for (let i of mediaTag.opt) {
+                    if (item.tags.indexOf(i) === -1) {
+                        temp_tag.push(i);
+                    }
+                }
+                temp_tag = supplyTag(item.tags, temp_tag);
+                if (!checkAdmin(1, req.user)) {
+                    for (let i in item[req.user._id.toString()]) {
+                        const index_tag = item.tags.indexOf(i);
+                        if (index_tag !== -1) {
+                            item.tags.splice(index_tag, 1);
+                        }
+                    }
+                    return {
+                        id: item._id,
+                        name: item.name,
+                        select: item[req.user._id.toString()],
+                        option: temp_tag,
+                        other: item.tags,
+                    };
+                } else {
+                    return {
+                        id: item._id,
+                        name: item.name,
+                        select: item.tags,
+                        option: temp_tag,
+                        other: [],
+                    };
+                }
+            });
+            const recur_feedback = index => getFeedback(items[index]).then(feedback => {
+                feedback_arr.push(feedback);
+                index++;
+                if (index < items.length) {
+                    return recur_feedback(index);
+                } else {
+                    res.json({feedbacks: feedback_arr});
+                }
+            });
+            if (items.length < 1) {
+                res.json({feedbacks: feedback_arr});
+            } else {
+                return recur_feedback(0);
+            }
+        });
+    });
+});
+
 export default router

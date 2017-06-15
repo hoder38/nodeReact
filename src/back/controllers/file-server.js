@@ -33,6 +33,9 @@ import PlaylistRouter from './playlist-router'
 import { handleError, HoError, showLog } from '../util/utility'
 import sendWs, { mainInit } from '../util/sendWs'
 
+//background
+import { autoUpload, checkMedia, updateExternal, autoDownload } from '../cmd/background'
+
 //global
 const credentials = {
     pfx: FsReadFileSync(PFX),
@@ -62,6 +65,10 @@ credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
 mainInit(server);
+autoUpload();
+checkMedia();
+updateExternal();
+autoDownload();
 
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
