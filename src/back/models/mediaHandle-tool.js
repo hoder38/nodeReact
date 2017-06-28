@@ -416,7 +416,7 @@ export default {
             }
             const addNoise = () => {
                 if (add_noise && mediaType['type'] === 'video') {
-                    const cmdline = `cat ${STATIC_PATH}/noise >> ${uploadPath}`;
+                    const cmdline = `cat ${STATIC_PATH}/noise >> "${uploadPath}"`;
                     console.log(cmdline);
                     return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => GoogleApi('delete', {fileId: add_noise}));
                 } else {

@@ -9,6 +9,7 @@ export const DEV = 'dev'
 export const USERDB = 'user'
 export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
+export const PASSWORDDB = 'password'
 export const DOCDB = 'docUpdate'
 
 //basic set
@@ -26,14 +27,17 @@ export const DRIVE_LIMIT = 100;
 export const TORRENT_CONNECT = 100;
 export const TORRENT_UPLOAD = 5;
 export const CACHE_EXPIRE = 86400;
-export const DRIVE_INTERVAL = 3600;
-export const MEDIA_INTERVAl = 7200;
 export const OATH_WAITING = 60;
 export const TORRENT_DURATION = 172800;
 export const ZIP_DURATION = 21600;
 export const MEGA_DURATION = 86400;
-export const EXTERNAL_INTERVAL = 604800;
+export const DRIVE_INTERVAL = 3600;
 export const DOC_INTERVAL = 3600;
+export const MEDIA_INTERVAl = 7200;
+export const EXTERNAL_INTERVAL = 604800;
+export const STOCK_INTERVAL = 172800;
+export const STOCK_FILTER_LIMIT = 100;
+export const ALGORITHM = 'aes-256-ctr';
 
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -147,6 +151,35 @@ export const ADULTONLY_PARENT = [
         tw: '成人創作者',
     },
 ]
+export const PASSWORD_PARENT = [
+    {
+        name: 'command',
+        tw: '指令',
+    },
+    {
+        name: 'category',
+        tw: '功能分類',
+    }, {
+        name: 'platform',
+        tw: '平台',
+    },
+]
+export const STOCK_PARENT = [
+    {
+        name: 'command',
+        tw: '指令',
+    }, {
+        name: 'country',
+        tw: '國家',
+    }, {
+        name: 'market type',
+        tw: '市場種類',
+    }, {
+        name: 'category',
+        tw: '產業分類',
+    },
+]
+
 //tag list
 export const MEDIA_LIST = [
     'image',

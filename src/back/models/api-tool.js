@@ -160,6 +160,9 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
             })).then(() => FsRenameSync(temp, filePath)) : res.text();
         }
     }).catch(err => {
+        if (err.code === 'HPE_INVALID_CONSTANT') {
+            return Promise.reject(err);
+        }
         console.log(index);
         handleError(err, 'Fetch');
         if (index > MAX_RETRY) {

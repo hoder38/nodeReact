@@ -320,7 +320,7 @@ const MediaWidget = React.createClass({
                 } else {
                     append = `/${this._playlist.obj.id}`
                     if (subIndex < this._playlist.obj_arr[0].index) {
-                        if (this._playlist.pageP) {
+                        if (subIndex !== 1 && this._playlist.pageP) {
                             append = `${append}/${this._playlist.pageP}/back`
                         }
                     } else {
@@ -359,6 +359,7 @@ const MediaWidget = React.createClass({
                 this._fix = 0
             }
             this._removeCue()
+            const same = (index === this.state.index) ? true : false;
             this.setState(Object.assign({}, this.state, {
                 src: this._playlist && this._playlist.obj.is_magnet && this._playlist.obj.id ? `${this.props.mainUrl}/torrent/v/${mediaId}/0` : this._playlist && this._playlist.obj.pre_url ? `${this._playlist.obj.pre_url}${this._playlist.obj.pre_obj[Math.round(this._playlist.obj.index * 1000) % 1000 - 1]}` : this._item.thumb ? this._item.thumb : `${this.props.mainUrl}/${this._preType}/${mediaId}/file`,
                 index: index,
@@ -410,6 +411,10 @@ const MediaWidget = React.createClass({
                         }
                     })
                     break
+                    default:
+                    if (same && this._media) {
+                        this._media.currentTime = this._preTime = 0;
+                    }
                 }
             })
         }).catch(err => {
@@ -547,7 +552,11 @@ const MediaWidget = React.createClass({
                 }
             }
             if (!this._playlist.end) {
-                return true
+                if (this.state.mode === 2) {
+                    this.setState(Object.assign({}, this.state, {subIndex: 1}), () => this._movePlaylist());
+                } else {
+                    return true
+                }
             }
         } else if (this.props.mediaType === 2 || this.props.mediaType === 9) {
             if (previous) {

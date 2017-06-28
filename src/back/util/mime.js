@@ -243,3 +243,13 @@ export function supplyTag(tags, retTags, otherTags=[]) {
 }
 
 export const changeExt = (str, ext) => str.replace(EXT_FILENAME, a => `.${ext}`);
+
+export const getExtname = name => {
+    const result = name.match(EXT_FILENAME);
+    const extName = (result && result[0]) ? result[0].toLowerCase() : '';
+    const frontName = name.substr(0, name.length - extName.length);
+    return {
+        front: frontName,
+        ext: extName,
+    };
+}

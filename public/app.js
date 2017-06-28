@@ -34142,7 +34142,7 @@
 	            cur: [],
 	            exactly: [],
 	            his: []
-	        }, '', '', 'name', 'asc', '');
+	        }, '', '', 'name', 'desc', '');
 	        this.props.dirsset([]);
 	    },
 	    _doLogout: function _doLogout() {
@@ -37949,7 +37949,7 @@
 	                } else {
 	                    append = '/' + this._playlist.obj.id;
 	                    if (subIndex < this._playlist.obj_arr[0].index) {
-	                        if (this._playlist.pageP) {
+	                        if (subIndex !== 1 && this._playlist.pageP) {
 	                            append = append + '/' + this._playlist.pageP + '/back';
 	                        }
 	                    } else {
@@ -37988,6 +37988,7 @@
 	                _this7._fix = 0;
 	            }
 	            _this7._removeCue();
+	            var same = index === _this7.state.index ? true : false;
 	            _this7.setState((0, _assign2.default)({}, _this7.state, {
 	                src: _this7._playlist && _this7._playlist.obj.is_magnet && _this7._playlist.obj.id ? _this7.props.mainUrl + '/torrent/v/' + mediaId + '/0' : _this7._playlist && _this7._playlist.obj.pre_url ? '' + _this7._playlist.obj.pre_url + _this7._playlist.obj.pre_obj[Math.round(_this7._playlist.obj.index * 1000) % 1000 - 1] : _this7._item.thumb ? _this7._item.thumb : _this7.props.mainUrl + '/' + _this7._preType + '/' + mediaId + '/file',
 	                index: index,
@@ -38043,6 +38044,10 @@
 	                            }
 	                        });
 	                        break;
+	                    default:
+	                        if (same && _this7._media) {
+	                            _this7._media.currentTime = _this7._preTime = 0;
+	                        }
 	                }
 	            });
 	        }).catch(function (err) {
@@ -38158,6 +38163,8 @@
 	        }
 	    },
 	    _nextMedia: function _nextMedia() {
+	        var _this10 = this;
+
 	        var previous = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
 	        if (this._media) {
@@ -38194,7 +38201,13 @@
 	                }
 	            }
 	            if (!this._playlist.end) {
-	                return true;
+	                if (this.state.mode === 2) {
+	                    this.setState((0, _assign2.default)({}, this.state, { subIndex: 1 }), function () {
+	                        return _this10._movePlaylist();
+	                    });
+	                } else {
+	                    return true;
+	                }
 	            }
 	        } else if (this.props.mediaType === 2 || this.props.mediaType === 9) {
 	            if (previous) {
@@ -38242,18 +38255,18 @@
 	        this.setState((0, _assign2.default)({}, this.state, this._input.getValue()));
 	    },
 	    _handleOpt: function _handleOpt(e) {
-	        var _this10 = this;
+	        var _this11 = this;
 
 	        switch (e.target.value) {
 	            case '1':
 	                if (this.props.mediaType === 9) {
 	                    this.props.sendglbcf(function () {
 	                        return (0, _utility.api)('/api/getPath').then(function (result) {
-	                            return (0, _utility.api)(_this10.props.mainUrl + '/api/torrent/copy/' + _this10._item.id + '/' + _this10.state.index, { path: result.path });
+	                            return (0, _utility.api)(_this11.props.mainUrl + '/api/torrent/copy/' + _this11._item.id + '/' + _this11.state.index, { path: result.path });
 	                        }).then(function (result) {
-	                            return _this10.props.pushfeedback(result);
+	                            return _this11.props.pushfeedback(result);
 	                        }).catch(function (err) {
-	                            return _this10.props.addalert(err);
+	                            return _this11.props.addalert(err);
 	                        });
 	                    }, '\u78BA\u5B9A\u8981\u5132\u5B58 ' + this._item.name + ' \u5230\u7DB2\u7AD9?');
 	                } else {
@@ -38283,23 +38296,23 @@
 	        }
 	    },
 	    _fixCue: function _fixCue() {
-	        var _this11 = this;
+	        var _this12 = this;
 
 	        if (this._video && this._video.src && window.location.href !== this._video.src) {
 	            if (this._fix) {
 	                (function () {
-	                    var index = _this11.props.mediaType === 9 ? '/' + _this11.state.index : '';
-	                    var adjust = Math.ceil((_this11._video.currentTime - _this11._fixtime) * 10) / 10;
-	                    var fix = _this11._fix;
-	                    _this11._fix = 0;
-	                    _this11.setState((0, _assign2.default)({}, _this11.state, {
+	                    var index = _this12.props.mediaType === 9 ? '/' + _this12.state.index : '';
+	                    var adjust = Math.ceil((_this12._video.currentTime - _this12._fixtime) * 10) / 10;
+	                    var fix = _this12._fix;
+	                    _this12._fix = 0;
+	                    _this12.setState((0, _assign2.default)({}, _this12.state, {
 	                        cue: ''
 	                    }), function () {
-	                        return _this11.props.sendglbcf(function () {
-	                            return (0, _utility.api)(_this11.props.mainUrl + '/api/external/subtitle/fix/' + (_this11._playlist ? _this11._playlist.obj.id : _this11._item.id) + '/' + (fix === 1 ? 'ch' : 'en') + '/' + adjust + index).then(function (result) {
-	                                return _this11.props.addalert('字幕校準成功');
+	                        return _this12.props.sendglbcf(function () {
+	                            return (0, _utility.api)(_this12.props.mainUrl + '/api/external/subtitle/fix/' + (_this12._playlist ? _this12._playlist.obj.id : _this12._item.id) + '/' + (fix === 1 ? 'ch' : 'en') + '/' + adjust + index).then(function (result) {
+	                                return _this12.props.addalert('字幕校準成功');
 	                            }).catch(function (err) {
-	                                return _this11.props.addalert(err);
+	                                return _this12.props.addalert(err);
 	                            });
 	                        }, '\u78BA\u5B9A\u6821\u6E96\u6B64\u5B57\u5E55\u5230' + adjust + '\u79D2\uFF1F');
 	                    });
@@ -38368,7 +38381,7 @@
 	        }
 	    },
 	    _mediaCheck: function _mediaCheck() {
-	        var _this12 = this;
+	        var _this13 = this;
 
 	        if (!this._item.id || this._item.complete || this._playlist && this._playlist.obj.complete) {
 	            return true;
@@ -38377,43 +38390,43 @@
 	        var obj = this._playlist ? this._playlist.obj : this._item;
 	        (0, _utility.api)(this.props.mainUrl + '/api/torrent/check/' + id + '/' + (obj.size ? parseInt(obj.size) : 0)).then(function (result) {
 	            if (result.start) {
-	                _this12.props.addalert('File start buffering, Mp4 may preview');
+	                _this13.props.addalert('File start buffering, Mp4 may preview');
 	            } else {
 	                obj.size = result.ret_size;
 	                obj.complete = result.complete;
 	                if (result.newBuffer) {
-	                    if (_this12._media) {
-	                        _this12._startTime = _this12._media.currentTime;
-	                        _this12._start = false;
+	                    if (_this13._media) {
+	                        _this13._startTime = _this13._media.currentTime;
+	                        _this13._start = false;
 	                    }
-	                    var urlmatch = _this12.state.src.match(/(.*)\/(0+)$/);
-	                    _this12.setState((0, _assign2.default)({}, _this12.state, {
-	                        src: urlmatch ? urlmatch[1] + '/' + urlmatch[2] + '0' : _this12.state.src + '/0'
+	                    var urlmatch = _this13.state.src.match(/(.*)\/(0+)$/);
+	                    _this13.setState((0, _assign2.default)({}, _this13.state, {
+	                        src: urlmatch ? urlmatch[1] + '/' + urlmatch[2] + '0' : _this13.state.src + '/0'
 	                    }));
 	                }
 	            }
 	        });
 	    },
 	    _mediaDownload: function _mediaDownload() {
-	        var _this13 = this;
+	        var _this14 = this;
 
 	        this.props.sendglbcf(function () {
-	            return window.location.href = _this13.state.src;
+	            return window.location.href = _this14.state.src;
 	        }, 'Would you sure to download ' + this._item.name + ' ?');
 	    },
 	    _handleExtend: function _handleExtend() {
-	        var _this14 = this;
+	        var _this15 = this;
 
 	        if (this.props.full) {
 	            this.setState((0, _assign2.default)({}, this.state, { extend: !this.state.extend }), function () {
-	                if (!_this14.state.extend) {
-	                    _this14.props.toggleFull();
+	                if (!_this15.state.extend) {
+	                    _this15.props.toggleFull();
 	                }
 	            });
 	        }
 	    },
 	    render: function render() {
-	        var _this15 = this;
+	        var _this16 = this;
 
 	        var show = this.props.show ? this.props.full && this._item.doc !== 2 && this._item.doc !== 3 && (this.props.mediaType === 2 || this.props.mediaType === 9 && this._item.type === 2) ? { visibility: 'hidden' } : {} : { display: 'none' };
 	        var option = null;
@@ -38490,7 +38503,7 @@
 	                _react2.default.createElement(
 	                    'a',
 	                    { href: '#', onClick: function onClick(e) {
-	                            return (0, _utility.killEvent)(e, _this15._backward);
+	                            return (0, _utility.killEvent)(e, _this16._backward);
 	                        } },
 	                    _react2.default.createElement('span', { className: 'glyphicon glyphicon-backward' })
 	                )
@@ -38511,7 +38524,7 @@
 	                    _react2.default.createElement(
 	                        'a',
 	                        { href: '#', onClick: function onClick(e) {
-	                                return (0, _utility.killEvent)(e, _this15._changeMode);
+	                                return (0, _utility.killEvent)(e, _this16._changeMode);
 	                            } },
 	                        mode
 	                    )
@@ -38529,7 +38542,7 @@
 	                        'a',
 	                        { href: '#', className: this.state.loading ? 'disabled' : '', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._movePlaylist(-1);
+	                                    return _this16._movePlaylist(-1);
 	                                });
 	                            } },
 	                        _react2.default.createElement('span', { className: 'glyphicon glyphicon-chevron-up' })
@@ -38547,7 +38560,7 @@
 	                        'a',
 	                        { href: '#', className: this.state.loading ? 'disabled' : '', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._movePlaylist(1);
+	                                    return _this16._movePlaylist(1);
 	                                });
 	                            } },
 	                        _react2.default.createElement('span', { className: 'glyphicon glyphicon-chevron-down' })
@@ -38560,7 +38573,7 @@
 	                _react2.default.createElement(
 	                    'a',
 	                    { href: '#', onClick: function onClick(e) {
-	                            return (0, _utility.killEvent)(e, _this15._mediaCheck);
+	                            return (0, _utility.killEvent)(e, _this16._mediaCheck);
 	                        } },
 	                    _react2.default.createElement('span', { className: 'glyphicon glyphicon-refresh' })
 	                )
@@ -38571,7 +38584,7 @@
 	                _react2.default.createElement(
 	                    'a',
 	                    { href: '#', onClick: function onClick(e) {
-	                            return (0, _utility.killEvent)(e, _this15._mediaDownload);
+	                            return (0, _utility.killEvent)(e, _this16._mediaDownload);
 	                        } },
 	                    _react2.default.createElement('span', { className: 'glyphicon glyphicon-download-alt' })
 	                )
@@ -38587,7 +38600,7 @@
 	                        'a',
 	                        { href: '#', className: this.state.loading ? 'disabled' : '', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._moveMedia(-1);
+	                                    return _this16._moveMedia(-1);
 	                                });
 	                            } },
 	                        _react2.default.createElement('span', { className: 'glyphicon glyphicon-chevron-left' })
@@ -38601,7 +38614,7 @@
 	                    _react2.default.createElement(
 	                        'a',
 	                        { href: '#', onClick: function onClick(e) {
-	                                return (0, _utility.killEvent)(e, _this15.props.toggleFull);
+	                                return (0, _utility.killEvent)(e, _this16.props.toggleFull);
 	                            } },
 	                        _react2.default.createElement('span', { className: 'glyphicon ' + (this.props.full ? 'glyphicon-minus-sign' : 'glyphicon-plus-sign') })
 	                    )
@@ -38613,7 +38626,7 @@
 	                        'a',
 	                        { href: '#', className: this.state.loading ? 'disabled' : '', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._moveMedia(1);
+	                                    return _this16._moveMedia(1);
 	                                });
 	                            } },
 	                        _react2.default.createElement('span', { className: 'glyphicon glyphicon-chevron-right' })
@@ -38643,7 +38656,7 @@
 	                        'a',
 	                        { href: '#', style: { position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible' }, className: 'text-center', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._nextMedia(true);
+	                                    return _this16._nextMedia(true);
 	                                });
 	                            } },
 	                        this.state.subIndex
@@ -38651,7 +38664,7 @@
 	                    _react2.default.createElement(
 	                        'a',
 	                        { href: '#', style: { position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible' }, className: 'text-center', onClick: function onClick(e) {
-	                                return (0, _utility.killEvent)(e, _this15._handleExtend);
+	                                return (0, _utility.killEvent)(e, _this16._handleExtend);
 	                            } },
 	                        _react2.default.createElement('i', { className: 'glyphicon glyphicon-resize-small' })
 	                    ),
@@ -38659,7 +38672,7 @@
 	                        'div',
 	                        { id: 'extend', style: { top: '-90px', visibility: 'visible', position: 'relative', height: '100vh', width: '98vw', overflow: 'auto', cursor: 'pointer', zIndex: -1 } },
 	                        _react2.default.createElement('img', { style: { visibility: 'visible', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '0px', zIndex: -1 }, src: this.state.src, alt: this._item.name, onClick: function onClick(e) {
-	                                return (0, _utility.killEvent)(e, _this15._nextMedia);
+	                                return (0, _utility.killEvent)(e, _this16._nextMedia);
 	                            }, onLoad: function onLoad() {
 	                                var extNode = document.getElementById('extend');
 	                                extNode.scrollTop = 0;
@@ -38677,7 +38690,7 @@
 	                        'a',
 	                        { href: '#', style: { position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible' }, className: 'text-center', onClick: function onClick(e) {
 	                                return (0, _utility.killEvent)(e, function () {
-	                                    return _this15._nextMedia(true);
+	                                    return _this16._nextMedia(true);
 	                                });
 	                            } },
 	                        this.state.subIndex
@@ -38685,15 +38698,15 @@
 	                    _react2.default.createElement(
 	                        'a',
 	                        { href: '#', style: { position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible' }, className: 'text-center', onClick: function onClick(e) {
-	                                return (0, _utility.killEvent)(e, _this15._handleExtend);
+	                                return (0, _utility.killEvent)(e, _this16._handleExtend);
 	                            } },
 	                        _react2.default.createElement('i', { className: 'glyphicon glyphicon-resize-full' })
 	                    ),
 	                    _react2.default.createElement('img', { style: { visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '-90px', maxHeight: '100vh', zIndex: -1 }, src: this.state.src, alt: this._item.name, onClick: function onClick(e) {
-	                            return (0, _utility.killEvent)(e, _this15._nextMedia);
+	                            return (0, _utility.killEvent)(e, _this16._nextMedia);
 	                        } })
 	                ) : _react2.default.createElement('img', { style: { visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer' }, src: this.state.src, alt: this._item.name, onClick: function onClick(e) {
-	                        return (0, _utility.killEvent)(e, _this15._nextMedia);
+	                        return (0, _utility.killEvent)(e, _this16._nextMedia);
 	                    } });
 	            }
 	        }
@@ -38712,14 +38725,14 @@
 	            media2 = _react2.default.createElement(
 	                'video',
 	                { style: (0, _assign2.default)(mediaCss, this.props.mediaType === 9 && this._item.type !== 3 ? { display: 'none' } : {}), controls: true, src: this.props.mediaType === 3 || this.props.mediaType === 9 && this._item.type === 3 ? this.state.src : '', ref: function ref(_ref) {
-	                        return _this15._video = _ref;
+	                        return _this16._video = _ref;
 	                    } },
 	                _react2.default.createElement('track', { label: 'Chinese', kind: 'captions', srcLang: 'ch', src: this.props.mediaType === 3 || this.props.mediaType === 9 && this._item.type === 3 ? this.state.subCh : '', 'default': true }),
 	                _react2.default.createElement('track', { label: 'English', kind: 'captions', srcLang: 'en', src: this.props.mediaType === 3 || this.props.mediaType === 9 && this._item.type === 3 ? this.state.subEn : '' })
 	            );
 	        }
 	        var media3 = this.props.mediaType === 4 || this.props.mediaType === 9 ? _react2.default.createElement('audio', { style: (0, _assign2.default)({ width: '300px', height: '50px' }, this.props.mediaType === 9 && this._item.type !== 4 ? { display: 'none' } : {}), controls: true, src: this.props.mediaType === 4 || this.props.mediaType === 9 && this._item.type === 4 ? this.state.src : '', ref: function ref(_ref2) {
-	                return _this15._audio = _ref2;
+	                return _this16._audio = _ref2;
 	            } }) : null;
 	        return _react2.default.createElement(
 	            'section',
@@ -38750,7 +38763,7 @@
 	                                'a',
 	                                { href: '#', onClick: function onClick(e) {
 	                                        return (0, _utility.killEvent)(e, function () {
-	                                            return _this15.setState((0, _assign2.default)({}, _this15.state, { option: !_this15.state.option }));
+	                                            return _this16.setState((0, _assign2.default)({}, _this16.state, { option: !_this16.state.option }));
 	                                        });
 	                                    } },
 	                                _react2.default.createElement(_Tooltip2.default, { tip: 'option', place: 'top' }),
@@ -49819,6 +49832,12 @@
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+	var mapStateToProps = function mapStateToProps(state) {
+	    return {
+	        bookmark: state.passDataHandle.item.bookmark
+	    };
+	};
+
 	var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 	    return {
 	        addalert: function addalert(msg) {
@@ -49826,11 +49845,14 @@
 	        },
 	        sendglbpw: function sendglbpw(callback) {
 	            return dispatch((0, _actions.sendGlbPw)(callback));
+	        },
+	        setLatest: function setLatest(id, bookmark) {
+	            return dispatch((0, _actions.setPass)(null, id, bookmark));
 	        }
 	    };
 	};
 
-	var RePasswordInfo = (0, _reactRedux.connect)(null, mapDispatchToProps)(_PasswordInfo2.default);
+	var RePasswordInfo = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_PasswordInfo2.default);
 
 	exports.default = RePasswordInfo;
 
@@ -49954,6 +49976,7 @@
 	                                    return _promise2.default.reject('User password not vaild!!!');
 	                                } else {
 	                                    set_obj['userPW'] = userPW;
+	                                    _this.props.setLatest(_this.props.item.id, _this.props.bookmark);
 	                                    return (0, _utility.api)('/api/password/editRow/' + _this.props.item.id, set_obj, 'PUT').then(function (info) {
 	                                        return _this.props.onclose();
 	                                    }).catch(function (err) {
@@ -49963,6 +49986,7 @@
 	                                }
 	                            });
 	                        } else {
+	                            _this.props.setLatest(_this.props.item.id, _this.props.bookmark);
 	                            (0, _utility.api)('/api/password/editRow/' + _this.props.item.id, set_obj, 'PUT').then(function (info) {
 	                                return _this.props.onclose();
 	                            }).catch(function (err) {
@@ -50011,6 +50035,7 @@
 	                return _promise2.default.reject('User password not vaild!!!');
 	            } else {
 	                return (0, _utility.api)('/api/password/getPW/' + id + (isPre ? '/pre' : ''), { userPW: userPW }, 'PUT').then(function (result) {
+	                    _this3.props.setLatest(id, _this3.props.bookmark);
 	                    isPre ? _this3._password2 = result.password : _this3._password = result.password;
 	                    callback();
 	                }).catch(function (err) {
@@ -50019,6 +50044,7 @@
 	                });
 	            }
 	        }) : (0, _utility.api)('/api/password/getPW/' + id + (isPre ? '/pre' : ''), {}, 'PUT').then(function (result) {
+	            _this3.props.setLatest(id, _this3.props.bookmark);
 	            isPre ? _this3._password2 = result.password : _this3._password = result.password;
 	            callback();
 	        }).catch(function (err) {
@@ -51483,7 +51509,7 @@
 	    };
 	};
 
-	var ReItemPassword = (0, _reactRedux.connect)(null, mapDispatchToProps)(_ItemPassword2.default);
+	var ReItemPassword = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_ItemPassword2.default);
 
 	exports.default = ReItemPassword;
 
@@ -51698,7 +51724,7 @@
 
 	var mapStateToProps = function mapStateToProps(state) {
 	    return {
-	        mainUrl: state.basicDataHandle.url
+	        bookmark: state.stockDataHandle.item.bookmark
 	    };
 	};
 
@@ -51709,6 +51735,9 @@
 	        },
 	        globalinput: function globalinput(type, callback, color, placeholder, value, option) {
 	            return dispatch((0, _actions.sendGlbIn)(type, callback, color, placeholder, value, option));
+	        },
+	        setLatest: function setLatest(id, bookmark) {
+	            return dispatch((0, _actions.setStock)(null, id, bookmark));
 	        }
 	    };
 	};
@@ -51759,7 +51788,8 @@
 	        var _this2 = this;
 
 	        (0, _utility.api)('/api/stock/getPER/' + id).then(function (result) {
-	            return _this2.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.per);
+	            _this2.props.setLatest(id, _this2.props.bookmark);
+	            _this2.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.per);
 	        }).catch(function (err) {
 	            return _this2.props.addalert(err);
 	        });
@@ -51768,7 +51798,8 @@
 	        var _this3 = this;
 
 	        (0, _utility.api)('/api/stock/getPredictPER/' + id).then(function (result) {
-	            return _this3.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.per);
+	            _this3.props.setLatest(id, _this3.props.bookmark);
+	            _this3.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.per);
 	        }).catch(function (err) {
 	            return _this3.props.addalert(err);
 	        });
@@ -51776,8 +51807,9 @@
 	    _interval: function _interval(id) {
 	        var _this4 = this;
 
-	        (0, _utility.api)(this.props.mainUrl + '/api/stock/getInterval/' + id).then(function (result) {
-	            return _this4.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.interval);
+	        (0, _utility.api)('/api/stock/getInterval/' + id).then(function (result) {
+	            _this4.props.setLatest(id, _this4.props.bookmark);
+	            _this4.props.globalinput(4, function () {}, 'warning', 'Parse Index', result.interval);
 	        }).catch(function (err) {
 	            return _this4.props.addalert(err);
 	        });
@@ -51787,7 +51819,8 @@
 
 	        this.props.globalinput(1, function (point) {
 	            return (0, _utility.api)('/api/stock/getPoint/' + id + '/' + point).then(function (result) {
-	                return _this5.props.globalinput(4, function () {}, 'info', 'Input Price', result.point[0], result.point[1]);
+	                _this5.props.setLatest(id, _this5.props.bookmark);
+	                _this5.props.globalinput(4, function () {}, 'info', 'Input Price', result.point[0], result.point[1]);
 	            });
 	        }, 'info', 'Input Price');
 	    },

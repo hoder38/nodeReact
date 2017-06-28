@@ -68,6 +68,11 @@ export function isValidString(str, type, msg=null, code=400) {
                 return objectID(str)
             }
             break
+            case 'email':
+            if (str.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,6})+$/)) {
+                return str;
+            }
+            break;
         }
     } else if (type === 'uid' && typeof str === 'object') {
         str = str.toString()
@@ -258,6 +263,37 @@ export const getStorageItem = (user, items, mediaHandle) => items.map(item => {
     }, mediaHandle === 1 ? {media: item.mediaType} : {}, media, item.present ? {present: item.present} : {}, item.url ? {url: item.url} : {}, item.thumb ? {thumb: item.thumb} : {}, item.cid ? {cid: item.cid} : {}, item.ctitle ? {ctitle: item.ctitle} : {}, item.status === 6 ? {doc: 1} : {}, item.status === 5 ? {doc: 2} : {}, item.status === 10 ? {doc: 3} : {});
 });
 
+export const getPasswordItem = (user, items) => items.map(item => {
+    if (item.important === 1) {
+        item.tags.push('important');
+    }
+    return Object.assign({
+        name: item.name,
+        id: item._id,
+        tags: item.tags,
+        username: item.username,
+        url: item.url,
+        email: item.email,
+        utime: item.utime,
+    }, (item.important === 1) ? {important : true} : {important : false});
+});
+
+export const getStockItem = (user, items) => checkAdmin(1, user) ? items.map(item => {
+    if (item.important === 1) {
+        item.tags.push('important');
+    }
+    return {
+        name: item.name,
+        id: item._id,
+        tags: item.tags,
+        profit: item.profitIndex,
+        safety: item.safetyIndex,
+        management: item.managementIndex,
+        index: item.index,
+        type: item.type,
+    };
+}) : [];
+
 export const getFileLocation = (owner, uid) => {
     const owner_S = owner.toString();
     const owner_md5 = createHash('md5').update(owner_S).digest('hex');
@@ -371,3 +407,40 @@ export const completeZero = (number, offset) => {
     }
     return number;
 }
+
+export const findTag = (node, tag=null, id=null) => {
+    let ret = [];
+    const item = node.children ? node.children : node;
+    if (!Array.isArray(item)) {
+        return ret;
+    }
+    for (let c of item) {
+        if (tag) {
+            if ((c.type === 'tag' || c.type === 'script') && c.name === tag) {
+                if (id) {
+                    if (c.attribs && (c.attribs.class === id || c.attribs.id === id)) {
+                        ret.push(c);
+                    }
+                } else {
+                    ret.push(c);
+                }
+            }
+        } else {
+            if (c.type === 'text') {
+                const str = c.data.toString().trim();
+                if (str) {
+                    ret.push(str);
+                }
+            }
+            if (c.type === 'comment') {
+                const str = c.data.toString().match(/^\[CDATA\[(.*)\]\]$/)[1].trim();
+                if (str) {
+                    ret.push(str);
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+export const addPre = (url, pre) => url.match(/^(https|http):\/\//) ? url : url.match(/^\//) ? `${pre}${url}` : `${pre}/${url}`;

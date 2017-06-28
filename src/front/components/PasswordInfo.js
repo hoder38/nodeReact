@@ -75,6 +75,7 @@ const PasswordInfo = React.createClass({
                                 return Promise.reject('User password not vaild!!!')
                             } else {
                                 set_obj['userPW'] = userPW
+                                this.props.setLatest(this.props.item.id, this.props.bookmark)
                                 return api(`/api/password/editRow/${this.props.item.id}`, set_obj, 'PUT').then(info => this.props.onclose()).catch(err => {
                                     this.props.addalert(err)
                                     throw err
@@ -82,6 +83,7 @@ const PasswordInfo = React.createClass({
                             }
                         })
                     } else {
+                        this.props.setLatest(this.props.item.id, this.props.bookmark)
                         api(`/api/password/editRow/${this.props.item.id}`, set_obj, 'PUT').then(info => this.props.onclose()).catch(err => this.props.addalert(err))
                     }
                 } else {
@@ -118,6 +120,7 @@ const PasswordInfo = React.createClass({
                 return Promise.reject('User password not vaild!!!')
             } else {
                 return api(`/api/password/getPW/${id}${isPre ? '/pre' : ''}`, {userPW}, 'PUT').then(result => {
+                    this.props.setLatest(id, this.props.bookmark)
                     isPre ? this._password2 = result.password : this._password = result.password
                     callback()
                 }).catch(err => {
@@ -126,6 +129,7 @@ const PasswordInfo = React.createClass({
                 })
             }
         }) : api(`/api/password/getPW/${id}${isPre ? '/pre' : ''}`, {}, 'PUT').then(result => {
+            this.props.setLatest(id, this.props.bookmark)
             isPre ? this._password2 = result.password : this._password = result.password
             callback()
         }).catch(err => this.props.addalert(err))

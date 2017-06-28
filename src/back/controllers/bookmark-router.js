@@ -1,8 +1,8 @@
-import { STORAGEDB, GENRE_LIST_CH } from '../constants'
+import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB } from '../constants'
 import Express from 'express'
 import { createHash } from 'crypto'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem } from '../util/utility'
+import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem } from '../util/utility'
 import { addPost } from '../util/mime'
 import Mongo, { objectID } from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
@@ -10,11 +10,14 @@ import sendWs from '../util/sendWs'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
+const PasswordTagTool = TagTool(PASSWORDDB);
+const StockTagTool = TagTool(STOCKDB);
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
+//storage
 router.get(`/${STORAGEDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
     console.log('get storage bookmark list');
     StorageTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
@@ -211,5 +214,56 @@ router.post(`/${STORAGEDB}/subscript/:id`, function(req, res, next) {
     })).catch(err => handleError(err, next));
 });
 
+//password
+router.get(`/${PASSWORDDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
+    console.log('get password bookmark list');
+    PasswordTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
+});
+
+router.get(`/${PASSWORDDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
+    console.log('get password bookmark');
+    PasswordTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
+        itemList: getPasswordItem(req.user, result.items),
+        parentList: result.parentList,
+        latest: result.latest,
+        bookmarkID: result.bookmark,
+    })).catch(err => handleError(err, next));
+});
+
+router.post(`/${PASSWORDDB}/add`, function (req, res, next) {
+    console.log('password add bookmark');
+    PasswordTagTool.addBookmark(isValidString(req.body.name, 'name', 'name is not vaild'), req.user, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
+});
+
+router.delete(`/${PASSWORDDB}/del/:id`, function (req, res, next) {
+    console.log('del password bookmark');
+    PasswordTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
+});
+
+//stock
+router.get(`/${STOCKDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
+    console.log('get stock bookmark list');
+    StockTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
+});
+
+router.get(`/${STOCKDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
+    console.log('get stock bookmark');
+    StockTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
+        itemList: getStockItem(req.user, result.items),
+        parentList: result.parentList,
+        latest: result.latest,
+        bookmarkID: result.bookmark,
+    })).catch(err => handleError(err, next));
+});
+
+router.post(`/${STOCKDB}/add`, function (req, res, next) {
+    console.log('stock add bookmark');
+    StockTagTool.addBookmark(isValidString(req.body.name, 'name', 'name is not vaild'), req.user, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
+});
+
+router.delete(`/${STOCKDB}/del/:id`, function (req, res, next) {
+    console.log('del stock bookmark');
+    StockTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
+});
 
 export default router

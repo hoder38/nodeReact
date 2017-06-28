@@ -116,7 +116,7 @@ const App = React.createClass({
             cur: [],
             exactly: [],
             his: [],
-        }, '', '', 'name', 'asc', '')
+        }, '', '', 'name', 'desc', '')
         this.props.dirsset([])
     },
     _doLogout: function() {

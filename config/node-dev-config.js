@@ -20,8 +20,8 @@ export default {
     NAS_PREFIX: '/mnt/storage',
     HINT: false,
     AUTO_UPLOAD: false,
-    AUTO_DOWNLOAD: true,
-    UPDATE_STOCK: false,
+    AUTO_DOWNLOAD: false,
+    UPDATE_STOCK: true,
     UPDATE_EXTERNAL: false,
     CHECK_MEDIA: false,
     API_LIMIT: 10,
@@ -29,4 +29,7 @@ export default {
     MEGA_LIMIT: 1,
     ZIP_LIMIT: 1,
     STREAM_LIMIT: 100,
+    STOCK_DATE: [28, 23, 24, 25],
+    STOCK_MODE: 3,
+    //3: xml重抓 2: xml重parse 1: parse tag
 }

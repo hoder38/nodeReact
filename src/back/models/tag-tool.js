@@ -1,21 +1,9 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, DEFAULT_TAGS, STORAGE_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
-
-const getStorageSortName  = sortName => {
-    switch (sortName) {
-        case 'count':
-        return sortName;
-        case 'mtime':
-        return 'utime';
-        case 'name':
-        default:
-        return 'name';
-    }
-}
 
 export default function process(collection) {
     let getQuerySql = null;
@@ -28,6 +16,18 @@ export default function process(collection) {
         getQueryTag = getStorageQueryTag;
         getSortName = getStorageSortName;
         parent_arr = STORAGE_PARENT;
+        break;
+        case PASSWORDDB:
+        getQuerySql = getPasswordQuerySql;
+        getQueryTag = getPasswordQueryTag;
+        getSortName = getPasswordSortName;
+        parent_arr = PASSWORD_PARENT;
+        break;
+        case STOCKDB:
+        getQuerySql = getStockQuerySql;
+        getQueryTag = getStockQueryTag;
+        getSortName = getStockSortName;
+        parent_arr = STOCK_PARENT;
         break;
         default:
         return false;
@@ -908,7 +908,7 @@ export default function process(collection) {
             } else {
                 bookmark = tags.getBookmark();
             }
-            return bookmark ? Mongo('update', `${collection}User`, {_id: objectID(bookmark)}, {$set: {latest: latest}}) : Promise.resolve();
+            return bookmark ? Mongo('update', `${collection}User`, {_id: objectID(bookmark)}, {$set: {latest}}) : Promise.resolve();
         },
         saveSql: function(page, saveName, back, user, session) {
             const save = this.searchTags(session).loadArray(saveName);
@@ -1055,7 +1055,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
         nosql.$and = and;
     }
     const hint = Object.assign({name: 1}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {is_first: 1} : {});
-    const ret = Object.assign({nosql: nosql}, HINT(ENV_TYPE) ? {hint: hint} : {}, skip ? {skip: skip} : {});
+    const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
     console.log(ret);
     console.log(ret.nosql);
     return ret;
@@ -1083,6 +1083,174 @@ function getStorageQueryTag(user, tag, del=1) {
             tag: {tags: normal},
             type: 1,
         };
+    }
+}
+
+function getStorageSortName(sortName) {
+    switch (sortName) {
+        case 'count':
+        return sortName;
+        case 'mtime':
+        return 'utime';
+        case 'name':
+        default:
+        return 'name';
+    }
+}
+
+function getPasswordQuerySql(user, tagList, exactly) {
+    let nosql = {owner: user._id};
+    let and = [];
+    let is_tags = false;
+    let is_important = false;
+    let skip = 0;
+    if (tagList.length > 0) {
+        for (let [i, tag] of Object.entries(tagList)) {
+            const normal = normalize(tag);
+            const index = isDefaultTag(normal);
+            if (index.index === 6) {
+                nosql['important'] = 1;
+                is_important = true;
+            } else if (index.index === 31) {
+                if (index.index[1] === '') {
+                    skip = Number(index.index[1]);
+                }
+                continue;
+            } else if (index) {
+            } else {
+                if (exactly[i]) {
+                    and.push({tags: normal});
+                    is_tags = true;
+                } else {
+                    and.push({tags: { $regex: escapeRegExp(normal) }});
+                }
+            }
+        }
+    }
+    if (and.length > 0) {
+        nosql.$and = and;
+    }
+    const hint = Object.assign({
+        owner: 1,
+        name: 1,
+    }, is_important ? {important: 1} : {}, is_tags ? {tags: 1} : {});
+    const ret = Object.assign({nosql, select: {
+        password: 0,
+        prePassword: 0,
+        owner: 0,
+    }}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
+    console.log(ret);
+    console.log(ret.nosql);
+    return ret;
+}
+
+function getPasswordQueryTag(user, tag, del=1) {
+    const normal = normalize(tag);
+    const index = isDefaultTag(normal);
+    if (index.index === 6) {
+        return {
+            type: 3,
+            name: '',
+        };
+    } else if (index) {
+        return {type: 0};
+    } else {
+        return {
+            tag: {tags: normal},
+            type: 1,
+        };
+    }
+}
+
+function getPasswordSortName(sortName) {
+    switch (sortName) {
+        case 'count':
+        return 'username';
+        case 'mtime':
+        return 'utime';
+        case 'name':
+        default:
+        return 'name';
+    }
+}
+
+function getStockQuerySql(user, tagList, exactly) {
+    let nosql = {};
+    let and = [];
+    let is_tags = false;
+    let is_important = false;
+    let skip = 0;
+    if (tagList.length > 0) {
+        for (let [i, tag] of Object.entries(tagList)) {
+            const normal = normalize(tag);
+            const index = isDefaultTag(normal);
+            if (index.index === 6) {
+                nosql['important'] = 1;
+                is_important = true;
+            } else if (index.index === 31) {
+                if (index.index[1] === '') {
+                    skip = Number(index.index[1]);
+                } else if (index.index[1] === 'profit') {
+                    nosql['profitIndex'] = {$gte: Number(index.index[1])};
+                } else if (index.index[1] === 'safety') {
+                    nosql['safetyIndex'] = {$gte: Number(index.index[1])};
+                } else if (index.index[1] === 'manag') {
+                    nosql['managementIndex'] = {$gte: Number(index.index[1])};
+                }
+                continue;
+            } else if (index) {
+            } else {
+                if (exactly[i]) {
+                    and.push({tags: normal});
+                    is_tags = true;
+                } else {
+                    and.push({tags: { $regex: escapeRegExp(normal) }});
+                }
+            }
+        }
+    }
+    if (and.length > 0) {
+        nosql.$and = and;
+    }
+    const hint = Object.assign({profitIndex: 1}, is_important ? {important: 1} : {}, is_tags ? {tags: 1} : {});
+    const ret = Object.assign({nosql, select: {
+        cash: 0,
+        asset: 0,
+        sales: 0,
+    }}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
+    console.log(ret);
+    console.log(ret.nosql);
+    return ret;
+}
+
+function getStockQueryTag(user, tag, del=1) {
+    const normal = normalize(tag);
+    const index = isDefaultTag(normal);
+    if (index.index === 6) {
+        return {
+            tag: {important: del},
+            type: 2,
+            name: default_tags[6],
+        };
+    } else if (index) {
+        return {type: 0};
+    } else {
+        return {
+            tag: {tags: normal},
+            type: 1,
+        };
+    }
+}
+
+function getStockSortName(sortName) {
+    switch (sortName) {
+        case 'count':
+        return 'managementIndex';
+        case 'mtime':
+        return 'safetyIndex';
+        case 'name':
+        default:
+        return 'profitIndex';
     }
 }
 

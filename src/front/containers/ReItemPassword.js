@@ -15,7 +15,7 @@ const mapDispatchToProps = dispatch => ({
 })
 
 const ReItemPassword = connect(
-    null,
+    mapStateToProps,
     mapDispatchToProps
 )(ItemPassword)
 

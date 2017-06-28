@@ -9,7 +9,7 @@ import Redis from '../models/redis-tool'
 import GoogleApi from '../models/api-tool-google'
 import { normalize, isDefaultTag } from '../models/tag-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation } from '../util/utility'
+import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility'
 import { addPost } from '../util/mime'
 import Api from './api-tool'
 
@@ -2036,43 +2036,6 @@ export default {
         }
     },
 }
-
-const findTag = (node, tag=null, id=null) => {
-    let ret = [];
-    const item = node.children ? node.children : node;
-    if (!Array.isArray(item)) {
-        return ret;
-    }
-    for (let c of item) {
-        if (tag) {
-            if ((c.type === 'tag' || c.type === 'script') && c.name === tag) {
-                if (id) {
-                    if (c.attribs && (c.attribs.class === id || c.attribs.id === id)) {
-                        ret.push(c);
-                    }
-                } else {
-                    ret.push(c);
-                }
-            }
-        } else {
-            if (c.type === 'text') {
-                const str = c.data.toString().trim();
-                if (str) {
-                    ret.push(str);
-                }
-            }
-            if (c.type === 'comment') {
-                const str = c.data.toString().match(/^\[CDATA\[(.*)\]\]$/)[1].trim();
-                if (str) {
-                    ret.push(str);
-                }
-            }
-        }
-    }
-    return ret;
-}
-
-const addPre = (url, pre) => url.match(/^(https|http):\/\//) ? url : url.match(/^\//) ? `${pre}${url}` : `${pre}/${url}`;
 
 export const subHdUrl = str => Api('url', `http://subhd.com/search/${encodeURIComponent(str)}`).then(raw_data => {
     const list = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container list')[0], 'div', 'row')[0], 'div', 'col-md-9')[0];

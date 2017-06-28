@@ -12,16 +12,28 @@ const ItemStock = React.createClass({
         ]
     },
     _per: function(id) {
-        api(`/api/stock/getPER/${id}`).then(result => this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per)).catch(err => this.props.addalert(err))
+        api(`/api/stock/getPER/${id}`).then(result => {
+            this.props.setLatest(id, this.props.bookmark);
+            this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
+        }).catch(err => this.props.addalert(err))
     },
     _predict: function(id) {
-        api(`/api/stock/getPredictPER/${id}`).then(result => this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per)).catch(err => this.props.addalert(err))
+        api(`/api/stock/getPredictPER/${id}`).then(result => {
+            this.props.setLatest(id, this.props.bookmark);
+            this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
+        }).catch(err => this.props.addalert(err))
     },
     _interval: function(id) {
-        api(`${this.props.mainUrl}/api/stock/getInterval/${id}`).then(result => this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.interval)).catch(err => this.props.addalert(err))
+        api(`/api/stock/getInterval/${id}`).then(result => {
+            this.props.setLatest(id, this.props.bookmark);
+            this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.interval);
+        }).catch(err => this.props.addalert(err))
     },
     _point: function(id) {
-        this.props.globalinput(1, point => api(`/api/stock/getPoint/${id}/${point}`).then(result => this.props.globalinput(4, () => {}, 'info', 'Input Price', result.point[0], result.point[1])), 'info', 'Input Price')
+        this.props.globalinput(1, point => api(`/api/stock/getPoint/${id}/${point}`).then(result => {
+            this.props.setLatest(id, this.props.bookmark);
+            this.props.globalinput(4, () => {}, 'info', 'Input Price', result.point[0], result.point[1]);
+        }), 'info', 'Input Price')
     },
     render: function() {
         const item = this.props.item

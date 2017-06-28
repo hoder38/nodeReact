@@ -32,3 +32,5 @@ export const TORRENT_LIMIT = env => env === RELEASE ? ReleaseConfig.TORRENT_LIMI
 export const ZIP_LIMIT = env => env === RELEASE ? ReleaseConfig.ZIP_LIMIT : DevConfig.ZIP_LIMIT
 export const MEGA_LIMIT = env => env === RELEASE ? ReleaseConfig.MEGA_LIMIT : DevConfig.MEGA_LIMIT
 export const STREAM_LIMIT = env => env === RELEASE ? ReleaseConfig.STREAM_LIMIT : DevConfig.STREAM_LIMIT
+export const STOCK_DATE = env => env === RELEASE ? ReleaseConfig.STOCK_DATE : DevConfig.STOCK_DATE
+export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : DevConfig.STOCK_MODE

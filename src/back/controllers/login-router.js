@@ -29,6 +29,7 @@ Passport.deserializeUser(function(id, done) {
         unDay: users[0].unDay,
         unHit: users[0].unHit,
         username: users[0].username,
+        password: users[0].password,
     })).catch(err => handleError(err, done))
 })
 

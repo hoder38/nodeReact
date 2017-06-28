@@ -29,6 +29,8 @@ import HomeRouter from './home-router'
 import BasicRouter from './basic-router'
 import UserRouter from './user-router'
 import StorageRouter from './storage-router'
+import PasswordRouter from './password-router'
+import StockRouter from './stock-router'
 import BookmarkRouter from './bookmark-router'
 import ParentRouter from './parent-router'
 import OtherRouter from './other-router'
@@ -86,12 +88,13 @@ app.use('/api/user', UserRouter);
 
 app.use('/api/storage', StorageRouter);
 
+app.use('/api/password', PasswordRouter);
+
+app.use('/api/stock', StockRouter);
+
 app.use('/api/bookmark', BookmarkRouter);
 
 app.use('/api/parent', ParentRouter);
-
-//password
-//stock
 
 //other
 app.use('/', OtherRouter);
