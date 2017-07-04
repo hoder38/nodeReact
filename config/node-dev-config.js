@@ -21,7 +21,7 @@ export default {
     HINT: false,
     AUTO_UPLOAD: false,
     AUTO_DOWNLOAD: false,
-    UPDATE_STOCK: true,
+    UPDATE_STOCK: false,
     UPDATE_EXTERNAL: false,
     CHECK_MEDIA: false,
     API_LIMIT: 10,

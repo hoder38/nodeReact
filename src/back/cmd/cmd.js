@@ -1,10 +1,12 @@
-import { USERDB, DRIVE_LIMIT, DOCDB } from '../constants'
+import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB } from '../constants'
 import { createInterface } from 'readline'
+import { writeFile as FsWriteFile, createReadStream as FsCreateReadStream, existsSync as FsExistsSync } from 'fs'
+import Mkdirp from 'mkdirp'
 import { userDrive, autoDoc } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
-import Mongo from '../models/mongo-tool'
-import { handleError, isValidString } from '../util/utility'
+import Mongo, { objectID } from '../models/mongo-tool'
+import { handleError, isValidString, HoError } from '../util/utility'
 
 function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     drive_batch = isNaN(drive_batch) ? DRIVE_LIMIT : Number(drive_batch);
@@ -13,6 +15,56 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     console.log(new Date());
     const isSingle = () => Mongo('find', USERDB, Object.assign({auto: {$exists: true}}, singleUser ? {username: isValidString(singleUser, 'name', 'user name not valid!!!')} : {}));
     return isSingle().then(userlist => userDrive(userlist, 0, drive_batch));
+}
+
+const dbDump = collection => {
+    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
+        handleError(new HoError('Collection not find'));
+    }
+    const folderPath = `/mnt/mongodb/backup/${collection}`;
+    const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+    const recur_dump = (index, offset) => Mongo('find', collection, {}, {
+        limit: DRIVE_LIMIT,
+        skip: offset,
+    }).then(items => {
+        if (items.length < DRIVE_LIMIT) {
+            return Promise.resolve();
+        }
+        let write_data = '';
+        items.forEach(item => {
+            write_data = `${write_data}${JSON.stringify(item)}` + "\r\n";
+        });
+        return new Promise((resolve, reject) => FsWriteFile(`${folderPath}/${index}`, write_data, 'utf8', err => err ? reject(err) : resolve())).then(() => recur_dump(index + 1, offset + items.length));
+    });
+    return mkfolder().then(() => recur_dump(0, 0));
+}
+
+const dbRestore = collection => {
+    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
+        handleError(new HoError('Collection not find'));
+    }
+    const folderPath = `/mnt/mongodb/backup/${collection}`;
+    const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store));
+    const recur_restore = index => {
+        const filePath = `${folderPath}/${index}`;
+        return !FsExistsSync(filePath) ? Promise.resolve() : new Promise((resolve, reject) => {
+            let store = [];
+            const rl = createInterface({
+                input: FsCreateReadStream(filePath),
+                terminal: false,
+            });
+            rl.on('line', line => {
+                const json = JSON.parse(line)
+                for (let i in json) {
+                    if (i === '_id' || i === 'userId' || i === 'owner') {
+                        json[i] = objectID(json[i]);
+                    }
+                }
+                store.push(json);
+            }).on('close', () => resolve(store));
+        }).then(store => recur_insert(0, store)).then(() => recur_restore(index + 1));
+    }
+    return recur_restore(0);
 }
 
 const rl = createInterface({
@@ -49,6 +101,12 @@ rl.on('line', line => {
         case 'complete':
         console.log('complete');
         return completeMimeTag(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD complete'));
+        case 'dbdump':
+        console.log('dbdump');
+        return dbDump(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD dbdump'));
+        case 'dbrestore':
+        console.log('dbrestore');
+        return dbRestore(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD dbrestore'));
         default:
         console.log('help:');
         console.log('drive batchNumber [single username]');
@@ -56,5 +114,7 @@ rl.on('line', line => {
         console.log('checkdoc');
         console.log('external lovetv|eztv [clear]');
         console.log('complete [add]');
+        console.log('dbdump collection');
+        console.log('dbrestore collection');
     }
 });

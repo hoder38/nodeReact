@@ -95,11 +95,11 @@ const updateStockList = (list, type) => {
     console.log('updateStockList');
     console.log(new Date());
     console.log(list[0]);
-    return StockTool.getSingleStock(type, '8213', STOCK_MODE(ENV_TYPE)).then(() => {
-        /*list.splice(0, 1);
+    return StockTool.getSingleStock(type, list[0], STOCK_MODE(ENV_TYPE)).then(() => {
+        list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
-        }*/
+        }
     });
 }
 

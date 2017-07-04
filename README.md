@@ -9,6 +9,23 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.6 60 --slave 
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.7 40 --slave /usr/bin/g++ g++ /usr/bin/g++-4.7
 sudo update-alternatives --config gcc
 
+nodejs: https://nodejs.org/dist/v7.4.0/
+uname -a 看cpu
+$wget https://nodejs.org/dist/latest-v5.x/node-v5.11.0-linux-armv7l.tar.gz
+$ tar -xvzf node-v5.11.0-linux-armv7l.tar.gz
+$ sudo mv node-v5.11.0-linux-armv7l /opt/node
+$ sudo mkdir /opt/bin
+$ sudo ln -s /opt/node/bin/* /opt/bin/
+$ sudo nano /etc/profile
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/bin"
+
+try:
+curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo apt-get install -y build-essential
+
+mongo: http://andyfelong.com/2016/01/mongodb-3-0-9-binaries-for-raspberry-pi-2-jessie/
+
 wget http://download.redis.io/releases/redis-3.2.6.tar.gz
 tar xzf redis-3.2.6.tar.gz
 cd redis-3.2.6
