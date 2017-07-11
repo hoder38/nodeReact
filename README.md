@@ -65,3 +65,16 @@ pdftk
 
 sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/cmd.js
 記得等db connect
+
+
+make p12
+
+1. Validations Wizard: domain
+
+2. Certificates Wizard: openssl req -newkey rsa:2048 -keyout anomopi.key -out anomopi.csr
+
+3. Toolbox -> certificate list -> retrieve -> OtherServer
+
+4. creat pfx: openssl pkcs12 -export -out anomopi.pfx -inkey anomopi.key -in 2_www.anomopi.com.crt
+
+5. PFX: anomopi.pfx CA: 1_Intermediate.crt
