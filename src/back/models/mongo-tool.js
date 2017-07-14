@@ -4,10 +4,10 @@ import { MongoClient, ObjectID} from 'mongodb'
 import { createHash } from 'crypto'
 import { handleError, HoError } from '../util/utility'
 
-MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {server: {
+MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {
     auto_reconnect: true,
     poolSize: 10,
-}}, (err, db) => {
+}, (err, db) => {
     handleError(err);
     if (!db) {
         handleError(new HoError('No db connected'));
