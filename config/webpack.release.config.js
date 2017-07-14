@@ -6,7 +6,7 @@ module.exports = {
     output: {
         path: './public',
         publicPath: 'public/',
-        filename: 'app.js',
+        filename: 'release.js',
     },
     module: {
         loaders: [
@@ -45,6 +45,6 @@ module.exports = {
                 NODE_ENV: JSON.stringify("production")
             }
         }),
-        new ExtractTextPlugin("app.css"),
+        new ExtractTextPlugin("release.css"),
     ]
  };
