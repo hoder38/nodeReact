@@ -1,47 +1,36 @@
 import { ENV_TYPE, DB_USERNAME, DB_PWD } from '../../../ver'
 import { DB_IP, DB_PORT, DB_NAME } from '../config'
-import { Server, Db, ObjectID} from 'mongodb'
+import { MongoClient, ObjectID} from 'mongodb'
 import { createHash } from 'crypto'
 import { handleError, HoError } from '../util/utility'
 
-const mongodbServer = new Server(DB_IP(ENV_TYPE), DB_PORT(ENV_TYPE), {
+MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {server: {
     auto_reconnect: true,
     poolSize: 10,
-})
-
-const db = new Db(DB_NAME(ENV_TYPE), mongodbServer, { safe: true })
-
-db.open(function(err, con) {
-    handleError(err)
-    if (!con) {
-        handleError(new HoError('No db connected'))
+}}, (err, db) => {
+    handleError(err);
+    if (!db) {
+        handleError(new HoError('No db connected'));
     }
-    con.authenticate(DB_USERNAME, DB_PWD, function(err,con2) {
-        handleError(err)
-        if (!con2) {
-            handleError(new HoError('No db connected'))
-        }
-        console.log('database connected');
-        db.collection('user', function(err, collection) {
-            handleError(err)
-            collection.count(function(err, count) {
-                handleError(err)
-                if (count === 0) {
-                    const data = {
-                        username: 'hoder',
-                        desc: 'owner',
-                        perm: 1,
-                        password: createHash('md5').update('test123').digest('hex'),
-                    }
-                    collection.insert(data, function(err, user) {
-                        handleError(err)
-                        console.log(user);
-                    })
-                }
-            })
-        })
-    })
-})
+    console.log('database connected');
+    db.collection('user', (err, collection) => {
+        handleError(err);
+        collection.count((err, count) => {
+            handleError(err);
+            if (count === 0) {
+                collection.insert({
+                    username: 'hoder',
+                    desc: 'owner',
+                    perm: 1,
+                    password: createHash('md5').update('test123').digest('hex'),
+                }, (err, user) => {
+                    handleError(err)
+                    console.log(user);
+                });
+            }
+        });
+    });
+});
 
 let collections = []
 

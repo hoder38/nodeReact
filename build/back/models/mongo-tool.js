@@ -68,41 +68,30 @@ var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var mongodbServer = new _mongodb.Server((0, _config.DB_IP)(_ver.ENV_TYPE), (0, _config.DB_PORT)(_ver.ENV_TYPE), {
-    auto_reconnect: true,
-    poolSize: 10
-});
-
-var db = new _mongodb.Db((0, _config.DB_NAME)(_ver.ENV_TYPE), mongodbServer, { safe: true });
-
-db.open(function (err, con) {
+_mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD + '@' + (0, _config.DB_IP)(_ver.ENV_TYPE) + ':' + (0, _config.DB_PORT)(_ver.ENV_TYPE) + '/' + (0, _config.DB_NAME)(_ver.ENV_TYPE), { server: {
+        auto_reconnect: true,
+        poolSize: 10
+    } }, function (err, db) {
     (0, _utility.handleError)(err);
-    if (!con) {
+    if (!db) {
         (0, _utility.handleError)(new _utility.HoError('No db connected'));
     }
-    con.authenticate(_ver.DB_USERNAME, _ver.DB_PWD, function (err, con2) {
+    console.log('database connected');
+    db.collection('user', function (err, collection) {
         (0, _utility.handleError)(err);
-        if (!con2) {
-            (0, _utility.handleError)(new _utility.HoError('No db connected'));
-        }
-        console.log('database connected');
-        db.collection('user', function (err, collection) {
+        collection.count(function (err, count) {
             (0, _utility.handleError)(err);
-            collection.count(function (err, count) {
-                (0, _utility.handleError)(err);
-                if (count === 0) {
-                    var data = {
-                        username: 'hoder',
-                        desc: 'owner',
-                        perm: 1,
-                        password: (0, _crypto.createHash)('md5').update('test123').digest('hex')
-                    };
-                    collection.insert(data, function (err, user) {
-                        (0, _utility.handleError)(err);
-                        console.log(user);
-                    });
-                }
-            });
+            if (count === 0) {
+                collection.insert({
+                    username: 'hoder',
+                    desc: 'owner',
+                    perm: 1,
+                    password: (0, _crypto.createHash)('md5').update('test123').digest('hex')
+                }, function (err, user) {
+                    (0, _utility.handleError)(err);
+                    console.log(user);
+                });
+            }
         });
     });
 });
