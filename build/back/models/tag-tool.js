@@ -1281,7 +1281,7 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    var hint = (0, _assign2.default)({ name: 1 }, is_adultonly ? { adultonly: 1 } : {}, is_tags ? { tags: 1 } : {}, is_first ? { is_first: 1 } : {});
+    var hint = (0, _assign2.default)({ name: 1 }, is_adultonly ? { adultonly: 1 } : {}, is_tags ? { tags: 1 } : {}, is_first ? { first: 1 } : {});
     var ret = (0, _assign2.default)({ nosql: nosql }, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
     console.log(ret);
     console.log(ret.nosql);

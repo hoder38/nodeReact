@@ -1054,7 +1054,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    const hint = Object.assign({name: 1}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {is_first: 1} : {});
+    const hint = Object.assign({name: 1}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {first: 1} : {});
     const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
     console.log(ret);
     console.log(ret.nosql);
