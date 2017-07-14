@@ -6,11 +6,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\"",
     "build": "babel src/back --out-dir build; webpack -p --config config/webpack.release.config.js; git commit -a",
-    "dev-back": "sudo service babel-nodejs-file.sh stop; sudo service babel-nodejs-file.sh start; sleep 5; sudo service babel-nodejs.sh start",
+    "dev-back": "sudo service babel-nodejs-file.sh stop; sudo service babel-nodejs-file.sh start; sleep 10; sudo service babel-nodejs.sh start",
     "dev-front": "webpack --watch --config config/webpack.dev.config.js",
     "dev-stop": "sudo service babel-nodejs-file.sh stop; sudo service nodejs-file.sh stop",
     "release": "git pull; sudo service release-nodejs.sh stop; sudo service release-nodejs.sh start",
-    "release file": "git pull; sudo service release-nodejs-file.sh stop; sudo service release-nodejs-file.sh start"
+    "release file": "git pull; sudo service release-nodejs-file.sh stop; sudo service release-nodejs-file.sh start",
+    "release-stop": "sudo service release-nodejs-file.sh stop"
   },
   "dependencies": {
     "ass-to-vtt": ">=1.0.0",
