@@ -6,7 +6,7 @@ import { STATIC_PATH } from '../constants'
 
 //config
 import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT } from '../config'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config'
 
 //external
 import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
@@ -100,7 +100,7 @@ app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT
 //view
 app.get('*', function(req, res, next) {
     console.log('view');
-    const stream = FsCreateReadStream(`${STATIC_PATH}/app.html`);
+    const stream = FsCreateReadStream(`${STATIC_PATH}/${APP_HTML(ENV_TYPE)}`);
     stream.on('error', function(err) {
         handleError(err);
     });

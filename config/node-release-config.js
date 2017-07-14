@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.default = {
     EXTENT_IP: 'www.anomopi.com',
     EXTENT_FILE_IP: 'www.anomopi.com',
+    APP_HTML: 'release.html',
     IP: '192.168.2.100',
     FILE_IP: '192.168.2.101',
     PORT: 443,

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
+exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.APP_HTML = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
 
 var _constants = require('./constants');
 
@@ -22,6 +22,9 @@ var EXTENT_IP = exports.EXTENT_IP = function EXTENT_IP(env) {
 };
 var EXTENT_FILE_IP = exports.EXTENT_FILE_IP = function EXTENT_FILE_IP(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.EXTENT_FILE_IP : _nodeDevConfig2.default.EXTENT_FILE_IP;
+};
+var APP_HTML = exports.APP_HTML = function APP_HTML(env) {
+  return env === _constants.RELEASE ? _nodeReleaseConfig2.default.APP_HTML : _nodeDevConfig2.default.APP_HTML;
 };
 var IP = exports.IP = function IP(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.IP : _nodeDevConfig2.default.IP;

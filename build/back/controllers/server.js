@@ -146,7 +146,7 @@ app.use('/', (0, _loginRouter2.default)('https://' + (0, _config.EXTENT_FILE_IP)
 //view
 app.get('*', function (req, res, next) {
     console.log('view');
-    var stream = (0, _fs.createReadStream)(_constants.STATIC_PATH + '/app.html');
+    var stream = (0, _fs.createReadStream)(_constants.STATIC_PATH + '/' + (0, _config.APP_HTML)(_ver.ENV_TYPE));
     stream.on('error', function (err) {
         (0, _utility.handleError)(err);
     });

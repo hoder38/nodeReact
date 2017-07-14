@@ -4,6 +4,7 @@ import ReleaseConfig from '../../config/node-release-config'
 
 export const EXTENT_IP = env => env === RELEASE ? ReleaseConfig.EXTENT_IP : DevConfig.EXTENT_IP
 export const EXTENT_FILE_IP = env => env === RELEASE ? ReleaseConfig.EXTENT_FILE_IP : DevConfig.EXTENT_FILE_IP
+export const APP_HTML = env => env === RELEASE ? ReleaseConfig.APP_HTML : DevConfig.APP_HTML
 export const IP = env => env === RELEASE ? ReleaseConfig.IP : DevConfig.IP
 export const FILE_IP = env => env === RELEASE ? ReleaseConfig.FILE_IP : DevConfig.FILE_IP
 export const PORT = env => env === RELEASE ? ReleaseConfig.PORT : DevConfig.PORT
