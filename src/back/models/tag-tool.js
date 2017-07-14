@@ -1054,7 +1054,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    const hint = Object.assign({name: 1}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {first: 1} : {});
+    const hint = Object.assign({}, is_adultonly ? {adultonly: 1} : {}, is_tags ? {tags: 1} : {}, is_first ? {first: 1} : {}, {name: 1});
     const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
     console.log(ret);
     console.log(ret.nosql);
@@ -1130,10 +1130,7 @@ function getPasswordQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    const hint = Object.assign({
-        owner: 1,
-        name: 1,
-    }, is_important ? {important: 1} : {}, is_tags ? {tags: 1} : {});
+    const hint = Object.assign({owner: 1}, is_tags ? {tags: 1} : {}, is_important ? {important: 1} : {}, {name: 1});
     const ret = Object.assign({nosql, select: {
         password: 0,
         prePassword: 0,
@@ -1212,7 +1209,7 @@ function getStockQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    const hint = Object.assign({profitIndex: 1}, is_important ? {important: 1} : {}, is_tags ? {tags: 1} : {});
+    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, is_important ? {important: 1} : {}, {profitIndex: 1});
     const ret = Object.assign({nosql, select: {
         cash: 0,
         asset: 0,

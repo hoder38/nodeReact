@@ -1281,7 +1281,7 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    var hint = (0, _assign2.default)({ name: 1 }, is_adultonly ? { adultonly: 1 } : {}, is_tags ? { tags: 1 } : {}, is_first ? { first: 1 } : {});
+    var hint = (0, _assign2.default)({}, is_adultonly ? { adultonly: 1 } : {}, is_tags ? { tags: 1 } : {}, is_first ? { first: 1 } : {}, { name: 1 });
     var ret = (0, _assign2.default)({ nosql: nosql }, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
     console.log(ret);
     console.log(ret.nosql);
@@ -1381,10 +1381,7 @@ function getPasswordQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    var hint = (0, _assign2.default)({
-        owner: 1,
-        name: 1
-    }, is_important ? { important: 1 } : {}, is_tags ? { tags: 1 } : {});
+    var hint = (0, _assign2.default)({ owner: 1 }, is_tags ? { tags: 1 } : {}, is_important ? { important: 1 } : {}, { name: 1 });
     var ret = (0, _assign2.default)({ nosql: nosql, select: {
             password: 0,
             prePassword: 0,
@@ -1487,7 +1484,7 @@ function getStockQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    var hint = (0, _assign2.default)({ profitIndex: 1 }, is_important ? { important: 1 } : {}, is_tags ? { tags: 1 } : {});
+    var hint = (0, _assign2.default)({}, is_tags ? { tags: 1 } : {}, is_important ? { important: 1 } : {}, { profitIndex: 1 });
     var ret = (0, _assign2.default)({ nosql: nosql, select: {
             cash: 0,
             asset: 0,
