@@ -69,7 +69,7 @@ var _utility = require('../util/utility');
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD + '@' + (0, _config.DB_IP)(_ver.ENV_TYPE) + ':' + (0, _config.DB_PORT)(_ver.ENV_TYPE) + '/' + (0, _config.DB_NAME)(_ver.ENV_TYPE), {
-    auto_reconnect: true,
+    autoReconnect: true,
     poolSize: 10
 }, function (err, db) {
     (0, _utility.handleError)(err);

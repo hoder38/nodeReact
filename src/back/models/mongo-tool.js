@@ -5,7 +5,7 @@ import { createHash } from 'crypto'
 import { handleError, HoError } from '../util/utility'
 
 MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {
-    auto_reconnect: true,
+    autoReconnect: true,
     poolSize: 10,
 }, (err, db) => {
     handleError(err);

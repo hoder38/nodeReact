@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
 
-var _constants = require('constants');
+var _constants = require('./constants');
 
 var _nodeDevConfig = require('../../config/node-dev-config');
 
