@@ -4,6 +4,8 @@ import { MongoClient, ObjectID} from 'mongodb'
 import { createHash } from 'crypto'
 import { handleError, HoError } from '../util/utility'
 
+let mongo = null;
+
 MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {
     autoReconnect: true,
     poolSize: 10,
@@ -12,6 +14,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
     if (!db) {
         handleError(new HoError('No db connected'));
     }
+    mongo = db;
     console.log('database connected');
     db.collection('user', (err, collection) => {
         handleError(err);
@@ -44,7 +47,7 @@ export default function(functionName, name, ...args) {
             return new Promise((resolve, reject) => collections[name][functionName].call(collections[name], ...args, (err, data) => err ? reject(err) : functionName === 'insert' ? resolve(data.ops) : functionName === 'count' ? resolve(data) : resolve(data.result.n)))
         }
     } else {
-        return new Promise((resolve, reject) => db.collection(name, (err, collection) => err ? reject(err) : resolve(collection))).then(collection => {
+        return new Promise((resolve, reject) => mongo.collection(name, (err, collection) => err ? reject(err) : resolve(collection))).then(collection => {
             collections[name] = collection
             if (functionName === 'find') {
                 return new Promise((resolve, reject) => collection[functionName].apply(collection, args).toArray((err, data) => err ? reject(err) : resolve(data)))

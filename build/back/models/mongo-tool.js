@@ -32,7 +32,7 @@ exports.default = function (functionName, name) {
         }
     } else {
         return new _promise2.default(function (resolve, reject) {
-            return db.collection(name, function (err, collection) {
+            return mongo.collection(name, function (err, collection) {
                 return err ? reject(err) : resolve(collection);
             });
         }).then(function (collection) {
@@ -68,6 +68,8 @@ var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var mongo = null;
+
 _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD + '@' + (0, _config.DB_IP)(_ver.ENV_TYPE) + ':' + (0, _config.DB_PORT)(_ver.ENV_TYPE) + '/' + (0, _config.DB_NAME)(_ver.ENV_TYPE), {
     autoReconnect: true,
     poolSize: 10
@@ -76,6 +78,7 @@ _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD
     if (!db) {
         (0, _utility.handleError)(new _utility.HoError('No db connected'));
     }
+    mongo = db;
     console.log('database connected');
     db.collection('user', function (err, collection) {
         (0, _utility.handleError)(err);
