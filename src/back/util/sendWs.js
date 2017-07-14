@@ -1,5 +1,5 @@
 import Ws from 'ws'
-import { ENV_TYPE } from '../ver'
+import { ENV_TYPE } from '../../../ver'
 import { FILE_IP, COM_PORT } from '../config'
 import { connect as NetConnect } from 'net'
 

@@ -1,5 +1,5 @@
 import { RE_WEBURL } from '../constants'
-import { ENV_TYPE } from '../ver'
+import { ENV_TYPE } from '../../../ver'
 import { NAS_PREFIX } from '../config'
 import { objectID } from '../models/mongo-tool'
 import MobileDetect from 'mobile-detect'

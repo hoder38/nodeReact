@@ -1,5 +1,5 @@
 import { STORAGEDB } from '../constants'
-import { ENV_TYPE } from '../ver'
+import { ENV_TYPE } from '../../../ver'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT } from '../config'
 import Express from 'express'
 import { request as HttpsRequest } from 'https'

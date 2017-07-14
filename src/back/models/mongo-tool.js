@@ -1,4 +1,4 @@
-import { ENV_TYPE, DB_USERNAME, DB_PWD } from '../ver'
+import { ENV_TYPE, DB_USERNAME, DB_PWD } from '../../../ver'
 import { DB_IP, DB_PORT, DB_NAME } from '../config'
 import { Server, Db, ObjectID} from 'mongodb'
 import { createHash } from 'crypto'

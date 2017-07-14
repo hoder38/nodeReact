@@ -1,4 +1,4 @@
-import { ENV_TYPE, SESS_SECRET, SESS_PWD } from '../ver'
+import { ENV_TYPE, SESS_SECRET, SESS_PWD } from '../../../ver'
 import { SESS_IP, SESS_PORT } from '../config'
 import ConnectRedis from 'connect-redis'
 

@@ -1,5 +1,5 @@
 import { STORAGEDB } from '../constants'
-import { ENV_TYPE } from '../ver'
+import { ENV_TYPE } from '../../../ver'
 import { STREAM_LIMIT } from '../config'
 import Express from 'express'
 import Child_process from 'child_process'

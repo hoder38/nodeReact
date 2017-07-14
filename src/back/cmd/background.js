@@ -1,4 +1,4 @@
-import { ENV_TYPE } from '../ver'
+import { ENV_TYPE } from '../../../ver'
 import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE } from '../config'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB } from '../constants'
 import Mongo from '../models/mongo-tool'

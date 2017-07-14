@@ -2,7 +2,7 @@ import { readFileSync as FsReadFileSync } from 'fs'
 import { join as PathJoin } from 'path'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../ver'
+import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
 import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT, COM_PORT } from '../config'
 
 //external

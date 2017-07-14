@@ -5,7 +5,7 @@ import { join as PathJoin } from 'path'
 import { STATIC_PATH } from '../constants'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../ver'
+import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT } from '../config'
 
 //external

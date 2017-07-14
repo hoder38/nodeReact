@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\"",
-    "build": "babel src/back --out-dir build; webpack -p --config config/webpack.release.config.js; git commit -a",
-    "build-back": "babel src/back --out-dir build; git commit -a",
+    "build": "babel src/back --out-dir build/back; webpack -p --config config/webpack.release.config.js; git commit -a",
+    "build-back": "babel src/back --out-dir build/back; git commit -a",
     "build-front": "webpack -p --config config/webpack.release.config.js; git commit -a",
     "dev-back": "sudo service babel-nodejs-file.sh stop; sudo service babel-nodejs-file.sh start; sleep 10; sudo service babel-nodejs.sh start",
     "dev-front": "webpack --watch --config config/webpack.dev.config.js",

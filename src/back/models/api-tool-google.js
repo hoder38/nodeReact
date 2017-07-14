@@ -1,5 +1,5 @@
 import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE } from '../constants'
-import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../ver'
+import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
 import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT } from '../config'
 import googleapis from 'googleapis'
 import Fetch from 'node-fetch'
