@@ -38,7 +38,7 @@ const FileFeedback = React.createClass({
         if (this.props.id !== nextProps.id) {
             this.setState(Object.assign({}, this.state, this._setList(nextProps), {sending: false}))
             if (!nextProps.id) {
-                api(`${this.props.mainUrl}/api/feedback`).then(result => this.props.feedbackset(result.feedbacks)).catch(err => this.props.addalert(err))
+                api(`${this.props.mainUrl}/api/file/feedback`).then(result => this.props.feedbackset(result.feedbacks)).catch(err => this.props.addalert(err))
             }
         }
     },
