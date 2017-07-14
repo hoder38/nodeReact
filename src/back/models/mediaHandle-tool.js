@@ -732,7 +732,7 @@ const getTimeTag = (time, opt) => {
         return [];
     } else if (time < 40 * 60 * 1000) {
         return opt.splice(2, 2);
-    } else if (mediaType['time'] < 60 * 60 * 1000) {
+    } else if (time < 60 * 60 * 1000) {
         return opt.splice(4, 2);
     } else {
         return opt.splice(0, 2);

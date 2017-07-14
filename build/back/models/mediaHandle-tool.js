@@ -188,11 +188,11 @@ exports.default = {
                 opt: []
             }, DBdata]);
         } else if (status === 9) {
-            var _mediaType = (0, _mime.extType)(newName);
-            if (_mediaType['type'] === 'zipbook') {
-                return _promise2.default.resolve([_mediaType, (0, _mime.extTag)(_mediaType['type']), (0, _assign2.default)(DBdata, {
+            var mediaType = (0, _mime.extType)(newName);
+            if (mediaType['type'] === 'zipbook') {
+                return _promise2.default.resolve([mediaType, (0, _mime.extTag)(mediaType['type']), (0, _assign2.default)(DBdata, {
                     status: 1,
-                    mediaType: _mediaType
+                    mediaType: mediaType
                 })]);
             } else {
                 return _promise2.default.resolve([false, {
@@ -577,9 +577,9 @@ exports.default = {
                                 for (var _iterator3 = (0, _getIterator3.default)(playlist), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
                                     var _i3 = _step3.value;
 
-                                    var _mediaType2 = (0, _mime.extType)(_i3);
-                                    if (_mediaType2) {
-                                        (0, _mime.extTag)(_mediaType2['type']).def.forEach(function (j) {
+                                    var _mediaType = (0, _mime.extType)(_i3);
+                                    if (_mediaType) {
+                                        (0, _mime.extTag)(_mediaType['type']).def.forEach(function (j) {
                                             return tagSet.add((0, _tagTool.normalize)(j));
                                         });
                                     }
@@ -1108,7 +1108,7 @@ var getTimeTag = function getTimeTag(time, opt) {
         return [];
     } else if (time < 40 * 60 * 1000) {
         return opt.splice(2, 2);
-    } else if (mediaType['time'] < 60 * 60 * 1000) {
+    } else if (time < 60 * 60 * 1000) {
         return opt.splice(4, 2);
     } else {
         return opt.splice(0, 2);
