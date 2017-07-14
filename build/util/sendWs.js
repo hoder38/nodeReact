@@ -15,7 +15,7 @@ var _ws = require('ws');
 
 var _ws2 = _interopRequireDefault(_ws);
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

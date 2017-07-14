@@ -1,4 +1,4 @@
-import { PASSWORD_PRIVATE_KEY, PASSWORD_SALT } from '../../../ver'
+import { PASSWORD_PRIVATE_KEY, PASSWORD_SALT } from '../ver'
 import { ALGORITHM, PASSWORDDB } from '../constants'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Mongo, { objectID } from '../models/mongo-tool'

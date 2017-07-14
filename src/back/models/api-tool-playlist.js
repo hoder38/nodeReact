@@ -1,4 +1,4 @@
-import { ENV_TYPE } from '../../../ver'
+import { ENV_TYPE } from '../ver'
 import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config'
 import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION } from '../constants'
 import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, renameSync as FsRenameSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync } from 'fs'

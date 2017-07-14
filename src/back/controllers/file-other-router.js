@@ -1,5 +1,5 @@
 import { STORAGEDB, STATIC_PATH } from '../constants'
-import { ENV_TYPE } from '../../../ver'
+import { ENV_TYPE } from '../ver'
 import { STREAM_LIMIT } from '../config'
 import Express from 'express'
 import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, statSync as FsStatSync, createWriteStream as FsCreateWriteStream, unlink as FsUnlink, renameSync as FsRenameSync } from 'fs'

@@ -1,4 +1,4 @@
-import { ENV_TYPE } from '../../../ver'
+import { ENV_TYPE } from '../ver'
 import { API_LIMIT } from '../config'
 import { API_EXPIRE, MAX_RETRY } from '../constants'
 import Fetch from 'node-fetch'

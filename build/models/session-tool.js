@@ -24,7 +24,7 @@ exports.default = function (express) {
     };
 };
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

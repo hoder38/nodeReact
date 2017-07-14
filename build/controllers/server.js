@@ -6,7 +6,7 @@ var _path = require('path');
 
 var _constants = require('../constants');
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 
@@ -80,29 +80,19 @@ var _sendWs = require('../util/sendWs');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-if (!(0, _fs.existsSync)((0, _path.join)(__dirname, '../../../ver.js'))) {
-    throw new Error('can not find ver.js');
-}
-
-//constant
-
-
-//config
-
-
-//external
-
-
-//model
-
-
-//router
+//global
 
 
 //util
 
 
-//global
+//router
+
+
+//model
+
+
+//constant
 var credentials = {
     pfx: (0, _fs.readFileSync)(_ver.PFX),
     passphrase: _ver.PFX_PWD,
@@ -110,6 +100,12 @@ var credentials = {
     ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA"].join(':'),
     honorCipherOrder: true
 };
+
+//external
+
+
+//config
+
 credentials.agent = new _https.Agent(credentials);
 var app = (0, _express2.default)();
 var server = (0, _https.createServer)(credentials, app);

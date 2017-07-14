@@ -36,7 +36,7 @@ exports.autoDoc = autoDoc;
 
 var _constants = require('../constants');
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

@@ -30,7 +30,7 @@ var _promise2 = _interopRequireDefault(_promise);
 
 exports.default = process;
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

@@ -12,7 +12,7 @@ var _set = require('babel-runtime/core-js/set');
 
 var _set2 = _interopRequireDefault(_set);
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _constants = require('../constants');
 

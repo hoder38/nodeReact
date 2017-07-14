@@ -56,7 +56,7 @@ exports.default = function (functionName) {
     }
 };
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

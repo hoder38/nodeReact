@@ -37,7 +37,7 @@ exports.default = process;
 exports.isDefaultTag = isDefaultTag;
 exports.normalize = normalize;
 
-var _ver = require('../../../ver');
+var _ver = require('../ver');
 
 var _config = require('../config');
 

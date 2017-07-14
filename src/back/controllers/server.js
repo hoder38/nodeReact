@@ -1,15 +1,11 @@
-import { existsSync as FsExistsSync, readFileSync as FsReadFileSync, createReadStream as FsCreateReadStream } from 'fs'
+import { readFileSync as FsReadFileSync, createReadStream as FsCreateReadStream } from 'fs'
 import { join as PathJoin } from 'path'
-
-if(!FsExistsSync(PathJoin(__dirname, '../../../ver.js'))) {
-    throw new Error('can not find ver.js')
-}
 
 //constant
 import { STATIC_PATH } from '../constants'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
+import { ENV_TYPE, PFX, CA, PFX_PWD } from '../ver'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT } from '../config'
 
 //external
