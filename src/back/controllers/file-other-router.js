@@ -531,14 +531,14 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
         if (!ext) {
             handleError(new HoError('not valid subtitle!!!'));
         }
-        const convertSub = filePath => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => err ? reject(err) : resolve())).then(() => SRT2VTT(filePath, ext).then(() => {
+        const convertSub = (filePath, id) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => err ? reject(err) : resolve())).then(() => SRT2VTT(filePath, ext).then(() => {
             sendWs({
                 type: 'sub',
                 data: id,
             }, 0, 0);
             res.json({apiOK: true});
         }));
-        const saveSub = filePath => {
+        const saveSub = (filePath, id) => {
             const folderPath = PathDirname(filePath);
             const mkFolder = filePath => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
             return mkFolder().then(() => {
@@ -556,7 +556,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                     stream.on('error', err => reject(err));
                     stream.on('close', () => resolve());
                     stream.pipe(FsCreateWriteStream(`${filePath}.${ext}`));
-                }).then(() => convertSub(filePath));
+                }).then(() => convertSub(filePath, id));
             });
         }
         const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
@@ -576,8 +576,9 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 ex_type = 'openload';
                 break;
             }
-            const filePath = getFileLocation(ex_type, isValidString(req.params.uid, 'name', 'external is not vaild'));
-            saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath).catch(err => handleError(err, next));
+            const id = isValidString(req.params.uid, 'name', 'external is not vaild');
+            const filePath = getFileLocation(ex_type, id);
+            saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath, id).catch(err => handleError(err, next));
         } else {
             Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
                 if (items.length < 1 ) {
@@ -607,7 +608,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                     }
                     filePath = `${filePath}/${fileIndex}`;
                 }
-                return saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath);
+                return saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath, items[0]._id);
             }).catch(err => handleError(err, next));
         }
     });

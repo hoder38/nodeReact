@@ -714,7 +714,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
         if (!ext) {
             (0, _utility.handleError)(new _utility.HoError('not valid subtitle!!!'));
         }
-        var convertSub = function convertSub(filePath) {
+        var convertSub = function convertSub(filePath, id) {
             return new _promise2.default(function (resolve, reject) {
                 return (0, _fs.unlink)(req.files.file.path, function (err) {
                     return err ? reject(err) : resolve();
@@ -729,7 +729,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                 });
             });
         };
-        var saveSub = function saveSub(filePath) {
+        var saveSub = function saveSub(filePath, id) {
             var folderPath = (0, _path.dirname)(filePath);
             var mkFolder = function mkFolder(filePath) {
                 return (0, _fs.existsSync)(folderPath) ? _promise2.default.resolve() : new _promise2.default(function (resolve, reject) {
@@ -758,7 +758,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     });
                     stream.pipe((0, _fs.createWriteStream)(filePath + '.' + ext));
                 }).then(function () {
-                    return convertSub(filePath);
+                    return convertSub(filePath, id);
                 });
             });
         };
@@ -779,8 +779,9 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     ex_type = 'openload';
                     break;
             }
-            var filePath = (0, _utility.getFileLocation)(ex_type, (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild'));
-            saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath).catch(function (err) {
+            var id = (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild');
+            var filePath = (0, _utility.getFileLocation)(ex_type, id);
+            saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath, id).catch(function (err) {
                 return (0, _utility.handleError)(err, next);
             });
         } else {
@@ -812,7 +813,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     }
                     filePath = filePath + '/' + fileIndex;
                 }
-                return saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath);
+                return saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath, items[0]._id);
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, next);
             });
