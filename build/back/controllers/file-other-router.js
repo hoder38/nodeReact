@@ -800,31 +800,10 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     if (req.params.index) {
                         fileIndex = Number(req.params.index);
                     } else {
-                        var _iteratorNormalCompletion2 = true;
-                        var _didIteratorError2 = false;
-                        var _iteratorError2 = undefined;
-
-                        try {
-                            for (var _iterator2 = (0, _getIterator3.default)(items[0]['playList']), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                var i = _step2.value;
-
-                                if ((0, _mime.isVideo)(i)) {
-                                    fileIndex = i;
-                                    break;
-                                }
-                            }
-                        } catch (err) {
-                            _didIteratorError2 = true;
-                            _iteratorError2 = err;
-                        } finally {
-                            try {
-                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                    _iterator2.return();
-                                }
-                            } finally {
-                                if (_didIteratorError2) {
-                                    throw _iteratorError2;
-                                }
+                        for (var i in items[0]['playList']) {
+                            if ((0, _mime.isVideo)(items[0]['playList'][i])) {
+                                fileIndex = i;
+                                break;
                             }
                         }
                     }

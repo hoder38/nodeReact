@@ -595,8 +595,8 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                     if (req.params.index) {
                         fileIndex = Number(req.params.index);
                     } else {
-                        for (let i of items[0]['playList']) {
-                            if (isVideo(i)) {
+                        for (let i in items[0]['playList']) {
+                            if (isVideo(items[0]['playList'][i])) {
                                 fileIndex = i;
                                 break;
                             }
