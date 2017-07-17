@@ -2562,7 +2562,11 @@ export default {
                 case 'twse':
                 return Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
                     let dividends = 0;
-                    findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0], 'tr', 'odd')[0], 'td').forEach(d => {
+                    const table = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
+                    if (!table) {
+                        handleError(new HoError('查詢過於頻繁,請稍後再試!!'));
+                    }
+                    findTag(findTag(table, 'tr', 'odd')[0], 'td').forEach(d => {
                         const t = findTag(d)[0];
                         if (t) {
                             const dMatch = t.match(/^\d+\.\d+/);
