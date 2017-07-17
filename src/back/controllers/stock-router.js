@@ -191,7 +191,9 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
             const pok = pp ? ((pp[1] === '>' && i.profitIndex > pp[2]) || (pp[1] === '<' && i.profitIndex < pp[2])) ? true : false : true;
             const sok = ss ? ((ss[1] === '>' && i.safetyIndex > ss[2]) || (ss[1] === '<' && i.safetyIndex < ss[2])) ? true : false : true;
             const mok = mm ? ((mm[1] === '>' && i.managementIndex > mm[2]) || (mm[1] === '<' && i.managementIndex < mm[2])) ? true : false : true;
-            if (!is_name && pok && sok && mok) {
+            if (is_name) {
+                filterNum++;
+            } else if (!is_name && pok && sok && mok) {
                 first_stage.push(i);
             }
         });
