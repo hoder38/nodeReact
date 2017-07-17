@@ -169,11 +169,11 @@ router.get('/download/:uid', function (req, res, next) {
             if (ret_string) {
                 res.writeHead(200, {
                     'Content-Type': 'application/force-download',
-                    'Content-disposition': 'attachment; filename=' + unescape(encodeURIComponent(items[0].name)) + '.txt'
+                    'Content-disposition': 'attachment; filename=' + items[0].name + '.txt'
                 });
                 res.end(ret_string);
             } else {
-                res.download(filePath, unescape(encodeURIComponent(items[0].name)));
+                res.download(filePath, items[0].name);
             }
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);
@@ -403,7 +403,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             } else {
                 var data = fileIndex === 0 || fileIndex === items[0].playList.length - 1 ? ['hdel', items[0]._id.toString()] : ['hmset', (0, _defineProperty3.default)({}, items[0]._id.toString(), '0&' + fileIndex)];
                 return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function () {
-                    return (0, _fs.existsSync)(comPath) ? res.download(comPath, unescape(encodeURIComponent(items[0].playList[fileIndex]))) : (0, _utility.handleError)(new _utility.HoError('need download first!!!'));
+                    return (0, _fs.existsSync)(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : (0, _utility.handleError)(new _utility.HoError('need download first!!!'));
                 });
             }
         }).catch(function (err) {

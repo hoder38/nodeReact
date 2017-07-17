@@ -85,11 +85,11 @@ router.get('/download/:uid', function(req, res, next) {
             if (ret_string) {
                 res.writeHead(200, {
                     'Content-Type': 'application/force-download',
-                    'Content-disposition': `attachment; filename=${unescape(encodeURIComponent(items[0].name))}.txt`,
+                    'Content-disposition': `attachment; filename=${items[0].name}.txt`,
                 });
                 res.end(ret_string);
             } else {
-                res.download(filePath, unescape(encodeURIComponent(items[0].name)));
+                res.download(filePath, items[0].name);
             }
         }).catch(err => handleError(err, next));
     });
@@ -310,7 +310,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     'hmset',
                     {[items[0]._id.toString()]: `0&${fileIndex}`},
                 ];
-                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => FsExistsSync(comPath) ? res.download(comPath, unescape(encodeURIComponent(items[0].playList[fileIndex]))) : handleError(new HoError('need download first!!!')));
+                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!')));
             }
         }).catch(err => handleError(err, next));
     });
