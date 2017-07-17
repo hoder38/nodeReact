@@ -692,7 +692,7 @@ router.post('/upload/url', function(req, res, next) {
 
 router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     console.log('subtitle search');
-    let name = isValidString(req.body.name, 'name', 'name is not vaild');
+    const name = isValidString(req.body.name, 'name', 'name is not vaild');
     const episode_match = req.body.episode ? req.body.episode.match(/^(s(\d*))?(e)?(\d+)$/i) : false;
     let episode = 0;
     let season = 0;
@@ -743,19 +743,21 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     console.log(episode);
     const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
     let type = 'youtube';
-    switch(idMatch[1]) {
-        case 'dym':
-        type = 'dailymotion';
-        break;
-        case 'bil':
-        type = 'bilibili';
-        break;
-        case 'yuk':
-        type = 'youku';
-        break;
-        case 'ope':
-        type = 'openload';
-        break;
+    if (idMatch) {
+        switch(idMatch[1]) {
+            case 'dym':
+            type = 'dailymotion';
+            break;
+            case 'bil':
+            type = 'bilibili';
+            break;
+            case 'yuk':
+            type = 'youku';
+            break;
+            case 'ope':
+            type = 'openload';
+            break;
+        }
     }
     const getId = () => idMatch ? Promise.resolve([isValidString(req.params.uid, 'name', 'external is not vaild'), getFileLocation(type, id)]) : Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
         if (items.length < 1) {
@@ -824,6 +826,9 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             const sub_en_url = subtitles.en ? subtitles.en.url : null;
             const restSub = () => sub_en_url ? mkfolder().then(() => getEn(sub_en_url)) : Promise.resolve();
             const getSub = name => subHdUrl(name).then(subtitles2 => {
+                if (!subtitles2) {
+                    handleError(new HoError('cannot find eng or cht subtitle!!!'));
+                }
                 const zip_ext = isZip(subtitles2);
                 if (!zip_ext) {
                     handleError(new HoError('is not zip!!!'));

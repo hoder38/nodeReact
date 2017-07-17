@@ -95,7 +95,7 @@ router.get('/download/:uid', function(req, res, next) {
     });
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function(req, res, next) {
+router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('subtitle file');
         const sendSub = (filePath, fileIndex=false) => {
@@ -141,7 +141,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function(req, res, 
                     sendSub(getFileLocation(items[0].owner, items[0]._id));
                 } else {
                     let fileIndex = 0;
-                    if (req.params.index) {
+                    if (req.params.index && req.params.index !== 'v') {
                         fileIndex = Number(req.params.index);
                     } else {
                         for (let i in items[0]['playList']) {

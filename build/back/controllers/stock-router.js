@@ -332,7 +332,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
                     });
                 };
                 if (per) {
-                    return getStockPER(first_stage[index]._id).then(function (_ref7) {
+                    return _stockTool2.default.getStockPER(first_stage[index]._id).then(function (_ref7) {
                         var _ref8 = (0, _slicedToArray3.default)(_ref7, 1),
                             stockPer = _ref8[0];
 
@@ -340,7 +340,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
                             console.log(stockPer);
                             console.log(first_stage[index].name);
                             if (yieldNumber) {
-                                return getStockYield(first_stage[index]._id).then(function (stockYield) {
+                                return _stockTool2.default.getStockYield(first_stage[index]._id).then(function (stockYield) {
                                     if (yieldNumber && stockYield > 0 && (yieldNumber[1] === '>' && stockYield > yieldNumber[2] * 2 / 3 || yieldNumber[1] === '<' && stockYield < yieldNumber[2] * 4 / 3)) {
                                         console.log(stockYield);
                                         return addFilter();
@@ -356,7 +356,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
                         }
                     });
                 } else if (yieldNumber) {
-                    return getStockYield(first_stage[index]._id).then(function (stockYield) {
+                    return _stockTool2.default.getStockYield(first_stage[index]._id).then(function (stockYield) {
                         if (yieldNumber && stockYield > 0 && (yieldNumber[1] === '>' && stockYield > yieldNumber[2] * 2 / 3 || yieldNumber[1] === '<' && stockYield < yieldNumber[2] * 4 / 3)) {
                             console.log(stockYield);
                             console.log(first_stage[index].name);

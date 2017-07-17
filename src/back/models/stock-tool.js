@@ -2931,7 +2931,8 @@ export default {
                         if (raw_data.length > 200) {
                             const year_str = year - 1911;
                             const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
-                            if (data_list.length > 0) {
+                            if (data_list && data_list.length > 0) {
+                                console.log(data_list.length);
                                 let tmp_index = -1;
                                 let tmp_number = '';
                                 for (let i of data_list) {
@@ -2964,7 +2965,7 @@ export default {
                             }
                             return [3, {high, low, vol}];
                         } else {
-                            return rest_interval(3, 0, true);
+                            return [3, {high, low, vol}, true];
                         }
                     });
                     const recur_mi = (type, index) => {
@@ -2999,7 +3000,7 @@ export default {
                             };
                             return rest_interval(type, index);
                         } else {
-                            return getList().then(([type, list]) => {
+                            return getList().then(([type, list, is_stop]) => {
                                 if (list.high.length > 0) {
                                     if (!start_month) {
                                         start_month = `${year}${month_str}`;
@@ -3039,7 +3040,7 @@ export default {
                                         min: tmp_min,
                                     };
                                 }
-                                return rest_interval(type, index);
+                                return rest_interval(type, index, is_stop);
                             });
                         }
                     }

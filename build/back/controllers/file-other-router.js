@@ -181,7 +181,7 @@ router.get('/download/:uid', function (req, res, next) {
     });
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function (req, res, next) {
+router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('subtitle file');
         var sendSub = function sendSub(filePath) {
@@ -229,7 +229,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function (req, res,
                     sendSub((0, _utility.getFileLocation)(items[0].owner, items[0]._id));
                 } else {
                     var fileIndex = 0;
-                    if (req.params.index) {
+                    if (req.params.index && req.params.index !== 'v') {
                         fileIndex = Number(req.params.index);
                     } else {
                         for (var i in items[0]['playList']) {

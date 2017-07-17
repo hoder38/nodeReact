@@ -53,13 +53,13 @@ router.get('/s', function (req, res, next) {
     });
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function (req, res, next) {
+router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('subtitle');
         var subReq = (0, _https.request)({
             host: (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE),
             port: (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE),
-            path: req.params.index ? '/subtitle/' + req.params.uid + '/' + req.params.lang + '/' + req.params.index : '/subtitle/' + req.params.uid + '/' + req.params.lang,
+            path: '/subtitle/' + req.params.uid + '/' + req.params.lang + '/' + req.params.index,
             method: 'GET',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',

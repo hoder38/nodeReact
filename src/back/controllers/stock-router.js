@@ -231,12 +231,12 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
                 return nextFilter();
             });
             if (per) {
-                return getStockPER(first_stage[index]._id).then(([stockPer]) => {
+                return StockTool.getStockPER(first_stage[index]._id).then(([stockPer]) => {
                     if (per && stockPer > 0 && ((per[1] === '>' && stockPer > (per[2] * 2 / 3)) || (per[1] === '<' && stockPer < (per[2] * 4 /3)))) {
                         console.log(stockPer);
                         console.log(first_stage[index].name);
                         if (yieldNumber) {
-                            return getStockYield(first_stage[index]._id).then(stockYield => {
+                            return StockTool.getStockYield(first_stage[index]._id).then(stockYield => {
                                 if (yieldNumber && stockYield > 0 && ((yieldNumber[1] === '>' && stockYield > (yieldNumber[2] * 2 / 3)) || (yieldNumber[1] === '<' && stockYield < (yieldNumber[2] * 4 /3)))) {
                                     console.log(stockYield);
                                     return addFilter();
@@ -252,7 +252,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
                     }
                 });
             } else if (yieldNumber) {
-                return getStockYield(first_stage[index]._id).then(stockYield => {
+                return StockTool.getStockYield(first_stage[index]._id).then(stockYield => {
                     if (yieldNumber && stockYield > 0 && ((yieldNumber[1] === '>' && stockYield > (yieldNumber[2] * 2 / 3)) || (yieldNumber[1] === '<' && stockYield < (yieldNumber[2] * 4 /3)))) {
                         console.log(stockYield);
                         console.log(first_stage[index].name);

@@ -365,8 +365,8 @@ const MediaWidget = React.createClass({
                 index: index,
                 subIndex: subIndex ? subIndex : 1,
                 loading: false,
-                subCh: `/subtitle/${mediaId}/ch`,
-                subEn: `/subtitle/${mediaId}/en`,
+                subCh: `/subtitle/${mediaId}/ch/v`,
+                subEn: `/subtitle/${mediaId}/en/v`,
                 cue: '',
             }), () => {
                 switch (!this._item.thumb || (this._playlist && this._playlist.obj.pre_url) ? 0 : this._playlist && this._playlist.obj.is_magnet ? this._playlist.obj.id ? 0 : 1 : 2) {
@@ -384,8 +384,8 @@ const MediaWidget = React.createClass({
                             this._removeCue()
                             this.setState(Object.assign({}, this.state, {
                                 src: `${this.props.mainUrl}/torrent/v/${mediaId}/0`,
-                                subCh: `/subtitle/${mediaId}/ch`,
-                                subEn: `/subtitle/${mediaId}/en`,
+                                subCh: `/subtitle/${mediaId}/ch/v`,
+                                subEn: `/subtitle/${mediaId}/en/v`,
                                 cue: '',
                             }))
                         }

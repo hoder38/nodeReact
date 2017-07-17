@@ -36,13 +36,13 @@ router.get('/s', function(req, res, next) {
     }).catch(err => handleError(err, next));
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+)?/:fresh(0+)?', function(req, res, next) {
+router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('subtitle');
         const subReq = HttpsRequest({
             host: EXTENT_FILE_IP(ENV_TYPE),
             port: EXTENT_FILE_PORT(ENV_TYPE),
-            path: req.params.index ? `/subtitle/${req.params.uid}/${req.params.lang}/${req.params.index}` : `/subtitle/${req.params.uid}/${req.params.lang}`,
+            path: `/subtitle/${req.params.uid}/${req.params.lang}/${req.params.index}`,
             method: 'GET',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',

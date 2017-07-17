@@ -3289,7 +3289,8 @@ exports.default = {
                                 if (raw_data.length > 200) {
                                     var year_str = year - 1911;
                                     var data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
-                                    if (data_list.length > 0) {
+                                    if (data_list && data_list.length > 0) {
+                                        console.log(data_list.length);
                                         var tmp_index = -1;
                                         var tmp_number = '';
                                         var _iteratorNormalCompletion9 = true;
@@ -3343,7 +3344,7 @@ exports.default = {
                                     }
                                     return [3, { high: high, low: low, vol: vol }];
                                 } else {
-                                    return rest_interval(3, 0, true);
+                                    return [3, { high: high, low: low, vol: vol }, true];
                                 }
                             });
                         };
@@ -3394,9 +3395,10 @@ exports.default = {
                                 return rest_interval(type, index);
                             } else {
                                 return getList().then(function (_ref13) {
-                                    var _ref14 = (0, _slicedToArray3.default)(_ref13, 2),
+                                    var _ref14 = (0, _slicedToArray3.default)(_ref13, 3),
                                         type = _ref14[0],
-                                        list = _ref14[1];
+                                        list = _ref14[1],
+                                        is_stop = _ref14[2];
 
                                     if (list.high.length > 0) {
                                         if (!start_month) {
@@ -3437,7 +3439,7 @@ exports.default = {
                                             min: tmp_min
                                         };
                                     }
-                                    return rest_interval(type, index);
+                                    return rest_interval(type, index, is_stop);
                                 });
                             }
                         };

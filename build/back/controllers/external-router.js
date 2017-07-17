@@ -1077,19 +1077,21 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
     console.log(episode);
     var idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
     var type = 'youtube';
-    switch (idMatch[1]) {
-        case 'dym':
-            type = 'dailymotion';
-            break;
-        case 'bil':
-            type = 'bilibili';
-            break;
-        case 'yuk':
-            type = 'youku';
-            break;
-        case 'ope':
-            type = 'openload';
-            break;
+    if (idMatch) {
+        switch (idMatch[1]) {
+            case 'dym':
+                type = 'dailymotion';
+                break;
+            case 'bil':
+                type = 'bilibili';
+                break;
+            case 'yuk':
+                type = 'youku';
+                break;
+            case 'ope':
+                type = 'openload';
+                break;
+        }
     }
     var getId = function getId() {
         return idMatch ? _promise2.default.resolve([(0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild'), (0, _utility.getFileLocation)(type, id)]) : (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
@@ -1183,6 +1185,9 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
             };
             var getSub = function getSub(name) {
                 return (0, _externalTool.subHdUrl)(name).then(function (subtitles2) {
+                    if (!subtitles2) {
+                        (0, _utility.handleError)(new _utility.HoError('cannot find eng or cht subtitle!!!'));
+                    }
                     var zip_ext = (0, _mime.isZip)(subtitles2);
                     if (!zip_ext) {
                         (0, _utility.handleError)(new _utility.HoError('is not zip!!!'));
