@@ -115,38 +115,44 @@ router.get('/single/:uid', function (req, res, next) {
 
 router.put('/addTag/:tag', function (req, res, next) {
     console.log('stock addTag');
-    _promise2.default.all(req.body.uids.map(function (u) {
-        return StockTagTool.addTag(u, req.params.tag, req.user, false);
-    })).then(function (result) {
-        result.forEach(function (r) {
-            if (r.id) {
+    var recur = function recur(index) {
+        return index >= req.body.uids.length ? _promise2.default.resolve(res.json({ apiOK: true })) : StockTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(function (result) {
+            if (result.id) {
                 (0, _sendWs2.default)({
                     type: 'stock',
-                    data: r.id
+                    data: result.id
                 });
             }
+            return new _promise2.default(function (resolve) {
+                return setTimeout(function () {
+                    return resolve(recur(index + 1));
+                }, 500);
+            });
         });
-        res.json({ apiOK: true });
-    }).catch(function (err) {
+    };
+    recur(0).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });
 });
 
 router.put('/delTag/:tag', function (req, res, next) {
     console.log('stock delTag');
-    _promise2.default.all(req.body.uids.map(function (u) {
-        return StockTagTool.delTag(u, req.params.tag, req.user, false);
-    })).then(function (result) {
-        result.forEach(function (r) {
-            if (r.id) {
+    var recur = function recur(index) {
+        return index >= req.body.uids.length ? _promise2.default.resolve(res.json({ apiOK: true })) : StockTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(function (result) {
+            if (result.id) {
                 (0, _sendWs2.default)({
                     type: 'stock',
-                    data: r.id
+                    data: result.id
                 });
             }
+            return new _promise2.default(function (resolve) {
+                return setTimeout(function () {
+                    return resolve(recur(index + 1));
+                }, 500);
+            });
         });
-        res.json({ apiOK: true });
-    }).catch(function (err) {
+    };
+    recur(0).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });
 });

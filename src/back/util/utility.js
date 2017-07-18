@@ -20,7 +20,7 @@ export function isValidString(str, type, msg=null, code=400) {
             const trim = str.trim()
             //改為 \ / : ? < > * " |  允許 ' ` &
             if (trim !== '.' && trim !== '..') {
-                if (trim.match(/^[^&\\\/\|\*\?"<>:]{1,255}$/)) {
+                if (trim.match(/^[^\\\/\|\*\?"<>:]{1,255}$/)) {
                     if (trim.replace(/[\s　]+/g, '') !== '') {
                         return trim
                     }

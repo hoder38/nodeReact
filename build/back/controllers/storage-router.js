@@ -453,19 +453,22 @@ router.post('/getOptionTag', function (req, res, next) {
 
 router.put('/addTag/:tag', function (req, res, next) {
     console.log('storage addTag');
-    _promise2.default.all(req.body.uids.map(function (u) {
-        return StorageTagTool.addTag(u, req.params.tag, req.user, false);
-    })).then(function (result) {
-        result.forEach(function (r) {
-            if (r.id) {
+    var recur = function recur(index) {
+        return index >= req.body.uids.length ? _promise2.default.resolve(res.json({ apiOK: true })) : StorageTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(function (result) {
+            if (result.id) {
                 (0, _sendWs2.default)({
                     type: 'file',
-                    data: r.id
-                }, r.adultonly);
+                    data: result.id
+                }, result.adultonly);
             }
+            return new _promise2.default(function (resolve) {
+                return setTimeout(function () {
+                    return resolve(recur(index + 1));
+                }, 500);
+            });
         });
-        res.json({ apiOK: true });
-    }).catch(function (err) {
+    };
+    recur(0).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });
 });
@@ -510,20 +513,22 @@ router.put('/addTagUrl', function (req, res, next) {
         }
     };
     getTaglist().then(function (taglist) {
-        var recur_add = function recur_add(index) {
-            return _promise2.default.all(req.body.uids.map(function (u) {
-                return StorageTagTool.addTag(u, taglist[index], req.user, false);
-            })).then(function (result) {
-                result.forEach(function (r) {
-                    if (r.id) {
-                        (0, _sendWs2.default)({
-                            type: 'file',
-                            data: r.id
-                        }, r.adultonly);
-                    }
+        var recur = function recur(index, u) {
+            var adultonly = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+            return index >= taglist.length ? _promise2.default.resolve((0, _sendWs2.default)({
+                type: 'file',
+                data: u
+            }, adultonly)) : StorageTagTool.addTag(u, taglist[index], req.user, false).then(function (result) {
+                return new _promise2.default(function (resolve) {
+                    return setTimeout(function () {
+                        return resolve(recur(index + 1, u, result.adultonly));
+                    }, 500);
                 });
-                index++;
-                return index < taglist.length ? recur_add(index) : res.json({ apiOK: true });
+            });
+        };
+        var recur_add = function recur_add(index) {
+            return index >= req.body.uids.length ? res.json({ apiOK: true }) : recur(0, req.body.uids[index]).then(function () {
+                return recur_add(index + 1);
             });
         };
         return req.body.uids ? recur_add(0) : res.json({ tags: taglist });
@@ -534,19 +539,22 @@ router.put('/addTagUrl', function (req, res, next) {
 
 router.put('/delTag/:tag', function (req, res, next) {
     console.log('storage delTag');
-    _promise2.default.all(req.body.uids.map(function (u) {
-        return StorageTagTool.delTag(u, req.params.tag, req.user, false);
-    })).then(function (result) {
-        result.forEach(function (r) {
-            if (r.id) {
+    var recur = function recur(index) {
+        return index >= req.body.uids.length ? _promise2.default.resolve(res.json({ apiOK: true })) : StorageTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(function (result) {
+            if (result.id) {
                 (0, _sendWs2.default)({
                     type: 'file',
-                    data: r.id
-                }, r.adultonly);
+                    data: result.id
+                }, result.adultonly);
             }
+            return new _promise2.default(function (resolve) {
+                return setTimeout(function () {
+                    return resolve(recur(index + 1));
+                }, 500);
+            });
         });
-        res.json({ apiOK: true });
-    }).catch(function (err) {
+    };
+    recur(0).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });
 });

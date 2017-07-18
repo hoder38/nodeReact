@@ -60,32 +60,30 @@ router.get('/single/:uid', function(req, res, next) {
 
 router.put('/addTag/:tag', function(req, res, next) {
     console.log('stock addTag');
-    Promise.all(req.body.uids.map(u => StockTagTool.addTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'stock',
-                    data: r.id,
-                });
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StockTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'stock',
+                data: result.id,
+            });
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
     console.log('stock delTag');
-    Promise.all(req.body.uids.map(u => StockTagTool.delTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'stock',
-                    data: r.id,
-                });
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StockTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'stock',
+                data: result.id,
+            });
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.get('/querySimple/:uid', function(req, res,next) {

@@ -63,32 +63,30 @@ router.post('/getOptionTag', function(req, res,next) {
 
 router.put('/addTag/:tag', function(req, res, next) {
     console.log('password addTag');
-    Promise.all(req.body.uids.map(u => PasswordTagTool.addTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'password',
-                    data: r.id,
-                });
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : PasswordTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'password',
+                data: result.id,
+            });
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
     console.log('password delTag');
-    Promise.all(req.body.uids.map(u => PasswordTagTool.delTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'password',
-                    data: r.id,
-                });
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : PasswordTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'password',
+                data: result.id,
+            });
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.post('/newRow', function(req, res, next) {

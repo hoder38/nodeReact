@@ -83,7 +83,7 @@ function isValidString(str, type) {
                 var trim = str.trim();
                 //改為 \ / : ? < > * " |  允許 ' ` &
                 if (trim !== '.' && trim !== '..') {
-                    if (trim.match(/^[^&\\\/\|\*\?"<>:]{1,255}$/)) {
+                    if (trim.match(/^[^\\\/\|\*\?"<>:]{1,255}$/)) {
                         if (trim.replace(/[\s　]+/g, '') !== '') {
                             return trim;
                         }

@@ -319,17 +319,16 @@ router.post('/getOptionTag', function(req, res, next) {
 
 router.put('/addTag/:tag', function(req, res, next) {
     console.log('storage addTag');
-    Promise.all(req.body.uids.map(u => StorageTagTool.addTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'file',
-                    data: r.id,
-                }, r.adultonly);
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StorageTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'file',
+                data: result.id,
+            }, result.adultonly);
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.put('/sendTag/:uid', function(req, res, next){
@@ -370,35 +369,27 @@ router.put('/addTagUrl', function(req, res, next) {
         }
     }
     getTaglist().then(taglist => {
-        const recur_add = index => Promise.all(req.body.uids.map(u => StorageTagTool.addTag(u, taglist[index], req.user, false))).then(result => {
-            result.forEach(r => {
-                if (r.id) {
-                    sendWs({
-                        type: 'file',
-                        data: r.id,
-                    }, r.adultonly);
-                }
-            });
-            index++;
-            return (index < taglist.length) ? recur_add(index) : res.json({apiOK: true});
-        });
+        const recur = (index, u, adultonly=false) => (index >= taglist.length) ? Promise.resolve(sendWs({
+            type: 'file',
+            data: u,
+        }, adultonly)) : StorageTagTool.addTag(u, taglist[index], req.user, false).then(result => new Promise(resolve => setTimeout(() => resolve(recur(index + 1, u, result.adultonly)), 500)));
+        const recur_add = index => (index >= req.body.uids.length) ? res.json({apiOK: true}) : recur(0, req.body.uids[index]).then(() => recur_add(index + 1));
         return req.body.uids ? recur_add(0) : res.json({tags: taglist})
     }).catch(err => handleError(err, next));
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
     console.log('storage delTag');
-    Promise.all(req.body.uids.map(u => StorageTagTool.delTag(u, req.params.tag, req.user, false))).then(result => {
-        result.forEach(r => {
-            if (r.id) {
-                sendWs({
-                    type: 'file',
-                    data: r.id,
-                }, r.adultonly);
-            }
-        });
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
+    const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : StorageTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
+        if (result.id) {
+            sendWs({
+                type: 'file',
+                data: result.id,
+            }, result.adultonly);
+        }
+        return new Promise(resolve => setTimeout(() => resolve(recur(index + 1)), 500));
+    });
+    recur(0).catch(err => handleError(err, next));
 });
 
 router.put('/recover/:uid', function(req, res, next) {
