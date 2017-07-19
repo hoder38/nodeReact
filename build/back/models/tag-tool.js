@@ -1504,7 +1504,7 @@ function getStockQueryTag(user, tag) {
         return {
             tag: { important: del },
             type: 2,
-            name: default_tags[6]
+            name: _constants.DEFAULT_TAGS[6]
         };
     } else if (index) {
         return { type: 0 };
