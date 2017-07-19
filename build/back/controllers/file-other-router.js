@@ -560,7 +560,11 @@ router.post('/upload/file', function (req, res, next) {
 
             return new _promise2.default(function (resolve, reject) {
                 return (0, _fs.unlink)(req.files.file.path, function (err) {
-                    return err ? reject(err) : resolve();
+                    if (err) {
+                        console.log(filePath);
+                        (0, _utility.handleError)(err, 'Upload file');
+                    }
+                    return resolve();
                 });
             }).then(function () {
                 var name = (0, _utility.toValidName)(filename);

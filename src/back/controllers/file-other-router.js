@@ -419,7 +419,13 @@ router.post('/upload/file', function(req, res, next) {
                 });
             }) : resolve([req.files.file.name, new Set(), new Set(), {}]));
             stream.pipe(FsCreateWriteStream(filePath));
-        })).then(([filename, setTag, optTag, db_obj]) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => err ? reject(err) : resolve())).then(() => {
+        })).then(([filename, setTag, optTag, db_obj]) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => {
+            if (err) {
+                console.log(filePath);
+                handleError(err, 'Upload file');
+            }
+            return resolve();
+        })).then(() => {
             let name = toValidName(filename);
             if (isDefaultTag(normalize(name))) {
                 name = addPost(name, '1');
