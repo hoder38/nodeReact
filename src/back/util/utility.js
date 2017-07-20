@@ -227,29 +227,33 @@ export const getStorageItem = (user, items, mediaHandle) => items.map(item => {
         item.tags.push('first item');
     }
     let media = {};
-    if (mediaHandle === 1 && !item.mediaType.type) {
-        media = {media : {
-            type: '',
-            key: '',
-            err: '',
-            timeout: '',
-            complete: '',
-        }};
-        Object.entries(item.mediaType).forEach(([i, v]) => {
-            media['media']['type'] = `${media['media']['type']}${i}.${v.type} `;
-            if (v.key) {
-                media['media']['key'] = `${media['media']['key']}${i}.${v.key} `;
-            }
-            if (v.err) {
-                media['media']['err'] = `${media['media']['err']}${i}.${v.err} `;
-            }
-            if (v.timeout) {
-                media['media']['timeout'] = `${media['media']['timeout']}${i}.${v.timeout} `;
-            }
-            if (v.complete) {
-                media['media']['complete'] = `${media['media']['complete']}${i}.${v.complete} `;
-            }
-        });
+    if (mediaHandle === 1) {
+        if (item.mediaType.type) {
+            item.mediaType.complete = item.mediaType.complete ? item.mediaType.complete.toString() : '';
+        } else {
+            media = {media : {
+                type: '',
+                key: '',
+                err: '',
+                timeout: '',
+                complete: '',
+            }};
+            Object.entries(item.mediaType).forEach(([i, v]) => {
+                media['media']['type'] = `${media['media']['type']}${i}.${v.type} `;
+                if (v.key) {
+                    media['media']['key'] = `${media['media']['key']}${i}.${v.key} `;
+                }
+                if (v.err) {
+                    media['media']['err'] = `${media['media']['err']}${i}.${v.err} `;
+                }
+                if (v.timeout) {
+                    media['media']['timeout'] = `${media['media']['timeout']}${i}.${v.timeout} `;
+                }
+                if (v.complete) {
+                    media['media']['complete'] = `${media['media']['complete']}${i}.${v.complete} `;
+                }
+            });
+        }
     }
     return Object.assign({
         name: item.name,

@@ -336,33 +336,37 @@ var getStorageItem = exports.getStorageItem = function getStorageItem(user, item
             item.tags.push('first item');
         }
         var media = {};
-        if (mediaHandle === 1 && !item.mediaType.type) {
-            media = { media: {
-                    type: '',
-                    key: '',
-                    err: '',
-                    timeout: '',
-                    complete: ''
-                } };
-            (0, _entries2.default)(item.mediaType).forEach(function (_ref2) {
-                var _ref3 = (0, _slicedToArray3.default)(_ref2, 2),
-                    i = _ref3[0],
-                    v = _ref3[1];
+        if (mediaHandle === 1) {
+            if (item.mediaType.type) {
+                item.mediaType.complete = item.mediaType.complete ? item.mediaType.complete.toString() : '';
+            } else {
+                media = { media: {
+                        type: '',
+                        key: '',
+                        err: '',
+                        timeout: '',
+                        complete: ''
+                    } };
+                (0, _entries2.default)(item.mediaType).forEach(function (_ref2) {
+                    var _ref3 = (0, _slicedToArray3.default)(_ref2, 2),
+                        i = _ref3[0],
+                        v = _ref3[1];
 
-                media['media']['type'] = '' + media['media']['type'] + i + '.' + v.type + ' ';
-                if (v.key) {
-                    media['media']['key'] = '' + media['media']['key'] + i + '.' + v.key + ' ';
-                }
-                if (v.err) {
-                    media['media']['err'] = '' + media['media']['err'] + i + '.' + v.err + ' ';
-                }
-                if (v.timeout) {
-                    media['media']['timeout'] = '' + media['media']['timeout'] + i + '.' + v.timeout + ' ';
-                }
-                if (v.complete) {
-                    media['media']['complete'] = '' + media['media']['complete'] + i + '.' + v.complete + ' ';
-                }
-            });
+                    media['media']['type'] = '' + media['media']['type'] + i + '.' + v.type + ' ';
+                    if (v.key) {
+                        media['media']['key'] = '' + media['media']['key'] + i + '.' + v.key + ' ';
+                    }
+                    if (v.err) {
+                        media['media']['err'] = '' + media['media']['err'] + i + '.' + v.err + ' ';
+                    }
+                    if (v.timeout) {
+                        media['media']['timeout'] = '' + media['media']['timeout'] + i + '.' + v.timeout + ' ';
+                    }
+                    if (v.complete) {
+                        media['media']['complete'] = '' + media['media']['complete'] + i + '.' + v.complete + ' ';
+                    }
+                });
+            }
         }
         return (0, _assign2.default)({
             name: item.name,
