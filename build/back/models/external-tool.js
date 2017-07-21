@@ -1077,7 +1077,12 @@ exports.default = {
                     var pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
                     var docDate1 = pDate.getFullYear() - 1911 + '\u5E74' + (pDate.getMonth() + 1) + '\u6708';
                     console.log(docDate1);
-                    var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                    var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                    if (!html) {
+                        console.log(raw_data);
+                        (0, _utility.handleError)(new _utility.HoError('empty html'));
+                    }
+                    var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     var dUrl = false;
                     var _iteratorNormalCompletion6 = true;
                     var _didIteratorError6 = false;
@@ -1149,7 +1154,12 @@ exports.default = {
                     };
                     return industrial().then(function () {
                         return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
-                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                            html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                            if (!html) {
+                                console.log(raw_data);
+                                (0, _utility.handleError)(new _utility.HoError('empty html'));
+                            }
+                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                             dUrl = false;
                             var _iteratorNormalCompletion8 = true;
                             var _didIteratorError8 = false;
