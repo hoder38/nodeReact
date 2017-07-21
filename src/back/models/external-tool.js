@@ -867,7 +867,12 @@ export default {
                 const pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
                 const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
                 console.log(docDate1);
-                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                let html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                if (!html) {
+                    console.log(raw_data);
+                    handleError(new HoError('empty html'));
+                }
+                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                 let dUrl = false;
                 for (let l of lis) {
                     const a = findTag(l, 'a')[0];
@@ -892,7 +897,12 @@ export default {
                     }
                 }) : Promise.resolve();
                 return industrial().then(() => Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
-                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                    html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                    if (!html) {
+                        console.log(raw_data);
+                        handleError(new HoError('empty html'));
+                    }
+                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     dUrl = false;
                     for (let l of lis) {
                         const a = findTag(l, 'a')[0];
