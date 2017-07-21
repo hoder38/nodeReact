@@ -1,6 +1,6 @@
 import React from 'react'
 import { IndexLink, browserHistory } from 'react-router'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD } from '../constants'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE } from '../constants'
 import { collapseToggle } from '../actions'
 import { api, doLogout, isValidString } from '../utility'
 import Navlist from './Navlist'
@@ -25,6 +25,7 @@ const App = React.createClass({
                 {title: "homepage", hash: ROOT_PAGE, css: "glyphicon glyphicon-home", key: 0},
                 {title: "Storage", hash: STORAGE_PAGE, css: "glyphicon glyphicon-hdd", key: 1},
                 {title: "Password", hash: PASSWORD_PAGE, css: "glyphicon glyphicon-lock", key: 2},
+                {title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
             ],
             zipPw: null,
         }

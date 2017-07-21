@@ -26,7 +26,7 @@ const isLogin = (nextState, replaceState, callback) => testLogin()
         callback()
     })
 
-//let unsubscribe = store.subscribe(() => console.log(store.getState()))
+let unsubscribe = store.subscribe(() => console.log(store.getState()))
 
 export default function Root() {
     return (
