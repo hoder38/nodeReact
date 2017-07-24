@@ -5,7 +5,7 @@ export const USER_PAGE = '/User'
 export const STORAGE_PAGE = '/Storage'
 export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
-export const FITNESS_PAGE = '/Storage'
+export const FITNESS_PAGE = '/Fitness'
 
 //item type
 export const STORAGE = 'storage'
