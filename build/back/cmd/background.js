@@ -64,6 +64,8 @@ var autoUpload = exports.autoUpload = function autoUpload() {
                 console.log(new Date());
                 return (0, _mongoTool2.default)('find', _constants.USERDB, { auto: { $exists: true } }).then(function (userlist) {
                     return (0, _apiToolGoogle.userDrive)(userlist, 0);
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop drive');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -81,8 +83,6 @@ var autoUpload = exports.autoUpload = function autoUpload() {
                     }, 60000);
                 }).then(function () {
                     return loopDrive();
-                }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop drive');
                 })
             };
         }();
@@ -111,6 +111,8 @@ var autoDownload = exports.autoDownload = function autoDownload() {
                         default:
                             return _promise2.default.resolve();
                     }
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop doc');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -128,8 +130,6 @@ var autoDownload = exports.autoDownload = function autoDownload() {
                     }, 120000);
                 }).then(function () {
                     return loopDoc();
-                }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop doc');
                 })
             };
         }();
@@ -145,15 +145,17 @@ var checkMedia = exports.checkMedia = function checkMedia() {
                 console.log('loopCheckMedia');
                 console.log(new Date());
                 return (0, _apiToolPlaylist2.default)('playlist kick').then(function () {
-                    return _mediaHandleTool2.default.checkMedia().then(function () {
-                        return new _promise2.default(function (resolve, reject) {
-                            return setTimeout(function () {
-                                return resolve();
-                            }, _constants.MEDIA_INTERVAl * 1000);
-                        });
-                    }).then(function () {
-                        return loopHandleMedia();
+                    return _mediaHandleTool2.default.checkMedia();
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop checkMedia');
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.MEDIA_INTERVAl * 1000);
                     });
+                }).then(function () {
+                    return loopHandleMedia();
                 });
             };
             return {
@@ -163,8 +165,6 @@ var checkMedia = exports.checkMedia = function checkMedia() {
                     }, 180000);
                 }).then(function () {
                     return loopHandleMedia();
-                }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop checkMedia');
                 })
             };
         }();
@@ -184,6 +184,8 @@ var updateExternal = exports.updateExternal = function updateExternal() {
                     return _externalTool2.default.getList('lovetv');
                 }).then(function () {
                     return _externalTool2.default.getList('eztv');
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop updateExternal');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -201,8 +203,6 @@ var updateExternal = exports.updateExternal = function updateExternal() {
                     }, 240000);
                 }).then(function () {
                     return loopUpdateExternal();
-                }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop updateExternal');
                 })
             };
         }();
@@ -308,7 +308,9 @@ var updateStock = exports.updateStock = function updateStock() {
                         });
                     });
                 };
-                return parseStockList().then(function () {
+                return parseStockList().catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop updateStock');
+                }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
@@ -325,8 +327,6 @@ var updateStock = exports.updateStock = function updateStock() {
                     }, 20000);
                 }).then(function () {
                     return loopUpdateStock();
-                }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop updateStock');
                 })
             };
         }();

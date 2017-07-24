@@ -3089,7 +3089,12 @@ export const getStockList = (type, stocktype=0) => {
 }
 
 const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
-    const tds = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0], 'table')[0], 'table')[0], 'tr')[1], 'td');
+    const form = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0];
+    if (!form) {
+        console.log(raw_data);
+        handleError(new HoError('cannot find form'));
+    }
+    const tds = findTag(findTag(findTag(findTag(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
     let filename = false;
     for (let t of tds) {
         const a = findTag(t, 'a')[0];

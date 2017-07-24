@@ -3514,7 +3514,12 @@ var getStockList = exports.getStockList = function getStockList(type) {
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
     return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=' + index + '&year=' + (year - 1911) + '&seamon=&mtype=F&dtype=F04', { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
-        var tds = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0], 'table')[0], 'table')[0], 'tr')[1], 'td');
+        var form = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0];
+        if (!form) {
+            console.log(raw_data);
+            (0, _utility.handleError)(new _utility.HoError('cannot find form'));
+        }
+        var tds = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
         var filename = false;
         var _iteratorNormalCompletion10 = true;
         var _didIteratorError10 = false;
