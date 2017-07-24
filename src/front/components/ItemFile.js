@@ -162,7 +162,9 @@ const ItemFile = React.createClass({
             }
         }
         if (item.media) {
-            dropList.push({title: 'handle media', onclick: () => this._handleMedia(item.id, item.name), key: 12})
+            if (item.status !== 3) {
+                dropList.push({title: 'handle media', onclick: () => this._handleMedia(item.id, item.name), key: 12})
+            }
             dropList.push({title: 'clear media', onclick: () => this._handleMedia(item.id, item.name, true), key: 13})
         }
         if (item.status === 0 || item.status === 1 || item.status === 9) {
