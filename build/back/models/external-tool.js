@@ -974,8 +974,10 @@ exports.default = {
                     var docDate = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
                     console.log(docDate);
                     var list = [];
+                    var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                    var html2 = (0, _utility.findTag)(html, 'html')[0];
                     var findDoc = function findDoc(title, raw_data) {
-                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
+                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1])[0] === docDate) {
                                 list.push({
                                     url: (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
@@ -994,7 +996,9 @@ exports.default = {
                                 var pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
                                 var docDate1 = pDate.getFullYear() - 1911 + '\u5E74' + (pDate.getMonth() + 1) + '\u6708';
                                 console.log(docDate1);
-                                var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                                var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                                var html2 = (0, _utility.findTag)(html, 'html')[0];
+                                var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                                 var link = null;
                                 var _iteratorNormalCompletion5 = true;
                                 var _didIteratorError5 = false;
@@ -1027,7 +1031,9 @@ exports.default = {
                                 }
 
                                 return link ? (0, _apiTool2.default)('url', link).then(function (raw_data) {
-                                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
+                                    var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                                    var html2 = (0, _utility.findTag)(html, 'html')[0];
+                                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
                                         list.push({
                                             url: link,
                                             name: (0, _utility.toValidName)('失業率'),
@@ -1082,7 +1088,8 @@ exports.default = {
                         console.log(raw_data);
                         (0, _utility.handleError)(new _utility.HoError('empty html'));
                     }
-                    var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                    var html2 = (0, _utility.findTag)(html, 'html')[0];
+                    var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     var dUrl = false;
                     var _iteratorNormalCompletion6 = true;
                     var _didIteratorError6 = false;
@@ -1159,7 +1166,8 @@ exports.default = {
                                 console.log(raw_data);
                                 (0, _utility.handleError)(new _utility.HoError('empty html'));
                             }
-                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                            var html2 = (0, _utility.findTag)(html, 'html')[0];
+                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                             dUrl = false;
                             var _iteratorNormalCompletion8 = true;
                             var _didIteratorError8 = false;
@@ -1612,7 +1620,9 @@ exports.default = {
             case 'sta':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(function (p) {
+                    var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                    var html2 = (0, _utility.findTag)(html, 'html')[0];
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(function (p) {
                         var as = (0, _utility.findTag)(p, 'a');
                         if (as.length > 0) {
                             var _iteratorNormalCompletion10 = true;

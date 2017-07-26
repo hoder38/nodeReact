@@ -788,7 +788,9 @@ export default {
                 const docDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
                 console.log(docDate);
                 let list = [];
-                const findDoc = (title, raw_data) => findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
+                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                const html2 = findTag(html, 'html')[0];
+                const findDoc = (title, raw_data) => findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
                     if (findTag(findTag(t, 'td')[1])[0] === docDate) {
                         list.push({
                             url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
@@ -806,7 +808,9 @@ export default {
                             const pDate = new Date(new Date(date).setMonth(date.getMonth()-1));
                             const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
                             console.log(docDate1);
-                            const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                            const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                            const html2 = findTag(html, 'html')[0];
+                            const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                             let link = null;
                             for (let l of lis) {
                                 const a = findTag(l, 'a')[0];
@@ -817,7 +821,9 @@ export default {
                                 }
                             }
                             return link ? Api('url', link).then(raw_data => {
-                                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
+                                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                                const html2 = findTag(html, 'html')[0];
+                                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
                                     list.push({
                                         url: link,
                                         name: toValidName('失業率'),
@@ -872,7 +878,8 @@ export default {
                     console.log(raw_data);
                     handleError(new HoError('empty html'));
                 }
-                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                const html2 = findTag(html, 'html')[0];
+                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                 let dUrl = false;
                 for (let l of lis) {
                     const a = findTag(l, 'a')[0];
@@ -902,7 +909,8 @@ export default {
                         console.log(raw_data);
                         handleError(new HoError('empty html'));
                     }
-                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                    const html2 = findTag(html, 'html')[0];
+                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     dUrl = false;
                     for (let l of lis) {
                         const a = findTag(l, 'a')[0];
@@ -1188,7 +1196,9 @@ export default {
             case 'sta':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(p => {
+                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                const html2 = findTag(html, 'html')[0];
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(p => {
                     let as = findTag(p, 'a');
                     if (as.length > 0) {
                         for (let a of as) {
