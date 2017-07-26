@@ -10,6 +10,7 @@ export const USERDB = 'user'
 export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
 export const PASSWORDDB = 'password'
+export const FITNESSDB = 'fitness'
 export const DOCDB = 'docUpdate'
 
 //basic set

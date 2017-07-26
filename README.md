@@ -62,6 +62,15 @@ youtube-dl: sudo ln -s /usr/bin/youtube-dl youtube-dl
 googleapis: ?
 
 pdftk
+nodejs
+mongodb
+redis
+youtube-dl
+unrar
+7za
+python
+megadl
+avconv or ffmpeg
 
 sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/cmd.js
 sudo -i node /home/pi/release/nodeReact/build/back/cmd/cmd.js

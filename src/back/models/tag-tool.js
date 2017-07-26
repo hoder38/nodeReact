@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -28,6 +28,12 @@ export default function process(collection) {
         getQueryTag = getStockQueryTag;
         getSortName = getStockSortName;
         parent_arr = STOCK_PARENT;
+        break;
+        case FITNESSDB:
+        getQuerySql = getStorageQuerySql;
+        getQueryTag = getStorageQueryTag;
+        getSortName = getStorageSortName;
+        parent_arr = [];
         break;
         default:
         return false;
@@ -72,7 +78,7 @@ export default function process(collection) {
                 parentList = tags.getArray(((collection === STOCKDB && defau.index === 31) || (collection === STORAGEDB && defau.index === 31)) ? tagName : isValidString(tagName, 'name', 'name is not vaild'), exactly);
             } else {
                 const defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(((collection === 'stock' && defau.index === 31) || (collection === 'storage' && defau.index === 31)) ? tagName : isValidString(tagName, 'name', 'name is not vaild'), exactly, isValidString(index, 'parentIndex', 'parentIndex is not vaild'));
+                parentList = tags.getArray(((collection === STOCKDB && defau.index === 31) || (collection === 'storage' && defau.index === 31)) ? tagName : isValidString(tagName, 'name', 'name is not vaild'), exactly, isValidString(index, 'parentIndex', 'parentIndex is not vaild'));
             }
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
             return sql ? Mongo('find', collection, sql.nosql, sql.select ? sql.select : {}, Object.assign({

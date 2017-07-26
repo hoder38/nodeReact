@@ -115,10 +115,11 @@ const Categorylist = React.createClass({
             )
             break
         }
+        const chartOpen = this.props.stockopen ? <i className="glyphicon glyphicon-chevron-up"></i> : <i className="glyphicon glyphicon-chevron-down"></i>;
         const chart = this.props.stock ? (
             <li className="active">
                 <a href="#" onClick={e => killEvent(e, this.props.setstock)}>
-                    <strong>{this.props.stock.type}{this.props.stock.index}{this.props.stock.name}</strong>
+                    <strong>{this.props.stock.type}{this.props.stock.index}{this.props.stock.name}{chartOpen}</strong>
                 </a>
             </li>
         ) : null
