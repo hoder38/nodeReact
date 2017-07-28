@@ -1,7 +1,7 @@
 import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
-import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem } from '../util/utility'
+import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem } from '../util/utility'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -132,7 +132,7 @@ router.get(`/${FITNESSDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc
 router.get(`/${FITNESSDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
     console.log('fitness parent query');
     FitnessTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
-        itemList: getStockItem(req.user, result.items),
+        itemList: getFitnessItem(req.user, result.items),
         parentList: result.parentList,
         latest: result.latest,
         bookmarkID: result.bookmark,

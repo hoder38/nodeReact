@@ -1,7 +1,7 @@
 import React from 'react'
 import ReDirlist from '../containers/ReDirlist'
 import RePasswordInfo from '../containers/RePasswordInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK } from '../constants'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS } from '../constants'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
 
 const Categorylist = React.createClass({
@@ -114,6 +114,15 @@ const Categorylist = React.createClass({
                 </li>
             )
             break
+            case FITNESS:
+            open = (
+                <li>
+                    <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
+                        New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
+                    </a>
+                </li>
+            )
+            break;
         }
         const chartOpen = this.props.stockopen ? <i className="glyphicon glyphicon-chevron-up"></i> : <i className="glyphicon glyphicon-chevron-down"></i>;
         const chart = this.props.stock ? (

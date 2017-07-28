@@ -298,6 +298,16 @@ export const getStockItem = (user, items) => checkAdmin(1, user) ? items.map(ite
     };
 }) : [];
 
+export const getFitnessItem = (user, items) => items.map(item => ({
+    name: item.name,
+    id: item._id,
+    tags: item.tags,
+    price: item.price,
+    count: item.count,
+    desc: item.desc,
+    type: item.type,
+}));
+
 export const getFileLocation = (owner, uid) => {
     const owner_S = owner.toString();
     const owner_md5 = createHash('md5').update(owner_S).digest('hex');

@@ -180,6 +180,16 @@ export const STOCK_PARENT = [
         tw: '產業分類',
     },
 ]
+export const FITNESS_PARENT = [
+    {
+        name: 'command',
+        tw: '指令',
+    },
+    {
+        name: 'type',
+        tw: '種類',
+    },
+]
 
 //tag list
 export const MEDIA_LIST = [

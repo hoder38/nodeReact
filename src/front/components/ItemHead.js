@@ -1,7 +1,7 @@
 import React from 'react'
 import Tooltip from './Tooltip'
 import { getItemList, isValidString, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS } from '../constants'
 
 const ItemHead = React.createClass({
     _changeSort: function(name) {
@@ -79,6 +79,9 @@ const ItemHead = React.createClass({
                     </a>
                 </li>
             )
+            break
+            case FITNESS:
+            head1 = 'price'
             break
         }
         return (

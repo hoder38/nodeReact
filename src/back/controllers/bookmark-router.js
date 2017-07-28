@@ -2,7 +2,7 @@ import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB, FITNESSDB } from '../con
 import Express from 'express'
 import { createHash } from 'crypto'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem } from '../util/utility'
+import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem, getFitnessItem } from '../util/utility'
 import { addPost } from '../util/mime'
 import Mongo, { objectID } from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
@@ -276,7 +276,7 @@ router.get(`/${FITNESSDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:pag
 router.get(`/${FITNESSDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
     console.log('get fitness bookmark');
     FitnessTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
-        itemList: getStockItem(req.user, result.items),
+        itemList: getFitnessItem(req.user, result.items),
         parentList: result.parentList,
         latest: result.latest,
         bookmarkID: result.bookmark,

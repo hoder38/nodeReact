@@ -59,6 +59,9 @@ const App = React.createClass({
                             case 'stock':
                             api(`/api/stock/single/${wsmsg.data}`).then(result => result.empty ? this.props.stockdel(wsmsg.data) : this.props.stockset(result.item)).catch(err => this.props.addalert(err))
                             break
+                            case 'fitness':
+                            api(`/api/fitness/single/${wsmsg.data}`).then(result => result.empty ? this.props.fitnessdel(wsmsg.data) : this.props.fitnessset(result.item)).catch(err => this.props.addalert(err))
+                            break
                             case 'sub':
                             this.props.sub.forEach(item => item())
                             break
