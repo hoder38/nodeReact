@@ -478,7 +478,7 @@ function download(data) {
         console.log(index);
         handleError(err, 'Google Fetch');
         if (index > MAX_RETRY) {
-            console.log(url);
+            console.log(data['url']);
             handleError(new HoError('timeout'));
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
