@@ -705,6 +705,7 @@ exports.default = {
             };
             return checkThumb().then(function (thumbnail) {
                 return (0, _apiToolGoogle2.default)('download', {
+                    user: user,
                     url: thumbnail,
                     filePath: filePath + '.jpg',
                     rest: function rest() {
@@ -726,6 +727,7 @@ exports.default = {
                 (0, _utility.handleError)(new _utility.HoError('video can not be decoded!!!'));
             }
             return (0, _apiToolGoogle2.default)('download media', {
+                user: user,
                 key: key,
                 filePath: mediaType['realPath'] ? filePath + '/' + mediaType['fileIndex'] + '_complete' : filePath + '_complete',
                 hd: mediaType['hd'],
@@ -753,6 +755,7 @@ exports.default = {
             };
             return _checkThumb().then(function (thumbnail) {
                 return (0, _apiToolGoogle2.default)('download doc', {
+                    user: user,
                     exportlink: thumbnail,
                     filePath: mediaType['realPath'] ? filePath + '/' + mediaType['fileIndex'] : filePath,
                     rest: function rest(number) {
@@ -780,7 +783,9 @@ exports.default = {
                     thumbnail = _ref7[0],
                     alternate = _ref7[1];
 
-                return (0, _apiToolGoogle2.default)('download present', { exportlink: thumbnail,
+                return (0, _apiToolGoogle2.default)('download present', {
+                    user: user,
+                    exportlink: thumbnail,
                     alternate: alternate,
                     filePath: mediaType['realPath'] ? filePath + '/' + mediaType['fileIndex'] : filePath,
                     rest: function rest(number) {
@@ -910,6 +915,7 @@ exports.default = {
                         addFolderId: handling
                     }).then(function () {
                         return (0, _fs.existsSync)(filePath) ? (0, _apiToolGoogle2.default)('download media', {
+                            user: user,
                             key: metadata.id,
                             filePath: filePath + '_complete',
                             hd: getHd(metadata.videoMediaMetadata.height),
@@ -920,10 +926,12 @@ exports.default = {
                                 return (0, _utility.handleError)(err, errDrive, metadata.id, folderId);
                             }
                         }) : (0, _apiToolGoogle2.default)('download', {
+                            user: user,
                             url: metadata.downloadUrl,
                             filePath: filePath,
                             rest: function rest() {
                                 return (0, _apiToolGoogle2.default)('download media', {
+                                    user: user,
                                     key: metadata.id,
                                     filePath: filePath + '_complete',
                                     hd: getHd(metadata.videoMediaMetadata.height),
@@ -949,6 +957,7 @@ exports.default = {
                         addFolderId: handling
                     }).then(function () {
                         return (0, _fs.existsSync)(filePath) ? handleRest(data, name) : (0, _apiToolGoogle2.default)('download', {
+                            user: user,
                             url: metadata.downloadUrl,
                             filePath: filePath,
                             rest: function rest() {
