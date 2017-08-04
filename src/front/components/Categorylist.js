@@ -1,6 +1,7 @@
 import React from 'react'
 import ReDirlist from '../containers/ReDirlist'
 import RePasswordInfo from '../containers/RePasswordInfo'
+import ReFitnessInfo from '../containers/ReFitnessInfo'
 import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS } from '../constants'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
 
@@ -93,10 +94,13 @@ const Categorylist = React.createClass({
         this.props.dirs.forEach(dir => rows.push(
             <ReDirlist name={dir.title} time="qtime" dir={dir} set={(item, sortName, sortType) => this.props.dirset(dir.name, item, sortName, sortType)} del={id => this.props.deldir(dir.name, id)} listUrl={`${this.props.dirUrl}${dir.name}/`} delUrl={this.props.dirDelUrl} edit={this.props.edit} collapse={true} dirItem={this._dirItem} key={dir.key} />
         ))
-        const edit = this.state.edit ? <RePasswordInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} item={{newable: true}} /> : null
+        let edit = null;
         let open = null
         switch(this.props.itemType) {
             case PASSWORD:
+            if (this.state.edit) {
+                edit = <RePasswordInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} item={{newable: true}} />;
+            }
             open = (
                 <li>
                     <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
@@ -115,13 +119,18 @@ const Categorylist = React.createClass({
             )
             break
             case FITNESS:
-            open = (
-                <li>
-                    <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
-                        New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
-                    </a>
-                </li>
-            )
+            if (this.props.level === 2) {
+                open = (
+                    <li>
+                        <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
+                            New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
+                        </a>
+                    </li>
+                );
+                if (this.state.edit) {
+                    edit = <ReFitnessInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} item={{newable: true}} />;
+                }
+            }
             break;
         }
         const chartOpen = this.props.stockopen ? <i className="glyphicon glyphicon-chevron-up"></i> : <i className="glyphicon glyphicon-chevron-down"></i>;

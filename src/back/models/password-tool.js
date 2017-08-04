@@ -10,7 +10,7 @@ const PasswordTagTool = TagTool(PASSWORDDB);
 
 export default {
     newRow: function(data, user) {
-        if (!data['username'] || !data['password']|| !data['conpassword'] || !data['name']) {
+        if (!data['username'] || !data['password'] || !data['conpassword'] || !data['name']) {
             handleError(new HoError('parameter lost!!!'));
         }
         const name = isValidString(data['name'], 'name', 'name not vaild!!!');

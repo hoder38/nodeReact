@@ -6,6 +6,7 @@ const initialState = {
     edit: false,
     level: 0,
     sub: [],
+    fitness: 0,
 }
 
 export default function basicDataHandle (state = initialState, action) {
@@ -16,12 +17,14 @@ export default function basicDataHandle (state = initialState, action) {
         const edit = action.edit === null ? state.edit : action.edit
         const level = action.level === null ? state.level : action.level
         const sub = action.sub === null ? state.sub : [...state.sub, action.sub]
+        const fitness = action.fitness === null ? state.fitness : action.fitness
         return {
             id,
             url,
             edit,
             level,
             sub,
+            fitness,
         }
         default:
         return state

@@ -89,14 +89,24 @@ export default function process(collection) {
                     sortType,
                 ]],
             }, sql.skip ? {skip: page + sql.skip} : {}, sql.hint ? {hint: sql.hint} : {})).then(items => {
-                if (collection === FITNESS) {
-                    //$in
-                }
-                return sql.nosql.mediaType ? ({
-                    items: items,
+                const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
+                    owner: user._id,
+                    itemId: {'$in': items.map(i => i._id)},
+                }).then(counts => items.map(i => {
+                    for (let c of counts) {
+                        if (i._id.equals(c.itemId)) {
+                            i['count'] = c['count'];
+                            return i;
+                        }
+                    }
+                    i['count'] = 0;
+                    return i;
+                })) : Promise.resolve(items);
+                return getCount().then(items => sql.nosql.mediaType ? ({
+                    items,
                     parentList: parentList,
                     mediaHadle: 1,
-                }) : returnPath(items, parentList);
+                }) : returnPath(items, parentList));
             }) : returnPath([], parentList);
         },
         singleQuery: function(uid, user, session) {
@@ -109,13 +119,14 @@ export default function process(collection) {
                     limit: 1,
                     hint: {_id: 1},
                 }).then(items => {
-                    if (collection === FITNESS) {
-                        //get count
-                    }
-                    return items.length < 1 ? {empty: true} : sql.nosql.mediaType ? {
+                    const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
+                        owner: user._id,
+                        itemId: items[0]._id,
+                    }).then(counts => [Object.assign(items[0], {count: (counts.length < 1) ? 0 : counts[0]['count']})]) : Promise.resolve(items);
+                    return (items.length < 1) ? {empty: true} : getCount().then(items => sql.nosql.mediaType ? {
                         item: items[0],
                         mediaHadle: 1,
-                    } : {item: items[0]};
+                    } : {item: items[0]});
                 });
             } else {
                 return {empty: true};
@@ -130,10 +141,25 @@ export default function process(collection) {
                     getSortName(sortName),
                     sortType,
                 ]],
-            }, sql.hint ? {hint: sql.hint} : {})).then(items => ({
-                items: items,
-                parentList: parentList,
-            })) : {
+            }, sql.hint ? {hint: sql.hint} : {})).then(items => {
+                const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
+                    owner: user._id,
+                    itemId: {'$in': items.map(i => i._id)},
+                }).then(counts => items.map(i => {
+                    for (let c of counts) {
+                        if (i._id.equals(c.itemId)) {
+                            i['count'] = c['count'];
+                            return i;
+                        }
+                    }
+                    i['count'] = 0;
+                    return i;
+                })) : Promise.resolve(items);
+                return getCount().then(items => ({
+                    items,
+                    parentList,
+                }));
+            }) : {
                 items: [],
                 parentList: parentList,
             };

@@ -4,7 +4,17 @@ export default function UserInput({ val, getinput, edit=true, show=true, type='t
     if (!show) {
         return null
     }
-    let content = (edit || copy) ? (
+    let content = (edit || copy) ? (type === 'textarea') ? (
+        <textarea
+            className={getinput.className}
+            style={getinput.style}
+            placeholder={placeholder}
+            value={(!edit && copy && copyShow) ? copyShow : val}
+            ref={ref => getinput.getRef(ref)}
+            onChange={getinput.onchange}
+            onCopy={(!edit && copy) ? copy : () => {}}
+            readOnly={(!edit && copy) ? true : false} />
+    ) : (
         <input
             type={(!edit && copy) ? 'text' : type}
             className={getinput.className}
@@ -16,11 +26,32 @@ export default function UserInput({ val, getinput, edit=true, show=true, type='t
             onCopy={(!edit && copy) ? copy : () => {}}
             onKeyPress={getinput.onenter}
             readOnly={(!edit && copy) ? true : false} />
-    ) : val
+    ) : showTextarea(val, type);
 
     content = edit ? insertChild(content, tage) : insertChild(content, tagv)
 
     return insertChild(content, children)
+}
+
+function showTextarea(str, type) {
+    return (type === 'textarea') ? str.split(/\[\[([^\]]+)\]\]/).map((item, key) => {
+        if (key%2 === 1) {
+            return (
+                <a key={key} href={item} target="_blank">
+                    {item}
+                </a>
+            )
+        } else {
+            const items = item.split(/(?:\r\n|\r|\n)/);
+            const itemlength = items.length;
+            return items.map((item1, key1) => (key1 === itemlength - 1) ? item1 : (
+                <span key={key1}>
+                    {item1}
+                    <br/>
+                </span>
+            ));
+        }
+    }) : str;
 }
 
 function insertChild(item1, item2) {

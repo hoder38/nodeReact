@@ -51,7 +51,7 @@ export function isValidString(str, type) {
         case 'altpwd':
         return str.match(/^[0-9a-zA-Z\._!@#$%;\u4e00-\u9fa5]{2,30}$/)
         case 'desc':
-        return str.match(/^[^\\\/\|\*\?\'"<>`:&]{0,250}$/)
+        return str.replace(/\[\[([^\]]+)\]\]/g, (m, m1) => `[[${encodeURIComponent(m1)}]]`).match(/^[^\\\/\|\*\?\'"<>`:&]{0,500}$/);
         case 'int':
         if (Number(str) && Number(str) > 0) {
             return true;

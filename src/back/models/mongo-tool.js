@@ -1,6 +1,6 @@
 import { ENV_TYPE, DB_USERNAME, DB_PWD } from '../../../ver'
 import { DB_IP, DB_PORT, DB_NAME } from '../config'
-import { MongoClient, ObjectID} from 'mongodb'
+import { MongoClient, ObjectId} from 'mongodb'
 import { createHash } from 'crypto'
 import { handleError, HoError } from '../util/utility'
 
@@ -37,7 +37,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
 
 let collections = []
 
-export const objectID = (id=null) => id === null ? new ObjectID() : new ObjectID(id)
+export const objectID = (id=null) => id === null ? new ObjectId() : new ObjectId(id)
 
 export default function(functionName, name, ...args) {
     if (name in collections) {

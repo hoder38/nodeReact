@@ -36,10 +36,7 @@ const ItemPassword = React.createClass({
                     throw err
                 })
             }
-        }) : api(`/api/password/delRow/${id}`, {}, 'PUT').catch(err => {
-            this.props.addalert(err)
-            throw err
-        }), `Would you sure to delete ${name} ?`)
+        }) : api(`/api/password/delRow/${id}`, {}, 'PUT').catch(err => this.props.addalert(err)), `Would you sure to delete ${name} ?`)
     },
     _getUsername: function(name) {
         this.props.globalinput(3, () => {}, 'info', 'New Username...', name)
@@ -67,7 +64,7 @@ const ItemPassword = React.createClass({
         const item = this.props.item
         let fileType = item.important ? 'recycled' : ''
         let dropList = [
-            {title: 'Details & Edit', onclick: () => this.setState({edit: true}), key: 0},
+            {title: 'Details', onclick: () => this.setState({edit: true}), key: 0},
             {title: 'Delete', onclick: () => this._delPassword(item.id, item.name, item.important), key: 1},
         ]
         if (item.url) {

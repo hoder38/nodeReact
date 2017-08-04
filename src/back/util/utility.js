@@ -29,8 +29,9 @@ export function isValidString(str, type, msg=null, code=400) {
             break
             case 'desc':
             //不合法字元: \ / | * ? ' " < > ` : &
-            if (str.search(/^[^\\\/\|\*\?\'"<>`:&]{0,250}$/) !== -1) {
-                return str
+            str = str.replace(/\[\[([^\]]+)\]\]/g, (m, m1) => `[[${encodeURIComponent(m1)}]]`);
+            if (str.search(/^[^\\\/\|\*\?\'"<>`:&]{0,500}$/) !== -1) {
+                return str;
             }
             break
             case 'perm':

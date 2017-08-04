@@ -682,3 +682,5 @@ export const MIME_EXT = {
     wav: 'audio/wav',
     m4a: 'audio/mp4',
 }
+
+export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
