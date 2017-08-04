@@ -460,6 +460,7 @@ export default {
                 return filedata['thumbnailLink'];
             });
             return checkThumb().then(thumbnail => GoogleApi('download', {
+                user,
                 url: thumbnail,
                 filePath: `${filePath}.jpg`,
                 rest: () => {
@@ -474,6 +475,7 @@ export default {
                 handleError(new HoError('video can not be decoded!!!'));
             }
             return GoogleApi('download media', {
+                user,
                 key,
                 filePath: mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}_complete` : `${filePath}_complete`,
                 hd: mediaType['hd'],
@@ -492,6 +494,7 @@ export default {
                 return filedata.exportLinks['application/pdf'];
             });
             return checkThumb().then(thumbnail => GoogleApi('download doc', {
+                user,
                 exportlink: thumbnail,
                 filePath: mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath,
                 rest: number => GoogleApi('delete', {fileId: key}).then(() => completeMedia(fileID, 5, mediaType['fileIndex'], number)),
@@ -505,7 +508,9 @@ export default {
                 }
                 return [filedata.exportLinks['application/pdf'], filedata.alternateLink];
             });
-            return checkThumb().then(([thumbnail, alternate]) => GoogleApi('download present', {exportlink: thumbnail,
+            return checkThumb().then(([thumbnail, alternate]) => GoogleApi('download present', {
+                user,
+                exportlink: thumbnail,
                 alternate,
                 filePath: mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath,
                 rest: number => GoogleApi('delete', {fileId: key}).then(() => completeMedia(fileID, 6, mediaType['fileIndex'], number)),
@@ -600,15 +605,18 @@ export default {
                     rmFolderId: folderId,
                     addFolderId: handling,
                 }).then(() => FsExistsSync(filePath) ? GoogleApi('download media', {
+                    user,
                     key: metadata.id,
                     filePath: `${filePath}_complete`,
                     hd: getHd(metadata.videoMediaMetadata.height),
                     rest: () => handleRest(data, name, 3, metadata.id, true),
                     errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 }) : GoogleApi('download', {
+                    user,
                     url: metadata.downloadUrl,
                     filePath,
                     rest: () => GoogleApi('download media', {
+                        user,
                         key: metadata.id,
                         filePath: `${filePath}_complete`,
                         hd: getHd(metadata.videoMediaMetadata.height),
@@ -623,6 +631,7 @@ export default {
                     rmFolderId: folderId,
                     addFolderId: handling,
                 }).then(() => FsExistsSync(filePath) ? handleRest(data, name) : GoogleApi('download', {
+                    user,
                     url: metadata.downloadUrl,
                     filePath,
                     rest: () => handleRest(data, name),
