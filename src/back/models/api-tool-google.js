@@ -577,7 +577,7 @@ function downloadMedia(data) {
         console.log(index);
         handleError(err, 'Youtubedl Fetch');
         if (index > MAX_RETRY) {
-            console.log(url);
+            console.log(data['key']);
             handleError(new HoError('timeout'));
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), Math.pow(2, index) * 10 * 1000));
