@@ -201,7 +201,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                 }
                 let fileIndex = false;
                 for (let i in items[0].mediaType) {
-                    if (Number(req.params.index) === items[0].mediaType[i]['fileIndex']) {
+                    if (Number(req.params.index) === Number(items[0].mediaType[i]['fileIndex'])) {
                         fileIndex = i;
                         break;
                     }
