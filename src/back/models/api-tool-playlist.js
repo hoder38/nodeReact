@@ -545,11 +545,23 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
     const filePath = getFileLocation(owner, id);
     const bufferPath = `${filePath}/${index}`;
     const comPath = `${bufferPath}_complete`;
-    if (index < 0 || index >= engine.files.length) {
+    let playList = engine.files.map(file => file.path);
+    if (playList.length < 1) {
+        handleError(new HoError('empty content!!!'));
+    }
+    playList = sortList(playList);
+    let tIndex = -1;
+    for (let i in engine.files) {
+        if (playList[index] === engine.files[i].path) {
+            tIndex = i;
+            break;
+        }
+    }
+    if (tIndex < 0 || tIndex >= engine.files.length) {
         return torrentComplete().then(() => Promise.reject(handleError(new HoError('unknown index'))));
     } else {
-        const file = engine.files[index];
-        console.log(index);
+        const file = engine.files[tIndex];
+        console.log(tIndex);
         console.log(file.name);
         console.log(file.length);
         console.log('torrent real start');
@@ -564,7 +576,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
             });
         } else {
             if (isVideo(file.name)) {
-                new Promise((resolve, reject) => computeHash(index, engine, (err, hash_ret) => err ? reject(err) : resolve(hash_ret))).then(hash_ret => {
+                new Promise((resolve, reject) => computeHash(tIndex, engine, (err, hash_ret) => err ? reject(err) : resolve(hash_ret))).then(hash_ret => {
                     console.log(hash_ret);
                     const openSubtitles = new OpenSubtitle('hoder agent v0.1');
                     return openSubtitles.search({
@@ -691,7 +703,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         engine = torrent_pool[i].engine;
                     }
                 } else {
-                    if (torrent_pool[i].engine && torrent_pool[i].engine.files && torrent_pool[i].engine.files[fileIndex]) {
+                    if (torrent_pool[i].engine && torrent_pool[i].engine.files) {
                         if (pType === 1) {
                             let totalDSize = 0;
                             let totalSize = 0;
@@ -711,17 +723,28 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                                 data: `${torrent_pool[i].engine.torrent.name ? `Playlist ${torrent_pool[i].engine.torrent.name}` : 'Playlist torrent'}: ${percent}%`,
                             }, 0);
                         } else if (!pType) {
-                            let percent = 0;
-                            if (FsExistsSync(bufferPath)) {
-                                if (torrent_pool[i].engine.files[fileIndex].length > 0) {
-                                    percent = Math.ceil(FsStatSync(bufferPath).size / torrent_pool[i].engine.files[fileIndex].length * 100);
+                            let playList = torrent_pool[i].engine.files.map(file => file.path);
+                            playList = sortList(playList);
+                            let tIndex = -1;
+                            for (let j in torrent_pool[i].engine.files) {
+                                if (playList[fileIndex] === torrent_pool[i].engine.files[j].path) {
+                                    tIndex = j;
+                                    break;
                                 }
                             }
-                            console.log(percent);
-                            sendWs({
-                                type: user.username,
-                                data: `${torrent_pool[i].engine.files[fileIndex].path}: ${percent}%`,
-                            }, 0);
+                            if (torrent_pool[i].engine.files[tIndex]) {
+                                let percent = 0;
+                                if (FsExistsSync(bufferPath)) {
+                                    if (torrent_pool[i].engine.files[tIndex].length > 0) {
+                                        percent = Math.ceil(FsStatSync(bufferPath).size / torrent_pool[i].engine.files[tIndex].length * 100);
+                                    }
+                                }
+                                console.log(percent);
+                                sendWs({
+                                    type: user.username,
+                                    data: `${torrent_pool[i].engine.files[tIndex].path}: ${percent}%`,
+                                }, 0);
+                            }
                         }
                     }
                     torrent_lock = false;
@@ -811,7 +834,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                         fileOwner: owner,
                         torrent: torrent,
                         start: Math.round(new Date().getTime() / 1000),
-                        engine: engine,
+                        engine,
                     });
                     torrent_lock = false;
                     return startEngine(fileIndex).then(() => rest());

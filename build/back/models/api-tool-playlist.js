@@ -858,14 +858,28 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
         var filePath = (0, _utility.getFileLocation)(owner, id);
         var bufferPath = filePath + '/' + index;
         var comPath = bufferPath + '_complete';
-        if (index < 0 || index >= engine.files.length) {
+        var playList = engine.files.map(function (file) {
+            return file.path;
+        });
+        if (playList.length < 1) {
+            (0, _utility.handleError)(new _utility.HoError('empty content!!!'));
+        }
+        playList = (0, _utility.sortList)(playList);
+        var tIndex = -1;
+        for (var i in engine.files) {
+            if (playList[index] === engine.files[i].path) {
+                tIndex = i;
+                break;
+            }
+        }
+        if (tIndex < 0 || tIndex >= engine.files.length) {
             return torrentComplete().then(function () {
                 return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown index')));
             });
         } else {
             var _ret7 = function () {
-                var file = engine.files[index];
-                console.log(index);
+                var file = engine.files[tIndex];
+                console.log(tIndex);
                 console.log(file.name);
                 console.log(file.length);
                 console.log('torrent real start');
@@ -891,7 +905,7 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
                 } else {
                     if ((0, _mime.isVideo)(file.name)) {
                         new _promise2.default(function (resolve, reject) {
-                            return (0, _osTorrentHash.computeHash)(index, engine, function (err, hash_ret) {
+                            return (0, _osTorrentHash.computeHash)(tIndex, engine, function (err, hash_ret) {
                                 return err ? reject(err) : resolve(hash_ret);
                             });
                         }).then(function (hash_ret) {
@@ -980,17 +994,17 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
                     return _promise2.default.resolve();
                 }
                 console.log('torrent complete');
-                for (var i in torrent_pool) {
-                    if (torrent_pool[i].hash === hash) {
-                        var pindex = torrent_pool[i].index.indexOf(index);
+                for (var _i2 in torrent_pool) {
+                    if (torrent_pool[_i2].hash === hash) {
+                        var pindex = torrent_pool[_i2].index.indexOf(index);
                         if (pindex !== -1) {
-                            torrent_pool[i].index.splice(pindex, 1);
+                            torrent_pool[_i2].index.splice(pindex, 1);
                         }
-                        if (torrent_pool[i].index.length <= 0) {
-                            if (torrent_pool[i].engine) {
-                                torrent_pool[i].engine.destroy();
+                        if (torrent_pool[_i2].index.length <= 0) {
+                            if (torrent_pool[_i2].engine) {
+                                torrent_pool[_i2].engine.destroy();
                             }
-                            torrent_pool.splice(i, 1);
+                            torrent_pool.splice(_i2, 1);
                         }
                         break;
                     }
@@ -1053,7 +1067,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner) {
                         engine = torrent_pool[i].engine;
                     }
                 } else {
-                    if (torrent_pool[i].engine && torrent_pool[i].engine.files && torrent_pool[i].engine.files[fileIndex]) {
+                    if (torrent_pool[i].engine && torrent_pool[i].engine.files) {
                         if (pType === 1) {
                             var totalDSize = 0;
                             var totalSize = 0;
@@ -1073,17 +1087,30 @@ function torrentAdd(user, torrent, fileIndex, id, owner) {
                                 data: (torrent_pool[i].engine.torrent.name ? 'Playlist ' + torrent_pool[i].engine.torrent.name : 'Playlist torrent') + ': ' + percent + '%'
                             }, 0);
                         } else if (!pType) {
-                            var _percent = 0;
-                            if ((0, _fs.existsSync)(bufferPath)) {
-                                if (torrent_pool[i].engine.files[fileIndex].length > 0) {
-                                    _percent = Math.ceil((0, _fs.statSync)(bufferPath).size / torrent_pool[i].engine.files[fileIndex].length * 100);
+                            var playList = torrent_pool[i].engine.files.map(function (file) {
+                                return file.path;
+                            });
+                            playList = (0, _utility.sortList)(playList);
+                            var tIndex = -1;
+                            for (var j in torrent_pool[i].engine.files) {
+                                if (playList[fileIndex] === torrent_pool[i].engine.files[j].path) {
+                                    tIndex = j;
+                                    break;
                                 }
                             }
-                            console.log(_percent);
-                            (0, _sendWs2.default)({
-                                type: user.username,
-                                data: torrent_pool[i].engine.files[fileIndex].path + ': ' + _percent + '%'
-                            }, 0);
+                            if (torrent_pool[i].engine.files[tIndex]) {
+                                var _percent = 0;
+                                if ((0, _fs.existsSync)(bufferPath)) {
+                                    if (torrent_pool[i].engine.files[tIndex].length > 0) {
+                                        _percent = Math.ceil((0, _fs.statSync)(bufferPath).size / torrent_pool[i].engine.files[tIndex].length * 100);
+                                    }
+                                }
+                                console.log(_percent);
+                                (0, _sendWs2.default)({
+                                    type: user.username,
+                                    data: torrent_pool[i].engine.files[tIndex].path + ': ' + _percent + '%'
+                                }, 0);
+                            }
                         }
                     }
                     torrent_lock = false;
@@ -1158,11 +1185,11 @@ function torrentAdd(user, torrent, fileIndex, id, owner) {
                                         console.log('torrent kick');
                                         console.log(time);
                                         console.log(out_shortTorrent);
-                                        for (var _i2 in torrent_pool) {
-                                            if (out_shortTorrent === torrent_pool[_i2].hash) {
-                                                if (torrent_pool[_i2].engine) {
-                                                    torrent_pool[_i2].engine.destroy();
-                                                    torrent_pool[_i2].engine = null;
+                                        for (var _i3 in torrent_pool) {
+                                            if (out_shortTorrent === torrent_pool[_i3].hash) {
+                                                if (torrent_pool[_i3].engine) {
+                                                    torrent_pool[_i3].engine.destroy();
+                                                    torrent_pool[_i3].engine = null;
                                                 }
                                             }
                                         }
@@ -1195,10 +1222,10 @@ function torrentAdd(user, torrent, fileIndex, id, owner) {
                             };
                         } else {
                             console.log('torrent old');
-                            for (var _i3 in torrent_pool) {
-                                if (torrent_pool[_i3].hash === shortTorrent) {
-                                    torrent_pool[_i3].engine = engine;
-                                    var runIndex = torrent_pool[_i3].index;
+                            for (var _i4 in torrent_pool) {
+                                if (torrent_pool[_i4].hash === shortTorrent) {
+                                    torrent_pool[_i4].engine = engine;
+                                    var runIndex = torrent_pool[_i4].index;
                                     torrent_lock = false;
                                     return {
                                         v: {
