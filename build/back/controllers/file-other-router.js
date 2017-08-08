@@ -234,7 +234,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
                     } else {
                         for (var i in items[0]['playList']) {
                             if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                                fileIndex = i;
+                                fileIndex = Number(i);
                                 break;
                             }
                         }
@@ -312,7 +312,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             if (req.params.index === 'v') {
                 for (var i in items[0]['playList']) {
                     if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                        fileIndex = i;
+                        fileIndex = Number(i);
                         break;
                     }
                 }
@@ -807,7 +807,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     } else {
                         for (var i in items[0]['playList']) {
                             if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                                fileIndex = i;
+                                fileIndex = Number(i);
                                 break;
                             }
                         }

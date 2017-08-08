@@ -1302,7 +1302,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    return _promise2.default.reject(err);
+                                    throw err;
                                 }
                             });
                         });
@@ -1323,7 +1323,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                return _promise2.default.reject(err);
+                                throw err;
                             }
                         });
                     });
@@ -1331,7 +1331,7 @@ exports.default = {
             case 'bea':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul')[0], 'li')[0], 'a')[0];
+                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                     if (!(0, _utility.findTag)(a)[0].match(/^Full Release/)) {
                         (0, _utility.handleError)(new _utility.HoError('cannot find release'));
                     }
@@ -1349,7 +1349,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    return _promise2.default.reject(err);
+                                    throw err;
                                 }
                             });
                         });
@@ -1368,7 +1368,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             case 'cbo':
@@ -1384,7 +1384,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             case 'sem':
@@ -1400,7 +1400,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             case 'oec':
@@ -1424,7 +1424,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    return _promise2.default.reject(err);
+                                    throw err;
                                 }
                             });
                         });
@@ -1445,7 +1445,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                return _promise2.default.reject(err);
+                                throw err;
                             }
                         });
                     });
@@ -1463,7 +1463,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             case 'sca':
@@ -1479,7 +1479,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             case 'fed':
@@ -1499,7 +1499,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    return _promise2.default.reject(err);
+                                    throw err;
                                 }
                             });
                         });
@@ -1526,7 +1526,7 @@ exports.default = {
                                                     return updateDocDate(type, obj.date);
                                                 },
                                                 errhandle: function errhandle(err) {
-                                                    return _promise2.default.reject(err);
+                                                    throw err;
                                                 }
                                             });
                                         });
@@ -1548,7 +1548,7 @@ exports.default = {
                             return updateDocDate(type, obj.date);
                         },
                         errhandle: function errhandle(err) {
-                            return _promise2.default.reject(err);
+                            throw err;
                         }
                     });
                 });
@@ -1567,7 +1567,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                return _promise2.default.reject(err);
+                                throw err;
                             }
                         });
                     });
@@ -1590,7 +1590,7 @@ exports.default = {
                                         return updateDocDate(type, obj.date);
                                     },
                                     errhandle: function errhandle(err) {
-                                        return _promise2.default.reject(err);
+                                        throw err;
                                     }
                                 });
                             });
@@ -1612,7 +1612,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                return _promise2.default.reject(err);
+                                throw err;
                             }
                         });
                     });
@@ -1650,7 +1650,7 @@ exports.default = {
                                                                 return updateDocDate(type, obj.date);
                                                             },
                                                             errhandle: function errhandle(err) {
-                                                                return _promise2.default.reject(err);
+                                                                throw err;
                                                             }
                                                         });
                                                     });
@@ -1713,7 +1713,7 @@ exports.default = {
                                                                             return updateDocDate(type, obj.date);
                                                                         },
                                                                         errhandle: function errhandle(err) {
-                                                                            return _promise2.default.reject(err);
+                                                                            throw err;
                                                                         }
                                                                     });
                                                                 });
@@ -1787,7 +1787,7 @@ exports.default = {
                                                         return updateDocDate(type, obj.date);
                                                     },
                                                     errhandle: function errhandle(err) {
-                                                        return _promise2.default.reject(err);
+                                                        throw err;
                                                     }
                                                 });
                                             });
@@ -1848,7 +1848,7 @@ exports.default = {
                                                             return updateDocDate(type, obj.date);
                                                         },
                                                         errhandle: function errhandle(err) {
-                                                            return _promise2.default.reject(err);
+                                                            throw err;
                                                         }
                                                     });
                                                 });
@@ -1907,7 +1907,7 @@ exports.default = {
                                                     return recur_down(dIndex + 1);
                                                 },
                                                 errhandle: function errhandle(err) {
-                                                    return _promise2.default.reject(err);
+                                                    throw err;
                                                 }
                                             });
                                         });
@@ -1931,7 +1931,7 @@ exports.default = {
                             return recur_down(0);
                         },
                         errhandle: function errhandle(err) {
-                            return _promise2.default.reject(err);
+                            throw err;
                         }
                     });
                 });

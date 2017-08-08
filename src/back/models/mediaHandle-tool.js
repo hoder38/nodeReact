@@ -690,7 +690,7 @@ export default {
                                 }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                             } else if (timeoutItems[index].mediaType['realPath']) {
                                 if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
-                                    return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${fileIndex}.timeout`]: false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
+                                    return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
                                         _id: timeoutItems[index].item.owner,
                                         perm: 1,
                                     }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
@@ -717,7 +717,7 @@ export default {
 }
 
 export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('update', STORAGEDB, {_id: fileID}, Object.assign({
-    $set: Object.assign({status: (typeof fileIndex === 'number') ? 9 : status}, (number && number > 1) ? (typeof fileIndex === 'number') ? {[`present.${fileIndex}`]: number} : {present: number} : {}, (status === 3) ? (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.complete`]: true} : {['mediaType.complete']: true} : {}),
+    $set: Object.assign({status: (typeof fileIndex === 'number') ? 9 : status}, (number && number > 1) ? (typeof fileIndex === 'number') ? {[`present.${fileIndex}`]: number} : {present: number} : {}, (status === 3) ? (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.complete`]: true} : {'mediaType.complete': true} : {}),
 }, (status === 3) ? {} : {$unset: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}`]: ''} : {mediaType: ''}})).then(() => Mongo('find', STORAGEDB, {_id: fileID}, {limit: 1})).then(items => {
     if (items.length < 1) {
         handleError(new HoError('cannot find file!!!'));
@@ -732,7 +732,11 @@ export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('upd
 export const errorMedia = (err, fileID, fileIndex) => (err.name === 'HoError' && err.message === 'timeout') ? Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {
     [`mediaType.${fileIndex}.timeout`]: true,
     status: 9,
-} : {'mediaType.timeout': true}}).then(() => Promise.reject(err)) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => Promise.reject(err));
+} : {'mediaType.timeout': true}}).then(() => {
+    throw err;
+}) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => {
+    throw err;
+});
 
 const getHd = height => height >= 2160 ? 2160 : height >= 1440 ? 1440 : height >= 1080 ? 1080 : height >= 720 ? 720 : height >= 480 ? 480 : height >= 360 ? 360 : height >= 240 ? 240 : 0;
 
@@ -752,4 +756,6 @@ const errDrive = (err, key, folderId) => GoogleApi('move parent', {
     fileId: key,
     rmFolderId: handling,
     addFolderId: folderId,
-}).then(() => Promise.reject(err));
+}).then(() => {
+    throw err;
+});

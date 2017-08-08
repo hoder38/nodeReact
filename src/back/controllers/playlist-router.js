@@ -321,7 +321,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
         if (req.params.index === 'v') {
             for (let i in items[0]['playList']) {
                 if (isVideo(items[0]['playList'][i])) {
-                    index = i;
+                    index = Number(i);
                     break;
                 }
             }

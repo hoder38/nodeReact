@@ -586,7 +586,7 @@ function youtubeAPI(method, data) {
 
 function upload(data) {
     if (!data['type'] || !data['name'] || !data['filePath'] && !data['body']) {
-        (0, _utility.handleError)(new _utility.HoError('upload parameter lost!!!'));
+        (0, _utility.handleError)(new _utility.HoError('upload parameter lost!!!'), data['errhandle']);
     }
     var parent = {};
     var mimeType = '*/*';
@@ -595,7 +595,7 @@ function upload(data) {
             parent = { id: (0, _config.GOOGLE_MEDIA_FOLDER)(_ver.ENV_TYPE) };
             mimeType = (0, _mime.mediaMIME)(data['name']);
             if (!mimeType) {
-                (0, _utility.handleError)(new _utility.HoError('upload mime type unknown!!!'));
+                (0, _utility.handleError)(new _utility.HoError('upload mime type unknown!!!'), data['errhandle']);
             }
             break;
         case 'backup':
@@ -609,7 +609,7 @@ function upload(data) {
             }
             break;
         default:
-            (0, _utility.handleError)(new _utility.HoError('upload type unknown!!!'));
+            (0, _utility.handleError)(new _utility.HoError('upload type unknown!!!'), data['errhandle']);
     }
     var param = data['filePath'] ? {
         resource: {
@@ -664,7 +664,7 @@ function upload(data) {
             (0, _utility.handleError)(err, 'google upload');
             if (index > _constants.MAX_RETRY) {
                 console.log(data);
-                (0, _utility.handleError)(err);
+                (0, _utility.handleError)(err, data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -768,7 +768,7 @@ function create(data) {
 
 function download(data) {
     if (!data['url'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('download parameter lost!!!'));
+        (0, _utility.handleError)(new _utility.HoError('download parameter lost!!!'), data['errhandle']);
     }
     var temp = data['filePath'] + '_t';
     var checkTmp = function checkTmp() {
@@ -817,7 +817,7 @@ function download(data) {
             (0, _utility.handleError)(err, 'Google Fetch');
             if (index > _constants.MAX_RETRY) {
                 console.log(data['url']);
-                (0, _utility.handleError)(new _utility.HoError('timeout'));
+                (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -891,7 +891,7 @@ function moveParent(data) {
 
 function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'));
+        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var proc = function proc(index) {
         return new _promise2.default(function (resolve, reject) {
@@ -994,7 +994,7 @@ function downloadMedia(data) {
             (0, _utility.handleError)(err, 'Youtubedl Fetch');
             if (index > _constants.MAX_RETRY) {
                 console.log(data['key']);
-                (0, _utility.handleError)(new _utility.HoError('timeout'));
+                (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -1008,7 +1008,7 @@ function downloadMedia(data) {
 
 function downloadPresent(data) {
     if (!data['exportlink'] || !data['alternate'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'));
+        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var number = 0;
     var present_html = data['filePath'] + '_b.htm';
@@ -1065,14 +1065,14 @@ function downloadPresent(data) {
                 };
             }
         } else {
-            return _promise2.default.reject(err);
+            (0, _utility.handleError)(err, data['errhandle']);
         }
     });
 }
 
 function downloadDoc(data) {
     if (!data['exportlink'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'));
+        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var zip = data['filePath'] + '.zip';
     return download({

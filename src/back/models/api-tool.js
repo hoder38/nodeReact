@@ -132,7 +132,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
     } : {})).then(res => {
         if (user) {
             if (!filePath) {
-                handleError(new HoError('file path empty!'));
+                handleError(new HoError('file path empty!'), errHandle);
             }
             return checkTmp().then(() => new Promise((resolve, reject) => {
                 const dest = FsCreateWriteStream(temp);
@@ -141,7 +141,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 dest.on('error', err => reject(err));
             }).then(() => {
                 if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== FsStatSync(filePath)['size'])) {
-                    handleError(new HoError('incomplete download'));
+                    handleError(new HoError('incomplete download'), errHandle);
                 }
                 FsRenameSync(temp, filePath);
                 if (rest) {
@@ -167,7 +167,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         handleError(err, 'Fetch');
         if (index > MAX_RETRY) {
             console.log(url);
-            handleError(new HoError('timeout'));
+            handleError(new HoError('timeout'), errHandle);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
     });

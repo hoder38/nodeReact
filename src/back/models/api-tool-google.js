@@ -321,7 +321,7 @@ function youtubeAPI(method, data) {
 
 function upload(data) {
     if (!data['type'] || !data['name'] || (!data['filePath'] && !data['body'])) {
-        handleError(new HoError('upload parameter lost!!!'));
+        handleError(new HoError('upload parameter lost!!!'), data['errhandle']);
     }
     let parent = {};
     let mimeType = '*/*';
@@ -330,7 +330,7 @@ function upload(data) {
         parent = {id: GOOGLE_MEDIA_FOLDER(ENV_TYPE)};
         mimeType = mediaMIME(data['name']);
         if (!mimeType) {
-            handleError(new HoError('upload mime type unknown!!!'));
+            handleError(new HoError('upload mime type unknown!!!'), data['errhandle']);
         }
         break;
         case 'backup':
@@ -344,7 +344,7 @@ function upload(data) {
         }
         break;
         default:
-        handleError(new HoError('upload type unknown!!!'));
+        handleError(new HoError('upload type unknown!!!'), data['errhandle']);
     }
     let param = data['filePath'] ? {
         resource: {
@@ -384,7 +384,7 @@ function upload(data) {
         handleError(err, 'google upload');
         if (index > MAX_RETRY) {
             console.log(data);
-            handleError(err);
+            handleError(err, data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc(index + 1));
     });
@@ -453,7 +453,7 @@ function create(data) {
 
 function download(data) {
     if (!data['url'] || !data['filePath']) {
-        handleError(new HoError('download parameter lost!!!'));
+        handleError(new HoError('download parameter lost!!!'), data['errhandle']);
     }
     const temp = `${data['filePath']}_t`;
     const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
@@ -479,7 +479,7 @@ function download(data) {
         handleError(err, 'Google Fetch');
         if (index > MAX_RETRY) {
             console.log(data['url']);
-            handleError(new HoError('timeout'));
+            handleError(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
     });
@@ -532,7 +532,7 @@ function moveParent(data) {
 
 function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'));
+        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     const proc = index => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, ['-F'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
         let info = [];
@@ -578,7 +578,7 @@ function downloadMedia(data) {
         handleError(err, 'Youtubedl Fetch');
         if (index > MAX_RETRY) {
             console.log(data['key']);
-            handleError(new HoError('timeout'));
+            handleError(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), Math.pow(2, index) * 10 * 1000));
     });
@@ -587,7 +587,7 @@ function downloadMedia(data) {
 
 function downloadPresent(data) {
     if (!data['exportlink'] || !data['alternate'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'));
+        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     let number = 0;
     const present_html = `${data['filePath']}_b.htm`;
@@ -618,14 +618,14 @@ function downloadPresent(data) {
                 return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](number)).catch(err => data['errhandle'](err));
             }
         } else {
-            return Promise.reject(err);
+            handleError(err, data['errhandle']);
         }
     });
 }
 
 function downloadDoc(data) {
     if (!data['exportlink'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'));
+        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     const zip = `${data['filePath']}.zip`;
     return download({

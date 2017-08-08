@@ -3131,7 +3131,9 @@ export const getSingleAnnual = (year, folder, index) => {
                         return recur_annual(cYear, annual_folder);
                     }
                 },
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
         } else {
             cYear--;

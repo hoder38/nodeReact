@@ -1037,7 +1037,7 @@ exports.default = {
                                         });
                                     } else if (timeoutItems[index].mediaType['realPath']) {
                                         if ((0, _fs.existsSync)(filePath + '/' + timeoutItems[index].mediaType['fileIndex'] + '_complete')) {
-                                            return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.timeout', false) }).then(function (item) {
+                                            return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: (0, _defineProperty3.default)({}, 'mediaType.' + timeoutItems[index].mediaType['fileIndex'] + '.timeout', false) }).then(function (item) {
                                                 return _this4.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
                                                     _id: timeoutItems[index].item.owner,
                                                     perm: 1
@@ -1083,7 +1083,7 @@ exports.default = {
 var completeMedia = exports.completeMedia = function completeMedia(fileID, status, fileIndex) {
     var number = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, (0, _assign2.default)({
-        $set: (0, _assign2.default)({ status: typeof fileIndex === 'number' ? 9 : status }, number && number > 1 ? typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'present.' + fileIndex, number) : { present: number } : {}, status === 3 ? typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.complete', true) : (0, _defineProperty3.default)({}, 'mediaType.complete', true) : {})
+        $set: (0, _assign2.default)({ status: typeof fileIndex === 'number' ? 9 : status }, number && number > 1 ? typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'present.' + fileIndex, number) : { present: number } : {}, status === 3 ? typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.complete', true) : { 'mediaType.complete': true } : {})
     }, status === 3 ? {} : { $unset: typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex, '') : { mediaType: '' } })).then(function () {
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: fileID }, { limit: 1 });
     }).then(function (items) {
@@ -1099,12 +1099,12 @@ var completeMedia = exports.completeMedia = function completeMedia(fileID, statu
 };
 
 var errorMedia = exports.errorMedia = function errorMedia(err, fileID, fileIndex) {
-    var _ref14;
+    var _ref13;
 
-    return err.name === 'HoError' && err.message === 'timeout' ? (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (_ref14 = {}, (0, _defineProperty3.default)(_ref14, 'mediaType.' + fileIndex + '.timeout', true), (0, _defineProperty3.default)(_ref14, 'status', 9), _ref14) : { 'mediaType.timeout': true } }).then(function () {
-        return _promise2.default.reject(err);
+    return err.name === 'HoError' && err.message === 'timeout' ? (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (_ref13 = {}, (0, _defineProperty3.default)(_ref13, 'mediaType.' + fileIndex + '.timeout', true), (0, _defineProperty3.default)(_ref13, 'status', 9), _ref13) : { 'mediaType.timeout': true } }).then(function () {
+        throw err;
     }) : (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.err', err) : { 'mediaType.err': err } }).then(function () {
-        return _promise2.default.reject(err);
+        throw err;
     });
 };
 
@@ -1130,6 +1130,6 @@ var errDrive = function errDrive(err, key, folderId) {
         rmFolderId: handling,
         addFolderId: folderId
     }).then(function () {
-        return _promise2.default.reject(err);
+        throw err;
     });
 };
