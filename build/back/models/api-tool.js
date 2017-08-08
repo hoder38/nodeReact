@@ -252,7 +252,7 @@ function download(user, url) {
         } : {})).then(function (res) {
             if (user) {
                 if (!filePath) {
-                    (0, _utility.handleError)(new _utility.HoError('file path empty!'));
+                    (0, _utility.handleError)(new _utility.HoError('file path empty!'), errHandle);
                 }
                 return checkTmp().then(function () {
                     return new _promise2.default(function (resolve, reject) {
@@ -266,7 +266,7 @@ function download(user, url) {
                         });
                     }).then(function () {
                         if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== (0, _fs.statSync)(filePath)['size'])) {
-                            (0, _utility.handleError)(new _utility.HoError('incomplete download'));
+                            (0, _utility.handleError)(new _utility.HoError('incomplete download'), errHandle);
                         }
                         (0, _fs.renameSync)(temp, filePath);
                         if (rest) {
@@ -315,7 +315,7 @@ function download(user, url) {
             (0, _utility.handleError)(err, 'Fetch');
             if (index > _constants.MAX_RETRY) {
                 console.log(url);
-                (0, _utility.handleError)(new _utility.HoError('timeout'));
+                (0, _utility.handleError)(new _utility.HoError('timeout'), errHandle);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {

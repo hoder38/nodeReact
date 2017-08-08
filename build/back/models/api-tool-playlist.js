@@ -468,7 +468,7 @@ var startMega = function startMega(user, url, filePath, data) {
             playList = (0, _utility.sortList)(playList);
             if (playList.length < 1) {
                 megaComplete();
-                (0, _utility.handleError)(new _utility.HoError('mega empty'));
+                (0, _utility.handleError)(new _utility.HoError('mega empty'), data['errhandle']);
             }
             if (playList.length === 1) {
                 (0, _fs.renameSync)(real + '/' + playList[0], filePath + '_t');

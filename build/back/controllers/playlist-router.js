@@ -562,7 +562,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function (req, res, next) {
         if (req.params.index === 'v') {
             for (var i in items[0]['playList']) {
                 if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                    index = i;
+                    index = Number(i);
                     break;
                 }
             }

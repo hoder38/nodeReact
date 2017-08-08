@@ -513,7 +513,7 @@ router.post('/upload/url', function (req, res, next) {
                         });
                     },
                     errHandle: function errHandle(err) {
-                        return _promise2.default.reject(err);
+                        throw err;
                     }
                 });
             };
@@ -1112,7 +1112,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
                 } else {
                     for (var i in items[0]['playList']) {
                         if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                            fileIndex = i;
+                            fileIndex = Number(i);
                             break;
                         }
                     }
@@ -1387,7 +1387,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
                     } else {
                         for (var i in items[0]['playList']) {
                             if ((0, _mime.isVideo)(items[0]['playList'][i])) {
-                                fileIndex = i;
+                                fileIndex = Number(i);
                                 break;
                             }
                         }

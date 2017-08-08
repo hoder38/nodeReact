@@ -180,7 +180,7 @@ const ItemFile = React.createClass({
         )
         let click = () => this._download(item.id, item.name)
         if (item.media) {
-            let error = item.media.timeout ? 'timeout' : ''
+            let error = '';
             if (item.media.err) {
                 Object.keys(item.media.err).forEach(i => error = `${error} ${i}: ${item.media.err[i]}`)
             }
@@ -190,6 +190,7 @@ const ItemFile = React.createClass({
                     type: {item.media.type}<br />
                     key: {item.media.key}<br />
                     err: {error}<br />
+                    timeout: {item.media.timeout}<br />
                     complete: {item.media.complete}
                 </span>
             )

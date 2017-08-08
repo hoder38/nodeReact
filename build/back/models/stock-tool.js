@@ -3592,7 +3592,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                                     }
                                 },
                                 errhandle: function errhandle(err) {
-                                    return _promise2.default.reject(err);
+                                    throw err;
                                 }
                             });
                         });

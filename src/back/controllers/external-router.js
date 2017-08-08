@@ -542,7 +542,9 @@ router.post('/upload/url', function(req, res, next) {
                     });
                     return getFile().then(([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj));
                 },
-                errHandle: err => Promise.reject(err),
+                errHandle: err => {
+                    throw err;
+                },
             });
         }
         function streamClose(filename, setTag, optTag, db_obj={}) {
@@ -777,7 +779,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             } else {
                 for (let i in items[0]['playList']) {
                     if (isVideo(items[0]['playList'][i])) {
-                        fileIndex = i;
+                        fileIndex = Number(i);
                         break;
                     }
                 }
@@ -987,7 +989,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
                     } else {
                         for (let i in items[0]['playList']) {
                             if (isVideo(items[0]['playList'][i])) {
-                                fileIndex = i;
+                                fileIndex = Number(i);
                                 break;
                             }
                         }

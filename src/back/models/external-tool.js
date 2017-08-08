@@ -985,7 +985,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'cen':
@@ -998,12 +1000,14 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'bea':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul')[0], 'li')[0], 'a')[0];
+                const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                 if (!findTag(a)[0].match(/^Full Release/)) {
                     handleError(new HoError('cannot find release'));
                 }
@@ -1016,7 +1020,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'ism':
@@ -1029,7 +1035,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'cbo':
             console.log(obj);
@@ -1041,7 +1049,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'sem':
             console.log(obj);
@@ -1053,7 +1063,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'oec':
             console.log(obj);
@@ -1071,7 +1083,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'dol':
@@ -1084,7 +1098,9 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'rea':
             console.log(obj);
@@ -1096,7 +1112,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'sca':
             console.log(obj);
@@ -1108,7 +1126,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'fed':
             console.log(obj);
@@ -1122,7 +1142,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
@@ -1139,7 +1161,9 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     }
                 }
@@ -1151,7 +1175,9 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 });
             });
             case 'sea':
@@ -1164,7 +1190,9 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'tri':
             console.log(obj);
@@ -1178,7 +1206,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             }));
             case 'ndc':
@@ -1191,7 +1221,9 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'sta':
             console.log(obj);
@@ -1212,7 +1244,9 @@ export default {
                                     filePath,
                                     parent,
                                     rest: () => updateDocDate(type, obj.date),
-                                    errhandle: err => Promise.reject(err),
+                                    errhandle: err => {
+                                        throw err;
+                                    },
                                 })));
                             }
                         }
@@ -1233,7 +1267,9 @@ export default {
                                             filePath,
                                             parent,
                                             rest: () => updateDocDate(type, obj.date),
-                                            errhandle: err => Promise.reject(err),
+                                            errhandle: err => {
+                                                throw err;
+                                            },
                                         })));
                                     }
                                 }
@@ -1258,7 +1294,9 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     }
                 };
@@ -1282,7 +1320,9 @@ export default {
                                 filePath,
                                 parent,
                                 rest: () => updateDocDate(type, obj.date),
-                                errhandle: err => Promise.reject(err),
+                                errhandle: err => {
+                                    throw err;
+                                },
                             })));
                         }
                     }
@@ -1313,7 +1353,9 @@ export default {
                             filePath: subPath,
                             parent,
                             rest: () => recur_down(dIndex + 1),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     } else {
                         return updateDocDate(type, obj.date);
@@ -1327,7 +1369,9 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => recur_down(0),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 });
             });
             default:

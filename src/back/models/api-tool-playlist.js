@@ -290,7 +290,7 @@ const startMega = (user, url, filePath, data) => {
             playList = sortList(playList);
             if (playList.length < 1) {
                 megaComplete();
-                handleError(new HoError('mega empty'));
+                handleError(new HoError('mega empty'), data['errhandle']);
             }
             if (playList.length === 1) {
                 FsRenameSync(`${real}/${playList[0]}`, `${filePath}_t`);

@@ -230,6 +230,7 @@ export const getStorageItem = (user, items, mediaHandle) => items.map(item => {
     if (mediaHandle === 1) {
         if (item.mediaType.type) {
             item.mediaType.complete = item.mediaType.complete ? item.mediaType.complete.toString() : '';
+            item.mediaType.timeout = item.mediaType.timeout ? item.mediaType.timeout.toString() : '';
         } else {
             media = {media : {
                 type: '',
