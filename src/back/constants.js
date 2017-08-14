@@ -186,8 +186,12 @@ export const FITNESS_PARENT = [
         tw: '指令',
     },
     {
-        name: 'type',
-        tw: '種類',
+        name: 'part',
+        tw: '訓練部位',
+    },
+    {
+        name: 'strength',
+        tw: '強度'
     },
 ]
 
