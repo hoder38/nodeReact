@@ -213,9 +213,7 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
                                 return recur_playlist_backup(index);
                             } else {
                                 recycle++;
-                                if (recycle < 4) {
-                                    return recur_backup(recycle);
-                                }
+                                return recycle < 4 ? recur_backup(recycle) : _promise2.default.resolve();
                             }
                         };
                         return (0, _fs.existsSync)(bufferPath + '_complete') ? (0, _apiToolGoogle.googleBackup)(req.user, items[0]._id, items[0].playList[index], bufferPath, items[0].tags, recycle, '_complete').then(function () {
@@ -238,6 +236,10 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
                                 v: recur_playlist_backup(0)
                             };
                         }
+                    } else {
+                        return {
+                            v: _promise2.default.resolve()
+                        };
                     }
                 }();
 
