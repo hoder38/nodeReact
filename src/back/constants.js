@@ -684,3 +684,5 @@ export const MIME_EXT = {
 }
 
 export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
+
+export const CHART_LIMIT = 4;

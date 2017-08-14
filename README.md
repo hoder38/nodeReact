@@ -88,3 +88,7 @@ make p12
 4. creat pfx: openssl pkcs12 -export -out anomopi.pfx -inkey anomopi.key -in 2_www.anomopi.com.crt
 
 5. PFX: anomopi.pfx CA: 1_Intermediate.crt
+
+
+遊戲: 請在pacjage.json加入     "redux-saga": ">=0.15.4",
+並uncommnet configureStore.js

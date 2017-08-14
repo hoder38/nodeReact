@@ -1,28 +1,7 @@
 import React from 'react'
 import Chart from 'chart.js'
 import Tooltip from './Tooltip'
-import { api, killEvent } from '../utility'
-
-function addCommas(nStr) {
-    nStr += ''
-    let x = nStr.split('.')
-    let x1 = x[0]
-    let x2 = x.length > 1 ? `.${x[1]}` : ''
-    let rgx = /(\d+)(\d{3})/
-    while (rgx.test(x1)) {
-        x1 = x1.replace(rgx, `$1,$2`)
-    }
-    return `${x1}${x2}`
-}
-
-function getRandomColor() {
-    let letters = '0123456789ABCDEF'.split('')
-    let color = '#'
-    for (let i = 0; i < 6; i++ ) {
-        color += letters[Math.floor(Math.random() * 16)]
-    }
-    return color
-}
+import { api, killEvent, addCommas, getRandomColor } from '../utility'
 
 const optionQuarter = [
     <option value={1} key={0}>One</option>,
@@ -100,7 +79,7 @@ const StockInfo = React.createClass({
             managementPay: true,
         }
     },
-    componentWillMount: function() {
+    componentDidMount: function() {
         api(`/api/stock/querySimple/${this.props.item.id}`).then(result => {
             if (result) {
                 this._parse = result

@@ -264,3 +264,24 @@ export const bookmarkItemList = (itemType, type, sortname, sorttype, set, id) =>
         return externalList('', set, result.parentList, sortname)
     }
 })
+
+export function addCommas(nStr) {
+    nStr += ''
+    let x = nStr.split('.')
+    let x1 = x[0]
+    let x2 = x.length > 1 ? `.${x[1]}` : ''
+    let rgx = /(\d+)(\d{3})/
+    while (rgx.test(x1)) {
+        x1 = x1.replace(rgx, `$1,$2`)
+    }
+    return `${x1}${x2}`
+}
+
+export function getRandomColor() {
+    let letters = '0123456789ABCDEF'.split('')
+    let color = '#'
+    for (let i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)]
+    }
+    return color
+}
