@@ -974,10 +974,10 @@ exports.default = {
                     var docDate = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
                     console.log(docDate);
                     var list = [];
-                    var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
-                    var html2 = (0, _utility.findTag)(html, 'html')[0];
                     var findDoc = function findDoc(title, raw_data) {
-                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
+                        var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                        var html2 = (0, _utility.findTag)(html, 'html')[0];
+                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1])[0] === docDate) {
                                 list.push({
                                     url: (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
@@ -2947,7 +2947,7 @@ exports.default = {
                         });
                         if (json_data['data']['movie']['cast']) {
                             json_data['data']['movie']['cast'].forEach(function (i) {
-                                return setTag.add(i);
+                                return setTag.add(i.name);
                             });
                         }
                         var newTag = new _set2.default();

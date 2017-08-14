@@ -788,17 +788,19 @@ export default {
                 const docDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
                 console.log(docDate);
                 let list = [];
-                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                const html2 = findTag(html, 'html')[0];
-                const findDoc = (title, raw_data) => findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
-                    if (findTag(findTag(t, 'td')[1])[0] === docDate) {
-                        list.push({
-                            url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
-                            name: toValidName(title),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
-                    }
-                });
+                const findDoc = (title, raw_data) => {
+                    const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                    const html2 = findTag(html, 'html')[0];
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
+                        if (findTag(findTag(t, 'td')[1])[0] === docDate) {
+                            list.push({
+                                url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
+                                name: toValidName(title),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                    });
+                }
                 findDoc('物價指數', raw_data);
                 return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(raw_data => {
                     findDoc('經濟成長率', raw_data);
@@ -2004,7 +2006,7 @@ export default {
                     setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
                     json_data['data']['movie']['genres'].forEach(i => setTag.add(i));
                     if (json_data['data']['movie']['cast']) {
-                        json_data['data']['movie']['cast'].forEach(i => setTag.add(i));
+                        json_data['data']['movie']['cast'].forEach(i => setTag.add(i.name));
                     }
                     let newTag = new Set();
                     setTag.forEach(i => newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i));
