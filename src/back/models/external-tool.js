@@ -1008,6 +1008,21 @@ export default {
             })));
             case 'bea':
             console.log(obj);
+            const ext1 = PathExtname(obj.url);
+            if (ext1 === '.pdf') {
+                driveName = `${obj.name} ${obj.date}${ext1}`;
+                console.log(driveName);
+                return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
+                    type: 'auto',
+                    name: driveName,
+                    filePath,
+                    parent,
+                    rest: () => updateDocDate(type, obj.date),
+                    errhandle: err => {
+                        throw err;
+                    },
+                })));
+            }
             return Api('url', obj.url).then(raw_data => {
                 const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                 if (!findTag(a)[0].match(/^Full Release/)) {
