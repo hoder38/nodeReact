@@ -3,10 +3,11 @@ import ReItemFile from '../containers/ReItemFile'
 import ReItemPassword from '../containers/ReItemPassword'
 import ReItemStock from '../containers/ReItemStock'
 import ReItemFitness from '../containers/ReItemFitness'
+import ItemRank from './ItemRank'
 import Tooltip from './Tooltip'
 import Dropdown from './Dropdown'
 import { isValidString, getItemList, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
 
 const Itemlist = React.createClass({
     getInitialState: function() {
@@ -105,6 +106,9 @@ const Itemlist = React.createClass({
                 break
                 case FITNESS:
                 rows.push(<ReItemFitness key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
+                break
+                case RANK:
+                rows.push(<ItemRank key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
                 break
             }
             if (select) {

@@ -28,6 +28,7 @@ import StorageRouter from './storage-router'
 import PasswordRouter from './password-router'
 import StockRouter from './stock-router'
 import FitnessRouter from './fitness-router'
+import RankRouter from './rank-router'
 import BookmarkRouter from './bookmark-router'
 import ParentRouter from './parent-router'
 import OtherRouter from './other-router'
@@ -90,6 +91,8 @@ app.use('/api/password', PasswordRouter);
 app.use('/api/stock', StockRouter);
 
 app.use('/api/fitness', FitnessRouter);
+
+app.use('/api/rank', RankRouter);
 
 app.use('/api/bookmark', BookmarkRouter);
 

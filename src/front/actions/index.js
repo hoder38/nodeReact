@@ -2,7 +2,7 @@ import { ALERT_PUSH, ALERT_POP, SET_BASIC, SET_UPLOAD, SEND_GLB_PW, CLOSE_GLB_PW
     CLOSE_GLB_CF, FEEDBACK_POP, FEEDBACK_PUSH, BOOKMARK_POP, BOOKMARK_PUSH, SET_DIRS, DIR_POP,
     DIR_PUSH, USER_POP, USER_PUSH, ITEM_PUSH, ITEM_POP, SET_ITEM, SEND_GLB_IN, CLOSE_GLB_IN,
     PASS_PUSH, PASS_POP, SET_PASS, SET_PDIRS, PDIR_POP, PDIR_PUSH, PBOOKMARK_POP, PBOOKMARK_PUSH,
-    STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH } from '../constants'
+    STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH, RANK_PUSH, RANK_POP, SET_RANK, SET_RDIRS, RDIR_PUSH, RDIR_POP, RBOOKMARK_POP, RBOOKMARK_PUSH } from '../constants'
 
 export const alertPush = msg => ({
     type: ALERT_PUSH,
@@ -144,6 +144,7 @@ export const closeGlbIn = input => ({
     input,
 })
 
+//password
 export const passPop = id => ({
     type: PASS_POP,
     id,
@@ -205,6 +206,7 @@ export const pbookmarkPush = (bookmark, sortName=null, sortType=null) => ({
     sortType,
 })
 
+//stock
 export const stockPop = id => ({
     type: STOCK_POP,
     id,
@@ -266,6 +268,7 @@ export const sbookmarkPush = (bookmark, sortName=null, sortType=null) => ({
     sortType,
 })
 
+//fitness
 export const fitnessPop = id => ({
     type: FITNESS_POP,
     id,
@@ -322,6 +325,68 @@ export const fbookmarkPop = id => ({
 
 export const fbookmarkPush = (bookmark, sortName=null, sortType=null) => ({
     type: FBOOKMARK_PUSH,
+    bookmark,
+    sortName,
+    sortType,
+})
+
+//rank
+export const rankPop = id => ({
+    type: RANK_POP,
+    id,
+})
+
+export const rankPush = (item, path=null, bookmark=null, latest=null, sortName=null, sortType=null, pageToken=null, list='item') => ({
+    type: RANK_PUSH,
+    item,
+    path,
+    bookmark,
+    latest,
+    sortName,
+    sortType,
+    pageToken,
+    list,
+})
+
+export const setRank = (select, latest=null, bookmark=null, multi=null, list=null, id=null, opt=null, time=null) => ({
+    type: SET_RANK,
+    select,
+    latest,
+    bookmark,
+    multi,
+    list,
+    id,
+    opt,
+    time,
+})
+
+export const setRdirs = (dirs, rest) => ({
+    type: SET_RDIRS,
+    dirs,
+    rest,
+})
+
+export const rdirPop = (name, id) => ({
+    type: RDIR_POP,
+    name,
+    id,
+})
+
+export const rdirPush = (name, dir, sortName=null, sortType=null) => ({
+    type: RDIR_PUSH,
+    name,
+    dir,
+    sortName,
+    sortType,
+})
+
+export const rbookmarkPop = id => ({
+    type: RBOOKMARK_POP,
+    id,
+})
+
+export const rbookmarkPush = (bookmark, sortName=null, sortType=null) => ({
+    type: RBOOKMARK_PUSH,
     bookmark,
     sortName,
     sortType,

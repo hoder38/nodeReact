@@ -6,12 +6,14 @@ export const STORAGE_PAGE = '/Storage'
 export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
 export const FITNESS_PAGE = '/Fitness'
+export const RANK_PAGE = '/Rank'
 
 //item type
 export const STORAGE = 'storage'
 export const PASSWORD = 'password'
 export const STOCK = 'stock'
 export const FITNESS = 'fitness'
+export const RANK = 'rank'
 
 //action
 export const ALERT_PUSH = 'ALERT_PUSH'
@@ -65,6 +67,15 @@ export const FDIR_POP = 'FDIR_POP'
 export const FDIR_PUSH = 'FDIR_PUSH'
 export const FBOOKMARK_POP = 'FBOOKMARK_POP'
 export const FBOOKMARK_PUSH = 'FBOOKMARK_PUSH'
+//rank
+export const RANK_PUSH = 'RANK_PUSH'
+export const RANK_POP = 'RANK_POP'
+export const SET_RANK = 'SET_RANK'
+export const SET_RDIRS = 'SET_RDIRS'
+export const RDIR_POP = 'RDIR_POP'
+export const RDIR_PUSH = 'RDIR_PUSH'
+export const RBOOKMARK_POP = 'RBOOKMARK_POP'
+export const RBOOKMARK_PUSH = 'RBOOKMARK_PUSH'
 
 //z-index
 export const RIGHT_SECTION_ZINDEX = 20

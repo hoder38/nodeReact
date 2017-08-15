@@ -16,7 +16,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
     bookmarkset: (bookmark, sortName, sortType) => dispatch(fbookmarkPush(bookmark, sortName, sortType)),
-    delbookmark: id => dispatch(bookmarkPop(id)),
+    delbookmark: id => dispatch(fbookmarkPop(id)),
     dirset: (name, dir, sortName, sortType) => dispatch(fdirPush(name, dir, sortName, sortType)),
     deldir: (name, id) => dispatch(fdirPop(name, id)),
     addalert: msg => dispatch(alertPush(msg)),
