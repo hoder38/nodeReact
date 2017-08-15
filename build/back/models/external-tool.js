@@ -1330,6 +1330,27 @@ exports.default = {
                 });
             case 'bea':
                 console.log(obj);
+                var ext1 = (0, _path.extname)(obj.url);
+                if (ext1 === '.pdf') {
+                    driveName = obj.name + ' ' + obj.date + ext1;
+                    console.log(driveName);
+                    return mkFolder((0, _path.dirname)(filePath)).then(function () {
+                        return (0, _apiTool2.default)('url', obj.url, { filePath: filePath }).then(function () {
+                            return (0, _apiToolGoogle2.default)('upload', {
+                                type: 'auto',
+                                name: driveName,
+                                filePath: filePath,
+                                parent: parent,
+                                rest: function rest() {
+                                    return updateDocDate(type, obj.date);
+                                },
+                                errhandle: function errhandle(err) {
+                                    throw err;
+                                }
+                            });
+                        });
+                    });
+                }
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                     if (!(0, _utility.findTag)(a)[0].match(/^Full Release/)) {
