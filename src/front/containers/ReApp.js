@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush } from '../actions'
+import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush } from '../actions'
 import App from '../components/App'
 
 const mapStateToProps = state => ({
@@ -26,6 +26,8 @@ const mapDispatchToProps = dispatch => ({
     stockdel: id => dispatch(stockPop(id)),
     fitnessset: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(fitnessPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
     fitnessdel: id => dispatch(fitnessPop(id)),
+    rankset: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(rankPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
+    rankdel: id => dispatch(rankPop(id)),
     closeglbpw: () => dispatch(closeGlbPw()),
 })
 

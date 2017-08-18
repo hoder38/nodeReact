@@ -310,6 +310,14 @@ export const getFitnessItem = (user, items) => items.map(item => ({
     type: item.type,
 }));
 
+export const getRankItem = (user, items) => items.map(item => ({
+    name: item.name,
+    id: item._id,
+    tags: item.tags,
+    start: item.start,
+    type: item.type,
+}));
+
 export const getFileLocation = (owner, uid) => {
     const owner_S = owner.toString();
     const owner_md5 = createHash('md5').update(owner_S).digest('hex');

@@ -1,7 +1,7 @@
 import React from 'react'
 import Tooltip from './Tooltip'
 import { getItemList, isValidString, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
 
 const ItemHead = React.createClass({
     _changeSort: function(name) {
@@ -83,6 +83,10 @@ const ItemHead = React.createClass({
             case FITNESS:
             head1 = 'price'
             break
+            case RANK:
+            head1 = 'start';
+            head2 = 'type';
+            break;
         }
         return (
             <ul className="nav nav-pills" style={{backgroundColor: 'white', borderBottom: '2px solid #ddd'}}>

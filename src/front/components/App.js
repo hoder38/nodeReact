@@ -63,6 +63,9 @@ const App = React.createClass({
                             case 'fitness':
                             api(`/api/fitness/single/${wsmsg.data}`).then(result => result.empty ? this.props.fitnessdel(wsmsg.data) : this.props.fitnessset(result.item)).catch(err => this.props.addalert(err))
                             break
+                            case 'rank':
+                            api(`/api/rank/single/${wsmsg.data}`).then(result => result.empty ? this.props.rankdel(wsmsg.data) : this.props.rankset(result.item)).catch(err => this.props.addalert(err))
+                            break
                             case 'sub':
                             this.props.sub.forEach(item => item())
                             break

@@ -82,7 +82,7 @@ export function randomFloor(min, max) {
 
 export const clearText = text => text.replace('l', '<little L>').replace('I', '<big i>').replace('1', '<number 1>').replace('O', '<big o>').replace('0', '<number 0>')
 
-export function checkInput(name, state, addalert, orig_input = '', type, confirm='') {
+export function checkInput(name, state, addalert, orig_input = '', type='name', confirm='') {
     if (confirm) {
         if (state[name].toString() !== orig_input.toString()) {
             addalert(`${name} is not the same!!!`)
@@ -277,11 +277,13 @@ export function addCommas(nStr) {
     return `${x1}${x2}`
 }
 
-export function getRandomColor() {
-    let letters = '0123456789ABCDEF'.split('')
-    let color = '#'
-    for (let i = 0; i < 6; i++ ) {
-        color += letters[Math.floor(Math.random() * 16)]
+export function getRandomColor(opacity) {
+    let color = 'rgba(';
+    for (let i = 0; i < 3; i++) {
+        color = `${color}${Math.floor(Math.random() * 256)},`;
     }
-    return color
+    return opacity ? [
+        `${color}${opacity})`,
+        `${color}1)`,
+    ] : `${color}1)`;
 }

@@ -1,7 +1,7 @@
 import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
-import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem } from '../util/utility'
+import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -159,29 +159,29 @@ router.get(`/${RANKDB}/list`, function(req, res, next) {
     }))});
 });
 
-router.get(`/${FITNESSDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc)/:page(\\d+)`, function(req, res, next) {
-    console.log('fitness show taglist');
-    FitnessTagTool.parentQuery(req.params.name, req.params.sortName, req.params.sortType, Number(req.params.page), req.user).then(result => res.json(result)).catch(err => handleError(err, next));
+router.get(`/${RANKDB}/taglist/:name/:sortName(name|mtime)/:sortType(desc|asc)/:page(\\d+)`, function(req, res, next) {
+    console.log('rank show taglist');
+    RankTagTool.parentQuery(req.params.name, req.params.sortName, req.params.sortType, Number(req.params.page), req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
-router.get(`/${FITNESSDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
-    console.log('fitness parent query');
-    FitnessTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
-        itemList: getFitnessItem(req.user, result.items),
+router.get(`/${RANKDB}/query/:id/:sortName(name|mtime|count)/:sortType(desc|asc)/:single?`, function(req, res, next) {
+    console.log('rank parent query');
+    RankTagTool.queryParentTag(req.params.id, req.params.single, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
+        itemList: getRankItem(req.user, result.items),
         parentList: result.parentList,
         latest: result.latest,
         bookmarkID: result.bookmark,
     })).catch(err => handleError(err, next));
 });
 
-router.post(`/${FITNESSDB}/add`, function(req, res,next) {
-    console.log('fitness parent add');
-    FitnessTagTool.addParent(req.body.name, req.body.tag, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
+router.post(`/${RANKDB}/add`, function(req, res,next) {
+    console.log('rank parent add');
+    RankTagTool.addParent(req.body.name, req.body.tag, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
-router.delete(`/${FITNESSDB}/del/:id`, function(req, res, next) {
-    console.log('fitness parent del');
-    FitnessTagTool.delParent(req.params.id, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
+router.delete(`/${RANKDB}/del/:id`, function(req, res, next) {
+    console.log('rank parent del');
+    RankTagTool.delParent(req.params.id, req.user).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 export default router

@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf } from '../actions'
-import ItemFitness from '../components/ItemFitness'
+import { alertPush } from '../actions'
+import RankInfo from '../components/RankInfo'
 
 const mapStateToProps = state => ({
     level: state.basicDataHandle.level,
@@ -8,12 +8,11 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),
-    sendglbcf: (callback, text) => dispatch(sendGlbCf(callback, text)),
 })
 
-const ReItemFitness = connect(
+const ReRankInfo = connect(
     mapStateToProps,
     mapDispatchToProps
-)(ItemFitness)
+)(RankInfo)
 
-export default ReItemFitness
+export default ReRankInfo

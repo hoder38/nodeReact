@@ -195,6 +195,12 @@ export const FITNESS_PARENT = [
         tw: '強度'
     },
 ]
+export const RANK_PARENT = [
+    {
+        name: 'command',
+        tw: '指令',
+    },
+]
 
 //tag list
 export const MEDIA_LIST = [
@@ -691,3 +697,5 @@ export const MIME_EXT = {
 export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
 
 export const CHART_LIMIT = 4;
+
+export const RANK_LIMIT = 10;

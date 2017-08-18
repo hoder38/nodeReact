@@ -2,7 +2,8 @@ import React from 'react'
 import ReDirlist from '../containers/ReDirlist'
 import RePasswordInfo from '../containers/RePasswordInfo'
 import ReFitnessInfo from '../containers/ReFitnessInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS } from '../constants'
+import ReRankInfo from '../containers/ReRankInfo'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
 
 const Categorylist = React.createClass({
@@ -129,6 +130,20 @@ const Categorylist = React.createClass({
                 );
                 if (this.state.edit) {
                     edit = <ReFitnessInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} item={{newable: true}} />;
+                }
+            }
+            break;
+            case RANK:
+            if (this.props.level === 2) {
+                open = (
+                    <li>
+                        <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
+                            New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
+                        </a>
+                    </li>
+                );
+                if (this.state.edit) {
+                    edit = <ReRankInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
                 }
             }
             break;

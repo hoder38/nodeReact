@@ -8,7 +8,7 @@ const ItemFitness = React.createClass({
         return {edit: false}
     },
     _delFitness: function(id, name) {
-        this.props.sendglbcf(() => api(`/api/fitness/delRow/${id}`, {}, 'PUT').catch(err => this.props.addalert(err)), `Would you sure to delete ${name} ?`);
+        this.props.sendglbcf(() => api(`/api/fitness/delRow/${id}`, {}, 'DELETE').catch(err => this.props.addalert(err)), `Would you sure to delete ${name} ?`);
     },
     render: function() {
         const item = this.props.item

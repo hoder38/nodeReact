@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -34,6 +34,12 @@ export default function process(collection) {
         getQueryTag = getFitnessQueryTag;
         getSortName = getFitnessSortName;
         parent_arr = FITNESS_PARENT;
+        break;
+        case RANKDB:
+        getQuerySql = getRankQuerySql;
+        getQueryTag = getRankQueryTag;
+        getSortName = getRankSortName;
+        parent_arr = RANK_PARENT;
         break;
         default:
         return false;
@@ -1347,6 +1353,66 @@ function getFitnessSortName(sortName) {
         return 'price';
         case 'name':
         case 'count':
+        default:
+        return 'name';
+    }
+}
+
+const getRankQuerySql = function(user, tagList, exactly) {
+    let nosql = {};
+    let and = [];
+    let is_tags = false;
+    let skip = 0;
+    if (tagList.length < 1) {
+    } else {
+        for (let [i, tag] of Object.entries(tagList)) {
+            const normal = normalize(tag);
+            const index = isDefaultTag(normal);
+            if (index.index === 31) {
+                if (index[1] === '') {
+                    skip = Number(index.index[2]);
+                }
+                continue;
+            } else if (index) {
+            } else {
+                if (exactly[i]) {
+                    and.push({tags: normal});
+                    is_tags = true;
+                } else {
+                    and.push({tags: { $regex: escapeRegExp(normal) }});
+                }
+            }
+        }
+    }
+    if (and.length > 0) {
+        nosql.$and = and;
+    }
+    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, {name: 1});
+    const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
+    console.log(ret);
+    console.log(ret.nosql);
+    return ret;
+}
+
+function getRankQueryTag(user, tag, del=1) {
+    const normal = normalize(tag);
+    const index = isDefaultTag(normal);
+    if (index) {
+        return {type: 0};
+    } else {
+        return {
+            tag: {tags: normal},
+            type: 1,
+        };
+    }
+}
+function getRankSortName(sortName) {
+    switch (sortName) {
+        case 'mtime':
+        return 'start';
+        case 'count':
+        return 'type';
+        case 'name':
         default:
         return 'name';
     }

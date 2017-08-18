@@ -117,7 +117,7 @@ router.put('/editRow/:uid', function(req, res, next) {
     }).catch(err => handleError(err, next));
 });
 
-router.put('/delRow/:uid', function(req, res, next) {
+router.delete('/delRow/:uid', function(req, res, next) {
     console.log('del fitness');
     if (!checkAdmin(1, req.user)) {
         handleError(new HoError('permission denied'));

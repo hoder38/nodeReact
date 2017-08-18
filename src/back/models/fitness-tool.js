@@ -14,8 +14,6 @@ export default {
         const name = isValidString(data['name'], 'name', 'name not vaild!!!');
         const price = isValidString(data['price'], 'int', 'price not vaild!!!');
         const desc = isValidString(data['desc'], 'desc', 'description not vaild!!!');
-        console.log(data['desc']);
-        console.log(desc);
         let setTag = new Set();
         setTag.add(normalize(name)).add('sport').add('運動');
         //setTag.add(normalize(name)).add('game').add('遊戲');
@@ -80,7 +78,10 @@ export default {
             return Mongo('remove', FITNESSDB, {
                 _id: items[0]._id,
                 $isolated: 1,
-            });
+            }).then(item => Mongo('remove', `${FITNESSDB}Count`, {
+                itemId: items[0]._id,
+                $isolated: 1,
+            }));
         });
     },
     getPoint: function(user) {
@@ -109,47 +110,64 @@ export default {
                 }).then(() => items[0].count);
             }) : items[0].count;
         });
-        return Mongo('find', FITNESSDB, {_id: id}).then(items => {
-            if (items.length < 1) {
-                handleError(new HoError('fitness row does not exist!!!'));
+        return Mongo('find', `${FITNESSDB}Stat`, {owner: user._id}).then(items2 => {
+            if (items2.length < 1) {
+                handleError(new HoError('fitness stat row does not exist!!!'));
             }
-            switch(items[0].type) {
-                case 1:
-                return Mongo('find', `${FITNESSDB}Count`, {
-                    owner: user._id,
-                    itemId: id,
-                }).then(items1 => Mongo('update', `${FITNESSDB}Count`, {
-                    owner: user._id,
-                    itemId: id,
-                }, {$inc: {count: number}}, {upsert: true}).then(item => {
-                    const addPoint = Math.floor(((items1.length < 1) ? number : items1[0].count % items[0].price + number) / items[0].price);
-                    const isAdd = () => addPoint ? Mongo('update', `${FITNESSDB}Count`, {
-                        owner: user._id,
-                        itemId: objectID(FITNESS_POINT),
-                    }, {$inc: {count: addPoint}}, {upsert: true}) : Promise.resolve();
-                    return isAdd().then(() => end(id, (items1.length < 1) ? number : items1[0].count + number));
-                }));
-                case 2:
-                return Mongo('find', `${FITNESSDB}Count`, {
-                    owner: user._id,
-                    itemId: objectID(FITNESS_POINT),
-                }).then(items1 => {
-                    //以後改成多一個 remain point 原本的point不變
-                    const max = Math.floor(items1[0].count / items[0].price);
-                    const addCount = (number < max) ? number : max;
-                    const isAdd = () => addCount ? Mongo('update', `${FITNESSDB}Count`, {
+            return Mongo('find', FITNESSDB, {_id: id}).then(items => {
+                if (items.length < 1) {
+                    handleError(new HoError('fitness row does not exist!!!'));
+                }
+                switch(items[0].type) {
+                    case 1:
+                    return Mongo('find', `${FITNESSDB}Count`, {
                         owner: user._id,
                         itemId: id,
-                    }, {$inc: {count: addCount}}, {upsert: true}).then(item => Mongo('update', `${FITNESSDB}Count`, {
+                    }).then(items1 => Mongo('update', `${FITNESSDB}Count`, {
+                        owner: user._id,
+                        itemId: id,
+                    }, {
+                        $inc: {count: number},
+                        $set: {start: items2[0].start},
+                    }, {upsert: true}).then(item => {
+                        const addPoint = Math.floor(((items1.length < 1) ? number : items1[0].count % items[0].price + number) / items[0].price);
+                        const isAdd = () => addPoint ? Mongo('update', `${FITNESSDB}Count`, {
+                            owner: user._id,
+                            itemId: objectID(FITNESS_POINT),
+                        }, {
+                            $inc: {count: addPoint},
+                            $set: {start: items2[0].start},
+                        }, {upsert: true}) : Promise.resolve();
+                        return isAdd().then(() => end(id, (items1.length < 1) ? number : items1[0].count + number));
+                    }));
+                    case 2:
+                    return Mongo('find', `${FITNESSDB}Count`, {
                         owner: user._id,
                         itemId: objectID(FITNESS_POINT),
-                    }, {$inc: {count: -addCount * items[0].price}}, {upsert: true})) : Promise.resolve();
-                    return isAdd().then(() => end());
-                });
-                break;
-                default:
-                handleError(new HoError('fitness type unknown!!!'));
-            }
+                    }).then(items1 => {
+                        //以後改成多一個 remain point 原本的point不變
+                        const max = Math.floor(items1[0].count / items[0].price);
+                        const addCount = (number < max) ? number : max;
+                        const isAdd = () => addCount ? Mongo('update', `${FITNESSDB}Count`, {
+                            owner: user._id,
+                            itemId: id,
+                        }, {
+                            $inc: {count: addCount},
+                            $set: {start: items2[0].start},
+                        }, {upsert: true}).then(item => Mongo('update', `${FITNESSDB}Count`, {
+                            owner: user._id,
+                            itemId: objectID(FITNESS_POINT),
+                        }, {
+                            $inc: {count: -addCount * items[0].price},
+                            $set: {start: items2[0].start},
+                        }, {upsert: true})) : Promise.resolve();
+                        return isAdd().then(() => end());
+                    });
+                    break;
+                    default:
+                    handleError(new HoError('fitness type unknown!!!'));
+                }
+            });
         });
     },
     getStat: function(uid, index=0, typeId=FITNESS_POINT) {
@@ -163,9 +181,9 @@ export default {
         const getStart = () => Mongo('find', `${FITNESSDB}Stat`, {owner: id}).then(items => {
             const get = () => (items.length < 1) ? Mongo('insert', `${FITNESSDB}Stat`, {
                 owner: id,
-                start: `${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`,
+                start: Number(`${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`),
                 chart: [],
-            }).then(item => [item[0].start, item[0].chart]) : Promise.resolve([items[0].start, items[0].chart]);
+            }).then(item => [item[0].start.toString(), item[0].chart]) : Promise.resolve([items[0].start.toString(), items[0].chart]);
             return get();
         });
         const getChart = (tId, start, name) => Redis('hget', `chart: ${id}`, tId.toString()).then(item => {
@@ -250,7 +268,7 @@ export default {
         const id = isValidString(uid, 'uid', 'uid is not vaild');
         const date = new Date();
         return Mongo('update', `${FITNESSDB}Stat`, {owner: id}, {$set: {
-            start: `${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`,
+            start: Number(`${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`),
             chart: [],
         }}).then(item => Mongo('remove', `${FITNESSDB}Count`, {
             owner: id,
