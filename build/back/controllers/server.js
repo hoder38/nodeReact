@@ -62,6 +62,14 @@ var _stockRouter = require('./stock-router');
 
 var _stockRouter2 = _interopRequireDefault(_stockRouter);
 
+var _fitnessRouter = require('./fitness-router');
+
+var _fitnessRouter2 = _interopRequireDefault(_fitnessRouter);
+
+var _rankRouter = require('./rank-router');
+
+var _rankRouter2 = _interopRequireDefault(_rankRouter);
+
 var _bookmarkRouter = require('./bookmark-router');
 
 var _bookmarkRouter2 = _interopRequireDefault(_bookmarkRouter);
@@ -133,6 +141,10 @@ app.use('/api/storage', _storageRouter2.default);
 app.use('/api/password', _passwordRouter2.default);
 
 app.use('/api/stock', _stockRouter2.default);
+
+app.use('/api/fitness', _fitnessRouter2.default);
+
+app.use('/api/rank', _rankRouter2.default);
 
 app.use('/api/bookmark', _bookmarkRouter2.default);
 

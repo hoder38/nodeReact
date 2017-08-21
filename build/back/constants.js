@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.MIME_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.BILI_TYPE = exports.TRANS_LIST_CH = exports.TRANS_LIST = exports.COMIC_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.DOCDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
+exports.RANK_LIMIT = exports.CHART_LIMIT = exports.FITNESS_POINT = exports.MIME_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.BILI_TYPE = exports.TRANS_LIST_CH = exports.TRANS_LIST = exports.COMIC_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.RANK_PARENT = exports.FITNESS_PARENT = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.DOCDB = exports.RANKDB = exports.FITNESSDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
 
 var _path = require('path');
 
@@ -18,6 +18,8 @@ var USERDB = exports.USERDB = 'user';
 var STORAGEDB = exports.STORAGEDB = 'storage';
 var STOCKDB = exports.STOCKDB = 'stock';
 var PASSWORDDB = exports.PASSWORDDB = 'password';
+var FITNESSDB = exports.FITNESSDB = 'fitness';
+var RANKDB = exports.RANKDB = 'rank';
 var DOCDB = exports.DOCDB = 'docUpdate';
 
 //basic set
@@ -140,6 +142,20 @@ var STOCK_PARENT = exports.STOCK_PARENT = [{
 }, {
     name: 'category',
     tw: '產業分類'
+}];
+var FITNESS_PARENT = exports.FITNESS_PARENT = [{
+    name: 'command',
+    tw: '指令'
+}, {
+    name: 'part',
+    tw: '訓練部位'
+}, {
+    name: 'strength',
+    tw: '強度'
+}];
+var RANK_PARENT = exports.RANK_PARENT = [{
+    name: 'command',
+    tw: '指令'
 }];
 
 //tag list
@@ -271,3 +287,9 @@ var MIME_EXT = exports.MIME_EXT = {
     wav: 'audio/wav',
     m4a: 'audio/mp4'
 };
+
+var FITNESS_POINT = exports.FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
+
+var CHART_LIMIT = exports.CHART_LIMIT = 4;
+
+var RANK_LIMIT = exports.RANK_LIMIT = 10;

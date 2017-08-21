@@ -54,6 +54,8 @@ var router = _express2.default.Router();
 var StorageTagTool = (0, _tagTool2.default)(_constants.STORAGEDB);
 var PasswordTagTool = (0, _tagTool2.default)(_constants.PASSWORDDB);
 var StockTagTool = (0, _tagTool2.default)(_constants.STOCKDB);
+var FitnessTagTool = (0, _tagTool2.default)(_constants.FITNESSDB);
+var RankTagTool = (0, _tagTool2.default)(_constants.RANKDB);
 
 router.use(function (req, res, next) {
     (0, _utility.checkLogin)(req, res, next);
@@ -409,6 +411,90 @@ router.post('/' + _constants.STOCKDB + '/add', function (req, res, next) {
 router.delete('/' + _constants.STOCKDB + '/del/:id', function (req, res, next) {
     console.log('del stock bookmark');
     StockTagTool.delBookmark(req.params.id).then(function (result) {
+        return res.json({ id: result.id });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+//fitness
+router.get('/' + _constants.FITNESSDB + '/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?', function (req, res, next) {
+    console.log('get fitness bookmark list');
+    FitnessTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(function (result) {
+        return res.json({ bookmarkList: result.bookmarkList });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.get('/' + _constants.FITNESSDB + '/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)', function (req, res, next) {
+    console.log('get fitness bookmark');
+    FitnessTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(function (result) {
+        return res.json({
+            itemList: (0, _utility.getFitnessItem)(req.user, result.items),
+            parentList: result.parentList,
+            latest: result.latest,
+            bookmarkID: result.bookmark
+        });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.post('/' + _constants.FITNESSDB + '/add', function (req, res, next) {
+    console.log('fitness add bookmark');
+    FitnessTagTool.addBookmark((0, _utility.isValidString)(req.body.name, 'name', 'name is not vaild'), req.user, req.session).then(function (result) {
+        return res.json(result);
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.delete('/' + _constants.FITNESSDB + '/del/:id', function (req, res, next) {
+    console.log('del fitness bookmark');
+    FitnessTagTool.delBookmark(req.params.id).then(function (result) {
+        return res.json({ id: result.id });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+//rank
+router.get('/' + _constants.RANKDB + '/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?', function (req, res, next) {
+    console.log('get rank bookmark list');
+    RankTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(function (result) {
+        return res.json({ bookmarkList: result.bookmarkList });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.get('/' + _constants.RANKDB + '/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)', function (req, res, next) {
+    console.log('get rank bookmark');
+    RankTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(function (result) {
+        return res.json({
+            itemList: (0, _utility.getRankItem)(req.user, result.items),
+            parentList: result.parentList,
+            latest: result.latest,
+            bookmarkID: result.bookmark
+        });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.post('/' + _constants.RANKDB + '/add', function (req, res, next) {
+    console.log('rank add bookmark');
+    RankTagTool.addBookmark((0, _utility.isValidString)(req.body.name, 'name', 'name is not vaild'), req.user, req.session).then(function (result) {
+        return res.json(result);
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.delete('/' + _constants.RANKDB + '/del/:id', function (req, res, next) {
+    console.log('del rank bookmark');
+    RankTagTool.delBookmark(req.params.id).then(function (result) {
         return res.json({ id: result.id });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);

@@ -103,5 +103,5 @@ var collections = [];
 
 var objectID = exports.objectID = function objectID() {
     var id = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-    return id === null ? new _mongodb.ObjectID() : new _mongodb.ObjectID(id);
+    return id === null ? new _mongodb.ObjectId() : new _mongodb.ObjectId(id);
 };

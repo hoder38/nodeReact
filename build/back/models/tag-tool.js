@@ -77,6 +77,18 @@ function process(collection) {
             getSortName = getStockSortName;
             parent_arr = _constants.STOCK_PARENT;
             break;
+        case _constants.FITNESSDB:
+            getQuerySql = getFitnessQuerySql;
+            getQueryTag = getFitnessQueryTag;
+            getSortName = getFitnessSortName;
+            parent_arr = _constants.FITNESS_PARENT;
+            break;
+        case _constants.RANKDB:
+            getQuerySql = getRankQuerySql;
+            getQueryTag = getRankQueryTag;
+            getSortName = getRankSortName;
+            parent_arr = _constants.RANK_PARENT;
+            break;
         default:
             return false;
     }
@@ -150,7 +162,7 @@ function process(collection) {
                 parentList = tags.getArray(collection === _constants.STOCKDB && defau.index === 31 || collection === _constants.STORAGEDB && defau.index === 31 ? tagName : (0, _utility.isValidString)(tagName, 'name', 'name is not vaild'), exactly);
             } else {
                 var _defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(collection === 'stock' && _defau.index === 31 || collection === 'storage' && _defau.index === 31 ? tagName : (0, _utility.isValidString)(tagName, 'name', 'name is not vaild'), exactly, (0, _utility.isValidString)(index, 'parentIndex', 'parentIndex is not vaild'));
+                parentList = tags.getArray(collection === _constants.STOCKDB && _defau.index === 31 || collection === 'storage' && _defau.index === 31 ? tagName : (0, _utility.isValidString)(tagName, 'name', 'name is not vaild'), exactly, (0, _utility.isValidString)(index, 'parentIndex', 'parentIndex is not vaild'));
             }
             var sql = getQuerySql(user, parentList.cur, parentList.exactly);
             return sql ? (0, _mongoTool2.default)('find', collection, sql.nosql, sql.select ? sql.select : {}, (0, _assign2.default)({
@@ -158,11 +170,54 @@ function process(collection) {
                 skip: page,
                 sort: [[getSortName(sortName), sortType]]
             }, sql.skip ? { skip: page + sql.skip } : {}, sql.hint ? { hint: sql.hint } : {})).then(function (items) {
-                return sql.nosql.mediaType ? {
-                    items: items,
-                    parentList: parentList,
-                    mediaHadle: 1
-                } : returnPath(items, parentList);
+                var getCount = function getCount() {
+                    return collection === _constants.FITNESSDB ? (0, _mongoTool2.default)('find', collection + 'Count', {
+                        owner: user._id,
+                        itemId: { '$in': items.map(function (i) {
+                                return i._id;
+                            }) }
+                    }).then(function (counts) {
+                        return items.map(function (i) {
+                            var _iteratorNormalCompletion2 = true;
+                            var _didIteratorError2 = false;
+                            var _iteratorError2 = undefined;
+
+                            try {
+                                for (var _iterator2 = (0, _getIterator3.default)(counts), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                    var c = _step2.value;
+
+                                    if (i._id.equals(c.itemId)) {
+                                        i['count'] = c['count'];
+                                        return i;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError2 = true;
+                                _iteratorError2 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                        _iterator2.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError2) {
+                                        throw _iteratorError2;
+                                    }
+                                }
+                            }
+
+                            i['count'] = 0;
+                            return i;
+                        });
+                    }) : _promise2.default.resolve(items);
+                };
+                return getCount().then(function (items) {
+                    return sql.nosql.mediaType ? {
+                        items: items,
+                        parentList: parentList,
+                        mediaHadle: 1
+                    } : returnPath(items, parentList);
+                });
             }) : returnPath([], parentList);
         },
         singleQuery: function singleQuery(uid, user, session) {
@@ -175,10 +230,20 @@ function process(collection) {
                     limit: 1,
                     hint: { _id: 1 }
                 }).then(function (items) {
-                    return items.length < 1 ? { empty: true } : sql.nosql.mediaType ? {
-                        item: items[0],
-                        mediaHadle: 1
-                    } : { item: items[0] };
+                    var getCount = function getCount() {
+                        return collection === _constants.FITNESSDB ? (0, _mongoTool2.default)('find', collection + 'Count', {
+                            owner: user._id,
+                            itemId: items[0]._id
+                        }).then(function (counts) {
+                            return [(0, _assign2.default)(items[0], { count: counts.length < 1 ? 0 : counts[0]['count'] })];
+                        }) : _promise2.default.resolve(items);
+                    };
+                    return items.length < 1 ? { empty: true } : getCount().then(function (items) {
+                        return sql.nosql.mediaType ? {
+                            item: items[0],
+                            mediaHadle: 1
+                        } : { item: items[0] };
+                    });
                 });
             } else {
                 return { empty: true };
@@ -191,10 +256,53 @@ function process(collection) {
                 limit: _constants.QUERY_LIMIT,
                 sort: [[getSortName(sortName), sortType]]
             }, sql.hint ? { hint: sql.hint } : {})).then(function (items) {
-                return {
-                    items: items,
-                    parentList: parentList
+                var getCount = function getCount() {
+                    return collection === _constants.FITNESSDB ? (0, _mongoTool2.default)('find', collection + 'Count', {
+                        owner: user._id,
+                        itemId: { '$in': items.map(function (i) {
+                                return i._id;
+                            }) }
+                    }).then(function (counts) {
+                        return items.map(function (i) {
+                            var _iteratorNormalCompletion3 = true;
+                            var _didIteratorError3 = false;
+                            var _iteratorError3 = undefined;
+
+                            try {
+                                for (var _iterator3 = (0, _getIterator3.default)(counts), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                                    var c = _step3.value;
+
+                                    if (i._id.equals(c.itemId)) {
+                                        i['count'] = c['count'];
+                                        return i;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError3 = true;
+                                _iteratorError3 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                        _iterator3.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError3) {
+                                        throw _iteratorError3;
+                                    }
+                                }
+                            }
+
+                            i['count'] = 0;
+                            return i;
+                        });
+                    }) : _promise2.default.resolve(items);
                 };
+                return getCount().then(function (items) {
+                    return {
+                        items: items,
+                        parentList: parentList
+                    };
+                });
             }) : {
                 items: [],
                 parentList: parentList
@@ -209,13 +317,13 @@ function process(collection) {
             var query_arr = [];
             var id_arr = [];
             var pl_arr = [];
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
 
             try {
-                for (var _iterator2 = (0, _getIterator3.default)(search_arr), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var i = _step2.value;
+                for (var _iterator4 = (0, _getIterator3.default)(search_arr), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var i = _step4.value;
 
                     var index = isDefaultTag(normalize(i));
                     if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
@@ -246,16 +354,16 @@ function process(collection) {
                     }
                 }
             } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
                     }
                 } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
                     }
                 }
             }
@@ -569,13 +677,13 @@ function process(collection) {
                         for (var _i = _constants.RELATIVE_INTER + 1; _i < items.length; _i++) {
                             _loop(_i);
                         }
-                        var _iteratorNormalCompletion3 = true;
-                        var _didIteratorError3 = false;
-                        var _iteratorError3 = undefined;
+                        var _iteratorNormalCompletion5 = true;
+                        var _didIteratorError5 = false;
+                        var _iteratorError5 = undefined;
 
                         try {
-                            for (var _iterator3 = (0, _getIterator3.default)(items), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                                var _i2 = _step3.value;
+                            for (var _iterator5 = (0, _getIterator3.default)(items), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                                var _i2 = _step5.value;
 
                                 if (u) {
                                     _i2.tags.forEach(function (e) {
@@ -591,16 +699,16 @@ function process(collection) {
                                 }
                             }
                         } catch (err) {
-                            _didIteratorError3 = true;
-                            _iteratorError3 = err;
+                            _didIteratorError5 = true;
+                            _iteratorError5 = err;
                         } finally {
                             try {
-                                if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                    _iterator3.return();
+                                if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                    _iterator5.return();
                                 }
                             } finally {
-                                if (_didIteratorError3) {
-                                    throw _iteratorError3;
+                                if (_didIteratorError5) {
+                                    throw _iteratorError5;
                                 }
                             }
                         }
@@ -1119,29 +1227,29 @@ function process(collection) {
 }
 
 function inAdultonlyArray(parent) {
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
+    var _iteratorNormalCompletion6 = true;
+    var _didIteratorError6 = false;
+    var _iteratorError6 = undefined;
 
     try {
-        for (var _iterator4 = (0, _getIterator3.default)(_constants.ADULTONLY_PARENT), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-            var i = _step4.value;
+        for (var _iterator6 = (0, _getIterator3.default)(_constants.ADULTONLY_PARENT), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var i = _step6.value;
 
             if (i.name === parent) {
                 return true;
             }
         }
     } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
     } finally {
         try {
-            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                _iterator4.return();
+            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                _iterator6.return();
             }
         } finally {
-            if (_didIteratorError4) {
-                throw _iteratorError4;
+            if (_didIteratorError6) {
+                throw _iteratorError6;
             }
         }
     }
@@ -1170,15 +1278,15 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
             nosql['recycle'] = 0;
         }
     } else {
-        var _iteratorNormalCompletion5 = true;
-        var _didIteratorError5 = false;
-        var _iteratorError5 = undefined;
+        var _iteratorNormalCompletion7 = true;
+        var _didIteratorError7 = false;
+        var _iteratorError7 = undefined;
 
         try {
-            for (var _iterator5 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                var _step5$value = (0, _slicedToArray3.default)(_step5.value, 2),
-                    i = _step5$value[0],
-                    tag = _step5$value[1];
+            for (var _iterator7 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                var _step7$value = (0, _slicedToArray3.default)(_step7.value, 2),
+                    i = _step7$value[0],
+                    tag = _step7$value[1];
 
                 var normal = normalize(tag);
                 var index = isDefaultTag(normal);
@@ -1253,16 +1361,16 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
                 }
             }
         } catch (err) {
-            _didIteratorError5 = true;
-            _iteratorError5 = err;
+            _didIteratorError7 = true;
+            _iteratorError7 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                    _iterator5.return();
+                if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                    _iterator7.return();
                 }
             } finally {
-                if (_didIteratorError5) {
-                    throw _iteratorError5;
+                if (_didIteratorError7) {
+                    throw _iteratorError7;
                 }
             }
         }
@@ -1334,15 +1442,15 @@ function getPasswordQuerySql(user, tagList, exactly) {
     var is_important = false;
     var skip = 0;
     if (tagList.length > 0) {
-        var _iteratorNormalCompletion6 = true;
-        var _didIteratorError6 = false;
-        var _iteratorError6 = undefined;
+        var _iteratorNormalCompletion8 = true;
+        var _didIteratorError8 = false;
+        var _iteratorError8 = undefined;
 
         try {
-            for (var _iterator6 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                var _step6$value = (0, _slicedToArray3.default)(_step6.value, 2),
-                    i = _step6$value[0],
-                    tag = _step6$value[1];
+            for (var _iterator8 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                var _step8$value = (0, _slicedToArray3.default)(_step8.value, 2),
+                    i = _step8$value[0],
+                    tag = _step8$value[1];
 
                 var normal = normalize(tag);
                 var index = isDefaultTag(normal);
@@ -1364,16 +1472,16 @@ function getPasswordQuerySql(user, tagList, exactly) {
                 }
             }
         } catch (err) {
-            _didIteratorError6 = true;
-            _iteratorError6 = err;
+            _didIteratorError8 = true;
+            _iteratorError8 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                    _iterator6.return();
+                if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                    _iterator8.return();
                 }
             } finally {
-                if (_didIteratorError6) {
-                    throw _iteratorError6;
+                if (_didIteratorError8) {
+                    throw _iteratorError8;
                 }
             }
         }
@@ -1431,15 +1539,15 @@ function getStockQuerySql(user, tagList, exactly) {
     var is_important = false;
     var skip = 0;
     if (tagList.length > 0) {
-        var _iteratorNormalCompletion7 = true;
-        var _didIteratorError7 = false;
-        var _iteratorError7 = undefined;
+        var _iteratorNormalCompletion9 = true;
+        var _didIteratorError9 = false;
+        var _iteratorError9 = undefined;
 
         try {
-            for (var _iterator7 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                var _step7$value = (0, _slicedToArray3.default)(_step7.value, 2),
-                    i = _step7$value[0],
-                    tag = _step7$value[1];
+            for (var _iterator9 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                var _step9$value = (0, _slicedToArray3.default)(_step9.value, 2),
+                    i = _step9$value[0],
+                    tag = _step9$value[1];
 
                 var normal = normalize(tag);
                 var index = isDefaultTag(normal);
@@ -1467,16 +1575,16 @@ function getStockQuerySql(user, tagList, exactly) {
                 }
             }
         } catch (err) {
-            _didIteratorError7 = true;
-            _iteratorError7 = err;
+            _didIteratorError9 = true;
+            _iteratorError9 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                    _iterator7.return();
+                if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                    _iterator9.return();
                 }
             } finally {
-                if (_didIteratorError7) {
-                    throw _iteratorError7;
+                if (_didIteratorError9) {
+                    throw _iteratorError9;
                 }
             }
         }
@@ -1525,6 +1633,171 @@ function getStockSortName(sortName) {
         case 'name':
         default:
             return 'profitIndex';
+    }
+}
+
+var getFitnessQuerySql = function getFitnessQuerySql(user, tagList, exactly) {
+    var nosql = {};
+    var and = [];
+    var is_tags = false;
+    var skip = 0;
+    if (tagList.length < 1) {} else {
+        var _iteratorNormalCompletion10 = true;
+        var _didIteratorError10 = false;
+        var _iteratorError10 = undefined;
+
+        try {
+            for (var _iterator10 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                var _step10$value = (0, _slicedToArray3.default)(_step10.value, 2),
+                    i = _step10$value[0],
+                    tag = _step10$value[1];
+
+                var normal = normalize(tag);
+                var index = isDefaultTag(normal);
+                if (index.index === 31) {
+                    if (index[1] === '') {
+                        skip = Number(index.index[2]);
+                    }
+                    continue;
+                } else if (index) {} else {
+                    if (exactly[i]) {
+                        and.push({ tags: normal });
+                        is_tags = true;
+                    } else {
+                        and.push({ tags: { $regex: escapeRegExp(normal) } });
+                    }
+                }
+            }
+        } catch (err) {
+            _didIteratorError10 = true;
+            _iteratorError10 = err;
+        } finally {
+            try {
+                if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                    _iterator10.return();
+                }
+            } finally {
+                if (_didIteratorError10) {
+                    throw _iteratorError10;
+                }
+            }
+        }
+    }
+    if (and.length > 0) {
+        nosql.$and = and;
+    }
+    var hint = (0, _assign2.default)({}, is_tags ? { tags: 1 } : {}, { name: 1 });
+    var ret = (0, _assign2.default)({ nosql: nosql }, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
+    console.log(ret);
+    console.log(ret.nosql);
+    return ret;
+};
+
+function getFitnessQueryTag(user, tag) {
+    var del = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+
+    var normal = normalize(tag);
+    var index = isDefaultTag(normal);
+    if (index) {
+        return { type: 0 };
+    } else {
+        return {
+            tag: { tags: normal },
+            type: 1
+        };
+    }
+}
+function getFitnessSortName(sortName) {
+    switch (sortName) {
+        case 'mtime':
+            return 'price';
+        case 'name':
+        case 'count':
+        default:
+            return 'name';
+    }
+}
+
+var getRankQuerySql = function getRankQuerySql(user, tagList, exactly) {
+    var nosql = {};
+    var and = [];
+    var is_tags = false;
+    var skip = 0;
+    if (tagList.length < 1) {} else {
+        var _iteratorNormalCompletion11 = true;
+        var _didIteratorError11 = false;
+        var _iteratorError11 = undefined;
+
+        try {
+            for (var _iterator11 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                var _step11$value = (0, _slicedToArray3.default)(_step11.value, 2),
+                    i = _step11$value[0],
+                    tag = _step11$value[1];
+
+                var normal = normalize(tag);
+                var index = isDefaultTag(normal);
+                if (index.index === 31) {
+                    if (index[1] === '') {
+                        skip = Number(index.index[2]);
+                    }
+                    continue;
+                } else if (index) {} else {
+                    if (exactly[i]) {
+                        and.push({ tags: normal });
+                        is_tags = true;
+                    } else {
+                        and.push({ tags: { $regex: escapeRegExp(normal) } });
+                    }
+                }
+            }
+        } catch (err) {
+            _didIteratorError11 = true;
+            _iteratorError11 = err;
+        } finally {
+            try {
+                if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                    _iterator11.return();
+                }
+            } finally {
+                if (_didIteratorError11) {
+                    throw _iteratorError11;
+                }
+            }
+        }
+    }
+    if (and.length > 0) {
+        nosql.$and = and;
+    }
+    var hint = (0, _assign2.default)({}, is_tags ? { tags: 1 } : {}, { name: 1 });
+    var ret = (0, _assign2.default)({ nosql: nosql }, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
+    console.log(ret);
+    console.log(ret.nosql);
+    return ret;
+};
+
+function getRankQueryTag(user, tag) {
+    var del = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+
+    var normal = normalize(tag);
+    var index = isDefaultTag(normal);
+    if (index) {
+        return { type: 0 };
+    } else {
+        return {
+            tag: { tags: normal },
+            type: 1
+        };
+    }
+}
+function getRankSortName(sortName) {
+    switch (sortName) {
+        case 'mtime':
+            return 'start';
+        case 'count':
+            return 'type';
+        case 'name':
+        default:
+            return 'name';
     }
 }
 

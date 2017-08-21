@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.addPre = exports.findTag = exports.completeZero = exports.sortList = exports.torrent2Magnet = exports.getJson = exports.SRT2VTT = exports.deleteFolderRecursive = exports.getFileLocation = exports.getStockItem = exports.getPasswordItem = exports.getStorageItem = exports.big5Encode = exports.checkAdmin = undefined;
+exports.addPre = exports.findTag = exports.completeZero = exports.sortList = exports.torrent2Magnet = exports.getJson = exports.SRT2VTT = exports.deleteFolderRecursive = exports.getFileLocation = exports.getRankItem = exports.getFitnessItem = exports.getStockItem = exports.getPasswordItem = exports.getStorageItem = exports.big5Encode = exports.checkAdmin = undefined;
 
 var _promise = require('babel-runtime/core-js/promise');
 
@@ -92,7 +92,10 @@ function isValidString(str, type) {
                 break;
             case 'desc':
                 //不合法字元: \ / | * ? ' " < > ` : &
-                if (str.search(/^[^\\\/\|\*\?\'"<>`:&]{0,250}$/) !== -1) {
+                str = str.replace(/\[\[([^\]]+)\]\]/g, function (m, m1) {
+                    return '[[' + encodeURIComponent(m1) + ']]';
+                });
+                if (str.search(/^[^\\\/\|\*\?\'"<>`:&]{0,500}$/) !== -1) {
                     return str;
                 }
                 break;
@@ -415,6 +418,32 @@ var getStockItem = exports.getStockItem = function getStockItem(user, items) {
             type: item.type
         };
     }) : [];
+};
+
+var getFitnessItem = exports.getFitnessItem = function getFitnessItem(user, items) {
+    return items.map(function (item) {
+        return {
+            name: item.name,
+            id: item._id,
+            tags: item.tags,
+            price: item.price,
+            count: item.count,
+            desc: item.desc,
+            type: item.type
+        };
+    });
+};
+
+var getRankItem = exports.getRankItem = function getRankItem(user, items) {
+    return items.map(function (item) {
+        return {
+            name: item.name,
+            id: item._id,
+            tags: item.tags,
+            start: item.start,
+            type: item.type
+        };
+    });
 };
 
 var getFileLocation = exports.getFileLocation = function getFileLocation(owner, uid) {
