@@ -401,7 +401,7 @@ const MediaWidget = React.createClass({
                                 this._playlist.obj.sub = result.sub
                             }
                             this.setState(Object.assign({}, this.state, {
-                                src: (result.audio && this._item.status === 4) ? result.audio : result.video[0],
+                                src: (result.audio && this._item.status === 4) ? result.audio : result.embed[0] ? `embed: ${result.embed[0]}` : result.video[0],
                             }))
                         }
                     }).catch(err => {
@@ -911,7 +911,8 @@ const MediaWidget = React.createClass({
                 height: 'auto',
                 maxWidth: '100%',
             }
-            media2 = (
+            const isEmbed = this.state.src.match(/^embed: (.*)$/);
+            media2 = isEmbed ? <iframe height="420" width="640" src={isEmbed[1]} frameborder="0" allowfullscreen=""></iframe> : (
                 <video style={Object.assign(mediaCss, this.props.mediaType === 9 && this._item.type !== 3 ? {display: 'none'} : {})} controls src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.src : ''} ref={ref => this._video = ref}>
                     <track label="Chinese" kind="captions" srcLang="ch" src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.subCh : ''} default={true} />
                     <track label="English" kind="captions" srcLang="en" src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.subEn : ''}/>

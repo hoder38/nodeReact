@@ -1712,6 +1712,11 @@ export default {
                                         for (let i of vIds) {
                                             obj.push(`ope_${i}`);
                                         }
+                                        //up2stream
+                                    } else if (t === 12) {
+                                        for (let i of vIds) {
+                                            obj.push(`up2_${i}`);
+                                        }
                                     } else {
                                         for (let i of vIds) {
                                             obj.push(`dym_${i}`);
@@ -2205,6 +2210,14 @@ export const youtubeVideoUrl = (id, url) => new Promise((resolve, reject) => You
                 ret_obj['video'].splice(0, 0, ret_info.url);
             }
         }
+    }
+    if (id === 'yuk') {
+        ret_obj['embed'] = [];
+        ret_obj['video'].map(i => {
+            if (i.match(/type=flv/)) {
+                ret_obj['embed'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z]+)\.html$/)[1]}`);
+            }
+        });
     }
     return ret_obj;
 });
