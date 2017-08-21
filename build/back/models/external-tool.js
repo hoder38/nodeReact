@@ -266,7 +266,8 @@ exports.default = {
                             }
                             var url = (0, _utility.isValidString)(external_item.url, 'url', 'url is not vaild');
                             return (0, _apiTool2.default)('url', external_item.url, { referer: 'https://eztv.ag/' }).then(function (raw_data) {
-                                var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table')[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
+                                var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
+                                var info = tables[1] ? (0, _utility.findTag)((0, _utility.findTag)(tables[1], 'tr')[1], 'td')[0] : (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
                                 var setTag = new _set2.default(['tv show', '電視劇', '歐美', '西洋', '影片', 'video']);
                                 (0, _utility.findTag)(info).forEach(function (n) {
                                     var infoMatch = false;

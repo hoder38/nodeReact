@@ -184,7 +184,8 @@ export default {
                     }
                     const url = isValidString(external_item.url, 'url', 'url is not vaild');
                     return Api('url', external_item.url, {referer: 'https://eztv.ag/'}).then(raw_data => {
-                        const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table')[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
+                        const tables = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
+                        const info = tables[1] ? findTag(findTag(tables[1], 'tr')[1], 'td')[0] : findTag(findTag(findTag(findTag(findTag(findTag(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
                         let setTag = new Set(['tv show', '電視劇', '歐美', '西洋', '影片', 'video']);
                         findTag(info).forEach(n => {
                             let infoMatch = false;
