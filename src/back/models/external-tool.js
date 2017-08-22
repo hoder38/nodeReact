@@ -15,6 +15,77 @@ import Api from './api-tool'
 
 const opencc = new OpenCC('s2t.json');
 
+const dramaList = [
+    'http://tw.lovetvshow.info/2013/05/drama-list.html',
+    'http://cn.lovetvshow.info/2012/05/drama-list.html',
+    'http://kr.vslovetv.com/2012/04/drama-list.html',
+    'http://jp.jplovetv.com/2012/08/drama-list.html',
+];
+
+const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
+    let list = [];
+    let year = null;
+    let table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+    const tbody = findTag(table, 'tbody')[0];
+    if (tbody) {
+        table = tbody;
+    }
+    table.children.forEach(t => findTag(t, 'td').forEach(d => {
+        const h = findTag(d, 'h3')[0];
+        if (h) {
+            const a = findTag(h, 'a')[0];
+            if (a) {
+                const name = findTag(a)[0];
+                if (name) {
+                    if (name.match(/�/)) {
+                        return true;
+                    }
+                    const dramaType = findTag(h)[0];
+                    if (year) {
+                        const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');
+                        list.push(Object.assign({
+                            name,
+                            url: url.replace(/max\-results\=20$/, 'max-results=200'),
+                            year,
+                        }, dramaType ? {type: dramaType.match(/^\(([^\)]+)/)[1]} : {}));
+                    }
+                    return true;
+                }
+            }
+            const getY = node => {
+                const y = findTag(node)[0].match(/^(Pre-)?\d+/);
+                if (y) {
+                    year = y[0];
+                }
+            }
+            const s = findTag(h, 'span')[0];
+            if (s) {
+                getY(s);
+            } else {
+                const f = findTag(h, 'font')[0];
+                if (f) {
+                    getY(f);
+                } else {
+                    const strong = findTag(h, 'strong')[0];
+                    if (strong) {
+                        const span = findTag(strong, 'span')[0];
+                        if (span) {
+                            getY(span);
+                        } else {
+                            const font = findTag(strong, 'font')[0];
+                            if (font) {
+                                getY(font);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }));
+    console.log(list.length);
+    return next(0, dramaIndex, list);
+});
+
 export default {
     //type要補到deltag裡
     getList: function(type, is_clear=false) {
@@ -27,12 +98,6 @@ export default {
         }) : Promise.resolve();
         switch (type) {
             case 'lovetv':
-            const dramaList = [
-                'http://tw.lovetvshow.info/2013/05/drama-list.html',
-                'http://cn.lovetvshow.info/2012/05/drama-list.html',
-                'http://kr.vslovetv.com/2012/04/drama-list.html',
-                'http://jp.jplovetv.com/2012/08/drama-list.html',
-            ];
             const recur_loveSave = (index, dramaIndex, list) => {
                 const external_item = list[index];
                 let name = toValidName(external_item.name);
@@ -94,80 +159,18 @@ export default {
                     });
                 });
             }
-            const recur_loveList = dramaIndex => Api('url', dramaList[dramaIndex]).then(raw_data => {
-                let list = [];
-                let year = null;
-                let table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-                const tbody = findTag(table, 'tbody')[0];
-                if (tbody) {
-                    table = tbody;
-                }
-                table.children.forEach(t => findTag(t, 'td').forEach(d => {
-                    const h = findTag(d, 'h3')[0];
-                    if (h) {
-                        const a = findTag(h, 'a')[0];
-                        if (a) {
-                            const name = findTag(a)[0];
-                            if (name) {
-                                if (name.match(/�/)) {
-                                    return true;
-                                }
-                                const dramaType = findTag(h)[0];
-                                if (year) {
-                                    list.push(Object.assign({
-                                        name,
-                                        url: (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com'),
-                                        year,
-                                    }, dramaType ? {type: dramaType.match(/^\(([^\)]+)/)[1]} : {}));
-                                }
-                                return true;
-                            }
-                        }
-                        const getY = node => {
-                            const y = findTag(node)[0].match(/^(Pre-)?\d+/);
-                            if (y) {
-                                year = y[0];
-                            }
-                        }
-                        const s = findTag(h, 'span')[0];
-                        if (s) {
-                            getY(s);
-                        } else {
-                            const f = findTag(h, 'font')[0];
-                            if (f) {
-                                getY(f);
-                            } else {
-                                const strong = findTag(h, 'strong')[0];
-                                if (strong) {
-                                    const span = findTag(strong, 'span')[0];
-                                    if (span) {
-                                        getY(span);
-                                    } else {
-                                        const font = findTag(strong, 'font')[0];
-                                        if (font) {
-                                            getY(font);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }));
-                console.log(list.length);
-                return nextLove(0, dramaIndex, list);
-            });
             function nextLove(index, dramaIndex, list) {
                 if (index < list.length) {
                     return recur_loveSave(index, dramaIndex, list);
                 } else {
                     dramaIndex++;
                     if (dramaIndex < dramaList.length) {
-                        return recur_loveList(dramaIndex);
+                        return recur_loveList(dramaIndex, nextLove);
                     }
                 }
                 return Promise.resolve();
             }
-            return clearExtenal().then(() => recur_loveList(0));
+            return clearExtenal().then(() => recur_loveList(0, nextLove));
             case 'eztv':
             const recur_eztvSave = (index, list) => {
                 const external_item = list[index];
@@ -1650,7 +1653,7 @@ export default {
                                 const name = findTag(a)[0];
                                 if (!name.match(/Synopsis$/i)) {
                                     list.splice(0, 0, {
-                                        name: name,
+                                        name,
                                         url: a.attribs.href,
                                     });
                                 }
@@ -1668,7 +1671,7 @@ export default {
                         }
                         if (!name.match(/Synopsis$/i)) {
                             list.splice(0, 0, {
-                                name: name,
+                                name,
                                 url: a.attribs.href,
                             });
                         }
@@ -1681,7 +1684,30 @@ export default {
                         break;
                     }
                 }
-                return [list, is_end];
+                return (list.length < 1) ? Mongo('find', STORAGEDB, {
+                    owner: type,
+                    url: encodeURIComponent(url),
+                }).then(items => {
+                    if (items.length < 1) {
+                        handleError(new HoError('cannot find lovetv url'));
+                    }
+                    const nextLove = (index, dramaIndex, list) => {
+                        for (let i of list) {
+                            if (i.name === items[0].name) {
+                                return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {url: isValidString(i.url, 'url', 'url is not vaild')}}).then(item => {
+                                    url = i.url;
+                                    return lovetvGetlist();
+                                });
+                            }
+                        }
+                        dramaIndex++;
+                        if (dramaIndex < dramaList.length) {
+                            return recur_loveList(dramaIndex, nextLove);
+                        }
+                        handleError(new HoError('cannot find lovetv'));
+                    }
+                    return recur_loveList(0, nextLove);
+                }) : [list, is_end];
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
@@ -1710,13 +1736,24 @@ export default {
                                             obj.push(`yuk_${i}`);
                                         }
                                     } else if (t === 3) {
+                                        //open
                                         for (let i of vIds) {
                                             obj.push(`ope_${i}`);
                                         }
-                                        //up2stream
                                     } else if (t === 12) {
+                                        //up2stream
                                         for (let i of vIds) {
                                             obj.push(`up2_${i}`);
+                                        }
+                                    } else if (t === 19) {
+                                        //愛藝奇
+                                        for (let i of vIds) {
+                                            obj.push(`iqi_${i}`);
+                                        }
+                                    } else if (t === 6) {
+                                        //line tv
+                                        for (let i of vIds) {
+                                            obj.push(`lin_${i}`);
                                         }
                                     } else {
                                         for (let i of vIds) {
@@ -2172,55 +2209,73 @@ export const bilibiliVideoUrl = url => {
     });
 }
 
-export const youtubeVideoUrl = (id, url) => new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+export const youtubeVideoUrl = (id, url) => {
     let ret_obj = {
-        title: info.title,
+        title: id,
         video: [],
     };
-    const ret_info = info.formats ? info.formats : info;
-    if (id === 'you') {
-        let audio_size = 0;
-        ret_info.forEach(i => {
-            if (i.format_note === 'DASH audio') {
-                if (!audio_size) {
-                    audio_size = i.filesize;
-                    ret_obj['audio'] = i.url;
-                } else if (audio_size > i.filesize) {
-                    audio_size = i.filesize;
-                    ret_obj['audio'] = i.url;
-                }
-            } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, i.url);
-            }
-        });
-    } else if (id === 'dym') {
-        ret_info.forEach(i => {
-            if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, i.url);
-            }
-        });
+    if (id === 'lin') {
+        ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
+    } else if (id === 'iqi') {
+        const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+        ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/v_${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
+    } else if (id === 'ope') {
+        ret_obj['iframe'] = [url];
     } else {
-        if (Array.isArray(ret_info)) {
-            ret_info.forEach(i => {
-                if ((i.ext === 'mp4' || i.ext === 'webm')) {
-                    ret_obj['video'].splice(0, 0, i.url);
+        return new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+            ret_obj.title = info.title;
+            const ret_info = info.formats ? info.formats : info;
+            if (id === 'you') {
+                let audio_size = 0;
+                ret_info.forEach(i => {
+                    if (i.format_note === 'DASH audio') {
+                        if (!audio_size) {
+                            audio_size = i.filesize;
+                            ret_obj['audio'] = i.url;
+                        } else if (audio_size > i.filesize) {
+                            audio_size = i.filesize;
+                            ret_obj['audio'] = i.url;
+                        }
+                    } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, i.url);
+                    }
+                });
+            } else if (id === 'dym') {
+                ret_info.forEach(i => {
+                    if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, i.url);
+                    }
+                });
+            } else if (id === 'lin') {
+                ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
+            } else if (id === 'iqi') {
+                const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+                ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
+            } else {
+                if (Array.isArray(ret_info)) {
+                    ret_info.forEach(i => {
+                        if ((i.ext === 'mp4' || i.ext === 'webm')) {
+                            ret_obj['video'].splice(0, 0, i.url);
+                        }
+                    });
+                } else {
+                    if ((ret_info.ext === 'mp4' || ret_info.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, ret_info.url);
+                    }
                 }
-            });
-        } else {
-            if ((ret_info.ext === 'mp4' || ret_info.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, ret_info.url);
             }
-        }
-    }
-    if (id === 'yuk') {
-        ret_obj['embed'] = [];
-        ret_obj['video'].map(i => {
-            if (i.match(/type=flv/)) {
-                ret_obj['embed'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z]+)\.html$/)[1]}`);
+            if (id === 'yuk') {
+                ret_obj['iframe'] = [];
+                ret_obj['video'].map(i => {
+                    if (i.match(/type=flv/)) {
+                        ret_obj['iframe'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z]+=)\.html$/)[1]}`);
+                    }
+                });
             }
+            return ret_obj;
         });
     }
-    return ret_obj;
-});
+    return Promise.resolve(ret_obj);
+};
 
 const updateDocDate = (type, date) => Mongo('update', DOCDB, {type}, {$set: {type, date}}, {upsert: true});
