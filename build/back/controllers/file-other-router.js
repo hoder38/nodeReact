@@ -192,7 +192,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
             res.writeHead(200, { 'Content-Type': 'text/vtt' });
             (0, _fs.createReadStream)((0, _fs.existsSync)(subPath + '.vtt') ? subPath + '.vtt' : '/home/pi/app/public/123.vtt').pipe(res);
         };
-        var id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope)_/);
+        var id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi)_/);
         if (id) {
             var id_valid = (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild');
             var filePath = null;
@@ -211,6 +211,12 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
                     break;
                 case 'ope':
                     filePath = (0, _utility.getFileLocation)('openload', id_valid);
+                    break;
+                case 'lin':
+                    filePath = (0, _utility.getFileLocation)('line', id_valid);
+                    break;
+                case 'iqi':
+                    filePath = (0, _utility.getFileLocation)('iqiyi', id_valid);
                     break;
                 default:
                     filePath = (0, _utility.getFileLocation)('youtube', id_valid);
@@ -766,7 +772,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                 });
             });
         };
-        var idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
+        var idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi)_/);
         if (idMatch) {
             var ex_type = 'youtube';
             switch (idMatch[1]) {
@@ -781,6 +787,12 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     break;
                 case 'ope':
                     ex_type = 'openload';
+                    break;
+                case 'lin':
+                    ex_type = 'line';
+                    break;
+                case 'iqi':
+                    ex_type = 'iqiyi';
                     break;
             }
             var id = (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild');

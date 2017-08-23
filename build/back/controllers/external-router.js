@@ -295,7 +295,7 @@ router.get('/2drive/:uid', function (req, res, next) {
 
 router.get('/getSingle/:uid', function (req, res, next) {
     console.log('external getSingle');
-    var id = req.params.uid.match(/^(you|dym|bil|yuk|ope)_(.*)/);
+    var id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi)_(.*)/);
     if (!id) {
         (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'));
     }
@@ -315,6 +315,12 @@ router.get('/getSingle/:uid', function (req, res, next) {
             break;
         case 'ope':
             url = 'https://openload.co/embed/' + id[2] + '/';
+            break;
+        case 'iqi':
+            url = 'http://www.iqiyi.com/' + id[2] + '.html';
+            break;
+        case 'lin':
+            url = 'https://tv.line.me/v/' + id[2];
             break;
         default:
             url = 'http://www.youtube.com/watch?v=' + id[2];

@@ -25,10 +25,6 @@ var _typeof2 = require('babel-runtime/helpers/typeof');
 
 var _typeof3 = _interopRequireDefault(_typeof2);
 
-var _assign = require('babel-runtime/core-js/object/assign');
-
-var _assign2 = _interopRequireDefault(_assign);
-
 var _defineProperty2 = require('babel-runtime/helpers/defineProperty');
 
 var _defineProperty3 = _interopRequireDefault(_defineProperty2);
@@ -40,6 +36,10 @@ var _set2 = _interopRequireDefault(_set);
 var _promise = require('babel-runtime/core-js/promise');
 
 var _promise2 = _interopRequireDefault(_promise);
+
+var _assign = require('babel-runtime/core-js/object/assign');
+
+var _assign2 = _interopRequireDefault(_assign);
 
 var _constants = require('../constants');
 
@@ -87,6 +87,76 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
+var dramaList = ['http://tw.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp.jplovetv.com/2012/08/drama-list.html'];
+
+var recur_loveList = function recur_loveList(dramaIndex, next) {
+    return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
+        var list = [];
+        var year = null;
+        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+        var tbody = (0, _utility.findTag)(table, 'tbody')[0];
+        if (tbody) {
+            table = tbody;
+        }
+        table.children.forEach(function (t) {
+            return (0, _utility.findTag)(t, 'td').forEach(function (d) {
+                var h = (0, _utility.findTag)(d, 'h3')[0];
+                if (h) {
+                    var a = (0, _utility.findTag)(h, 'a')[0];
+                    if (a) {
+                        var name = (0, _utility.findTag)(a)[0];
+                        if (name) {
+                            if (name.match(/�/)) {
+                                return true;
+                            }
+                            var dramaType = (0, _utility.findTag)(h)[0];
+                            if (year) {
+                                var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://jp.jplovetv.com');
+                                list.push((0, _assign2.default)({
+                                    name: name,
+                                    url: url.replace(/max\-results\=20$/, 'max-results=200'),
+                                    year: year
+                                }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
+                            }
+                            return true;
+                        }
+                    }
+                    var getY = function getY(node) {
+                        var y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
+                        if (y) {
+                            year = y[0];
+                        }
+                    };
+                    var s = (0, _utility.findTag)(h, 'span')[0];
+                    if (s) {
+                        getY(s);
+                    } else {
+                        var f = (0, _utility.findTag)(h, 'font')[0];
+                        if (f) {
+                            getY(f);
+                        } else {
+                            var strong = (0, _utility.findTag)(h, 'strong')[0];
+                            if (strong) {
+                                var span = (0, _utility.findTag)(strong, 'span')[0];
+                                if (span) {
+                                    getY(span);
+                                } else {
+                                    var font = (0, _utility.findTag)(strong, 'font')[0];
+                                    if (font) {
+                                        getY(font);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        console.log(list.length);
+        return next(0, dramaIndex, list);
+    });
+};
+
 exports.default = {
     //type要補到deltag裡
     getList: function getList(type) {
@@ -105,7 +175,6 @@ exports.default = {
         var _ret = function () {
             switch (type) {
                 case 'lovetv':
-                    var dramaList = ['http://tw.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp.jplovetv.com/2012/08/drama-list.html'];
                     var recur_loveSave = function recur_loveSave(index, dramaIndex, list) {
                         var external_item = list[index];
                         var name = (0, _utility.toValidName)(external_item.name);
@@ -166,72 +235,6 @@ exports.default = {
                             });
                         });
                     };
-                    var recur_loveList = function recur_loveList(dramaIndex) {
-                        return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
-                            var list = [];
-                            var year = null;
-                            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-                            var tbody = (0, _utility.findTag)(table, 'tbody')[0];
-                            if (tbody) {
-                                table = tbody;
-                            }
-                            table.children.forEach(function (t) {
-                                return (0, _utility.findTag)(t, 'td').forEach(function (d) {
-                                    var h = (0, _utility.findTag)(d, 'h3')[0];
-                                    if (h) {
-                                        var a = (0, _utility.findTag)(h, 'a')[0];
-                                        if (a) {
-                                            var name = (0, _utility.findTag)(a)[0];
-                                            if (name) {
-                                                if (name.match(/�/)) {
-                                                    return true;
-                                                }
-                                                var dramaType = (0, _utility.findTag)(h)[0];
-                                                if (year) {
-                                                    list.push((0, _assign2.default)({
-                                                        name: name,
-                                                        url: dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://jp.jplovetv.com'),
-                                                        year: year
-                                                    }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
-                                                }
-                                                return true;
-                                            }
-                                        }
-                                        var getY = function getY(node) {
-                                            var y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
-                                            if (y) {
-                                                year = y[0];
-                                            }
-                                        };
-                                        var s = (0, _utility.findTag)(h, 'span')[0];
-                                        if (s) {
-                                            getY(s);
-                                        } else {
-                                            var f = (0, _utility.findTag)(h, 'font')[0];
-                                            if (f) {
-                                                getY(f);
-                                            } else {
-                                                var strong = (0, _utility.findTag)(h, 'strong')[0];
-                                                if (strong) {
-                                                    var span = (0, _utility.findTag)(strong, 'span')[0];
-                                                    if (span) {
-                                                        getY(span);
-                                                    } else {
-                                                        var font = (0, _utility.findTag)(strong, 'font')[0];
-                                                        if (font) {
-                                                            getY(font);
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            });
-                            console.log(list.length);
-                            return nextLove(0, dramaIndex, list);
-                        });
-                    };
 
                     var nextLove = function nextLove(index, dramaIndex, list) {
                         if (index < list.length) {
@@ -239,7 +242,7 @@ exports.default = {
                         } else {
                             dramaIndex++;
                             if (dramaIndex < dramaList.length) {
-                                return recur_loveList(dramaIndex);
+                                return recur_loveList(dramaIndex, nextLove);
                             }
                         }
                         return _promise2.default.resolve();
@@ -247,7 +250,7 @@ exports.default = {
 
                     return {
                         v: clearExtenal().then(function () {
-                            return recur_loveList(0);
+                            return recur_loveList(0, nextLove);
                         })
                     };
                 case 'eztv':
@@ -2422,9 +2425,9 @@ exports.default = {
 
                             try {
                                 for (var _iterator21 = (0, _getIterator3.default)(list), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-                                    var i = _step21.value;
+                                    var _i = _step21.value;
 
-                                    if (i.url.match(/大結局/)) {
+                                    if (_i.url.match(/大結局/)) {
                                         is_end = true;
                                         break;
                                     }
@@ -2444,7 +2447,60 @@ exports.default = {
                                 }
                             }
 
-                            return [list, is_end];
+                            return list.length < 1 ? (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
+                                owner: type,
+                                url: encodeURIComponent(url)
+                            }).then(function (items) {
+                                if (items.length < 1) {
+                                    (0, _utility.handleError)(new _utility.HoError('cannot find lovetv url'));
+                                }
+                                var nextLove = function nextLove(index, dramaIndex, list) {
+                                    var _iteratorNormalCompletion22 = true;
+                                    var _didIteratorError22 = false;
+                                    var _iteratorError22 = undefined;
+
+                                    try {
+                                        var _loop = function _loop() {
+                                            var i = _step22.value;
+
+                                            if (i.name === items[0].name) {
+                                                return {
+                                                    v: (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $set: { url: (0, _utility.isValidString)(i.url, 'url', 'url is not vaild') } }).then(function (item) {
+                                                        url = i.url;
+                                                        return lovetvGetlist();
+                                                    })
+                                                };
+                                            }
+                                        };
+
+                                        for (var _iterator22 = (0, _getIterator3.default)(list), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                                            var _ret9 = _loop();
+
+                                            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                        }
+                                    } catch (err) {
+                                        _didIteratorError22 = true;
+                                        _iteratorError22 = err;
+                                    } finally {
+                                        try {
+                                            if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                                                _iterator22.return();
+                                            }
+                                        } finally {
+                                            if (_didIteratorError22) {
+                                                throw _iteratorError22;
+                                            }
+                                        }
+                                    }
+
+                                    dramaIndex++;
+                                    if (dramaIndex < dramaList.length) {
+                                        return recur_loveList(dramaIndex, nextLove);
+                                    }
+                                    (0, _utility.handleError)(new _utility.HoError('cannot find lovetv'));
+                                };
+                                return recur_loveList(0, nextLove);
+                            }) : [list, is_end];
                         });
                     };
                     return {
@@ -2465,44 +2521,19 @@ exports.default = {
                                             if (vIds.length > 0) {
                                                 var t = Number((0, _utility.findTag)((0, _utility.findTag)(v, 'div', 'video_type' + vType)[0])[0]);
                                                 if (t === 17) {
-                                                    for (var i = 1; i <= vIds[1]; i++) {
-                                                        obj.push('bil_av' + vIds[0] + '_' + i);
+                                                    for (var _i2 = 1; _i2 <= vIds[1]; _i2++) {
+                                                        obj.push('bil_av' + vIds[0] + '_' + _i2);
                                                     }
                                                 } else if (t === 1) {
-                                                    var _iteratorNormalCompletion22 = true;
-                                                    var _didIteratorError22 = false;
-                                                    var _iteratorError22 = undefined;
-
-                                                    try {
-                                                        for (var _iterator22 = (0, _getIterator3.default)(vIds), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                                            var _i = _step22.value;
-
-                                                            obj.push('you_' + _i);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError22 = true;
-                                                        _iteratorError22 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion22 && _iterator22.return) {
-                                                                _iterator22.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError22) {
-                                                                throw _iteratorError22;
-                                                            }
-                                                        }
-                                                    }
-                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion23 = true;
                                                     var _didIteratorError23 = false;
                                                     var _iteratorError23 = undefined;
 
                                                     try {
                                                         for (var _iterator23 = (0, _getIterator3.default)(vIds), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-                                                            var _i2 = _step23.value;
+                                                            var _i3 = _step23.value;
 
-                                                            obj.push('yuk_' + _i2);
+                                                            obj.push('you_' + _i3);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError23 = true;
@@ -2518,16 +2549,16 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 3) {
+                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion24 = true;
                                                     var _didIteratorError24 = false;
                                                     var _iteratorError24 = undefined;
 
                                                     try {
                                                         for (var _iterator24 = (0, _getIterator3.default)(vIds), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                                            var _i3 = _step24.value;
+                                                            var _i4 = _step24.value;
 
-                                                            obj.push('ope_' + _i3);
+                                                            obj.push('yuk_' + _i4);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError24 = true;
@@ -2543,16 +2574,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else {
+                                                } else if (t === 3) {
+                                                    //open
                                                     var _iteratorNormalCompletion25 = true;
                                                     var _didIteratorError25 = false;
                                                     var _iteratorError25 = undefined;
 
                                                     try {
                                                         for (var _iterator25 = (0, _getIterator3.default)(vIds), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                                                            var _i4 = _step25.value;
+                                                            var _i5 = _step25.value;
 
-                                                            obj.push('dym_' + _i4);
+                                                            obj.push('ope_' + _i5);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError25 = true;
@@ -2565,6 +2597,109 @@ exports.default = {
                                                         } finally {
                                                             if (_didIteratorError25) {
                                                                 throw _iteratorError25;
+                                                            }
+                                                        }
+                                                    }
+                                                } else if (t === 12) {
+                                                    //up2stream
+                                                    var _iteratorNormalCompletion26 = true;
+                                                    var _didIteratorError26 = false;
+                                                    var _iteratorError26 = undefined;
+
+                                                    try {
+                                                        for (var _iterator26 = (0, _getIterator3.default)(vIds), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
+                                                            var _i6 = _step26.value;
+
+                                                            obj.push('up2_' + _i6);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError26 = true;
+                                                        _iteratorError26 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion26 && _iterator26.return) {
+                                                                _iterator26.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError26) {
+                                                                throw _iteratorError26;
+                                                            }
+                                                        }
+                                                    }
+                                                } else if (t === 19) {
+                                                    //愛奇藝
+                                                    var _iteratorNormalCompletion27 = true;
+                                                    var _didIteratorError27 = false;
+                                                    var _iteratorError27 = undefined;
+
+                                                    try {
+                                                        for (var _iterator27 = (0, _getIterator3.default)(vIds), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
+                                                            var _i7 = _step27.value;
+
+                                                            obj.push('iqi_' + _i7);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError27 = true;
+                                                        _iteratorError27 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion27 && _iterator27.return) {
+                                                                _iterator27.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError27) {
+                                                                throw _iteratorError27;
+                                                            }
+                                                        }
+                                                    }
+                                                } else if (t === 6) {
+                                                    //line tv
+                                                    var _iteratorNormalCompletion28 = true;
+                                                    var _didIteratorError28 = false;
+                                                    var _iteratorError28 = undefined;
+
+                                                    try {
+                                                        for (var _iterator28 = (0, _getIterator3.default)(vIds), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
+                                                            var _i8 = _step28.value;
+
+                                                            obj.push('lin_' + _i8);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError28 = true;
+                                                        _iteratorError28 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion28 && _iterator28.return) {
+                                                                _iterator28.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError28) {
+                                                                throw _iteratorError28;
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    var _iteratorNormalCompletion29 = true;
+                                                    var _didIteratorError29 = false;
+                                                    var _iteratorError29 = undefined;
+
+                                                    try {
+                                                        for (var _iterator29 = (0, _getIterator3.default)(vIds), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
+                                                            var _i9 = _step29.value;
+
+                                                            obj.push('dym_' + _i9);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError29 = true;
+                                                        _iteratorError29 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion29 && _iterator29.return) {
+                                                                _iterator29.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError29) {
+                                                                throw _iteratorError29;
                                                             }
                                                         }
                                                     }
@@ -2625,9 +2760,9 @@ exports.default = {
                                             size: size
                                         };
                                         var si = -1;
-                                        for (var i in list) {
-                                            if (list[i][0]['season'] === season) {
-                                                si = i;
+                                        for (var _i10 in list) {
+                                            if (list[_i10][0]['season'] === season) {
+                                                si = _i10;
                                                 break;
                                             }
                                         }
@@ -2635,9 +2770,9 @@ exports.default = {
                                             list.push([data]);
                                         } else {
                                             var isInsert = false;
-                                            for (var _i5 in list[si]) {
-                                                if (list[si][_i5].size > size) {
-                                                    list[si].splice(_i5, 0, data);
+                                            for (var _i11 in list[si]) {
+                                                if (list[si][_i11].size > size) {
+                                                    list[si].splice(_i11, 0, data);
                                                     isInsert = true;
                                                     break;
                                                 }
@@ -2743,29 +2878,29 @@ exports.default = {
                                 (0, _utility.handleError)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion26 = true;
-                            var _didIteratorError26 = false;
-                            var _iteratorError26 = undefined;
+                            var _iteratorNormalCompletion30 = true;
+                            var _didIteratorError30 = false;
+                            var _iteratorError30 = undefined;
 
                             try {
-                                for (var _iterator26 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-                                    var i = _step26.value;
+                                for (var _iterator30 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
+                                    var _i12 = _step30.value;
 
-                                    if (i['quality'] === '1080p' || !magnet && i['quality'] === '720p') {
-                                        magnet = 'magnet:?xt=urn:btih:' + i['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
+                                    if (_i12['quality'] === '1080p' || !magnet && _i12['quality'] === '720p') {
+                                        magnet = 'magnet:?xt=urn:btih:' + _i12['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError26 = true;
-                                _iteratorError26 = err;
+                                _didIteratorError30 = true;
+                                _iteratorError30 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion26 && _iterator26.return) {
-                                        _iterator26.return();
+                                    if (!_iteratorNormalCompletion30 && _iterator30.return) {
+                                        _iterator30.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError26) {
-                                        throw _iteratorError26;
+                                    if (_didIteratorError30) {
+                                        throw _iteratorError30;
                                     }
                                 }
                             }
@@ -2817,7 +2952,7 @@ exports.default = {
                                 }
                                 return [json_data.result.episodes.map(function (e) {
                                     return {
-                                        id: 'bil_av' + e.av_id + '_' + e.index,
+                                        id: 'bil_av' + e.av_id + '_' + e.page,
                                         name: e.index_title
                                     };
                                 }).reverse(), json_data.result.seasons];
@@ -2825,15 +2960,15 @@ exports.default = {
                         };
                         return bili_id[1] ? (0, _apiTool2.default)('url', url, { referer: 'http://www.bilibili.com/' }).then(function (raw_data) {
                             var select = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'b-page-body')[0], 'div', 'player-wrapper')[0], 'div', 'main-inner')[0], 'div', 'v-plist')[0], 'div', 'plist')[0], 'select');
-                            return select.length > 0 ? (0, _utility.findTag)(select[0], 'option').map(function (o) {
+                            return select.length > 0 ? [(0, _utility.findTag)(select[0], 'option').map(function (o) {
                                 return {
                                     id: 'bil_' + bili_id[0] + '_' + o.attribs.value.match(/index_(\d+)\.html/)[1],
                                     name: (0, _utility.findTag)(o)[0]
                                 };
-                            }) : [{
+                            }), false] : [[{
                                 id: 'bil_' + bili_id[0],
                                 name: 'bil'
-                            }];
+                            }], false];
                         }) : getBangumi(bili_id[0]).then(function (_ref11) {
                             var _ref12 = (0, _slicedToArray3.default)(_ref11, 2),
                                 list = _ref12[0],
@@ -2916,8 +3051,8 @@ exports.default = {
                                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                                     var sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
                                     var pre_obj = [];
-                                    for (var i = 1; i <= sub; i++) {
-                                        pre_obj.push(i < 10 ? '00' + i + '.jpg' : i < 100 ? '0' + i + '.jpg' : i + '.jpg');
+                                    for (var _i13 = 1; _i13 <= sub; _i13++) {
+                                        pre_obj.push(_i13 < 10 ? '00' + _i13 + '.jpg' : _i13 < 100 ? '0' + _i13 + '.jpg' : _i13 + '.jpg');
                                     }
                                     saveList(madGetlist, raw_list, is_end, etime);
                                     return [{
@@ -3083,81 +3218,93 @@ var bilibiliVideoUrl = exports.bilibiliVideoUrl = function bilibiliVideoUrl(url)
     if (!id) {
         (0, _utility.handleError)(new _utility.HoError('bilibili id invalid'));
     }
-    var page = id[3] ? Number(id[4]) - 1 : 0;
+    var page = id[3] ? Number(id[4]) : 1;
     return (0, _apiTool2.default)('url', 'http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=' + id[2] + '&page=1&batch=true', { referer: 'http://api.bilibili.com/' }).then(function (raw_data) {
         var json_data = (0, _utility.getJson)(raw_data);
         if (!json_data.list) {
             (0, _utility.handleError)(new _utility.HoError('cannot get list'));
         }
-        var cid = json_data.list[page].cid;
-        if (!cid) {
-            (0, _utility.handleError)(new _utility.HoError('cannot get cid'));
-        }
-        return (0, _apiTool2.default)('url', 'http://interface.bilibili.com/playurl?platform=bilihelper&otype=json&appkey=8e9fc618fbd41e28&cid=' + cid + '&quality=4&type=mp4', {
-            referer: 'http://interface.bilibili.com/',
-            fake_ip: '220.181.111.228'
-        }).then(function (raw_data) {
-            var json_data_1 = (0, _utility.getJson)(raw_data);
-            if (!json_data_1.durl || !json_data_1.durl[0] || !json_data_1.durl[0].url) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find videoUrl'));
-            }
-            return {
-                title: json_data.list[page].part,
-                video: [json_data_1.durl[0].url]
-            };
-        });
+        return {
+            title: json_data.list[page].part,
+            video: [],
+            embed: ['//static.hdslb.com/miniloader.swf?aid=' + id[2] + '&page=' + page]
+        };
     });
 };
 
 var youtubeVideoUrl = exports.youtubeVideoUrl = function youtubeVideoUrl(id, url) {
-    return new _promise2.default(function (resolve, reject) {
-        return (0, _youtubeDl.getInfo)(url, [], { maxBuffer: 10 * 1024 * 1024 }, function (err, info) {
-            return err ? reject(err) : resolve(info);
-        });
-    }).then(function (info) {
-        var ret_obj = {
-            title: info.title,
-            video: []
-        };
-        var ret_info = info.formats ? info.formats : info;
-        if (id === 'you') {
-            (function () {
-                var audio_size = 0;
-                ret_info.forEach(function (i) {
-                    if (i.format_note === 'DASH audio') {
-                        if (!audio_size) {
-                            audio_size = i.filesize;
-                            ret_obj['audio'] = i.url;
-                        } else if (audio_size > i.filesize) {
-                            audio_size = i.filesize;
-                            ret_obj['audio'] = i.url;
-                        }
-                    } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
-                        ret_obj['video'].splice(0, 0, i.url);
-                    }
-                });
-            })();
-        } else if (id === 'dym') {
-            ret_info.forEach(function (i) {
-                if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
-                    ret_obj['video'].splice(0, 0, i.url);
-                }
+    var ret_obj = {
+        title: id,
+        video: []
+    };
+    if (id === 'lin') {
+        ret_obj['iframe'] = ['//tv.line.me/embed/' + url.match(/[^\/]+$/)[0] + '?isAutoPlay=true'];
+    } else if (id === 'iqi') {
+        var iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+        ret_obj['embed'] = ['//player.video.qiyi.com/' + iqiId[0] + '/0/0/v_' + iqiId[1] + '.swf-albumId=' + iqiId[2] + '-tvId=' + iqiId[3] + '-isPurchase=0-cnId=2'];
+    } else if (id === 'ope') {
+        ret_obj['iframe'] = [url];
+    } else {
+        return new _promise2.default(function (resolve, reject) {
+            return (0, _youtubeDl.getInfo)(url, [], { maxBuffer: 10 * 1024 * 1024 }, function (err, info) {
+                return err ? reject(err) : resolve(info);
             });
-        } else {
-            if (Array.isArray(ret_info)) {
+        }).then(function (info) {
+            ret_obj.title = info.title;
+            var ret_info = info.formats ? info.formats : info;
+            if (id === 'you') {
+                (function () {
+                    var audio_size = 0;
+                    ret_info.forEach(function (i) {
+                        if (i.format_note === 'DASH audio') {
+                            if (!audio_size) {
+                                audio_size = i.filesize;
+                                ret_obj['audio'] = i.url;
+                            } else if (audio_size > i.filesize) {
+                                audio_size = i.filesize;
+                                ret_obj['audio'] = i.url;
+                            }
+                        } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
+                            ret_obj['video'].splice(0, 0, i.url);
+                        }
+                    });
+                })();
+            } else if (id === 'dym') {
                 ret_info.forEach(function (i) {
-                    if (i.ext === 'mp4' || i.ext === 'webm') {
+                    if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
                         ret_obj['video'].splice(0, 0, i.url);
                     }
                 });
+            } else if (id === 'lin') {
+                ret_obj['iframe'] = ['//tv.line.me/embed/' + url.match(/[^\/]+$/)[0] + '?isAutoPlay=true'];
+            } else if (id === 'iqi') {
+                var _iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+                ret_obj['embed'] = ['//player.video.qiyi.com/' + _iqiId[0] + '/0/0/' + _iqiId[1] + '.swf-albumId=' + _iqiId[2] + '-tvId=' + _iqiId[3] + '-isPurchase=0-cnId=2'];
             } else {
-                if (ret_info.ext === 'mp4' || ret_info.ext === 'webm') {
-                    ret_obj['video'].splice(0, 0, ret_info.url);
+                if (Array.isArray(ret_info)) {
+                    ret_info.forEach(function (i) {
+                        if (i.ext === 'mp4' || i.ext === 'webm') {
+                            ret_obj['video'].splice(0, 0, i.url);
+                        }
+                    });
+                } else {
+                    if (ret_info.ext === 'mp4' || ret_info.ext === 'webm') {
+                        ret_obj['video'].splice(0, 0, ret_info.url);
+                    }
                 }
             }
-        }
-        return ret_obj;
-    });
+            if (id === 'yuk') {
+                ret_obj['iframe'] = [];
+                ret_obj['video'].map(function (i) {
+                    if (i.match(/type=flv/)) {
+                        ret_obj['iframe'].push('//player.youku.com/embed/' + url.match(/id_([\da-zA-Z]+=)\.html$/)[1]);
+                    }
+                });
+            }
+            return ret_obj;
+        });
+    }
+    return _promise2.default.resolve(ret_obj);
 };
 
 var updateDocDate = function updateDocDate(type, date) {

@@ -776,7 +776,7 @@ router.get('/media/record/:id/:time/:pId?', function (req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         (0, _utility.handleError)(new _utility.HoError('timestamp is not vaild'));
     }
-    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope)_/) ? (0, _utility.isValidString)(req.params.id, 'name', 'external is not vaild') : (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
+    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl)_/) ? (0, _utility.isValidString)(req.params.id, 'name', 'external is not vaild') : (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
     var data = req.params.time === '0' ? ['hdel', id.toString()] : ['hmset', (0, _defineProperty3.default)({}, id.toString(), req.params.time)];
     return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function (ret) {
         return res.json({ apiOK: true });
