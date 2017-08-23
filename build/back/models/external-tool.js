@@ -114,7 +114,7 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
                                 var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://jp.jplovetv.com');
                                 list.push((0, _assign2.default)({
                                     name: name,
-                                    url: url.replace(/max\-results\=20$/, 'max-results=200'),
+                                    url: url + '?max-results=300',
                                     year: year
                                 }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
                             }

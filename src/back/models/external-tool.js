@@ -45,7 +45,7 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                         const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');
                         list.push(Object.assign({
                             name,
-                            url: url.replace(/max\-results\=20$/, 'max-results=200'),
+                            url: `${url}?max-results=300`,
                             year,
                         }, dramaType ? {type: dramaType.match(/^\(([^\)]+)/)[1]} : {}));
                     }
