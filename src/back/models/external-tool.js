@@ -1746,7 +1746,7 @@ export default {
                                             obj.push(`up2_${i}`);
                                         }
                                     } else if (t === 19) {
-                                        //愛藝奇
+                                        //愛奇藝
                                         for (let i of vIds) {
                                             obj.push(`iqi_${i}`);
                                         }
@@ -1952,7 +1952,7 @@ export default {
                     }
                     return [
                         json_data.result.episodes.map(e => ({
-                            id: `bil_av${e.av_id}_${e.index}`,
+                            id: `bil_av${e.av_id}_${e.page}`,
                             name: e.index_title,
                         })).reverse(),
                         json_data.result.seasons,
@@ -1960,13 +1960,13 @@ export default {
                 });
                 return bili_id[1] ? Api('url', url, {referer: 'http://www.bilibili.com/'}).then(raw_data => {
                     const select = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'b-page-body')[0], 'div', 'player-wrapper')[0], 'div', 'main-inner')[0], 'div', 'v-plist')[0], 'div', 'plist')[0], 'select');
-                    return (select.length > 0) ? findTag(select[0], 'option').map(o => ({
+                    return (select.length > 0) ? [findTag(select[0], 'option').map(o => ({
                         id: `bil_${bili_id[0]}_${o.attribs.value.match(/index_(\d+)\.html/)[1]}`,
                         name: findTag(o)[0],
-                    })) : [{
+                    })), false] : [[{
                         id: `bil_${bili_id[0]}`,
                         name: 'bil',
-                    }];
+                    }], false];
                 }) : getBangumi(bili_id[0]).then(([list, seasons]) => {
                     const recur_season = index => getBangumi(seasons[index].season_id).then(([slist, sseasons]) => {
                         list = list.concat(slist);
@@ -2183,29 +2183,17 @@ export const bilibiliVideoUrl = url => {
     if (!id) {
         handleError(new HoError('bilibili id invalid'));
     }
-    const page = id[3] ? Number(id[4]) - 1 : 0;
+    const page = id[3] ? Number(id[4]) : 1;
     return Api('url', `http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=${id[2]}&page=1&batch=true`, {referer: 'http://api.bilibili.com/'}).then(raw_data => {
         const json_data = getJson(raw_data);
         if (!json_data.list) {
             handleError(new HoError('cannot get list'));
         }
-        const cid = json_data.list[page].cid;
-        if (!cid) {
-            handleError(new HoError('cannot get cid'));
-        }
-        return Api('url', `http://interface.bilibili.com/playurl?platform=bilihelper&otype=json&appkey=8e9fc618fbd41e28&cid=${cid}&quality=4&type=mp4`, {
-            referer: 'http://interface.bilibili.com/',
-            fake_ip: '220.181.111.228',
-        }).then(raw_data => {
-            const json_data_1 = getJson(raw_data);
-            if (!json_data_1.durl || !json_data_1.durl[0] || !json_data_1.durl[0].url) {
-                handleError(new HoError('cannot find videoUrl'));
-            }
-            return {
-                title: json_data.list[page].part,
-                video: [json_data_1.durl[0].url],
-            }
-        });
+        return {
+            title: json_data.list[page].part,
+            video: [],
+            embed: [`//static.hdslb.com/miniloader.swf?aid=${id[2]}&page=${page}`],
+        };
     });
 }
 

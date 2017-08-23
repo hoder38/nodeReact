@@ -900,6 +900,7 @@ const MediaWidget = React.createClass({
             }
         }
         let media2 = null
+        let media4 = null
         if (this.props.mediaType === 3 || this.props.mediaType === 9) {
             const mediaCss = this.props.full ? {
                 maxWidth: '100%',
@@ -913,12 +914,13 @@ const MediaWidget = React.createClass({
             }
             const isIframe = this.state.src.match(/^iframe: (.*)$/);
             const isEmbed = this.state.src.match(/^embed: (.*)$/);
-            media2 = isIframe ? <iframe style={{height: '420px', width: '640px'}} src={isIframe[1]} frameBorder='0px' allowFullScreen={true}></iframe> : isEmbed ? <embed style={{height: '420px', width: '640px'}} src={isEmbed[1]} allowFullScreen={true} type="application/x-shockwave-flash"></embed> : (
-                <video style={Object.assign(mediaCss, this.props.mediaType === 9 && this._item.type !== 3 ? {display: 'none'} : {})} controls src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.src : ''} ref={ref => this._video = ref}>
-                    <track label="Chinese" kind="captions" srcLang="ch" src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.subCh : ''} default={true} />
-                    <track label="English" kind="captions" srcLang="en" src={this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? this.state.subEn : ''}/>
+            media2 = (
+                <video style={Object.assign(mediaCss, ((this.props.mediaType === 9 && this._item.type !== 3) || isIframe || isEmbed) ? {display: 'none'} : {})} controls src={(!isIframe && !isEmbed && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? this.state.src : ''} ref={ref => this._video = ref}>
+                    <track label="Chinese" kind="captions" srcLang="ch" src={(!isIframe && !isEmbed && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? this.state.subCh : ''} default={true} />
+                    <track label="English" kind="captions" srcLang="en" src={(!isIframe && !isEmbed && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? this.state.subEn : ''}/>
                 </video>
             )
+            media4 = isIframe ? <iframe style={{height: '420px', width: '640px'}} src={isIframe[1]} frameBorder='0px' allowFullScreen={true}></iframe> : isEmbed ? <embed style={{height: '420px', width: '640px'}} src={isEmbed[1]} allowFullScreen={true} type="application/x-shockwave-flash"></embed> : null;
         }
         const media3 = (this.props.mediaType === 4 || this.props.mediaType === 9) ? <audio style={Object.assign({width: '300px', height: '50px'}, this.props.mediaType === 9 && this._item.type !== 4 ? {display: 'none'} : {})} controls src={this.props.mediaType === 4 || (this.props.mediaType === 9 && this._item.type === 4) ? this.state.src : ''} ref={ref => this._audio = ref} /> : null
         return (
@@ -943,6 +945,7 @@ const MediaWidget = React.createClass({
                     {media}
                     {media2}
                     {media3}
+                    {media4}
                 </div>
             </section>
         )
