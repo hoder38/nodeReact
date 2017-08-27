@@ -15,6 +15,77 @@ import Api from './api-tool'
 
 const opencc = new OpenCC('s2t.json');
 
+const dramaList = [
+    'http://tw.lovetvshow.info/2013/05/drama-list.html',
+    'http://cn.lovetvshow.info/2012/05/drama-list.html',
+    'http://kr.vslovetv.com/2012/04/drama-list.html',
+    'http://jp.jplovetv.com/2012/08/drama-list.html',
+];
+
+const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
+    let list = [];
+    let year = null;
+    let table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+    const tbody = findTag(table, 'tbody')[0];
+    if (tbody) {
+        table = tbody;
+    }
+    table.children.forEach(t => findTag(t, 'td').forEach(d => {
+        const h = findTag(d, 'h3')[0];
+        if (h) {
+            const a = findTag(h, 'a')[0];
+            if (a) {
+                const name = findTag(a)[0];
+                if (name) {
+                    if (name.match(/�/)) {
+                        return true;
+                    }
+                    const dramaType = findTag(h)[0];
+                    if (year) {
+                        const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');
+                        list.push(Object.assign({
+                            name,
+                            url: `${url}?max-results=300`,
+                            year,
+                        }, dramaType ? {type: dramaType.match(/^\(([^\)]+)/)[1]} : {}));
+                    }
+                    return true;
+                }
+            }
+            const getY = node => {
+                const y = findTag(node)[0].match(/^(Pre-)?\d+/);
+                if (y) {
+                    year = y[0];
+                }
+            }
+            const s = findTag(h, 'span')[0];
+            if (s) {
+                getY(s);
+            } else {
+                const f = findTag(h, 'font')[0];
+                if (f) {
+                    getY(f);
+                } else {
+                    const strong = findTag(h, 'strong')[0];
+                    if (strong) {
+                        const span = findTag(strong, 'span')[0];
+                        if (span) {
+                            getY(span);
+                        } else {
+                            const font = findTag(strong, 'font')[0];
+                            if (font) {
+                                getY(font);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }));
+    console.log(list.length);
+    return next(0, dramaIndex, list);
+});
+
 export default {
     //type要補到deltag裡
     getList: function(type, is_clear=false) {
@@ -27,12 +98,6 @@ export default {
         }) : Promise.resolve();
         switch (type) {
             case 'lovetv':
-            const dramaList = [
-                'http://tw.lovetvshow.info/2013/05/drama-list.html',
-                'http://cn.lovetvshow.info/2012/05/drama-list.html',
-                'http://kr.vslovetv.com/2012/04/drama-list.html',
-                'http://jp.jplovetv.com/2012/08/drama-list.html',
-            ];
             const recur_loveSave = (index, dramaIndex, list) => {
                 const external_item = list[index];
                 let name = toValidName(external_item.name);
@@ -94,80 +159,18 @@ export default {
                     });
                 });
             }
-            const recur_loveList = dramaIndex => Api('url', dramaList[dramaIndex]).then(raw_data => {
-                let list = [];
-                let year = null;
-                let table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-                const tbody = findTag(table, 'tbody')[0];
-                if (tbody) {
-                    table = tbody;
-                }
-                table.children.forEach(t => findTag(t, 'td').forEach(d => {
-                    const h = findTag(d, 'h3')[0];
-                    if (h) {
-                        const a = findTag(h, 'a')[0];
-                        if (a) {
-                            const name = findTag(a)[0];
-                            if (name) {
-                                if (name.match(/�/)) {
-                                    return true;
-                                }
-                                const dramaType = findTag(h)[0];
-                                if (year) {
-                                    list.push(Object.assign({
-                                        name,
-                                        url: (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com'),
-                                        year,
-                                    }, dramaType ? {type: dramaType.match(/^\(([^\)]+)/)[1]} : {}));
-                                }
-                                return true;
-                            }
-                        }
-                        const getY = node => {
-                            const y = findTag(node)[0].match(/^(Pre-)?\d+/);
-                            if (y) {
-                                year = y[0];
-                            }
-                        }
-                        const s = findTag(h, 'span')[0];
-                        if (s) {
-                            getY(s);
-                        } else {
-                            const f = findTag(h, 'font')[0];
-                            if (f) {
-                                getY(f);
-                            } else {
-                                const strong = findTag(h, 'strong')[0];
-                                if (strong) {
-                                    const span = findTag(strong, 'span')[0];
-                                    if (span) {
-                                        getY(span);
-                                    } else {
-                                        const font = findTag(strong, 'font')[0];
-                                        if (font) {
-                                            getY(font);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }));
-                console.log(list.length);
-                return nextLove(0, dramaIndex, list);
-            });
             function nextLove(index, dramaIndex, list) {
                 if (index < list.length) {
                     return recur_loveSave(index, dramaIndex, list);
                 } else {
                     dramaIndex++;
                     if (dramaIndex < dramaList.length) {
-                        return recur_loveList(dramaIndex);
+                        return recur_loveList(dramaIndex, nextLove);
                     }
                 }
                 return Promise.resolve();
             }
-            return clearExtenal().then(() => recur_loveList(0));
+            return clearExtenal().then(() => recur_loveList(0, nextLove));
             case 'eztv':
             const recur_eztvSave = (index, list) => {
                 const external_item = list[index];
@@ -184,7 +187,8 @@ export default {
                     }
                     const url = isValidString(external_item.url, 'url', 'url is not vaild');
                     return Api('url', external_item.url, {referer: 'https://eztv.ag/'}).then(raw_data => {
-                        const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table')[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
+                        const tables = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
+                        const info = tables[1] ? findTag(findTag(tables[1], 'tr')[1], 'td')[0] : findTag(findTag(findTag(findTag(findTag(findTag(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
                         let setTag = new Set(['tv show', '電視劇', '歐美', '西洋', '影片', 'video']);
                         findTag(info).forEach(n => {
                             let infoMatch = false;
@@ -482,7 +486,7 @@ export default {
                 return list;
             });
             case 'ism':
-            return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/PastRob.cfm').then(raw_data => {
+            return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     handleError(new HoError('date invalid'));
@@ -490,28 +494,25 @@ export default {
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
-                const docStr = `(released ${docDate})`;
+                const docStr = `FOR RELEASE: ${docDate}`;
                 let list = [];
-                const pmiList = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'ul');
-                findTag(pmiList[0], 'li').forEach(l => {
-                    if (findTag(l)[0] === docStr) {
+                if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
+                    list.push({
+                        url: 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1',
+                        name: toValidName('Manufacturing ISM'),
+                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                    });
+                }
+                return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1').then(raw_data => {
+                    if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
                         list.push({
-                            url: addPre(findTag(l, 'a')[0].attribs.href, 'https://www.instituteforsupplymanagement.org'),
-                            name: toValidName('Manufacturing ISM'),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
-                    }
-                });
-                findTag(pmiList[1], 'li').forEach(l => {
-                    if (findTag(l)[0] === docStr) {
-                        list.push({
-                            url: addPre(findTag(l, 'a')[0].attribs.href, 'https://www.instituteforsupplymanagement.org'),
+                            url: 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1',
                             name: toValidName('Non-Manufacturing ISM'),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
                     }
+                    return list;
                 });
-                return list;
             });
             case 'cbo':
             return Api('url', 'https://www.conference-board.org/data/consumerconfidence.cfm').then(raw_data => {
@@ -643,7 +644,7 @@ export default {
                 return list;
             });
             case 'sca':
-            return Api('url', 'http://press.sca.isr.umich.edu/press/press_release').then(raw_data => {
+            return Api('url', 'http://www.sca.isr.umich.edu/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     handleError(new HoError('date invalid'));
@@ -652,15 +653,13 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'content')[0], 'ul')[0], 'li', 'list').forEach(l => {
-                    if (findTag(findTag(l, 'span')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d/)[0] === docDate) {
-                        list.push({
-                            url: addPre(findTag(l, 'a')[0].attribs.href, 'http://press.sca.isr.umich.edu'),
-                            name: toValidName('Michigan Consumer Sentiment Index'),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
-                    }
-                });
+                if (date.getDate() === 15 || date.getDate() === 28) {
+                    list.push({
+                        url: 'http://www.sca.isr.umich.edu/',
+                        name: toValidName('Michigan Consumer Sentiment Index'),
+                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                    });
+                }
                 return list;
             });
             case 'fed':
@@ -793,15 +792,19 @@ export default {
                 const docDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
                 console.log(docDate);
                 let list = [];
-                const findDoc = (title, raw_data) => findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
-                    if (findTag(findTag(t, 'td')[1])[0] === docDate) {
-                        list.push({
-                            url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
-                            name: toValidName(title),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
-                    }
-                });
+                const findDoc = (title, raw_data) => {
+                    const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                    const html2 = findTag(html, 'html')[0];
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
+                        if (findTag(findTag(t, 'td')[1])[0] === docDate) {
+                            list.push({
+                                url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
+                                name: toValidName(title),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                    });
+                }
                 findDoc('物價指數', raw_data);
                 return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(raw_data => {
                     findDoc('經濟成長率', raw_data);
@@ -811,7 +814,9 @@ export default {
                             const pDate = new Date(new Date(date).setMonth(date.getMonth()-1));
                             const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
                             console.log(docDate1);
-                            const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                            const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                            const html2 = findTag(html, 'html')[0];
+                            const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                             let link = null;
                             for (let l of lis) {
                                 const a = findTag(l, 'a')[0];
@@ -822,7 +827,9 @@ export default {
                                 }
                             }
                             return link ? Api('url', link).then(raw_data => {
-                                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
+                                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                                const html2 = findTag(html, 'html')[0];
+                                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
                                     list.push({
                                         url: link,
                                         name: toValidName('失業率'),
@@ -872,7 +879,13 @@ export default {
                 const pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
                 const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
                 console.log(docDate1);
-                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                let html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                if (!html) {
+                    console.log(raw_data);
+                    handleError(new HoError('empty html'));
+                }
+                const html2 = findTag(html, 'html')[0];
+                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                 let dUrl = false;
                 for (let l of lis) {
                     const a = findTag(l, 'a')[0];
@@ -897,7 +910,13 @@ export default {
                     }
                 }) : Promise.resolve();
                 return industrial().then(() => Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
-                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                    html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                    if (!html) {
+                        console.log(raw_data);
+                        handleError(new HoError('empty html'));
+                    }
+                    const html2 = findTag(html, 'html')[0];
+                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     dUrl = false;
                     for (let l of lis) {
                         const a = findTag(l, 'a')[0];
@@ -972,7 +991,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'cen':
@@ -985,10 +1006,27 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'bea':
             console.log(obj);
+            const ext1 = PathExtname(obj.url);
+            if (ext1 === '.pdf') {
+                driveName = `${obj.name} ${obj.date}${ext1}`;
+                console.log(driveName);
+                return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
+                    type: 'auto',
+                    name: driveName,
+                    filePath,
+                    parent,
+                    rest: () => updateDocDate(type, obj.date),
+                    errhandle: err => {
+                        throw err;
+                    },
+                })));
+            }
             return Api('url', obj.url).then(raw_data => {
                 const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                 if (!findTag(a)[0].match(/^Full Release/)) {
@@ -1003,7 +1041,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'ism':
@@ -1016,7 +1056,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'cbo':
             console.log(obj);
@@ -1028,7 +1070,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'sem':
             console.log(obj);
@@ -1040,7 +1084,9 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'oec':
             console.log(obj);
@@ -1058,7 +1104,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             });
             case 'dol':
@@ -1071,7 +1119,9 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'rea':
             console.log(obj);
@@ -1083,20 +1133,24 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             });
             case 'sca':
             console.log(obj);
-            driveName = `${obj.name} ${obj.date}.pdf`;
+            driveName = `${obj.name} ${obj.date}.txt`;
             console.log(driveName);
-            return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
+            return GoogleApi('upload', {
                 type: 'auto',
                 name: driveName,
-                filePath,
+                body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
-            })));
+                errhandle: err => {
+                    throw err;
+                },
+            });
             case 'fed':
             console.log(obj);
             const ext = PathExtname(obj.url);
@@ -1109,7 +1163,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
@@ -1126,7 +1182,9 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     }
                 }
@@ -1138,7 +1196,9 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 });
             });
             case 'sea':
@@ -1151,7 +1211,9 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'tri':
             console.log(obj);
@@ -1165,7 +1227,9 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 })));
             }));
             case 'ndc':
@@ -1178,12 +1242,16 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => Promise.reject(err),
+                errhandle: err => {
+                    throw err;
+                },
             })));
             case 'sta':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(p => {
+                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
+                const html2 = findTag(html, 'html')[0];
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(p => {
                     let as = findTag(p, 'a');
                     if (as.length > 0) {
                         for (let a of as) {
@@ -1197,7 +1265,9 @@ export default {
                                     filePath,
                                     parent,
                                     rest: () => updateDocDate(type, obj.date),
-                                    errhandle: err => Promise.reject(err),
+                                    errhandle: err => {
+                                        throw err;
+                                    },
                                 })));
                             }
                         }
@@ -1218,7 +1288,9 @@ export default {
                                             filePath,
                                             parent,
                                             rest: () => updateDocDate(type, obj.date),
-                                            errhandle: err => Promise.reject(err),
+                                            errhandle: err => {
+                                                throw err;
+                                            },
                                         })));
                                     }
                                 }
@@ -1243,7 +1315,9 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     }
                 };
@@ -1267,7 +1341,9 @@ export default {
                                 filePath,
                                 parent,
                                 rest: () => updateDocDate(type, obj.date),
-                                errhandle: err => Promise.reject(err),
+                                errhandle: err => {
+                                    throw err;
+                                },
                             })));
                         }
                     }
@@ -1298,7 +1374,9 @@ export default {
                             filePath: subPath,
                             parent,
                             rest: () => recur_down(dIndex + 1),
-                            errhandle: err => Promise.reject(err),
+                            errhandle: err => {
+                                throw err;
+                            },
                         })));
                     } else {
                         return updateDocDate(type, obj.date);
@@ -1312,7 +1390,9 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => recur_down(0),
-                    errhandle: err => Promise.reject(err),
+                    errhandle: err => {
+                        throw err;
+                    },
                 });
             });
             default:
@@ -1573,7 +1653,7 @@ export default {
                                 const name = findTag(a)[0];
                                 if (!name.match(/Synopsis$/i)) {
                                     list.splice(0, 0, {
-                                        name: name,
+                                        name,
                                         url: a.attribs.href,
                                     });
                                 }
@@ -1591,7 +1671,7 @@ export default {
                         }
                         if (!name.match(/Synopsis$/i)) {
                             list.splice(0, 0, {
-                                name: name,
+                                name,
                                 url: a.attribs.href,
                             });
                         }
@@ -1604,7 +1684,30 @@ export default {
                         break;
                     }
                 }
-                return [list, is_end];
+                return (list.length < 1) ? Mongo('find', STORAGEDB, {
+                    owner: type,
+                    url: encodeURIComponent(url),
+                }).then(items => {
+                    if (items.length < 1) {
+                        handleError(new HoError('cannot find lovetv url'));
+                    }
+                    const nextLove = (index, dramaIndex, list) => {
+                        for (let i of list) {
+                            if (i.name === items[0].name) {
+                                return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {url: isValidString(i.url, 'url', 'url is not vaild')}}).then(item => {
+                                    url = i.url;
+                                    return lovetvGetlist();
+                                });
+                            }
+                        }
+                        dramaIndex++;
+                        if (dramaIndex < dramaList.length) {
+                            return recur_loveList(dramaIndex, nextLove);
+                        }
+                        handleError(new HoError('cannot find lovetv'));
+                    }
+                    return recur_loveList(0, nextLove);
+                }) : [list, is_end];
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
@@ -1633,8 +1736,24 @@ export default {
                                             obj.push(`yuk_${i}`);
                                         }
                                     } else if (t === 3) {
+                                        //open
                                         for (let i of vIds) {
                                             obj.push(`ope_${i}`);
+                                        }
+                                    } else if (t === 12) {
+                                        //up2stream
+                                        for (let i of vIds) {
+                                            obj.push(`up2_${i}`);
+                                        }
+                                    } else if (t === 19) {
+                                        //愛奇藝
+                                        for (let i of vIds) {
+                                            obj.push(`iqi_${i}`);
+                                        }
+                                    } else if (t === 6) {
+                                        //line tv
+                                        for (let i of vIds) {
+                                            obj.push(`lin_${i}`);
                                         }
                                     } else {
                                         for (let i of vIds) {
@@ -1839,7 +1958,7 @@ export default {
                     }
                     return [
                         json_data.result.episodes.map(e => ({
-                            id: `bil_av${e.av_id}_${e.index}`,
+                            id: `bil_av${e.av_id}_${e.page}`,
                             name: e.index_title,
                         })).reverse(),
                         json_data.result.seasons,
@@ -1847,13 +1966,13 @@ export default {
                 });
                 return bili_id[1] ? Api('url', url, {referer: 'http://www.bilibili.com/'}).then(raw_data => {
                     const select = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'b-page-body')[0], 'div', 'player-wrapper')[0], 'div', 'main-inner')[0], 'div', 'v-plist')[0], 'div', 'plist')[0], 'select');
-                    return (select.length > 0) ? findTag(select[0], 'option').map(o => ({
+                    return (select.length > 0) ? [findTag(select[0], 'option').map(o => ({
                         id: `bil_${bili_id[0]}_${o.attribs.value.match(/index_(\d+)\.html/)[1]}`,
                         name: findTag(o)[0],
-                    })) : [{
+                    })), false] : [[{
                         id: `bil_${bili_id[0]}`,
                         name: 'bil',
-                    }];
+                    }], false];
                 }) : getBangumi(bili_id[0]).then(([list, seasons]) => {
                     const recur_season = index => getBangumi(seasons[index].season_id).then(([slist, sseasons]) => {
                         list = list.concat(slist);
@@ -1951,7 +2070,7 @@ export default {
                     setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
                     json_data['data']['movie']['genres'].forEach(i => setTag.add(i));
                     if (json_data['data']['movie']['cast']) {
-                        json_data['data']['movie']['cast'].forEach(i => setTag.add(i));
+                        json_data['data']['movie']['cast'].forEach(i => setTag.add(i.name));
                     }
                     let newTag = new Set();
                     setTag.forEach(i => newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i));
@@ -2070,73 +2189,87 @@ export const bilibiliVideoUrl = url => {
     if (!id) {
         handleError(new HoError('bilibili id invalid'));
     }
-    const page = id[3] ? Number(id[4]) - 1 : 0;
+    const page = id[3] ? Number(id[4]) : 1;
     return Api('url', `http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=${id[2]}&page=1&batch=true`, {referer: 'http://api.bilibili.com/'}).then(raw_data => {
         const json_data = getJson(raw_data);
         if (!json_data.list) {
             handleError(new HoError('cannot get list'));
         }
-        const cid = json_data.list[page].cid;
-        if (!cid) {
-            handleError(new HoError('cannot get cid'));
-        }
-        return Api('url', `http://interface.bilibili.com/playurl?platform=bilihelper&otype=json&appkey=8e9fc618fbd41e28&cid=${cid}&quality=4&type=mp4`, {
-            referer: 'http://interface.bilibili.com/',
-            fake_ip: '220.181.111.228',
-        }).then(raw_data => {
-            const json_data_1 = getJson(raw_data);
-            if (!json_data_1.durl || !json_data_1.durl[0] || !json_data_1.durl[0].url) {
-                handleError(new HoError('cannot find videoUrl'));
-            }
-            return {
-                title: json_data.list[page].part,
-                video: [json_data_1.durl[0].url],
-            }
-        });
+        return {
+            title: json_data.list[page].part,
+            video: [],
+            embed: [`//static.hdslb.com/miniloader.swf?aid=${id[2]}&page=${page}`],
+        };
     });
 }
 
-export const youtubeVideoUrl = (id, url) => new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+export const youtubeVideoUrl = (id, url) => {
     let ret_obj = {
-        title: info.title,
+        title: id,
         video: [],
     };
-    const ret_info = info.formats ? info.formats : info;
-    if (id === 'you') {
-        let audio_size = 0;
-        ret_info.forEach(i => {
-            if (i.format_note === 'DASH audio') {
-                if (!audio_size) {
-                    audio_size = i.filesize;
-                    ret_obj['audio'] = i.url;
-                } else if (audio_size > i.filesize) {
-                    audio_size = i.filesize;
-                    ret_obj['audio'] = i.url;
-                }
-            } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, i.url);
-            }
-        });
-    } else if (id === 'dym') {
-        ret_info.forEach(i => {
-            if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, i.url);
-            }
-        });
+    if (id === 'lin') {
+        ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
+    } else if (id === 'iqi') {
+        const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+        ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/v_${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
+    } else if (id === 'ope') {
+        ret_obj['iframe'] = [url];
     } else {
-        if (Array.isArray(ret_info)) {
-            ret_info.forEach(i => {
-                if ((i.ext === 'mp4' || i.ext === 'webm')) {
-                    ret_obj['video'].splice(0, 0, i.url);
+        return new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+            ret_obj.title = info.title;
+            const ret_info = info.formats ? info.formats : info;
+            if (id === 'you') {
+                let audio_size = 0;
+                ret_info.forEach(i => {
+                    if (i.format_note === 'DASH audio') {
+                        if (!audio_size) {
+                            audio_size = i.filesize;
+                            ret_obj['audio'] = i.url;
+                        } else if (audio_size > i.filesize) {
+                            audio_size = i.filesize;
+                            ret_obj['audio'] = i.url;
+                        }
+                    } else if (i.format_note !== 'DASH video' && (i.ext === 'mp4' || i.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, i.url);
+                    }
+                });
+            } else if (id === 'dym') {
+                ret_info.forEach(i => {
+                    if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, i.url);
+                    }
+                });
+            } else if (id === 'lin') {
+                ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
+            } else if (id === 'iqi') {
+                const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
+                ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
+            } else {
+                if (Array.isArray(ret_info)) {
+                    ret_info.forEach(i => {
+                        if ((i.ext === 'mp4' || i.ext === 'webm')) {
+                            ret_obj['video'].splice(0, 0, i.url);
+                        }
+                    });
+                } else {
+                    if ((ret_info.ext === 'mp4' || ret_info.ext === 'webm')) {
+                        ret_obj['video'].splice(0, 0, ret_info.url);
+                    }
                 }
-            });
-        } else {
-            if ((ret_info.ext === 'mp4' || ret_info.ext === 'webm')) {
-                ret_obj['video'].splice(0, 0, ret_info.url);
             }
-        }
+            if (id === 'yuk') {
+                ret_obj['iframe'] = [];
+                ret_obj['video'].map(i => {
+                    if (i.match(/type=flv/)) {
+                        ret_obj['iframe'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z]+=)\.html$/)[1]}`);
+                    }
+                });
+            }
+            return ret_obj;
+        });
     }
-    return ret_obj;
-});
+    return Promise.resolve(ret_obj);
+};
 
 const updateDocDate = (type, date) => Mongo('update', DOCDB, {type}, {$set: {type, date}}, {upsert: true});
