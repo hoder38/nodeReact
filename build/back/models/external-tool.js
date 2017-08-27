@@ -2797,6 +2797,7 @@ exports.default = {
                                 var tr = (0, _utility.findTag)((0, _utility.findTag)(center, 'table', 'forum_header_noborder')[0], 'tr', 'forum_header_border');
                                 var trLength = tr.length;
                                 console.log(trLength);
+                                var is_end = false;
                                 var _iteratorNormalCompletion30 = true;
                                 var _didIteratorError30 = false;
                                 var _iteratorError30 = undefined;

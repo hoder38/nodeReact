@@ -1844,6 +1844,7 @@ export default {
                         let tr = findTag(findTag(center, 'table', 'forum_header_noborder')[0], 'tr', 'forum_header_border');
                         const trLength = tr.length;
                         console.log(trLength);
+                        let is_end = false;
                         for (let i of findTag(findTag(findTag(findTag(center, 'table')[0], 'tr')[4], 'td')[0], 'b')) {
                             if (findTag(i)[0] === 'Ended') {
                                 is_end = true;
