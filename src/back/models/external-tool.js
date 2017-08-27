@@ -1844,7 +1844,12 @@ export default {
                         let tr = findTag(findTag(center, 'table', 'forum_header_noborder')[0], 'tr', 'forum_header_border');
                         const trLength = tr.length;
                         console.log(trLength);
-                        const is_end = (findTag(findTag(findTag(findTag(findTag(center, 'table')[0], 'tr')[4], 'td')[0], 'b')[1])[0] === 'Ended') ? true : false;
+                        for (let i of findTag(findTag(findTag(findTag(center, 'table')[0], 'tr')[4], 'td')[0], 'b')) {
+                            if (findTag(i)[0] === 'Ended') {
+                                is_end = true;
+                                break;
+                            }
+                        }
                         if (trLength < 100) {
                             return [getEzList(tr), is_end];
                         } else {

@@ -2797,7 +2797,34 @@ exports.default = {
                                 var tr = (0, _utility.findTag)((0, _utility.findTag)(center, 'table', 'forum_header_noborder')[0], 'tr', 'forum_header_border');
                                 var trLength = tr.length;
                                 console.log(trLength);
-                                var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')[1])[0] === 'Ended' ? true : false;
+                                var _iteratorNormalCompletion30 = true;
+                                var _didIteratorError30 = false;
+                                var _iteratorError30 = undefined;
+
+                                try {
+                                    for (var _iterator30 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
+                                        var _i12 = _step30.value;
+
+                                        if ((0, _utility.findTag)(_i12)[0] === 'Ended') {
+                                            is_end = true;
+                                            break;
+                                        }
+                                    }
+                                } catch (err) {
+                                    _didIteratorError30 = true;
+                                    _iteratorError30 = err;
+                                } finally {
+                                    try {
+                                        if (!_iteratorNormalCompletion30 && _iterator30.return) {
+                                            _iterator30.return();
+                                        }
+                                    } finally {
+                                        if (_didIteratorError30) {
+                                            throw _iteratorError30;
+                                        }
+                                    }
+                                }
+
                                 if (trLength < 100) {
                                     return [getEzList(tr), is_end];
                                 } else {
@@ -2878,29 +2905,29 @@ exports.default = {
                                 (0, _utility.handleError)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion30 = true;
-                            var _didIteratorError30 = false;
-                            var _iteratorError30 = undefined;
+                            var _iteratorNormalCompletion31 = true;
+                            var _didIteratorError31 = false;
+                            var _iteratorError31 = undefined;
 
                             try {
-                                for (var _iterator30 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
-                                    var _i12 = _step30.value;
+                                for (var _iterator31 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
+                                    var _i13 = _step31.value;
 
-                                    if (_i12['quality'] === '1080p' || !magnet && _i12['quality'] === '720p') {
-                                        magnet = 'magnet:?xt=urn:btih:' + _i12['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
+                                    if (_i13['quality'] === '1080p' || !magnet && _i13['quality'] === '720p') {
+                                        magnet = 'magnet:?xt=urn:btih:' + _i13['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError30 = true;
-                                _iteratorError30 = err;
+                                _didIteratorError31 = true;
+                                _iteratorError31 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion30 && _iterator30.return) {
-                                        _iterator30.return();
+                                    if (!_iteratorNormalCompletion31 && _iterator31.return) {
+                                        _iterator31.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError30) {
-                                        throw _iteratorError30;
+                                    if (_didIteratorError31) {
+                                        throw _iteratorError31;
                                     }
                                 }
                             }
@@ -3051,8 +3078,8 @@ exports.default = {
                                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                                     var sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
                                     var pre_obj = [];
-                                    for (var _i13 = 1; _i13 <= sub; _i13++) {
-                                        pre_obj.push(_i13 < 10 ? '00' + _i13 + '.jpg' : _i13 < 100 ? '0' + _i13 + '.jpg' : _i13 + '.jpg');
+                                    for (var _i14 = 1; _i14 <= sub; _i14++) {
+                                        pre_obj.push(_i14 < 10 ? '00' + _i14 + '.jpg' : _i14 < 100 ? '0' + _i14 + '.jpg' : _i14 + '.jpg');
                                     }
                                     saveList(madGetlist, raw_list, is_end, etime);
                                     return [{
