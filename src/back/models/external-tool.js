@@ -42,7 +42,8 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                     }
                     const dramaType = findTag(h)[0];
                     if (year) {
-                        const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');
+                        /*const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');*/
+                        const url = a.attribs.href;
                         list.push(Object.assign({
                             name,
                             url: `${url}?max-results=300`,
