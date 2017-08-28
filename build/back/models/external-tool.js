@@ -87,72 +87,101 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp03.jplovetv.com/2012/08/drama-list.html'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
         var list = [];
         var year = null;
-        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-        var tbody = (0, _utility.findTag)(table, 'tbody')[0];
-        if (tbody) {
-            table = tbody;
+        if (dramaIndex === 4) {
+            year = '台灣';
         }
-        table.children.forEach(function (t) {
-            return (0, _utility.findTag)(t, 'td').forEach(function (d) {
-                var h = (0, _utility.findTag)(d, 'h3')[0];
-                if (h) {
-                    var a = (0, _utility.findTag)(h, 'a')[0];
-                    if (a) {
-                        var name = (0, _utility.findTag)(a)[0];
-                        if (name) {
-                            if (name.match(/�/)) {
+        var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
+        var table = null;
+        var table2 = null;
+        if (dramaIndex === 4) {
+            var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget HTML')[0], 'div', 'widget-content')[0], 'table');
+            table = tables[1];
+            table2 = tables[2];
+        } else {
+            table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+            var tbody = (0, _utility.findTag)(table, 'tbody')[0];
+            if (tbody) {
+                table = tbody;
+            }
+        }
+        var getList = function getList(table) {
+            return table.children.forEach(function (t) {
+                return (0, _utility.findTag)(t, 'td').forEach(function (d) {
+                    var h = (0, _utility.findTag)(d, 'h3')[0];
+                    if (h) {
+                        var a = (0, _utility.findTag)(h, 'a')[0];
+                        if (a) {
+                            var name = (0, _utility.findTag)(a)[0];
+                            if (name) {
+                                if (name.match(/�/)) {
+                                    return true;
+                                }
+                                var dramaType = dramaIndex === 4 ? null : (0, _utility.findTag)(h)[0];
+                                if (year) {
+                                    /*const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');*/
+                                    var url = a.attribs.href;
+                                    list.push((0, _assign2.default)({
+                                        name: name,
+                                        url: url + '?max-results=300',
+                                        year: year
+                                    }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
+                                }
                                 return true;
                             }
-                            var dramaType = (0, _utility.findTag)(h)[0];
-                            if (year) {
-                                /*const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');*/
-                                var url = a.attribs.href;
-                                list.push((0, _assign2.default)({
-                                    name: name,
-                                    url: url + '?max-results=300',
-                                    year: year
-                                }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
+                        }
+                        var getY = function getY(node) {
+                            if (dramaIndex === 4) {
+                                var y = (0, _utility.findTag)(node)[0].match(/^(大陸綜藝節目)?(韓國綜藝節目)?/);
+                                if (y) {
+                                    if (y[1]) {
+                                        year = '大陸';
+                                    } else if (y[2]) {
+                                        year = '韓國';
+                                    }
+                                }
+                            } else {
+                                var _y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
+                                if (_y) {
+                                    year = _y[0];
+                                }
                             }
-                            return true;
-                        }
-                    }
-                    var getY = function getY(node) {
-                        var y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
-                        if (y) {
-                            year = y[0];
-                        }
-                    };
-                    var s = (0, _utility.findTag)(h, 'span')[0];
-                    if (s) {
-                        getY(s);
-                    } else {
-                        var f = (0, _utility.findTag)(h, 'font')[0];
-                        if (f) {
-                            getY(f);
+                        };
+                        var s = (0, _utility.findTag)(h, 'span')[0];
+                        if (s) {
+                            getY(s);
                         } else {
-                            var strong = (0, _utility.findTag)(h, 'strong')[0];
-                            if (strong) {
-                                var span = (0, _utility.findTag)(strong, 'span')[0];
-                                if (span) {
-                                    getY(span);
-                                } else {
-                                    var font = (0, _utility.findTag)(strong, 'font')[0];
-                                    if (font) {
-                                        getY(font);
+                            var f = (0, _utility.findTag)(h, 'font')[0];
+                            if (f) {
+                                getY(f);
+                            } else {
+                                var strong = (0, _utility.findTag)(h, 'strong')[0];
+                                if (strong) {
+                                    var span = (0, _utility.findTag)(strong, 'span')[0];
+                                    if (span) {
+                                        getY(span);
+                                    } else {
+                                        var font = (0, _utility.findTag)(strong, 'font')[0];
+                                        if (font) {
+                                            getY(font);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
+                });
             });
-        });
+        };
+        getList(table);
+        if (table2) {
+            getList(table2);
+        }
         console.log(list.length);
         return next(0, dramaIndex, list);
     });
@@ -198,12 +227,19 @@ exports.default = {
                                 setTag.add('韓國');
                             } else if (dramaIndex === 3) {
                                 setTag.add('日本');
+                            } else if (dramaIndex === 4) {
+                                setTag.add('綜藝節目');
                             }
                             setTag.add((0, _tagTool.normalize)(name)).add((0, _tagTool.normalize)(type));
                             if (external_item.type) {
                                 setTag.add((0, _tagTool.normalize)(external_item.type));
                             }
                             setTag.add((0, _tagTool.normalize)(external_item.year));
+                            if ((0, _tagTool.normalize)(external_item.year) === '台灣') {
+                                setTag.add('臺灣');
+                            } else if ((0, _tagTool.normalize)(external_item.year) === '大陸') {
+                                setTag.add('中國');
+                            }
                             var setArr = [];
                             var adultonly = 0;
                             setTag.forEach(function (s) {
@@ -3301,7 +3337,7 @@ var youtubeVideoUrl = exports.youtubeVideoUrl = function youtubeVideoUrl(id, url
             } else if (id === 'dym') {
                 ret_info.forEach(function (i) {
                     if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
-                        ret_obj['video'].splice(0, 0, i.url);
+                        ret_obj['video'].splice(0, 0, i.url.replace(/^https:/i, 'http:'));
                     }
                 });
             } else if (id === 'lin') {
@@ -3326,7 +3362,7 @@ var youtubeVideoUrl = exports.youtubeVideoUrl = function youtubeVideoUrl(id, url
                 ret_obj['iframe'] = [];
                 ret_obj['video'].map(function (i) {
                     if (i.match(/type=flv/)) {
-                        ret_obj['iframe'].push('//player.youku.com/embed/' + url.match(/id_([\da-zA-Z]+=)\.html$/)[1]);
+                        ret_obj['iframe'].push('//player.youku.com/embed/' + url.match(/id_([\da-zA-Z=]+)\.html$/)[1]);
                     }
                 });
             }
