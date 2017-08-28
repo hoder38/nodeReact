@@ -20,17 +20,30 @@ const dramaList = [
     'http://cn.lovetvshow.info/2012/05/drama-list.html',
     'http://kr.vslovetv.com/2012/04/drama-list.html',
     'http://jp03.jplovetv.com/2012/08/drama-list.html',
+    'http://www.lovetvshow.com/',
 ];
 
 const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
     let list = [];
     let year = null;
-    let table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-    const tbody = findTag(table, 'tbody')[0];
-    if (tbody) {
-        table = tbody;
+    if (dramaIndex === 4) {
+        year = '台灣';
     }
-    table.children.forEach(t => findTag(t, 'td').forEach(d => {
+    const main = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
+    let table = null;
+    let table2 = null;
+    if (dramaIndex === 4) {
+        const tables = findTag(findTag(findTag(main, 'div', 'widget HTML')[0], 'div', 'widget-content')[0], 'table');
+        table = tables[1];
+        table2 = tables[2];
+    } else {
+        table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(main, 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+        const tbody = findTag(table, 'tbody')[0];
+        if (tbody) {
+            table = tbody;
+        }
+    }
+    const getList = table => table.children.forEach(t => findTag(t, 'td').forEach(d => {
         const h = findTag(d, 'h3')[0];
         if (h) {
             const a = findTag(h, 'a')[0];
@@ -40,7 +53,7 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                     if (name.match(/�/)) {
                         return true;
                     }
-                    const dramaType = findTag(h)[0];
+                    const dramaType = (dramaIndex === 4) ? null : findTag(h)[0];
                     if (year) {
                         /*const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');*/
                         const url = a.attribs.href;
@@ -54,9 +67,20 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                 }
             }
             const getY = node => {
-                const y = findTag(node)[0].match(/^(Pre-)?\d+/);
-                if (y) {
-                    year = y[0];
+                if (dramaIndex === 4) {
+                    const y = findTag(node)[0].match(/^(大陸綜藝節目)?(韓國綜藝節目)?/);
+                    if (y) {
+                        if (y[1]) {
+                            year = '大陸';
+                        } else if (y[2]) {
+                            year = '韓國';
+                        }
+                    }
+                } else {
+                    const y = findTag(node)[0].match(/^(Pre-)?\d+/);
+                    if (y) {
+                        year = y[0];
+                    }
                 }
             }
             const s = findTag(h, 'span')[0];
@@ -83,6 +107,10 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
             }
         }
     }));
+    getList(table);
+    if (table2) {
+        getList(table2);
+    }
     console.log(list.length);
     return next(0, dramaIndex, list);
 });
@@ -121,12 +149,19 @@ export default {
                         setTag.add('韓國');
                     } else if (dramaIndex === 3) {
                         setTag.add('日本');
+                    } else if (dramaIndex === 4) {
+                        setTag.add('綜藝節目');
                     }
                     setTag.add(normalize(name)).add(normalize(type));
                     if (external_item.type) {
                         setTag.add(normalize(external_item.type));
                     }
                     setTag.add(normalize(external_item.year));
+                    if (normalize(external_item.year) === '台灣') {
+                        setTag.add('臺灣');
+                    } else if (normalize(external_item.year) === '大陸') {
+                        setTag.add('中國');
+                    }
                     let setArr = [];
                     let adultonly = 0;
                     setTag.forEach(s => {
@@ -2238,7 +2273,7 @@ export const youtubeVideoUrl = (id, url) => {
             } else if (id === 'dym') {
                 ret_info.forEach(i => {
                     if (i.format_id.match(/^(http-)?\d+$/) && (i.ext === 'mp4' || i.ext === 'webm')) {
-                        ret_obj['video'].splice(0, 0, i.url);
+                        ret_obj['video'].splice(0, 0, i.url.replace(/^https:/i, 'http:'));
                     }
                 });
             } else if (id === 'lin') {
@@ -2263,7 +2298,7 @@ export const youtubeVideoUrl = (id, url) => {
                 ret_obj['iframe'] = [];
                 ret_obj['video'].map(i => {
                     if (i.match(/type=flv/)) {
-                        ret_obj['iframe'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z]+=)\.html$/)[1]}`);
+                        ret_obj['iframe'].push(`//player.youku.com/embed/${url.match(/id_([\da-zA-Z=]+)\.html$/)[1]}`);
                     }
                 });
             }
