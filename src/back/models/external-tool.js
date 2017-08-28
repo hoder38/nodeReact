@@ -16,10 +16,10 @@ import Api from './api-tool'
 const opencc = new OpenCC('s2t.json');
 
 const dramaList = [
-    'http://tw.lovetvshow.info/2013/05/drama-list.html',
+    'http://tw01.lovetvshow.info/2013/05/drama-list.html',
     'http://cn.lovetvshow.info/2012/05/drama-list.html',
     'http://kr.vslovetv.com/2012/04/drama-list.html',
-    'http://jp.jplovetv.com/2012/08/drama-list.html',
+    'http://jp03.jplovetv.com/2012/08/drama-list.html',
 ];
 
 const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
