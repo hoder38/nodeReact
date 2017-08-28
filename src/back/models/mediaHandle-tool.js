@@ -684,10 +684,19 @@ export default {
                         const single_check = () => {
                             const filePath = getFileLocation(timeoutItems[index].item.owner, timeoutItems[index].item._id);
                             if (timeoutItems[index].mediaType.key) {
-                                return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
-                                    _id: timeoutItems[index].item.owner,
-                                    perm: 1,
-                                }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                if (timeoutItems[index].mediaType['realPath']) {
+                                    if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
+                                        return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
+                                            _id: timeoutItems[index].item.owner,
+                                            perm: 1,
+                                        }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                    }
+                                } else {
+                                    return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
+                                        _id: timeoutItems[index].item.owner,
+                                        perm: 1,
+                                    }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                }
                             } else if (timeoutItems[index].mediaType['realPath']) {
                                 if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
                                     return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
