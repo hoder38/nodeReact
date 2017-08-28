@@ -87,7 +87,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp.jplovetv.com/2012/08/drama-list.html'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/2012/04/drama-list.html', 'http://jp03.jplovetv.com/2012/08/drama-list.html'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
@@ -111,7 +111,8 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
                             }
                             var dramaType = (0, _utility.findTag)(h)[0];
                             if (year) {
-                                var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://jp.jplovetv.com');
+                                /*const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://kr.vslovetv.com') : addPre(a.attribs.href, 'http://jp.jplovetv.com');*/
+                                var url = a.attribs.href;
                                 list.push((0, _assign2.default)({
                                     name: name,
                                     url: url + '?max-results=300',

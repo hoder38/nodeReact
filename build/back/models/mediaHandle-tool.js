@@ -1027,14 +1027,27 @@ exports.default = {
                                 var single_check = function single_check() {
                                     var filePath = (0, _utility.getFileLocation)(timeoutItems[index].item.owner, timeoutItems[index].item._id);
                                     if (timeoutItems[index].mediaType.key) {
-                                        return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: { 'mediaType.timeout': false } }).then(function (item) {
-                                            return _this4.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
-                                                _id: timeoutItems[index].item.owner,
-                                                perm: 1
-                                            }).catch(function (err) {
-                                                return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                        if (timeoutItems[index].mediaType['realPath']) {
+                                            if ((0, _fs.existsSync)(filePath + '/' + timeoutItems[index].mediaType['fileIndex'] + '_complete')) {
+                                                return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: (0, _defineProperty3.default)({}, 'mediaType.' + timeoutItems[index].mediaType['fileIndex'] + '.timeout', false) }).then(function (item) {
+                                                    return _this4.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
+                                                        _id: timeoutItems[index].item.owner,
+                                                        perm: 1
+                                                    }).catch(function (err) {
+                                                        return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                    });
+                                                });
+                                            }
+                                        } else {
+                                            return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: { 'mediaType.timeout': false } }).then(function (item) {
+                                                return _this4.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
+                                                    _id: timeoutItems[index].item.owner,
+                                                    perm: 1
+                                                }).catch(function (err) {
+                                                    return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                });
                                             });
-                                        });
+                                        }
                                     } else if (timeoutItems[index].mediaType['realPath']) {
                                         if ((0, _fs.existsSync)(filePath + '/' + timeoutItems[index].mediaType['fileIndex'] + '_complete')) {
                                             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: timeoutItems[index].item._id }, { $set: (0, _defineProperty3.default)({}, 'mediaType.' + timeoutItems[index].mediaType['fileIndex'] + '.timeout', false) }).then(function (item) {
