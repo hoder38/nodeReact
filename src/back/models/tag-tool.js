@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_TYPE } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -440,7 +440,7 @@ export default function process(collection) {
                             year = 0;
                             country = '';
                         }
-                    } else if (KUBO_TYPE.includes(normal)) {
+                    } else if (KUBO_COUNTRY.includes(normal)) {
                         country = normal;
                         searchWord = null;
                         year = 0;
@@ -466,7 +466,7 @@ export default function process(collection) {
             if (type) {
                 const order = (sortName === 'mtime') ? 'vod_addtime' : 'vod_hits_month';
                 const sOrder = (sortName === 'mtime') ? 1 : 2;
-                const url = searchWord ? `http://www.99kubo.com/index.php?s=Vod-innersearch-q-${searchWord}-order-${sOrder}-page-${page}` : `http://www.99kubo.com/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
+                const url = searchWord ? `http://www.99kubo.com/index.php?s=Vod-innersearch-q-${encodeURIComponent(searchWord)}-order-${sOrder}-page-${page}` : `http://www.99kubo.com/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
                 console.log(url);
                 return url;
             } else {

@@ -1,4 +1,4 @@
-import { GENRE_LIST, GENRE_LIST_CH, TRANS_LIST, TRANS_LIST_CH, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB } from '../constants'
+import { GENRE_LIST, GENRE_LIST_CH, TRANS_LIST, TRANS_LIST_CH, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB, KUBO_TYPE } from '../constants'
 import OpenCC from 'opencc'
 import Htmlparser from 'htmlparser2'
 import { dirname as PathDirname, extname as PathExtname, join as PathJoin } from 'path'
@@ -391,11 +391,10 @@ export default {
                         const dom = Htmlparser.parseDOM(json_data['html']);
                         list = findTag(dom, 'li', 'video matrix ').map(v => {
                             const a = findTag(v, 'a')[0];
-                            const img = findTag(a.children[1], 'img')[0];
                             return {
                                 id: a.attribs.href.match(/av\d+/)[0],
-                                name: opencc.convertSync(img.attribs.title),
-                                thumb: img.attribs.src,
+                                name: opencc.convertSync(a.attribs.title),
+                                thumb: `http:${findTag(findTag(a, 'div', 'img')[0], 'img')[0].attribs['data-src']}`,
                                 date: new Date('1970-01-01').getTime() / 1000,
                                 tags: ['movie', '電影'],
                                 count: opencc.convertSync(findTag(findTag(findTag(findTag(v, 'div', 'info')[0], 'div', 'tags')[0], 'span', 'so-icon watch-num')[0])[0]),
@@ -405,9 +404,9 @@ export default {
                             list = findTag(dom, 'li', 'synthetical').map(v => {
                                 const a = findTag(v, 'div', 'left-img')[0].children[1];
                                 return {
-                                    id: a.attribs.href.match(/\d+$/)[0],
+                                    id: a.attribs.href.match(/\/anime\/(\d+)/)[1],
                                     name: opencc.convertSync(a.attribs.title),
-                                    thumb: findTag(a, 'img')[0].attribs.src,
+                                    thumb: `http:${findTag(a, 'img')[0].attribs['data-src']}`,
                                     date: new Date('1970-01-01').getTime() / 1000,
                                     tags: ['animation', '動畫'],
                                     count: 0,
@@ -420,280 +419,141 @@ export default {
             }
             case 'kubo':
             return Api('url', url, {referer: 'http://www.99kubo.com/',}).then(raw_data => {
-                const type_id = url.match(/vod-search-id-(\d+)/);
-                if (!type_id) {
-                    handleError(new HoError('unknown kubo type'));
-                }
-                return findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(l => {
-                    const a = findTag(l, 'a')[0];
-                    const img = findTag(a, 'img')[0];
-                    let tags = new Set();
-                    if (type_id[1] === '1') {
-                        tags = new Set(['電影', 'movie']);
-                    } else if (type_id[1] === '3') {
-                        tags = new Set(['動畫', 'animation']);
-                    } else {
-                        tags = new Set(['電視劇', 'tv show']);
-                        if (type_id[1] === '41') {
-                            tags.add('綜藝節目');
-                        }
+                const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                const main = findTag(body, 'div', 'main')[0];
+                if (main) {
+                    const type_id = url.match(/vod-search-id-(\d+)/);
+                    if (!type_id) {
+                        handleError(new HoError('unknown kubo type'));
                     }
-                    let count = 0;
-                    let date = '1970-01-01';
-                    findTag(l, 'p').forEach(p => {
-                        const t = findTag(p)[0];
-                        if (t) {
-                            if (t === '主演：') {
-                                findTag(p, 'a').forEach(b => tags.add(findTag(b)[0]));
-                            } else {
-                                let match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
-                                if (match) {
-                                    tags.add(match[1]).add(match[2]);
+                    return findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(l => {
+                        const a = findTag(l, 'a')[0];
+                        const img = findTag(a, 'img')[0];
+                        let tags = new Set();
+                        if (type_id[1] === '1') {
+                            tags = new Set(['電影', 'movie']);
+                        } else if (type_id[1] === '3') {
+                            tags = new Set(['動畫', 'animation']);
+                        } else {
+                            tags = new Set(['電視劇', 'tv show']);
+                            if (type_id[1] === '41') {
+                                tags.add('綜藝節目');
+                            }
+                        }
+                        let count = 0;
+                        let date = '1970-01-01';
+                        findTag(l, 'p').forEach(p => {
+                            const t = findTag(p)[0];
+                            if (t) {
+                                if (t === '主演：') {
+                                    findTag(p, 'a').forEach(b => tags.add(findTag(b)[0]));
                                 } else {
-                                    match = t.match(/^月熱度：(\d+)/);
+                                    let match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
                                     if (match) {
-                                        count = Number(match[1]);
+                                        tags.add(match[1]).add(match[2]);
                                     } else {
-                                        match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
+                                        match = t.match(/^月熱度：(\d+)/);
                                         if (match) {
-                                            date = match[1];
+                                            count = Number(match[1]);
+                                        } else {
+                                            match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
+                                            if (match) {
+                                                date = match[1];
+                                            }
                                         }
                                     }
                                 }
                             }
+                        });
+                        return {
+                            name: img.attribs.alt,
+                            id: a.attribs.href.match(/\d+/)[0],
+                            thumb: img.attribs['data-original'],
+                            tags,
+                            count,
+                            date,
+                        };
+                    });
+                } else {
+                    return findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'div')[0], 'div', 'wrapper_wrapper')[0], 'div', 'container')[0], 'div', 'content_left')[0], 'div', 'ires')[0], 'ol')[0], 'li', 'g').map(g => {
+                        const tr = findTag(findTag(g, 'table')[0], 'tr')[0];
+                        const a = findTag(findTag(findTag(tr, 'td')[0], 'div')[0], 'a')[0];
+                        const td = findTag(tr, 'td')[1];
+                        const a1 = findTag(findTag(td, 'h3')[0], 'a')[0];
+                        const bs = findTag(a1, 'b').map(b => findTag(b)[0]);
+                        let name = '';
+                        findTag(a1).forEach((n, i) => name = bs[i] ? `${name}${n}${bs[i]}` : `${name}${n}`);
+                        name = name.match(/^(.*)-([^\-]+)$/);
+                        let tags = new Set([normalize(name[2])]);
+                        let count = 0;
+                        let date = '1970-01-01';
+                        for (let i in KUBO_TYPE) {
+                            const index = KUBO_TYPE[i].indexOf(name[2]);
+                            if (index !== -1) {
+                                if (i === '0') {
+                                    tags.add('movie').add('電影');
+                                    switch (index) {
+                                        case 0:
+                                        tags.add('action').add('動作');
+                                        break;
+                                        case 1:
+                                        tags.add('comedy').add('喜劇');
+                                        break;
+                                        case 2:
+                                        tags.add('romance').add('浪漫');
+                                        break;
+                                        case 3:
+                                        tags.add('sci-fi').add('科幻');
+                                        break;
+                                        case 4:
+                                        tags.add('horror').add('恐怖');
+                                        break;
+                                        case 5:
+                                        tags.add('drama').add('劇情');
+                                        break;
+                                        case 6:
+                                        tags.add('war').add('戰爭');
+                                        break;
+                                        case 7:
+                                        tags.add('animation').add('動畫');
+                                        break;
+                                    }
+                                } else if (i === '1') {
+                                    tags.add('tv show').add('電視劇');
+                                } else if (i === '2') {
+                                    tags.add('tv show').add('電視劇').add('綜藝節目');
+                                } else if (i === '3') {
+                                    tags.add('animation').add('動畫');
+                                }
+                                break;
+                            }
+                        }
+                        const div = findTag(td, 'div')[0];
+                        const span = findTag(findTag(div, 'div', 'kv')[0], 'span')[0];
+                        for (let t of findTag(span)) {
+                            const match = t.match(/月熱度:(\d+)/);
+                            if (match) {
+                                count = Number(match[1]);
+                                break;
+                            }
+                        }
+                        findTag(span, 'a').forEach(s => tags.add(normalize(findTag(s)[0])));
+                        findTag(div, 'div', 'osl').forEach(o => findTag(o, 'a').forEach(s => tags.add(normalize(findTag(s)[0]))));
+                        const matchDate = findTag(findTag(span, 'cite')[0])[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                        if (matchDate) {
+                            date = `${matchDate[1]}-${matchDate[2]}-${matchDate[3]}`;
+                        }
+                        return {
+                            id: a.attribs.href.match(/\d+/)[0],
+                            name: name[1],
+                            thumb: findTag(a, 'img')[0].attribs.src,
+                            date,
+                            tags,
+                            count,
                         }
                     });
-                    return {
-                        name: img.attribs.alt,
-                        id: a.attribs.href.match(/\d+/)[0],
-                        thumb: img.attribs['data-original'],
-                        tags,
-                        count,
-                        date,
-                    };
-                });
+                }
             });
-            /*api.xuiteDownload(url, '', function(err, raw_data) {
-                if (err) {
-                    err.hoerror = 2;
-                    util.handleError(err, callback, callback);
-                }
-                var raw_list = raw_data.match(/(.*)data\-original[\s\S]+?更新：\d\d\d\d-\d\d-\d\d/g);
-                var list = [];
-                var list_match = false;
-                var item_match = false;
-                var data = null;
-                var tags = [];
-                var act_match = false;
-                if (raw_list) {
-                    var type_id = url.match(/vod-search-id-(\d+)/);
-                    if (!type_id) {
-                        util.handleError({hoerror: 2, message: 'unknown kubo type'}, callback, callback);
-                    }
-                    type_id = type_id[1];
-                    for (var i in raw_list) {
-                        list_match = raw_list[i].match(/href=".*-(\d+)\.html".*data\-original="([^"]+)".*alt="([^"]+)"/);
-                        if (list_match) {
-                            data = {name: list_match[3], id: list_match[1], thumb: list_match[2]};
-                            if (type_id === '1') {
-                                tags = ['電影', 'movie'];
-                            } else if (type_id === '3') {
-                                tags = ['動畫', 'animation'];
-                            } else {
-                                tags = ['電視劇', 'tv show'];
-                            }
-                            item_match = raw_list[i].match(/地區\/年份：(.*)\/(\d+)/);
-                            if (item_match) {
-                                if (tags.indexOf(item_match[1]) === -1) {
-                                    tags.push(item_match[1]);
-                                }
-                                if (tags.indexOf(item_match[2]) === -1) {
-                                    tags.push(item_match[2]);
-                                }
-                            }
-                            item_match = raw_list[i].match(/主演：(.*)<\/p>/);
-                            if (item_match) {
-                                act_match = item_match[0].match(/>[^<>]+<\/a/g);
-                                if (act_match) {
-                                    for (var j in act_match) {
-                                        item_match = act_match[j].match(/>([^<>]+)<\/a/);
-                                        if (item_match) {
-                                            if (tags.indexOf(item_match[1]) === -1) {
-                                                tags.push(item_match[1]);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            data['tags'] = tags;
-                            item_match = raw_list[i].match(/月熱度：(\d+)/);
-                            if (item_match) {
-                                data['count'] = Number(item_match[1]);
-                            } else {
-                                data['count'] = 0;
-                            }
-                            item_match = raw_list[i].match(/更新：(\d\d\d\d-\d\d-\d\d)/);
-                            if (item_match) {
-                                data['date'] = item_match[1];
-                            } else {
-                                data['date'] = '1970-01-01';
-                            }
-                            list.push(data);
-                        }
-                    }
-                } else {
-                    raw_list = raw_data.match(/\.html"><img src="[\s\S]+?\d\d:\d\d<\/cite>/g);
-                    if (raw_list) {
-                        for (var i in raw_list) {
-                            list_match = raw_list[i].match(/<img src="([^"]+)"/);
-                            if (list_match) {
-                                data = {thumb: list_match[1]};
-                                list_match = raw_list[i].match(/vod-read-id-(\d+).html">(.*?)\-([^\-]+?)<\/a>/);
-                                if (list_match) {
-                                    data['id'] = list_match[1];
-                                    data['name'] = list_match[2].replace(/<\/?b>/g, '');
-                                    tags = [list_match[3]];
-                                    for (var j in kubo_type) {
-                                        if (kubo_type[j].indexOf(list_match[3]) !== -1) {
-                                            if (j === '2') {
-                                                if (tags.indexOf('animation') === -1) {
-                                                    tags.push('animation');
-                                                }
-                                                if (tags.indexOf('動畫') === -1) {
-                                                    tags.push('動畫');
-                                                }
-                                            } else if (j === '0') {
-                                                if (tags.indexOf('movie') === -1) {
-                                                    tags.push('movie');
-                                                }
-                                                if (tags.indexOf('電影') === -1) {
-                                                    tags.push('電影');
-                                                }
-                                                switch (kubo_type[j].indexOf(list_match[3])) {
-                                                    case 0:
-                                                    if (tags.indexOf('action') === -1) {
-                                                        tags.push('action');
-                                                    }
-                                                    if (tags.indexOf('動作') === -1) {
-                                                        tags.push('動作');
-                                                    }
-                                                    break;
-                                                    case 1:
-                                                    if (tags.indexOf('comedy') === -1) {
-                                                        tags.push('comedy');
-                                                    }
-                                                    if (tags.indexOf('喜劇') === -1) {
-                                                        tags.push('喜劇');
-                                                    }
-                                                    break;
-                                                    case 2:
-                                                    if (tags.indexOf('romance') === -1) {
-                                                        tags.push('romance');
-                                                    }
-                                                    if (tags.indexOf('浪漫') === -1) {
-                                                        tags.push('浪漫');
-                                                    }
-                                                    break;
-                                                    case 3:
-                                                    if (tags.indexOf('sci-fi') === -1) {
-                                                        tags.push('sci-fi');
-                                                    }
-                                                    if (tags.indexOf('科幻') === -1) {
-                                                        tags.push('科幻');
-                                                    }
-                                                    break;
-                                                    case 4:
-                                                    if (tags.indexOf('horror') === -1) {
-                                                        tags.push('horror');
-                                                    }
-                                                    if (tags.indexOf('恐怖') === -1) {
-                                                        tags.push('恐怖');
-                                                    }
-                                                    break;
-                                                    case 5:
-                                                    if (tags.indexOf('drama') === -1) {
-                                                        tags.push('drama');
-                                                    }
-                                                    if (tags.indexOf('劇情') === -1) {
-                                                        tags.push('劇情');
-                                                    }
-                                                    break;
-                                                    case 6:
-                                                    if (tags.indexOf('war') === -1) {
-                                                        tags.push('war');
-                                                    }
-                                                    if (tags.indexOf('戰爭') === -1) {
-                                                        tags.push('戰爭');
-                                                    }
-                                                    break;
-                                                    case 7:
-                                                    if (tags.indexOf('animation') === -1) {
-                                                        tags.push('animation');
-                                                    }
-                                                    if (tags.indexOf('動畫') === -1) {
-                                                        tags.push('動畫');
-                                                    }
-                                                    break;
-                                                }
-                                            } else if (j === '1') {
-                                                if (tags.indexOf('tv show') === -1) {
-                                                    tags.push('tv show');
-                                                }
-                                                if (tags.indexOf('電視劇') === -1) {
-                                                    tags.push('電視劇');
-                                                }
-                                            }
-                                        }
-                                    }
-                                    item_match = raw_list[i].match(/地區:<a[^>]+>([^<]+)/);
-                                    if (item_match) {
-                                        if (tags.indexOf(item_match[1]) === -1) {
-                                            tags.push(item_match[1]);
-                                        }
-                                    }
-                                    item_match = raw_list[i].match(/年份:<a[^>]+>(\d+)/);
-                                    if (item_match) {
-                                        if (tags.indexOf(item_match[1]) === -1) {
-                                            tags.push(item_match[1]);
-                                        }
-                                    }
-                                    item_match = raw_list[i].match(/演出:(.*)/);
-                                    if (item_match) {
-                                        act_match = item_match[0].match(/>[^<>]+<\/a/g);
-                                        if (act_match) {
-                                            for (var j in act_match) {
-                                                item_match = act_match[j].match(/>([^<>]+)<\/a/);
-                                                if (item_match) {
-                                                    if (tags.indexOf(item_match[1]) === -1) {
-                                                        tags.push(item_match[1]);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    data['tags'] = tags;
-                                    item_match = raw_list[i].match(/月熱度:(\d+)/);
-                                    if (item_match) {
-                                        data['count'] = Number(item_match[1]);
-                                    } else {
-                                        data['count'] = 0;
-                                    }
-                                    item_match = raw_list[i].match(/更新時間:(\d\d\d\d)年(\d\d)月(\d\d)日/);
-                                    if (item_match) {
-                                        data['date'] = item_match[1] + '-' + item_match[2] + '-' + item_match[3];
-                                    } else {
-                                        data['date'] = '1970-01-01';
-                                    }
-                                }
-                            }
-                            list.push(data);
-                        }
-                    }
-                }
-                setTimeout(function(){
-                    callback(null, list);
-                }, 0);
-            }, 60000, false, false, 'http://www.123kubo.com/');*/
             case 'cartoonmad':
             return Api('url', url, {
                 referer: 'http://www.cartoonmad.com/',
@@ -2625,7 +2485,7 @@ export const bilibiliVideoUrl = url => {
             handleError(new HoError('cannot get list'));
         }
         return {
-            title: json_data.list[page].part,
+            title: json_data.list[page - 1].part,
             video: [],
             embed: [`//static.hdslb.com/miniloader.swf?aid=${id[2]}&page=${page}`],
         };

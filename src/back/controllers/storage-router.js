@@ -434,7 +434,7 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(req, res, next){
     console.log('media setTime');
-    let id = req.params.id.match(/^(you|ypl|yif|mad|bbl)_(.*)$/);
+    let id = req.params.id.match(/^(you|ypl|yif|mad|bbl|kub)_(.*)$/);
     let playlist = 0;
     let playlistId = null;
     let obj = req.params.obj;
@@ -534,7 +534,10 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             } else if (playlist > 2) {
                 let playurl = null;
                 let playtype = null;
-                if (playlist === 4) {
+                if (playlist === 3) {
+                    playurl = `http://www.99kubo.com/vod-read-id-${playlistId}.html`;
+                    playtype = 'kubo';
+                } else if (playlist === 4) {
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;
                     playtype = 'yify';
                 } else if (playlist === 5) {
@@ -543,9 +546,6 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                 } else if (playlist === 6) {
                     playurl = playlistId.match(/^av/) ? `http://www.bilibili.com/video/${playlistId}/` : `http://www.bilibili.com/bangumi/i/${playlistId}/`;
                     playtype = 'bilibili';
-
-                    playurl = 'http://www.99kubo.com/vod-read-id-93964.html';
-                    playtype = 'kubo';
                 }
                 return External.getSingleId(playtype, playurl, recordTime).then(([obj, is_end, total]) => ret_rest(obj, is_end, total));
             }
@@ -564,7 +564,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         handleError(new HoError('timestamp is not vaild'));
     }
-    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|dou|kdy)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
+    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|dou|kdy|kub)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
     const data = req.params.time === '0' ? [
         'hdel',
         id.toString(),
