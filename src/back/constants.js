@@ -106,6 +106,10 @@ export const DEFAULT_TAGS = [
     'bilibili animation',
     'bilibili movie',
     '18-',
+    'kubo movie',
+    'kubo tv series',
+    'kubo tv show',
+    'kubo animation',
 ]
 
 //parent list
@@ -494,6 +498,19 @@ export const BILI_TYPE = [
     '海外',
     '完結',
 ]
+export const KUBO_TYPE = [
+    '香港',
+    '台灣',
+    '大陸',
+    '日本',
+    '韓國',
+    '歐美',
+    '泰國',
+    '新馬',
+    '印度',
+    '海外',
+]
+
 export const BILI_INDEX = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 16]
 export const MAD_INDEX = ['01', '02', '03', '04', '10', '07', '08', '09', '16', '17', '13', '14', '18', '21', '22']
 

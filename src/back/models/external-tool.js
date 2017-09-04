@@ -12,6 +12,7 @@ import Mongo, { objectID } from '../models/mongo-tool'
 import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility'
 import { addPost } from '../util/mime'
 import Api from './api-tool'
+import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo'
 
 const opencc = new OpenCC('s2t.json');
 
@@ -417,6 +418,282 @@ export default {
                     return list;
                 });
             }
+            case 'kubo':
+            return Api('url', url, {referer: 'http://www.99kubo.com/',}).then(raw_data => {
+                const type_id = url.match(/vod-search-id-(\d+)/);
+                if (!type_id) {
+                    handleError(new HoError('unknown kubo type'));
+                }
+                return findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(l => {
+                    const a = findTag(l, 'a')[0];
+                    const img = findTag(a, 'img')[0];
+                    let tags = new Set();
+                    if (type_id[1] === '1') {
+                        tags = new Set(['電影', 'movie']);
+                    } else if (type_id[1] === '3') {
+                        tags = new Set(['動畫', 'animation']);
+                    } else {
+                        tags = new Set(['電視劇', 'tv show']);
+                        if (type_id[1] === '41') {
+                            tags.add('綜藝節目');
+                        }
+                    }
+                    let count = 0;
+                    let date = '1970-01-01';
+                    findTag(l, 'p').forEach(p => {
+                        const t = findTag(p)[0];
+                        if (t) {
+                            if (t === '主演：') {
+                                findTag(p, 'a').forEach(b => tags.add(findTag(b)[0]));
+                            } else {
+                                let match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
+                                if (match) {
+                                    tags.add(match[1]).add(match[2]);
+                                } else {
+                                    match = t.match(/^月熱度：(\d+)/);
+                                    if (match) {
+                                        count = Number(match[1]);
+                                    } else {
+                                        match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
+                                        if (match) {
+                                            date = match[1];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    return {
+                        name: img.attribs.alt,
+                        id: a.attribs.href.match(/\d+/)[0],
+                        thumb: img.attribs['data-original'],
+                        tags,
+                        count,
+                        date,
+                    };
+                });
+            });
+            /*api.xuiteDownload(url, '', function(err, raw_data) {
+                if (err) {
+                    err.hoerror = 2;
+                    util.handleError(err, callback, callback);
+                }
+                var raw_list = raw_data.match(/(.*)data\-original[\s\S]+?更新：\d\d\d\d-\d\d-\d\d/g);
+                var list = [];
+                var list_match = false;
+                var item_match = false;
+                var data = null;
+                var tags = [];
+                var act_match = false;
+                if (raw_list) {
+                    var type_id = url.match(/vod-search-id-(\d+)/);
+                    if (!type_id) {
+                        util.handleError({hoerror: 2, message: 'unknown kubo type'}, callback, callback);
+                    }
+                    type_id = type_id[1];
+                    for (var i in raw_list) {
+                        list_match = raw_list[i].match(/href=".*-(\d+)\.html".*data\-original="([^"]+)".*alt="([^"]+)"/);
+                        if (list_match) {
+                            data = {name: list_match[3], id: list_match[1], thumb: list_match[2]};
+                            if (type_id === '1') {
+                                tags = ['電影', 'movie'];
+                            } else if (type_id === '3') {
+                                tags = ['動畫', 'animation'];
+                            } else {
+                                tags = ['電視劇', 'tv show'];
+                            }
+                            item_match = raw_list[i].match(/地區\/年份：(.*)\/(\d+)/);
+                            if (item_match) {
+                                if (tags.indexOf(item_match[1]) === -1) {
+                                    tags.push(item_match[1]);
+                                }
+                                if (tags.indexOf(item_match[2]) === -1) {
+                                    tags.push(item_match[2]);
+                                }
+                            }
+                            item_match = raw_list[i].match(/主演：(.*)<\/p>/);
+                            if (item_match) {
+                                act_match = item_match[0].match(/>[^<>]+<\/a/g);
+                                if (act_match) {
+                                    for (var j in act_match) {
+                                        item_match = act_match[j].match(/>([^<>]+)<\/a/);
+                                        if (item_match) {
+                                            if (tags.indexOf(item_match[1]) === -1) {
+                                                tags.push(item_match[1]);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            data['tags'] = tags;
+                            item_match = raw_list[i].match(/月熱度：(\d+)/);
+                            if (item_match) {
+                                data['count'] = Number(item_match[1]);
+                            } else {
+                                data['count'] = 0;
+                            }
+                            item_match = raw_list[i].match(/更新：(\d\d\d\d-\d\d-\d\d)/);
+                            if (item_match) {
+                                data['date'] = item_match[1];
+                            } else {
+                                data['date'] = '1970-01-01';
+                            }
+                            list.push(data);
+                        }
+                    }
+                } else {
+                    raw_list = raw_data.match(/\.html"><img src="[\s\S]+?\d\d:\d\d<\/cite>/g);
+                    if (raw_list) {
+                        for (var i in raw_list) {
+                            list_match = raw_list[i].match(/<img src="([^"]+)"/);
+                            if (list_match) {
+                                data = {thumb: list_match[1]};
+                                list_match = raw_list[i].match(/vod-read-id-(\d+).html">(.*?)\-([^\-]+?)<\/a>/);
+                                if (list_match) {
+                                    data['id'] = list_match[1];
+                                    data['name'] = list_match[2].replace(/<\/?b>/g, '');
+                                    tags = [list_match[3]];
+                                    for (var j in kubo_type) {
+                                        if (kubo_type[j].indexOf(list_match[3]) !== -1) {
+                                            if (j === '2') {
+                                                if (tags.indexOf('animation') === -1) {
+                                                    tags.push('animation');
+                                                }
+                                                if (tags.indexOf('動畫') === -1) {
+                                                    tags.push('動畫');
+                                                }
+                                            } else if (j === '0') {
+                                                if (tags.indexOf('movie') === -1) {
+                                                    tags.push('movie');
+                                                }
+                                                if (tags.indexOf('電影') === -1) {
+                                                    tags.push('電影');
+                                                }
+                                                switch (kubo_type[j].indexOf(list_match[3])) {
+                                                    case 0:
+                                                    if (tags.indexOf('action') === -1) {
+                                                        tags.push('action');
+                                                    }
+                                                    if (tags.indexOf('動作') === -1) {
+                                                        tags.push('動作');
+                                                    }
+                                                    break;
+                                                    case 1:
+                                                    if (tags.indexOf('comedy') === -1) {
+                                                        tags.push('comedy');
+                                                    }
+                                                    if (tags.indexOf('喜劇') === -1) {
+                                                        tags.push('喜劇');
+                                                    }
+                                                    break;
+                                                    case 2:
+                                                    if (tags.indexOf('romance') === -1) {
+                                                        tags.push('romance');
+                                                    }
+                                                    if (tags.indexOf('浪漫') === -1) {
+                                                        tags.push('浪漫');
+                                                    }
+                                                    break;
+                                                    case 3:
+                                                    if (tags.indexOf('sci-fi') === -1) {
+                                                        tags.push('sci-fi');
+                                                    }
+                                                    if (tags.indexOf('科幻') === -1) {
+                                                        tags.push('科幻');
+                                                    }
+                                                    break;
+                                                    case 4:
+                                                    if (tags.indexOf('horror') === -1) {
+                                                        tags.push('horror');
+                                                    }
+                                                    if (tags.indexOf('恐怖') === -1) {
+                                                        tags.push('恐怖');
+                                                    }
+                                                    break;
+                                                    case 5:
+                                                    if (tags.indexOf('drama') === -1) {
+                                                        tags.push('drama');
+                                                    }
+                                                    if (tags.indexOf('劇情') === -1) {
+                                                        tags.push('劇情');
+                                                    }
+                                                    break;
+                                                    case 6:
+                                                    if (tags.indexOf('war') === -1) {
+                                                        tags.push('war');
+                                                    }
+                                                    if (tags.indexOf('戰爭') === -1) {
+                                                        tags.push('戰爭');
+                                                    }
+                                                    break;
+                                                    case 7:
+                                                    if (tags.indexOf('animation') === -1) {
+                                                        tags.push('animation');
+                                                    }
+                                                    if (tags.indexOf('動畫') === -1) {
+                                                        tags.push('動畫');
+                                                    }
+                                                    break;
+                                                }
+                                            } else if (j === '1') {
+                                                if (tags.indexOf('tv show') === -1) {
+                                                    tags.push('tv show');
+                                                }
+                                                if (tags.indexOf('電視劇') === -1) {
+                                                    tags.push('電視劇');
+                                                }
+                                            }
+                                        }
+                                    }
+                                    item_match = raw_list[i].match(/地區:<a[^>]+>([^<]+)/);
+                                    if (item_match) {
+                                        if (tags.indexOf(item_match[1]) === -1) {
+                                            tags.push(item_match[1]);
+                                        }
+                                    }
+                                    item_match = raw_list[i].match(/年份:<a[^>]+>(\d+)/);
+                                    if (item_match) {
+                                        if (tags.indexOf(item_match[1]) === -1) {
+                                            tags.push(item_match[1]);
+                                        }
+                                    }
+                                    item_match = raw_list[i].match(/演出:(.*)/);
+                                    if (item_match) {
+                                        act_match = item_match[0].match(/>[^<>]+<\/a/g);
+                                        if (act_match) {
+                                            for (var j in act_match) {
+                                                item_match = act_match[j].match(/>([^<>]+)<\/a/);
+                                                if (item_match) {
+                                                    if (tags.indexOf(item_match[1]) === -1) {
+                                                        tags.push(item_match[1]);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    data['tags'] = tags;
+                                    item_match = raw_list[i].match(/月熱度:(\d+)/);
+                                    if (item_match) {
+                                        data['count'] = Number(item_match[1]);
+                                    } else {
+                                        data['count'] = 0;
+                                    }
+                                    item_match = raw_list[i].match(/更新時間:(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                                    if (item_match) {
+                                        data['date'] = item_match[1] + '-' + item_match[2] + '-' + item_match[3];
+                                    } else {
+                                        data['date'] = '1970-01-01';
+                                    }
+                                }
+                            }
+                            list.push(data);
+                        }
+                    }
+                }
+                setTimeout(function(){
+                    callback(null, list);
+                }, 0);
+            }, 60000, false, false, 'http://www.123kubo.com/');*/
             case 'cartoonmad':
             return Api('url', url, {
                 referer: 'http://www.cartoonmad.com/',
@@ -2035,6 +2312,119 @@ export default {
                 };
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : bilibiliGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
+            case 'kubo':
+            const kuboGetlist = () => Api('url', url).then(raw_data => {
+                let list = [];
+                let is_end = false;
+                const main = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
+                const topRow = findTag(main, 'div', 'topRow')[0];
+                let isFlv = false;
+                findTag(findTag(topRow, 'ul', 'tabber')[0], 'li').forEach(l => {
+                    const kt = findTag(findTag(l, 'b')[0])[0];
+                    if (kt === 'FLV' || kt === 'YouTube') {
+                        isFlv = true;
+                    }
+                });
+                if (!isFlv) {
+                    handleError(new HoError('No flv!!!'));
+                }
+                for (let p of findTag(findTag(findTag(findTag(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')) {
+                    for (let pt of findTag(p)) {
+                        if (pt.match(/完結/)) {
+                            is_end = true;
+                            break;
+                        }
+                    }
+                    if (is_end) {
+                        break;
+                    }
+                }
+                let flvUrl = null;
+                let listY = [];
+                findTag(topRow, 'div', 'hideCont').forEach(h => {
+                    let ul = findTag(findTag(findTag(findTag(h, 'ul')[0], 'div', 'vmain')[0], 'div', 'vpl')[0], 'ul')[0];
+                    const div = findTag(ul, 'div')[0];
+                    if (div) {
+                        ul = div;
+                    }
+                    for (let l of findTag(ul, 'li')) {
+                        const a = findTag(l, 'a')[0];
+                        let urlMatch = addPre(a.attribs.href, 'http://www.99kubo.com').match(/youtube\.php\?(.*)$/);
+                        if (urlMatch) {
+                            listY.push({
+                                name: findTag(a)[0],
+                                id: `kdy_${urlMatch[1]}`,
+                            });
+                        } else {
+                            if (a.attribs.href.match(/vod\-play\-id\-/)) {
+                                flvUrl = addPre(a.attribs.href, 'http://www.99kubo.com');
+                                break;
+                            }
+                        }
+                    }
+                });
+                return flvUrl ? Api('url', flvUrl).then(raw_data => {
+                    let diy_vid = '';
+                    let Pid = '';
+                    let ff_urls = '';
+                    const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0]
+                    findTag(findTag(html, 'head')[0], 'script').forEach(s => {
+                        const j = findTag(s)[0];
+                        if (j) {
+                            let jM = j.match(/^\s*var\s*diy_vid\s*=\s*['"](\d+)['"];?\s*$/);
+                            if (jM) {
+                                diy_vid = jM[1];
+                            } else {
+                                jM = j.match(/^\s*var\s*Pid\s*=\s*['"](\d+)['"];?\s*$/);
+                                if (jM) {
+                                    Pid = jM[1];
+                                }
+                            }
+                        }
+                    });
+                    const jM = findTag(findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
+                    if (jM) {
+                        ff_urls = JSON.parse(jM[1].replace(/\\\"/g, '"'));
+                    }
+                    let list2 = [];
+                    ff_urls.Data.forEach(f => {
+                        if (f.playname === 'bj58') {
+                            list = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kud_${Pid}_${diy_vid}_${new Buffer(p[1]).toString('base64')}`,
+                            }));
+                        } else if (f.playname === 'bj2') {
+                            list2 = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `dou_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        }
+                    });
+                    list = list.concat(listY);
+                    list = list.concat(list2);
+                    return [list, is_end];
+                }) : [listY, is_end];
+            });
+            return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
+                const sendList = (raw_list, is_end, etime) => {
+                    const choose = raw_list[index - 1];
+                    if (!choose) {
+                        handleError(new HoError('cannot find external index'));
+                    }
+                    saveList(kuboGetlist, raw_list, is_end, etime);
+                    return [Object.assign({
+                        index,
+                        showId: index,
+                        id: choose.id,
+                        title: choose.name,
+                    }, choose.id.match(/^kdy_/) ? {
+                        index: (index * 1000 + sub_index) / 1000,
+                        showId: (index * 1000 + sub_index) / 1000,
+                        id: `${choose.id}_${sub_index}`,
+                    } : {}), is_end, raw_list.length];
+                };
+                return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : kuboGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
+            });
             case 'cartoonmad':
             if (!url.match(/\d+/)) {
                 handleError(new HoError('comic id invalid'));
@@ -2240,11 +2630,42 @@ export const bilibiliVideoUrl = url => {
     });
 }
 
+export const kuboVideoUrl = (id, url, subIndex=1) => {
+    console.log(url);
+    if (id === 'kdy') {
+        return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+            const iframes = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container')[0], 'div', 'youtube-player')[0], 'iframe');
+            if (subIndex > iframes.length) {
+                subIndex = iframes.length;
+            }
+            const getUrl = youUrl => youUrl.match(/www\.youtube\.com/) ? youtubeVideoUrl('you', `http://www.youtube.com/watch?v=${youUrl.match(/embed\/(.*)$/)[1]}`) : youtubeVideoUrl('dym', `http://www.dailymotion.com/embed/video/${youUrl.match(/url\=(.*)$/)[1]}`);
+            return getUrl(iframes[subIndex - 1].attribs.src).then(ret_obj => Object.assign(ret_obj, (iframes.length > 1) ? {sub : iframes.length} : {}));
+        });
+    } else if (id === 'kud') {
+        return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+            let ret_obj = {video: []};
+            JuicyCodes.Run(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0])[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+            kuboInfo.sources.forEach(s => {
+                if (s.type === 'video/mp4') {
+                    ret_obj.video.splice(0, 0, s.file);
+                }
+            });
+            if (ret_obj.video.length < 1) {
+                handleError(new HoError('cannot find mp4'));
+            }
+            return ret_obj;
+        });
+    } else {
+        return Promise.resolve({
+            video: [],
+            url: [url],
+        });
+    }
+}
+
 export const youtubeVideoUrl = (id, url) => {
-    let ret_obj = {
-        title: id,
-        video: [],
-    };
+    console.log(url);
+    let ret_obj = {video: []};
     if (id === 'lin') {
         ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
     } else if (id === 'iqi') {

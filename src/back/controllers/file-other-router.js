@@ -104,7 +104,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
             res.writeHead(200, {'Content-Type': 'text/vtt'});
             FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : '/home/pi/app/public/123.vtt').pipe(res);
         }
-        const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi)_/);
+        const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|dou|kdy)_/);
         if (id) {
             const id_valid = isValidString(req.params.uid, 'name', 'external is not vaild');
             let filePath = null;
@@ -129,6 +129,15 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
                 break;
                 case 'iqi':
                 filePath = getFileLocation('iqiyi', id_valid);
+                break;
+                case 'kud':
+                filePath = getFileLocation('kubodrive', id_valid);
+                break;
+                case 'dou':
+                filePath = getFileLocation('doudou', id_valid);
+                break;
+                case 'kdy':
+                filePath = getFileLocation('kubodymyou', id_valid);
                 break;
                 default:
                 filePath = getFileLocation('youtube', id_valid);
@@ -571,7 +580,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 }).then(() => convertSub(filePath, id));
             });
         }
-        const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi)_/);
+        const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|dou|kdy)_/);
         if (idMatch) {
             let ex_type = 'youtube';
             switch(idMatch[1]) {
@@ -592,6 +601,15 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 break;
                 case 'iqi':
                 ex_type = 'iqiyi';
+                break;
+                case 'kud':
+                ex_type = 'kubodrive';
+                break;
+                case 'dou':
+                ex_type = 'doudou';
+                break;
+                case 'kdy':
+                ex_type = 'kubodymyou';
                 break;
             }
             const id = isValidString(req.params.uid, 'name', 'external is not vaild');

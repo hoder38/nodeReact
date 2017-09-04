@@ -222,7 +222,18 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
     const index = req.params.pageToken ? Number(req.params.pageToken.match(/^\d+/)) : 1;
     const pageToken = req.params.pageToken ? req.params.pageToken.match(/[^\d]+$/) : false;
     let itemList = [];
-    External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
+    External.getSingleList('kubo', StorageTagTool.getKuboQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
+        name: item.name,
+        id: `kub_${item.id}`,
+        tags: [...item.tags, 'first item'],
+        recycle: 0,
+        isOwn: false,
+        utime: new Date(item.date).getTime()/1000,
+        thumb: item.thumb,
+        noDb: true,
+        status: 3,
+        count: item.count,
+    }))).then(() => External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index))).then(list => [...itemList, ...list.map(item => ({
         name: item.name,
         id: `yif_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -233,7 +244,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.rating,
-    }))).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+    }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `bbl_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -532,6 +543,9 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                 } else if (playlist === 6) {
                     playurl = playlistId.match(/^av/) ? `http://www.bilibili.com/video/${playlistId}/` : `http://www.bilibili.com/bangumi/i/${playlistId}/`;
                     playtype = 'bilibili';
+
+                    playurl = 'http://www.99kubo.com/vod-read-id-93964.html';
+                    playtype = 'kubo';
                 }
                 return External.getSingleId(playtype, playurl, recordTime).then(([obj, is_end, total]) => ret_rest(obj, is_end, total));
             }
@@ -550,7 +564,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         handleError(new HoError('timestamp is not vaild'));
     }
-    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
+    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|dou|kdy)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
     const data = req.params.time === '0' ? [
         'hdel',
         id.toString(),

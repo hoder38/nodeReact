@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_TYPE } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -243,7 +243,7 @@ export default function process(collection) {
                         genre = GENRE_LIST[GENRE_LIST_CH.indexOf(normal)];
                         query_term = null;
                     } else {
-                        query_term = denormalize(s);
+                        query_term = s;
                         genre = null;
                     }
                 } else if (index.index === 13) {
@@ -285,7 +285,7 @@ export default function process(collection) {
                             query_term = null;
                             s_country = -1;
                         } else {
-                            query_term = denormalize(s);
+                            query_term = s;
                             s_year = 0;
                             s_country = -1;
                         }
@@ -387,7 +387,7 @@ export default function process(collection) {
                         comic_type = mIndex;
                         query_term = null;
                     } else {
-                        query_term = denormalize(s);
+                        query_term = s;
                         comic_type = -1;
                     }
                 } else if (index.index === 14) {
@@ -417,6 +417,58 @@ export default function process(collection) {
                     console.log(url);
                     return url;
                 }
+            } else {
+                return false;
+            }
+        },
+        getKuboQuery: function(search_arr, sortName, page) {
+            let searchWord = null;
+            let year = 0;
+            let type = 0;
+            let country = '';
+            search_arr.forEach(s => {
+                const normal = normalize(s);
+                const index = isDefaultTag(normal);
+                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
+                    if (s.match(/^\d\d\d\d$/)) {
+                        if (Number(s) < 2100 && Number(s) > 1800) {
+                            year = Number(s);
+                            searchWord = null;
+                            country = '';
+                        } else {
+                            searchWord = s;
+                            year = 0;
+                            country = '';
+                        }
+                    } else if (KUBO_TYPE.includes(normal)) {
+                        country = normal;
+                        searchWord = null;
+                        year = 0;
+                    } else {
+                        searchWord = s;
+                        year = 0;
+                        country = '';
+                    }
+                //movie
+                } else if (index.index === 18) {
+                    type = 1;
+                //tv series
+                } else if (index.index === 19) {
+                    type = 2;
+                //tv show
+                } else if (index.index === 20) {
+                    type = 41;
+                //animation
+                } else if (index.index === 21) {
+                    type = 3;
+                }
+            });
+            if (type) {
+                const order = (sortName === 'mtime') ? 'vod_addtime' : 'vod_hits_month';
+                const sOrder = (sortName === 'mtime') ? 1 : 2;
+                const url = searchWord ? `http://www.99kubo.com/index.php?s=Vod-innersearch-q-${searchWord}-order-${sOrder}-page-${page}` : `http://www.99kubo.com/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
+                console.log(url);
+                return url;
             } else {
                 return false;
             }
@@ -1073,7 +1125,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                     console.log(ret.nosql);
                     return ret;
                 }
-            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16) {
+            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21) {
             } else if (index.index === 5) {
                 is_first = false;
             } else if (index.index === 7) {
