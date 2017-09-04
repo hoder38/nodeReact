@@ -1164,19 +1164,21 @@ export default {
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div', 'wrapper')[0], 'div', 'wrapperInner')[0], 'div', 'contentBox')[0], 'div', 'subpageBox')[0], 'div', 'rowBox_2column_s1')[0], 'div', 'rowBox_2column_s1_col-1')[0], 'div', 'normalListBox')[0], 'div', 'normalListBox_data')[0], 'div', 'tableBox')[0], 'table', 'table_list printArea')[0], 'tr').forEach(t => {
-                    const td = findTag(t, 'td')[3];
-                    if (td && findTag(findTag(td, 'div')[0])[0] === docDate) {
-                        const a = findTag(findTag(findTag(t, 'td')[1], 'div')[0], 'a')[0];
-                        if (a.attribs.title.match(/海關進出口貿易/)) {
+                for (let l of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'div_newsDataBox')[0], 'ul', 'list')[0], 'li')) {
+                    const a = findTag(l, 'a')[0];
+                    const day = findTag(findTag(a, 'div', 'day')[0], 'p')[0];
+                    if (`${findTag(day)[0]}-${findTag(findTag(day, 'span')[0])[0]}` === docDate) {
+                        const name = findTag(findTag(findTag(a, 'div', 'p_title')[0], 'p', 'name')[0])[0];
+                        if (name.match(/海關進出口貿易/)) {
                             list.push({
                                 url: addPre(a.attribs.href, 'http://www.mof.gov.tw'),
-                                name: toValidName(a.attribs.title),
+                                name: toValidName(name),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
                         }
+                        break;
                     }
-                });
+                }
                 return list;
             });
             case 'moe':
@@ -1615,7 +1617,7 @@ export default {
             case 'mof':
             console.log(obj);
             return Api('url', obj.url, {referer: 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281'}).then(raw_data => {
-                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div', 'wrapper')[0], 'div', 'wrapperInner')[0], 'div', 'contentBox')[0], 'div', 'subpageBox')[0], 'div', 'rowBox_2column_s1')[0], 'div', 'rowBox_2column_s1_col-1')[0], 'div', 'displayDocBox printArea')[0], 'div', 'displayDocBox_content')[0], 'div', 'msgBox imgBottom')[0], 'div', 'msgBox_main')[0], 'div', 'displayDocBox_text')[0], 'p');
+                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
                 for (let p of ps) {
                     const pc = findTag(p)[0];
                     if (pc && pc.match(/本文及附表/)) {
