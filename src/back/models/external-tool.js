@@ -2179,17 +2179,6 @@ export default {
                 let list = [];
                 let is_end = false;
                 const main = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
-                const topRow = findTag(main, 'div', 'topRow')[0];
-                let isFlv = false;
-                findTag(findTag(topRow, 'ul', 'tabber')[0], 'li').forEach(l => {
-                    const kt = findTag(findTag(l, 'b')[0])[0];
-                    if (kt === 'FLV' || kt === 'YouTube') {
-                        isFlv = true;
-                    }
-                });
-                if (!isFlv) {
-                    handleError(new HoError('No flv!!!'));
-                }
                 for (let p of findTag(findTag(findTag(findTag(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')) {
                     for (let pt of findTag(p)) {
                         if (pt.match(/完結/)) {
@@ -2203,7 +2192,7 @@ export default {
                 }
                 let flvUrl = null;
                 let listY = [];
-                findTag(topRow, 'div', 'hideCont').forEach(h => {
+                findTag(findTag(main, 'div', 'topRow')[0], 'div', 'hideCont').forEach(h => {
                     let ul = findTag(findTag(findTag(findTag(h, 'ul')[0], 'div', 'vmain')[0], 'div', 'vpl')[0], 'ul')[0];
                     const div = findTag(ul, 'div')[0];
                     if (div) {
@@ -2248,22 +2237,43 @@ export default {
                     if (jM) {
                         ff_urls = JSON.parse(jM[1].replace(/\\\"/g, '"'));
                     }
+                    let list1 = [];
                     let list2 = [];
+                    let lists = [];
+                    let listO = [];
                     ff_urls.Data.forEach(f => {
                         if (f.playname === 'bj58') {
                             list = f.playurls.map(p => ({
                                 name: p[0],
                                 id: `kud_${Pid}_${diy_vid}_${new Buffer(p[1]).toString('base64')}`,
                             }));
+                        } else if (f.playname === 'bj') {
+                            list1 = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kyu_${p[1].match(/^(.*)_wd1$/)[1]}`,
+                            }));
                         } else if (f.playname === 'bj2') {
                             list2 = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `dou_${new Buffer(p[2]).toString('base64')}`,
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        } else if (f.playname.match(/^bj/)) {
+                            lists = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        } else {
+                            listO = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
                             }));
                         }
                     });
                     list = list.concat(listY);
+                    list = list.concat(list1);
                     list = list.concat(list2);
+                    list = list.concat(lists);
+                    list = list.concat(listO);
                     return [list, is_end];
                 }) : [listY, is_end];
             });
@@ -2279,7 +2289,7 @@ export default {
                         showId: index,
                         id: choose.id,
                         title: choose.name,
-                    }, choose.id.match(/^kdy_/) ? {
+                    }, choose.id.match(/^(kdy|kyu)_/) ? {
                         index: (index * 1000 + sub_index) / 1000,
                         showId: (index * 1000 + sub_index) / 1000,
                         id: `${choose.id}_${sub_index}`,
@@ -2372,6 +2382,86 @@ export default {
                         url,
                     ];
                 });
+            });
+            case 'kubo':
+            url = `http://www.99kubo.com/vod-read-id-${id}.html`
+            return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+                const vmain = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
+                const img = findTag(findTag(vmain, 'div', 'vpic')[0], 'img')[0];
+                const name = img.attribs.alt;
+                const thumb = img.attribs.src;
+                let tags = new Set(['kubo', '酷播', '影片', 'video']);
+                findTag(findTag(vmain, 'div', 'vshow')[0], 'p').forEach(p => {
+                    const t = findTag(p)[0];
+                    if (t) {
+                        const match = findTag(p)[0].match(/^別名:(.*)$/);
+                        if (match) {
+                            match[1].split('/').forEach(m => tags.add(m));
+                        } else {
+                            if (t === '類型：') {
+                                findTag(p, 'a').forEach(a => tags.add(findTag(a)[0]));
+                            } else if (t === '分類：') {
+                                findTag(p, 'font').forEach(a => tags.add(findTag(a)[0]));
+                                const type = findTag(findTag(p, 'a')[0])[0];
+                                tags.add(type);
+                                for (let i in KUBO_TYPE) {
+                                    const index = KUBO_TYPE[i].indexOf(type);
+                                    if (index !== -1) {
+                                        if (i === '0') {
+                                            tags.add('movie').add('電影');
+                                            switch (index) {
+                                                case 0:
+                                                tags.add('action').add('動作');
+                                                break;
+                                                case 1:
+                                                tags.add('comedy').add('喜劇');
+                                                break;
+                                                case 2:
+                                                tags.add('romance').add('浪漫');
+                                                break;
+                                                case 3:
+                                                tags.add('sci-fi').add('科幻');
+                                                break;
+                                                case 4:
+                                                tags.add('horror').add('恐怖');
+                                                break;
+                                                case 5:
+                                                tags.add('drama').add('劇情');
+                                                break;
+                                                case 6:
+                                                tags.add('war').add('戰爭');
+                                                break;
+                                                case 7:
+                                                tags.add('animation').add('動畫');
+                                                break;
+                                            }
+                                        } else if (i === '1') {
+                                            tags.add('tv show').add('電視劇');
+                                        } else if (i === '2') {
+                                            tags.add('tv show').add('電視劇').add('綜藝節目');
+                                        } else if (i === '3') {
+                                            tags.add('animation').add('動畫');
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                let newTag = new Set();
+                tags.forEach(t => {
+                    const index = TRANS_LIST.indexOf(t);
+                    newTag.add((index !== -1) ? TRANS_LIST_CH[index] : t);
+                });
+                return [
+                    img.attribs.alt,
+                    newTag,
+                    new Set(),
+                    'kubo',
+                    img.attribs.src,
+                    url,
+                ];
             });
             case 'cartoonmad':
             url = `http://www.cartoonmad.com/comic/${id}.html`;
@@ -2501,6 +2591,10 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                 subIndex = iframes.length;
             }
             const getUrl = youUrl => youUrl.match(/www\.youtube\.com/) ? youtubeVideoUrl('you', `http://www.youtube.com/watch?v=${youUrl.match(/embed\/(.*)$/)[1]}`) : youtubeVideoUrl('dym', `http://www.dailymotion.com/embed/video/${youUrl.match(/url\=(.*)$/)[1]}`);
+            if (!iframes[subIndex - 1]) {
+                console.log(iframes);
+                handleError(new HoError('cannot find mp4'));
+            }
             return getUrl(iframes[subIndex - 1].attribs.src).then(ret_obj => Object.assign(ret_obj, (iframes.length > 1) ? {sub : iframes.length} : {}));
         });
     } else if (id === 'kud') {
@@ -2513,9 +2607,33 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                 }
             });
             if (ret_obj.video.length < 1) {
+                console.log(ret_obj.video);
                 handleError(new HoError('cannot find mp4'));
             }
             return ret_obj;
+        });
+    } else if (id === 'kyu') {
+        return Api('url', `http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
+            referer: 'http://forum.99kubo.com/',
+            post: {url: new Buffer(url).toString('base64')},
+        }).then(raw_data => {
+            const json_data = getJson(raw_data);
+            if (json_data['code'] === '404') {
+                console.log(json_data);
+                handleError(new HoError('try later'));
+            }
+            if (!json_data['mp4']) {
+                console.log(json_data);
+                handleError(new HoError('cannot find mp4'));
+            }
+            if (subIndex > json_data['mp4'].length) {
+                subIndex = json_data['mp4'].length;
+            }
+            if (!json_data['mp4'][subIndex - 1]) {
+                console.log(json_data);
+                handleError(new HoError('cannot find mp4'));
+            }
+            return Object.assign({video: [json_data['mp4'][subIndex - 1].url]}, (json_data['mp4'].length > 1) ? {sub : json_data['mp4'].length} : {});
         });
     } else {
         return Promise.resolve({

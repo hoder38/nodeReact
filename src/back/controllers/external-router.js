@@ -180,7 +180,7 @@ router.get('/2drive/:uid', function(req, res, next){
 
 router.get('/getSingle/:uid', function(req, res, next) {
     console.log('external getSingle');
-    const id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|dou|kdy)_(.*)/);
+    const id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
     if (!id) {
         handleError(new HoError('file is not youtube video!!!'));
     }
@@ -195,13 +195,18 @@ router.get('/getSingle/:uid', function(req, res, next) {
         idsub = id[2].match(/^(\d+)_(\d+)_(.*)$/);
         url = `http://www.99kubo.com/168player/?url=${new Buffer(idsub[3], 'base64').toString()}&kubovid=${idsub[2]}&kubocid=${idsub[1]}`;
         break;
-        case 'dou':
-        url = `http://www.99kubo.com/${new Buffer(id[2], 'base64').toString()}`;
+        case 'kyu':
+        idsub = id[2].match(/^(.*)_(\d+)$/);
+        subIndex = Number(idsub[2]);
+        url = `http://v.youku.com/v_show/id_${idsub[1]}.html`;
         break;
         case 'kdy':
         idsub = id[2].match(/^(.*)_(\d+)$/);
         subIndex = Number(idsub[2]);
         url = `http://www.99kubo.com/168player/youtube.php?${idsub[1]}`;
+        break;
+        case 'kur':
+        url = `http://www.99kubo.com/${new Buffer(id[2], 'base64').toString()}`;
         break;
         case 'bil':
         idsub = id[2].match(/^([^_]+)_(\d+)$/);
@@ -223,7 +228,7 @@ router.get('/getSingle/:uid', function(req, res, next) {
         url = `http://www.youtube.com/watch?v=${id[2]}`;
         break;
     }
-    const getUrl = () => (id[1] === 'bil') ? bilibiliVideoUrl(url) : (id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'dou') ? kuboVideoUrl(id[1], url, subIndex) : youtubeVideoUrl(id[1], url);
+    const getUrl = () => (id[1] === 'bil') ? bilibiliVideoUrl(url) : (id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'kyu' || id[1] === 'kur') ? kuboVideoUrl(id[1], url, subIndex) : youtubeVideoUrl(id[1], url);
     getUrl().then(ret_obj => res.json(ret_obj)).catch(err => handleError(err, next));
 });
 
@@ -450,6 +455,26 @@ router.post('/upload/url', function(req, res, next) {
                         }
                         is_media = 3;
                         return External.saveSingle('yify', yify_id[0]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                            owner: owner,
+                            untag: 0,
+                            thumb: thumb,
+                            url: url,
+                        }]);
+                    });
+                } else if (decodeUrl.match(/^(https|http):\/\/www\.99kubo\.com\//)) {
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'kubo',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            handleError(new HoError('already has one'));
+                        }
+                        const kubo_id = decodeUrl.match(/(\d+)\.html$/);
+                        if (!kubo_id) {
+                            handleError(new HoError('kubo url invalid'));
+                        }
+                        is_media = 3;
+                        return External.saveSingle('kubo', kubo_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
                             owner: owner,
                             untag: 0,
                             thumb: thumb,
@@ -761,7 +786,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     }
     console.log(season);
     console.log(episode);
-    const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|dou|kdy)_/);
+    const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
     let type = 'youtube';
     if (idMatch) {
         switch(idMatch[1]) {
@@ -780,11 +805,14 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             case 'kud':
             type = 'kubodrive';
             break;
-            case 'dou':
-            type = 'doudou';
+            case 'kyu':
+            type = 'kuboyouku';
             break;
             case 'kdy':
             type = 'kubodymyou';
+            break;
+            case 'kur':
+            type = 'kubourl';
             break;
         }
     }

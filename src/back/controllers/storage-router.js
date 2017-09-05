@@ -564,7 +564,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         handleError(new HoError('timestamp is not vaild'));
     }
-    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|dou|kdy|kub)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
+    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
     const data = req.params.time === '0' ? [
         'hdel',
         id.toString(),
