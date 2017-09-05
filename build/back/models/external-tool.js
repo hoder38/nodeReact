@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.youtubeVideoUrl = exports.bilibiliVideoUrl = exports.subHdUrl = undefined;
+exports.youtubeVideoUrl = exports.kuboVideoUrl = exports.bilibiliVideoUrl = exports.subHdUrl = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -82,6 +82,8 @@ var _mime = require('../util/mime');
 var _apiTool = require('./api-tool');
 
 var _apiTool2 = _interopRequireDefault(_apiTool);
+
+var _kubo = require('../util/kubo');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -491,11 +493,10 @@ exports.default = {
                             var dom = _htmlparser2.default.parseDOM(json_data['html']);
                             list = (0, _utility.findTag)(dom, 'li', 'video matrix ').map(function (v) {
                                 var a = (0, _utility.findTag)(v, 'a')[0];
-                                var img = (0, _utility.findTag)(a.children[1], 'img')[0];
                                 return {
                                     id: a.attribs.href.match(/av\d+/)[0],
-                                    name: opencc.convertSync(img.attribs.title),
-                                    thumb: img.attribs.src,
+                                    name: opencc.convertSync(a.attribs.title),
+                                    thumb: 'http:' + (0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'img')[0], 'img')[0].attribs['data-src'],
                                     date: new Date('1970-01-01').getTime() / 1000,
                                     tags: ['movie', '電影'],
                                     count: opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(v, 'div', 'info')[0], 'div', 'tags')[0], 'span', 'so-icon watch-num')[0])[0])
@@ -505,9 +506,9 @@ exports.default = {
                                 list = (0, _utility.findTag)(dom, 'li', 'synthetical').map(function (v) {
                                     var a = (0, _utility.findTag)(v, 'div', 'left-img')[0].children[1];
                                     return {
-                                        id: a.attribs.href.match(/\d+$/)[0],
+                                        id: a.attribs.href.match(/\/anime\/(\d+)/)[1],
                                         name: opencc.convertSync(a.attribs.title),
-                                        thumb: (0, _utility.findTag)(a, 'img')[0].attribs.src,
+                                        thumb: 'http:' + (0, _utility.findTag)(a, 'img')[0].attribs['data-src'],
                                         date: new Date('1970-01-01').getTime() / 1000,
                                         tags: ['animation', '動畫'],
                                         count: 0
@@ -518,6 +519,183 @@ exports.default = {
                         return list;
                     });
                 }
+            case 'kubo':
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+                    var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
+                    var main = (0, _utility.findTag)(body, 'div', 'main')[0];
+                    if (main) {
+                        var _ret2 = function () {
+                            var type_id = url.match(/vod-search-id-(\d+)/);
+                            if (!type_id) {
+                                (0, _utility.handleError)(new _utility.HoError('unknown kubo type'));
+                            }
+                            return {
+                                v: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(function (l) {
+                                    var a = (0, _utility.findTag)(l, 'a')[0];
+                                    var img = (0, _utility.findTag)(a, 'img')[0];
+                                    var tags = new _set2.default();
+                                    if (type_id[1] === '1') {
+                                        tags = new _set2.default(['電影', 'movie']);
+                                    } else if (type_id[1] === '3') {
+                                        tags = new _set2.default(['動畫', 'animation']);
+                                    } else {
+                                        tags = new _set2.default(['電視劇', 'tv show']);
+                                        if (type_id[1] === '41') {
+                                            tags.add('綜藝節目');
+                                        }
+                                    }
+                                    var count = 0;
+                                    var date = '1970-01-01';
+                                    (0, _utility.findTag)(l, 'p').forEach(function (p) {
+                                        var t = (0, _utility.findTag)(p)[0];
+                                        if (t) {
+                                            if (t === '主演：') {
+                                                (0, _utility.findTag)(p, 'a').forEach(function (b) {
+                                                    return tags.add((0, _utility.findTag)(b)[0]);
+                                                });
+                                            } else {
+                                                var match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
+                                                if (match) {
+                                                    tags.add(match[1]).add(match[2]);
+                                                } else {
+                                                    match = t.match(/^月熱度：(\d+)/);
+                                                    if (match) {
+                                                        count = Number(match[1]);
+                                                    } else {
+                                                        match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
+                                                        if (match) {
+                                                            date = match[1];
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                    return {
+                                        name: img.attribs.alt,
+                                        id: a.attribs.href.match(/\d+/)[0],
+                                        thumb: img.attribs['data-original'],
+                                        tags: tags,
+                                        count: count,
+                                        date: date
+                                    };
+                                })
+                            };
+                        }();
+
+                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                    } else {
+                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[0], 'div', 'wrapper_wrapper')[0], 'div', 'container')[0], 'div', 'content_left')[0], 'div', 'ires')[0], 'ol')[0], 'li', 'g').map(function (g) {
+                            var tr = (0, _utility.findTag)((0, _utility.findTag)(g, 'table')[0], 'tr')[0];
+                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'div')[0], 'a')[0];
+                            var td = (0, _utility.findTag)(tr, 'td')[1];
+                            var a1 = (0, _utility.findTag)((0, _utility.findTag)(td, 'h3')[0], 'a')[0];
+                            var bs = (0, _utility.findTag)(a1, 'b').map(function (b) {
+                                return (0, _utility.findTag)(b)[0];
+                            });
+                            var name = '';
+                            (0, _utility.findTag)(a1).forEach(function (n, i) {
+                                return name = bs[i] ? '' + name + n + bs[i] : '' + name + n;
+                            });
+                            name = name.match(/^(.*)-([^\-]+)$/);
+                            var tags = new _set2.default([(0, _tagTool.normalize)(name[2])]);
+                            var count = 0;
+                            var date = '1970-01-01';
+                            for (var i in _constants.KUBO_TYPE) {
+                                var index = _constants.KUBO_TYPE[i].indexOf(name[2]);
+                                if (index !== -1) {
+                                    if (i === '0') {
+                                        tags.add('movie').add('電影');
+                                        switch (index) {
+                                            case 0:
+                                                tags.add('action').add('動作');
+                                                break;
+                                            case 1:
+                                                tags.add('comedy').add('喜劇');
+                                                break;
+                                            case 2:
+                                                tags.add('romance').add('浪漫');
+                                                break;
+                                            case 3:
+                                                tags.add('sci-fi').add('科幻');
+                                                break;
+                                            case 4:
+                                                tags.add('horror').add('恐怖');
+                                                break;
+                                            case 5:
+                                                tags.add('drama').add('劇情');
+                                                break;
+                                            case 6:
+                                                tags.add('war').add('戰爭');
+                                                break;
+                                            case 7:
+                                                tags.add('animation').add('動畫');
+                                                break;
+                                        }
+                                    } else if (i === '1') {
+                                        tags.add('tv show').add('電視劇');
+                                    } else if (i === '2') {
+                                        tags.add('tv show').add('電視劇').add('綜藝節目');
+                                    } else if (i === '3') {
+                                        tags.add('animation').add('動畫');
+                                    }
+                                    break;
+                                }
+                            }
+                            var div = (0, _utility.findTag)(td, 'div')[0];
+                            var span = (0, _utility.findTag)((0, _utility.findTag)(div, 'div', 'kv')[0], 'span')[0];
+                            var _iteratorNormalCompletion = true;
+                            var _didIteratorError = false;
+                            var _iteratorError = undefined;
+
+                            try {
+                                for (var _iterator = (0, _getIterator3.default)((0, _utility.findTag)(span)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                                    var t = _step.value;
+
+                                    var match = t.match(/月熱度:(\d+)/);
+                                    if (match) {
+                                        count = Number(match[1]);
+                                        break;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError = true;
+                                _iteratorError = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion && _iterator.return) {
+                                        _iterator.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError) {
+                                        throw _iteratorError;
+                                    }
+                                }
+                            }
+
+                            (0, _utility.findTag)(span, 'a').forEach(function (s) {
+                                return tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
+                            });
+                            (0, _utility.findTag)(div, 'div', 'osl').forEach(function (o) {
+                                return (0, _utility.findTag)(o, 'a').forEach(function (s) {
+                                    return tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
+                                });
+                            });
+                            var matchDate = (0, _utility.findTag)((0, _utility.findTag)(span, 'cite')[0])[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                            if (matchDate) {
+                                date = matchDate[1] + '-' + matchDate[2] + '-' + matchDate[3];
+                            }
+                            return {
+                                id: a.attribs.href.match(/\d+/)[0],
+                                name: name[1],
+                                thumb: (0, _utility.findTag)(a, 'img')[0].attribs.src,
+                                date: date,
+                                tags: tags,
+                                count: count
+                            };
+                        });
+                    }
+                });
             case 'cartoonmad':
                 return (0, _apiTool2.default)('url', url, {
                     referer: 'http://www.cartoonmad.com/',
@@ -760,13 +938,13 @@ exports.default = {
                     var link = false;
                     var today = false;
                     var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'page clearfix')[0], 'section', 'section-content')[0], 'div', 'zone-content-wrapper')[0], 'div', 'zone-content')[0], 'div', 'region-content')[0], 'div', 'region-inner region-content-inner')[0], 'div', 'block-system-main')[0], 'div', 'block-inner clearfix')[0], 'div', 'content clearfix')[0], 'div', 'clearfix panel-display omega-grid rotheme-12-twocol-8-4-stacked')[0], 'div', 'panel-panel grid-8')[0], 'div', 'grid-8 alpha omega')[0], 'div', 'inside')[0], 'div', 'panel-pane pane-entity-field pane-node-body')[0], 'div', 'pane-content')[0], 'div', 'field field-name-body field-type-text-with-summary field-label-hidden')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'ul')[0], 'li');
-                    var _iteratorNormalCompletion = true;
-                    var _didIteratorError = false;
-                    var _iteratorError = undefined;
+                    var _iteratorNormalCompletion2 = true;
+                    var _didIteratorError2 = false;
+                    var _iteratorError2 = undefined;
 
                     try {
-                        for (var _iterator = (0, _getIterator3.default)(lis), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                            var l = _step.value;
+                        for (var _iterator2 = (0, _getIterator3.default)(lis), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                            var l = _step2.value;
 
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             if ((0, _utility.findTag)(a)[0] === 'Read the full news release') {
@@ -786,16 +964,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError = true;
-                        _iteratorError = err;
+                        _didIteratorError2 = true;
+                        _iteratorError2 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion && _iterator.return) {
-                                _iterator.return();
+                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                _iterator2.return();
                             }
                         } finally {
-                            if (_didIteratorError) {
-                                throw _iteratorError;
+                            if (_didIteratorError2) {
+                                throw _iteratorError2;
                             }
                         }
                     }
@@ -847,13 +1025,13 @@ exports.default = {
                         var content = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'dates')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                             var as = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'h3')[0], 'span')[0], 'a');
-                            var _iteratorNormalCompletion2 = true;
-                            var _didIteratorError2 = false;
-                            var _iteratorError2 = undefined;
+                            var _iteratorNormalCompletion3 = true;
+                            var _didIteratorError3 = false;
+                            var _iteratorError3 = undefined;
 
                             try {
-                                for (var _iterator2 = (0, _getIterator3.default)(as), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                    var i = _step2.value;
+                                for (var _iterator3 = (0, _getIterator3.default)(as), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                                    var i = _step3.value;
 
                                     if ((0, _utility.findTag)(i)[0].match(/pdf/i)) {
                                         list.push({
@@ -864,16 +1042,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError2 = true;
-                                _iteratorError2 = err;
+                                _didIteratorError3 = true;
+                                _iteratorError3 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                        _iterator2.return();
+                                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                        _iterator3.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError2) {
-                                        throw _iteratorError2;
+                                    if (_didIteratorError3) {
+                                        throw _iteratorError3;
                                     }
                                 }
                             }
@@ -943,24 +1121,24 @@ exports.default = {
                     console.log(docDate);
                     var list = [];
                     var json_data = (0, _utility.getJson)(raw_data);
-                    var _iteratorNormalCompletion3 = true;
-                    var _didIteratorError3 = false;
-                    var _iteratorError3 = undefined;
+                    var _iteratorNormalCompletion4 = true;
+                    var _didIteratorError4 = false;
+                    var _iteratorError4 = undefined;
 
                     try {
-                        for (var _iterator3 = (0, _getIterator3.default)(json_data), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                            var i = _step3.value;
+                        for (var _iterator4 = (0, _getIterator3.default)(json_data), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                            var i = _step4.value;
 
                             if (i.date === docDate) {
                                 var list_match = i.content.match(/href="([^"]+pdf)".*?title="(.*?\d\d\d\d?年\d\d?月[^"]+)/g);
                                 if (list_match) {
-                                    var _iteratorNormalCompletion4 = true;
-                                    var _didIteratorError4 = false;
-                                    var _iteratorError4 = undefined;
+                                    var _iteratorNormalCompletion5 = true;
+                                    var _didIteratorError5 = false;
+                                    var _iteratorError5 = undefined;
 
                                     try {
-                                        for (var _iterator4 = (0, _getIterator3.default)(list_match), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                                            var j = _step4.value;
+                                        for (var _iterator5 = (0, _getIterator3.default)(list_match), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                                            var j = _step5.value;
 
                                             var item_match = j.match(/href="([^"]+pdf)".*?title="(.*?\d\d\d\d?年\d\d?月[^"]+)/);
                                             if (item_match) {
@@ -972,16 +1150,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError4 = true;
-                                        _iteratorError4 = err;
+                                        _didIteratorError5 = true;
+                                        _iteratorError5 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                                                _iterator4.return();
+                                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                                _iterator5.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError4) {
-                                                throw _iteratorError4;
+                                            if (_didIteratorError5) {
+                                                throw _iteratorError5;
                                             }
                                         }
                                     }
@@ -989,16 +1167,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError3 = true;
-                        _iteratorError3 = err;
+                        _didIteratorError4 = true;
+                        _iteratorError4 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                _iterator3.return();
+                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                _iterator4.return();
                             }
                         } finally {
-                            if (_didIteratorError3) {
-                                throw _iteratorError3;
+                            if (_didIteratorError4) {
+                                throw _iteratorError4;
                             }
                         }
                     }
@@ -1041,13 +1219,13 @@ exports.default = {
                                 var html2 = (0, _utility.findTag)(html, 'html')[0];
                                 var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                                 var link = null;
-                                var _iteratorNormalCompletion5 = true;
-                                var _didIteratorError5 = false;
-                                var _iteratorError5 = undefined;
+                                var _iteratorNormalCompletion6 = true;
+                                var _didIteratorError6 = false;
+                                var _iteratorError6 = undefined;
 
                                 try {
-                                    for (var _iterator5 = (0, _getIterator3.default)(lis), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                                        var l = _step5.value;
+                                    for (var _iterator6 = (0, _getIterator3.default)(lis), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                                        var l = _step6.value;
 
                                         var a = (0, _utility.findTag)(l, 'a')[0];
                                         var dateMatch = (0, _utility.findTag)(a)[0].match(/^\d\d\d年\d\d?月/);
@@ -1057,16 +1235,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError5 = true;
-                                    _iteratorError5 = err;
+                                    _didIteratorError6 = true;
+                                    _iteratorError6 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                                            _iterator5.return();
+                                        if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                            _iterator6.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError5) {
-                                            throw _iteratorError5;
+                                        if (_didIteratorError6) {
+                                            throw _iteratorError6;
                                         }
                                     }
                                 }
@@ -1096,13 +1274,13 @@ exports.default = {
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
                     var list = [];
-                    var _iteratorNormalCompletion6 = true;
-                    var _didIteratorError6 = false;
-                    var _iteratorError6 = undefined;
+                    var _iteratorNormalCompletion7 = true;
+                    var _didIteratorError7 = false;
+                    var _iteratorError7 = undefined;
 
                     try {
-                        for (var _iterator6 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'div_newsDataBox')[0], 'ul', 'list')[0], 'li')), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                            var l = _step6.value;
+                        for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'div_newsDataBox')[0], 'ul', 'list')[0], 'li')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                            var l = _step7.value;
 
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             var day = (0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'day')[0], 'p')[0];
@@ -1119,16 +1297,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError6 = true;
-                        _iteratorError6 = err;
+                        _didIteratorError7 = true;
+                        _iteratorError7 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                _iterator6.return();
+                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                _iterator7.return();
                             }
                         } finally {
-                            if (_didIteratorError6) {
-                                throw _iteratorError6;
+                            if (_didIteratorError7) {
+                                throw _iteratorError7;
                             }
                         }
                     }
@@ -1156,13 +1334,13 @@ exports.default = {
                     var html2 = (0, _utility.findTag)(html, 'html')[0];
                     var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     var dUrl = false;
-                    var _iteratorNormalCompletion7 = true;
-                    var _didIteratorError7 = false;
-                    var _iteratorError7 = undefined;
+                    var _iteratorNormalCompletion8 = true;
+                    var _didIteratorError8 = false;
+                    var _iteratorError8 = undefined;
 
                     try {
-                        for (var _iterator7 = (0, _getIterator3.default)(lis), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                            var l = _step7.value;
+                        for (var _iterator8 = (0, _getIterator3.default)(lis), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                            var l = _step8.value;
 
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             if (a.attribs.title.match(/^\d\d\d年\d\d?月/)[0] === docDate1) {
@@ -1171,16 +1349,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError7 = true;
-                        _iteratorError7 = err;
+                        _didIteratorError8 = true;
+                        _iteratorError8 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                                _iterator7.return();
+                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                _iterator8.return();
                             }
                         } finally {
-                            if (_didIteratorError7) {
-                                throw _iteratorError7;
+                            if (_didIteratorError8) {
+                                throw _iteratorError8;
                             }
                         }
                     }
@@ -1190,13 +1368,13 @@ exports.default = {
                         return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
                             var detail = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0];
                             var texts = (0, _utility.findTag)(detail);
-                            var _iteratorNormalCompletion8 = true;
-                            var _didIteratorError8 = false;
-                            var _iteratorError8 = undefined;
+                            var _iteratorNormalCompletion9 = true;
+                            var _didIteratorError9 = false;
+                            var _iteratorError9 = undefined;
 
                             try {
-                                for (var _iterator8 = (0, _getIterator3.default)(texts), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                                    var t = _step8.value;
+                                for (var _iterator9 = (0, _getIterator3.default)(texts), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                                    var t = _step9.value;
 
                                     var matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
                                     if (matchT && matchT[0] === docDate) {
@@ -1205,47 +1383,6 @@ exports.default = {
                                             name: (0, _utility.toValidName)('工業生產'),
                                             date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                                         });
-                                        break;
-                                    }
-                                }
-                            } catch (err) {
-                                _didIteratorError8 = true;
-                                _iteratorError8 = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                                        _iterator8.return();
-                                    }
-                                } finally {
-                                    if (_didIteratorError8) {
-                                        throw _iteratorError8;
-                                    }
-                                }
-                            }
-                        }) : _promise2.default.resolve();
-                    };
-                    return industrial().then(function () {
-                        return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
-                            html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
-                            if (!html) {
-                                console.log(raw_data);
-                                (0, _utility.handleError)(new _utility.HoError('empty html'));
-                            }
-                            var html2 = (0, _utility.findTag)(html, 'html')[0];
-                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
-                            dUrl = false;
-                            var _iteratorNormalCompletion9 = true;
-                            var _didIteratorError9 = false;
-                            var _iteratorError9 = undefined;
-
-                            try {
-                                for (var _iterator9 = (0, _getIterator3.default)(lis), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                                    var l = _step9.value;
-
-                                    var a = (0, _utility.findTag)(l, 'a')[0];
-                                    var aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
-                                    if (aMatch && aMatch[0] === docDate1) {
-                                        dUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.moea.gov.tw');
                                         break;
                                     }
                                 }
@@ -1263,19 +1400,60 @@ exports.default = {
                                     }
                                 }
                             }
+                        }) : _promise2.default.resolve();
+                    };
+                    return industrial().then(function () {
+                        return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
+                            html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                            if (!html) {
+                                console.log(raw_data);
+                                (0, _utility.handleError)(new _utility.HoError('empty html'));
+                            }
+                            var html2 = (0, _utility.findTag)(html, 'html')[0];
+                            lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
+                            dUrl = false;
+                            var _iteratorNormalCompletion10 = true;
+                            var _didIteratorError10 = false;
+                            var _iteratorError10 = undefined;
+
+                            try {
+                                for (var _iterator10 = (0, _getIterator3.default)(lis), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                                    var l = _step10.value;
+
+                                    var a = (0, _utility.findTag)(l, 'a')[0];
+                                    var aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
+                                    if (aMatch && aMatch[0] === docDate1) {
+                                        dUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.moea.gov.tw');
+                                        break;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError10 = true;
+                                _iteratorError10 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                                        _iterator10.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError10) {
+                                        throw _iteratorError10;
+                                    }
+                                }
+                            }
 
                             ;
                             var output = function output() {
                                 return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
                                     var detail = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0];
                                     var texts = (0, _utility.findTag)(detail);
-                                    var _iteratorNormalCompletion10 = true;
-                                    var _didIteratorError10 = false;
-                                    var _iteratorError10 = undefined;
+                                    var _iteratorNormalCompletion11 = true;
+                                    var _didIteratorError11 = false;
+                                    var _iteratorError11 = undefined;
 
                                     try {
-                                        for (var _iterator10 = (0, _getIterator3.default)(texts), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                            var t = _step10.value;
+                                        for (var _iterator11 = (0, _getIterator3.default)(texts), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                                            var t = _step11.value;
 
                                             var matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
                                             if (matchT && matchT[0] === docDate) {
@@ -1288,16 +1466,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError10 = true;
-                                        _iteratorError10 = err;
+                                        _didIteratorError11 = true;
+                                        _iteratorError11 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion10 && _iterator10.return) {
-                                                _iterator10.return();
+                                            if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                                                _iterator11.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError10) {
-                                                throw _iteratorError10;
+                                            if (_didIteratorError11) {
+                                                throw _iteratorError11;
                                             }
                                         }
                                     }
@@ -1596,7 +1774,7 @@ exports.default = {
                     if (share) {
                         var a = (0, _utility.findTag)(share, 'a')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[1])[0].match(/pdf/i)) {
-                            var _ret2 = function () {
+                            var _ret3 = function () {
                                 var url = (0, _utility.addPre)(a.attribs.href, 'https://www.federalreserve.gov');
                                 driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                 console.log(driveName);
@@ -1620,7 +1798,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
                         }
                     }
                     driveName = obj.name + ' ' + obj.date + '.txt';
@@ -1711,16 +1889,16 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(function (p) {
                         var as = (0, _utility.findTag)(p, 'a');
                         if (as.length > 0) {
-                            var _iteratorNormalCompletion11 = true;
-                            var _didIteratorError11 = false;
-                            var _iteratorError11 = undefined;
+                            var _iteratorNormalCompletion12 = true;
+                            var _didIteratorError12 = false;
+                            var _iteratorError12 = undefined;
 
                             try {
-                                for (var _iterator11 = (0, _getIterator3.default)(as), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                                    var a = _step11.value;
+                                for (var _iterator12 = (0, _getIterator3.default)(as), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                                    var a = _step12.value;
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
-                                        var _ret3 = function () {
+                                        var _ret4 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
                                             driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                             console.log(driveName);
@@ -1744,46 +1922,46 @@ exports.default = {
                                             };
                                         }();
 
-                                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError11 = true;
-                                _iteratorError11 = err;
+                                _didIteratorError12 = true;
+                                _iteratorError12 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
-                                        _iterator11.return();
+                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                        _iterator12.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError11) {
-                                        throw _iteratorError11;
+                                    if (_didIteratorError12) {
+                                        throw _iteratorError12;
                                     }
                                 }
                             }
                         }
                         var bs = (0, _utility.findTag)(p, 'b');
                         if (bs.length > 0) {
-                            var _iteratorNormalCompletion12 = true;
-                            var _didIteratorError12 = false;
-                            var _iteratorError12 = undefined;
+                            var _iteratorNormalCompletion13 = true;
+                            var _didIteratorError13 = false;
+                            var _iteratorError13 = undefined;
 
                             try {
-                                for (var _iterator12 = (0, _getIterator3.default)(bs), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                                    var b = _step12.value;
+                                for (var _iterator13 = (0, _getIterator3.default)(bs), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                                    var b = _step13.value;
 
                                     as = (0, _utility.findTag)(b, 'a');
                                     if (as.length > 0) {
-                                        var _iteratorNormalCompletion13 = true;
-                                        var _didIteratorError13 = false;
-                                        var _iteratorError13 = undefined;
+                                        var _iteratorNormalCompletion14 = true;
+                                        var _didIteratorError14 = false;
+                                        var _iteratorError14 = undefined;
 
                                         try {
-                                            for (var _iterator13 = (0, _getIterator3.default)(as), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                                var _a = _step13.value;
+                                            for (var _iterator14 = (0, _getIterator3.default)(as), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                                                var _a = _step14.value;
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
-                                                    var _ret4 = function () {
+                                                    var _ret5 = function () {
                                                         var url = (0, _utility.addPre)(_a.attribs.href, 'http://www.stat.gov.tw');
                                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                                         console.log(driveName);
@@ -1807,36 +1985,36 @@ exports.default = {
                                                         };
                                                     }();
 
-                                                    if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                                                    if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                                                 }
                                             }
                                         } catch (err) {
-                                            _didIteratorError13 = true;
-                                            _iteratorError13 = err;
+                                            _didIteratorError14 = true;
+                                            _iteratorError14 = err;
                                         } finally {
                                             try {
-                                                if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                                                    _iterator13.return();
+                                                if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                                                    _iterator14.return();
                                                 }
                                             } finally {
-                                                if (_didIteratorError13) {
-                                                    throw _iteratorError13;
+                                                if (_didIteratorError14) {
+                                                    throw _iteratorError14;
                                                 }
                                             }
                                         }
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError12 = true;
-                                _iteratorError12 = err;
+                                _didIteratorError13 = true;
+                                _iteratorError13 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                                        _iterator12.return();
+                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                                        _iterator13.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError12) {
-                                        throw _iteratorError12;
+                                    if (_didIteratorError13) {
+                                        throw _iteratorError13;
                                     }
                                 }
                             }
@@ -1847,17 +2025,17 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url, { referer: 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281' }).then(function (raw_data) {
                     var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
-                    var _iteratorNormalCompletion14 = true;
-                    var _didIteratorError14 = false;
-                    var _iteratorError14 = undefined;
+                    var _iteratorNormalCompletion15 = true;
+                    var _didIteratorError15 = false;
+                    var _iteratorError15 = undefined;
 
                     try {
-                        for (var _iterator14 = (0, _getIterator3.default)(ps), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                            var p = _step14.value;
+                        for (var _iterator15 = (0, _getIterator3.default)(ps), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                            var p = _step15.value;
 
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
-                                var _ret5 = function () {
+                                var _ret6 = function () {
                                     var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
@@ -1881,20 +2059,20 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                             }
                         }
                     } catch (err) {
-                        _didIteratorError14 = true;
-                        _iteratorError14 = err;
+                        _didIteratorError15 = true;
+                        _iteratorError15 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                                _iterator14.return();
+                            if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                                _iterator15.return();
                             }
                         } finally {
-                            if (_didIteratorError14) {
-                                throw _iteratorError14;
+                            if (_didIteratorError15) {
+                                throw _iteratorError15;
                             }
                         }
                     }
@@ -1905,19 +2083,19 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'ctl00_holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
-                    var _iteratorNormalCompletion15 = true;
-                    var _didIteratorError15 = false;
-                    var _iteratorError15 = undefined;
+                    var _iteratorNormalCompletion16 = true;
+                    var _didIteratorError16 = false;
+                    var _iteratorError16 = undefined;
 
                     try {
-                        for (var _iterator15 = (0, _getIterator3.default)(files), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-                            var f = _step15.value;
+                        for (var _iterator16 = (0, _getIterator3.default)(files), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                            var f = _step16.value;
 
                             var kind = (0, _utility.findTag)(f, 'div', 'td-filesKind')[0];
                             if (kind) {
                                 var a = (0, _utility.findTag)(kind, 'a')[0];
                                 if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                                    var _ret6 = function () {
+                                    var _ret7 = function () {
                                         var url = a.attribs.href;
                                         url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
                                         driveName = obj.name + ' ' + obj.date + '.pdf';
@@ -1942,21 +2120,21 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                 }
                             }
                         }
                     } catch (err) {
-                        _didIteratorError15 = true;
-                        _iteratorError15 = err;
+                        _didIteratorError16 = true;
+                        _iteratorError16 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion15 && _iterator15.return) {
-                                _iterator15.return();
+                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                                _iterator16.return();
                             }
                         } finally {
-                            if (_didIteratorError15) {
-                                throw _iteratorError15;
+                            if (_didIteratorError16) {
+                                throw _iteratorError16;
                             }
                         }
                     }
@@ -1977,7 +2155,7 @@ exports.default = {
                     }
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
-                            var _ret7 = function () {
+                            var _ret8 = function () {
                                 driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex]);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
@@ -2001,7 +2179,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                         } else {
                             return updateDocDate(type, obj.date);
                         }
@@ -2051,13 +2229,13 @@ exports.default = {
                             taglist.add((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(cast[1], 'a')[0], 'span')[0])[0]);
                         }
                     });
-                    var _iteratorNormalCompletion16 = true;
-                    var _didIteratorError16 = false;
-                    var _iteratorError16 = undefined;
+                    var _iteratorNormalCompletion17 = true;
+                    var _didIteratorError17 = false;
+                    var _iteratorError17 = undefined;
 
                     try {
-                        for (var _iterator16 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-                            var t = _step16.value;
+                        for (var _iterator17 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                            var t = _step17.value;
 
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'h4')[0])[0] === 'Genres:') {
                                 (0, _utility.findTag)(t, 'a').forEach(function (a) {
@@ -2067,36 +2245,6 @@ exports.default = {
                                     if (index !== -1) {
                                         taglist.add(_constants.GENRE_LIST_CH[index]);
                                     }
-                                });
-                                break;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError16 = true;
-                        _iteratorError16 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
-                                _iterator16.return();
-                            }
-                        } finally {
-                            if (_didIteratorError16) {
-                                throw _iteratorError16;
-                            }
-                        }
-                    }
-
-                    var _iteratorNormalCompletion17 = true;
-                    var _didIteratorError17 = false;
-                    var _iteratorError17 = undefined;
-
-                    try {
-                        for (var _iterator17 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-                            var _t = _step17.value;
-
-                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
-                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
-                                    return taglist.add((0, _utility.findTag)(a)[0]);
                                 });
                                 break;
                             }
@@ -2112,6 +2260,36 @@ exports.default = {
                         } finally {
                             if (_didIteratorError17) {
                                 throw _iteratorError17;
+                            }
+                        }
+                    }
+
+                    var _iteratorNormalCompletion18 = true;
+                    var _didIteratorError18 = false;
+                    var _iteratorError18 = undefined;
+
+                    try {
+                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+                            var _t = _step18.value;
+
+                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
+                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
+                                    return taglist.add((0, _utility.findTag)(a)[0]);
+                                });
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError18 = true;
+                        _iteratorError18 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion18 && _iterator18.return) {
+                                _iterator18.return();
+                            }
+                        } finally {
+                            if (_didIteratorError18) {
+                                throw _iteratorError18;
                             }
                         }
                     }
@@ -2181,13 +2359,13 @@ exports.default = {
             case 'dc':
                 return (0, _apiTool2.default)('url', url).then(function (raw_data) {
                     taglist.add('歐美').add('漫畫').add('comic').add(type);
-                    var _iteratorNormalCompletion18 = true;
-                    var _didIteratorError18 = false;
-                    var _iteratorError18 = undefined;
+                    var _iteratorNormalCompletion19 = true;
+                    var _didIteratorError19 = false;
+                    var _iteratorError19 = undefined;
 
                     try {
-                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-                            var div = _step18.value;
+                        for (var _iterator19 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+                            var div = _step19.value;
 
                             if (div.attribs.class !== 'center') {
                                 (0, _utility.findTag)(div, 'div').forEach(function (d, i) {
@@ -2196,13 +2374,13 @@ exports.default = {
                                         if (name.length > 0) {
                                             taglist.add(name[0]);
                                         } else {
-                                            var _iteratorNormalCompletion19 = true;
-                                            var _didIteratorError19 = false;
-                                            var _iteratorError19 = undefined;
+                                            var _iteratorNormalCompletion20 = true;
+                                            var _didIteratorError20 = false;
+                                            var _iteratorError20 = undefined;
 
                                             try {
-                                                for (var _iterator19 = (0, _getIterator3.default)(d.children), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-                                                    var c = _step19.value;
+                                                for (var _iterator20 = (0, _getIterator3.default)(d.children), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+                                                    var c = _step20.value;
 
                                                     name = (0, _utility.findTag)(c);
                                                     if (c.type === 'tag' && name.length > 0) {
@@ -2211,16 +2389,16 @@ exports.default = {
                                                     }
                                                 }
                                             } catch (err) {
-                                                _didIteratorError19 = true;
-                                                _iteratorError19 = err;
+                                                _didIteratorError20 = true;
+                                                _iteratorError20 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion19 && _iterator19.return) {
-                                                        _iterator19.return();
+                                                    if (!_iteratorNormalCompletion20 && _iterator20.return) {
+                                                        _iterator20.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError19) {
-                                                        throw _iteratorError19;
+                                                    if (_didIteratorError20) {
+                                                        throw _iteratorError20;
                                                     }
                                                 }
                                             }
@@ -2251,16 +2429,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError18 = true;
-                        _iteratorError18 = err;
+                        _didIteratorError19 = true;
+                        _iteratorError19 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion18 && _iterator18.return) {
-                                _iterator18.return();
+                            if (!_iteratorNormalCompletion19 && _iterator19.return) {
+                                _iterator19.return();
                             }
                         } finally {
-                            if (_didIteratorError18) {
-                                throw _iteratorError18;
+                            if (_didIteratorError19) {
+                                throw _iteratorError19;
                             }
                         }
                     }
@@ -2331,13 +2509,13 @@ exports.default = {
             if (index === 1) {
                 is_new = false;
             } else {
-                var _iteratorNormalCompletion20 = true;
-                var _didIteratorError20 = false;
-                var _iteratorError20 = undefined;
+                var _iteratorNormalCompletion21 = true;
+                var _didIteratorError21 = false;
+                var _iteratorError21 = undefined;
 
                 try {
-                    for (var _iterator20 = (0, _getIterator3.default)(vId_arr), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
-                        var i = _step20.value;
+                    for (var _iterator21 = (0, _getIterator3.default)(vId_arr), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+                        var i = _step21.value;
 
                         if (i.id === index) {
                             ret_obj = i;
@@ -2346,16 +2524,16 @@ exports.default = {
                         }
                     }
                 } catch (err) {
-                    _didIteratorError20 = true;
-                    _iteratorError20 = err;
+                    _didIteratorError21 = true;
+                    _iteratorError21 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion20 && _iterator20.return) {
-                            _iterator20.return();
+                        if (!_iteratorNormalCompletion21 && _iterator21.return) {
+                            _iterator21.return();
                         }
                     } finally {
-                        if (_didIteratorError20) {
-                            throw _iteratorError20;
+                        if (_didIteratorError21) {
+                            throw _iteratorError21;
                         }
                     }
                 }
@@ -2404,7 +2582,7 @@ exports.default = {
             });
         };
 
-        var _ret8 = function () {
+        var _ret9 = function () {
             switch (type) {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
@@ -2443,13 +2621,13 @@ exports.default = {
                                     }
                                 });
                             } else {
-                                var _iteratorNormalCompletion21 = true;
-                                var _didIteratorError21 = false;
-                                var _iteratorError21 = undefined;
+                                var _iteratorNormalCompletion22 = true;
+                                var _didIteratorError22 = false;
+                                var _iteratorError22 = undefined;
 
                                 try {
-                                    for (var _iterator21 = (0, _getIterator3.default)(outer), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-                                        var o = _step21.value;
+                                    for (var _iterator22 = (0, _getIterator3.default)(outer), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                                        var o = _step22.value;
 
                                         var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
                                         var name = (0, _utility.findTag)(a)[0];
@@ -2466,28 +2644,28 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError21 = true;
-                                    _iteratorError21 = err;
+                                    _didIteratorError22 = true;
+                                    _iteratorError22 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion21 && _iterator21.return) {
-                                            _iterator21.return();
+                                        if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                                            _iterator22.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError21) {
-                                            throw _iteratorError21;
+                                        if (_didIteratorError22) {
+                                            throw _iteratorError22;
                                         }
                                     }
                                 }
                             }
                             var is_end = false;
-                            var _iteratorNormalCompletion22 = true;
-                            var _didIteratorError22 = false;
-                            var _iteratorError22 = undefined;
+                            var _iteratorNormalCompletion23 = true;
+                            var _didIteratorError23 = false;
+                            var _iteratorError23 = undefined;
 
                             try {
-                                for (var _iterator22 = (0, _getIterator3.default)(list), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                    var _i = _step22.value;
+                                for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
+                                    var _i = _step23.value;
 
                                     if (_i.url.match(/大結局/)) {
                                         is_end = true;
@@ -2495,16 +2673,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError22 = true;
-                                _iteratorError22 = err;
+                                _didIteratorError23 = true;
+                                _iteratorError23 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion22 && _iterator22.return) {
-                                        _iterator22.return();
+                                    if (!_iteratorNormalCompletion23 && _iterator23.return) {
+                                        _iterator23.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError22) {
-                                        throw _iteratorError22;
+                                    if (_didIteratorError23) {
+                                        throw _iteratorError23;
                                     }
                                 }
                             }
@@ -2517,13 +2695,13 @@ exports.default = {
                                     (0, _utility.handleError)(new _utility.HoError('cannot find lovetv url'));
                                 }
                                 var nextLove = function nextLove(index, dramaIndex, list) {
-                                    var _iteratorNormalCompletion23 = true;
-                                    var _didIteratorError23 = false;
-                                    var _iteratorError23 = undefined;
+                                    var _iteratorNormalCompletion24 = true;
+                                    var _didIteratorError24 = false;
+                                    var _iteratorError24 = undefined;
 
                                     try {
                                         var _loop = function _loop() {
-                                            var i = _step23.value;
+                                            var i = _step24.value;
 
                                             if (i.name === items[0].name) {
                                                 return {
@@ -2535,22 +2713,22 @@ exports.default = {
                                             }
                                         };
 
-                                        for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-                                            var _ret9 = _loop();
+                                        for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+                                            var _ret10 = _loop();
 
-                                            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                                         }
                                     } catch (err) {
-                                        _didIteratorError23 = true;
-                                        _iteratorError23 = err;
+                                        _didIteratorError24 = true;
+                                        _iteratorError24 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion23 && _iterator23.return) {
-                                                _iterator23.return();
+                                            if (!_iteratorNormalCompletion24 && _iterator24.return) {
+                                                _iterator24.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError23) {
-                                                throw _iteratorError23;
+                                            if (_didIteratorError24) {
+                                                throw _iteratorError24;
                                             }
                                         }
                                     }
@@ -2587,40 +2765,15 @@ exports.default = {
                                                         obj.push('bil_av' + vIds[0] + '_' + _i2);
                                                     }
                                                 } else if (t === 1) {
-                                                    var _iteratorNormalCompletion24 = true;
-                                                    var _didIteratorError24 = false;
-                                                    var _iteratorError24 = undefined;
-
-                                                    try {
-                                                        for (var _iterator24 = (0, _getIterator3.default)(vIds), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                                            var _i3 = _step24.value;
-
-                                                            obj.push('you_' + _i3);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError24 = true;
-                                                        _iteratorError24 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion24 && _iterator24.return) {
-                                                                _iterator24.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError24) {
-                                                                throw _iteratorError24;
-                                                            }
-                                                        }
-                                                    }
-                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion25 = true;
                                                     var _didIteratorError25 = false;
                                                     var _iteratorError25 = undefined;
 
                                                     try {
                                                         for (var _iterator25 = (0, _getIterator3.default)(vIds), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                                                            var _i4 = _step25.value;
+                                                            var _i3 = _step25.value;
 
-                                                            obj.push('yuk_' + _i4);
+                                                            obj.push('you_' + _i3);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError25 = true;
@@ -2636,17 +2789,16 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 3) {
-                                                    //open
+                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion26 = true;
                                                     var _didIteratorError26 = false;
                                                     var _iteratorError26 = undefined;
 
                                                     try {
                                                         for (var _iterator26 = (0, _getIterator3.default)(vIds), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-                                                            var _i5 = _step26.value;
+                                                            var _i4 = _step26.value;
 
-                                                            obj.push('ope_' + _i5);
+                                                            obj.push('yuk_' + _i4);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError26 = true;
@@ -2662,17 +2814,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 12) {
-                                                    //up2stream
+                                                } else if (t === 3) {
+                                                    //open
                                                     var _iteratorNormalCompletion27 = true;
                                                     var _didIteratorError27 = false;
                                                     var _iteratorError27 = undefined;
 
                                                     try {
                                                         for (var _iterator27 = (0, _getIterator3.default)(vIds), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
-                                                            var _i6 = _step27.value;
+                                                            var _i5 = _step27.value;
 
-                                                            obj.push('up2_' + _i6);
+                                                            obj.push('ope_' + _i5);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError27 = true;
@@ -2688,17 +2840,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 19) {
-                                                    //愛奇藝
+                                                } else if (t === 12) {
+                                                    //up2stream
                                                     var _iteratorNormalCompletion28 = true;
                                                     var _didIteratorError28 = false;
                                                     var _iteratorError28 = undefined;
 
                                                     try {
                                                         for (var _iterator28 = (0, _getIterator3.default)(vIds), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-                                                            var _i7 = _step28.value;
+                                                            var _i6 = _step28.value;
 
-                                                            obj.push('iqi_' + _i7);
+                                                            obj.push('up2_' + _i6);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError28 = true;
@@ -2714,17 +2866,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 6) {
-                                                    //line tv
+                                                } else if (t === 19) {
+                                                    //愛奇藝
                                                     var _iteratorNormalCompletion29 = true;
                                                     var _didIteratorError29 = false;
                                                     var _iteratorError29 = undefined;
 
                                                     try {
                                                         for (var _iterator29 = (0, _getIterator3.default)(vIds), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-                                                            var _i8 = _step29.value;
+                                                            var _i7 = _step29.value;
 
-                                                            obj.push('lin_' + _i8);
+                                                            obj.push('iqi_' + _i7);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError29 = true;
@@ -2740,16 +2892,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else {
+                                                } else if (t === 6) {
+                                                    //line tv
                                                     var _iteratorNormalCompletion30 = true;
                                                     var _didIteratorError30 = false;
                                                     var _iteratorError30 = undefined;
 
                                                     try {
                                                         for (var _iterator30 = (0, _getIterator3.default)(vIds), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
-                                                            var _i9 = _step30.value;
+                                                            var _i8 = _step30.value;
 
-                                                            obj.push('dym_' + _i9);
+                                                            obj.push('lin_' + _i8);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError30 = true;
@@ -2762,6 +2915,31 @@ exports.default = {
                                                         } finally {
                                                             if (_didIteratorError30) {
                                                                 throw _iteratorError30;
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    var _iteratorNormalCompletion31 = true;
+                                                    var _didIteratorError31 = false;
+                                                    var _iteratorError31 = undefined;
+
+                                                    try {
+                                                        for (var _iterator31 = (0, _getIterator3.default)(vIds), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
+                                                            var _i9 = _step31.value;
+
+                                                            obj.push('dym_' + _i9);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError31 = true;
+                                                        _iteratorError31 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion31 && _iterator31.return) {
+                                                                _iterator31.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError31) {
+                                                                throw _iteratorError31;
                                                             }
                                                         }
                                                     }
@@ -2860,13 +3038,13 @@ exports.default = {
                                 var trLength = tr.length;
                                 console.log(trLength);
                                 var is_end = false;
-                                var _iteratorNormalCompletion31 = true;
-                                var _didIteratorError31 = false;
-                                var _iteratorError31 = undefined;
+                                var _iteratorNormalCompletion32 = true;
+                                var _didIteratorError32 = false;
+                                var _iteratorError32 = undefined;
 
                                 try {
-                                    for (var _iterator31 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-                                        var _i12 = _step31.value;
+                                    for (var _iterator32 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
+                                        var _i12 = _step32.value;
 
                                         if ((0, _utility.findTag)(_i12)[0] === 'Ended') {
                                             is_end = true;
@@ -2874,16 +3052,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError31 = true;
-                                    _iteratorError31 = err;
+                                    _didIteratorError32 = true;
+                                    _iteratorError32 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion31 && _iterator31.return) {
-                                            _iterator31.return();
+                                        if (!_iteratorNormalCompletion32 && _iterator32.return) {
+                                            _iterator32.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError31) {
-                                            throw _iteratorError31;
+                                        if (_didIteratorError32) {
+                                            throw _iteratorError32;
                                         }
                                     }
                                 }
@@ -2968,29 +3146,29 @@ exports.default = {
                                 (0, _utility.handleError)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion32 = true;
-                            var _didIteratorError32 = false;
-                            var _iteratorError32 = undefined;
+                            var _iteratorNormalCompletion33 = true;
+                            var _didIteratorError33 = false;
+                            var _iteratorError33 = undefined;
 
                             try {
-                                for (var _iterator32 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-                                    var _i13 = _step32.value;
+                                for (var _iterator33 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
+                                    var _i13 = _step33.value;
 
                                     if (_i13['quality'] === '1080p' || !magnet && _i13['quality'] === '720p') {
                                         magnet = 'magnet:?xt=urn:btih:' + _i13['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError32 = true;
-                                _iteratorError32 = err;
+                                _didIteratorError33 = true;
+                                _iteratorError33 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion32 && _iterator32.return) {
-                                        _iterator32.return();
+                                    if (!_iteratorNormalCompletion33 && _iterator33.return) {
+                                        _iterator33.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError32) {
-                                        throw _iteratorError32;
+                                    if (_didIteratorError33) {
+                                        throw _iteratorError33;
                                     }
                                 }
                             }
@@ -3102,6 +3280,213 @@ exports.default = {
                             });
                         })
                     };
+                case 'kubo':
+                    var kuboGetlist = function kuboGetlist() {
+                        return (0, _apiTool2.default)('url', url).then(function (raw_data) {
+                            var list = [];
+                            var is_end = false;
+                            var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
+                            var _iteratorNormalCompletion34 = true;
+                            var _didIteratorError34 = false;
+                            var _iteratorError34 = undefined;
+
+                            try {
+                                for (var _iterator34 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
+                                    var p = _step34.value;
+                                    var _iteratorNormalCompletion36 = true;
+                                    var _didIteratorError36 = false;
+                                    var _iteratorError36 = undefined;
+
+                                    try {
+                                        for (var _iterator36 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+                                            var pt = _step36.value;
+
+                                            if (pt.match(/完結/)) {
+                                                is_end = true;
+                                                break;
+                                            }
+                                        }
+                                    } catch (err) {
+                                        _didIteratorError36 = true;
+                                        _iteratorError36 = err;
+                                    } finally {
+                                        try {
+                                            if (!_iteratorNormalCompletion36 && _iterator36.return) {
+                                                _iterator36.return();
+                                            }
+                                        } finally {
+                                            if (_didIteratorError36) {
+                                                throw _iteratorError36;
+                                            }
+                                        }
+                                    }
+
+                                    if (is_end) {
+                                        break;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError34 = true;
+                                _iteratorError34 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion34 && _iterator34.return) {
+                                        _iterator34.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError34) {
+                                        throw _iteratorError34;
+                                    }
+                                }
+                            }
+
+                            var flvUrl = null;
+                            var listY = [];
+                            (0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'topRow')[0], 'div', 'hideCont').forEach(function (h) {
+                                var ul = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(h, 'ul')[0], 'div', 'vmain')[0], 'div', 'vpl')[0], 'ul')[0];
+                                var div = (0, _utility.findTag)(ul, 'div')[0];
+                                if (div) {
+                                    ul = div;
+                                }
+                                var _iteratorNormalCompletion35 = true;
+                                var _didIteratorError35 = false;
+                                var _iteratorError35 = undefined;
+
+                                try {
+                                    for (var _iterator35 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
+                                        var l = _step35.value;
+
+                                        var a = (0, _utility.findTag)(l, 'a')[0];
+                                        var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.99kubo.com').match(/youtube\.php\?(.*)$/);
+                                        if (urlMatch) {
+                                            listY.push({
+                                                name: (0, _utility.findTag)(a)[0],
+                                                id: 'kdy_' + urlMatch[1]
+                                            });
+                                        } else {
+                                            if (a.attribs.href.match(/vod\-play\-id\-/)) {
+                                                flvUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.99kubo.com');
+                                                break;
+                                            }
+                                        }
+                                    }
+                                } catch (err) {
+                                    _didIteratorError35 = true;
+                                    _iteratorError35 = err;
+                                } finally {
+                                    try {
+                                        if (!_iteratorNormalCompletion35 && _iterator35.return) {
+                                            _iterator35.return();
+                                        }
+                                    } finally {
+                                        if (_didIteratorError35) {
+                                            throw _iteratorError35;
+                                        }
+                                    }
+                                }
+                            });
+                            return flvUrl ? (0, _apiTool2.default)('url', flvUrl).then(function (raw_data) {
+                                var diy_vid = '';
+                                var Pid = '';
+                                var ff_urls = '';
+                                var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
+                                (0, _utility.findTag)((0, _utility.findTag)(html, 'head')[0], 'script').forEach(function (s) {
+                                    var j = (0, _utility.findTag)(s)[0];
+                                    if (j) {
+                                        var _jM = j.match(/^\s*var\s*diy_vid\s*=\s*['"](\d+)['"];?\s*$/);
+                                        if (_jM) {
+                                            diy_vid = _jM[1];
+                                        } else {
+                                            _jM = j.match(/^\s*var\s*Pid\s*=\s*['"](\d+)['"];?\s*$/);
+                                            if (_jM) {
+                                                Pid = _jM[1];
+                                            }
+                                        }
+                                    }
+                                });
+                                var jM = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
+                                if (jM) {
+                                    ff_urls = JSON.parse(jM[1].replace(/\\\"/g, '"'));
+                                }
+                                var list1 = [];
+                                var list2 = [];
+                                var lists = [];
+                                var listO = [];
+                                ff_urls.Data.forEach(function (f) {
+                                    if (f.playname === 'bj58') {
+                                        list = f.playurls.map(function (p) {
+                                            return {
+                                                name: p[0],
+                                                id: 'kud_' + Pid + '_' + diy_vid + '_' + new Buffer(p[1]).toString('base64')
+                                            };
+                                        });
+                                    } else if (f.playname === 'bj') {
+                                        list1 = f.playurls.map(function (p) {
+                                            return {
+                                                name: p[0],
+                                                id: 'kyu_' + p[1].match(/^(.*)_wd1$/)[1]
+                                            };
+                                        });
+                                    } else if (f.playname === 'bj2') {
+                                        list2 = f.playurls.map(function (p) {
+                                            return {
+                                                name: p[0],
+                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
+                                            };
+                                        });
+                                    } else if (f.playname.match(/^bj/)) {
+                                        lists = f.playurls.map(function (p) {
+                                            return {
+                                                name: p[0],
+                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
+                                            };
+                                        });
+                                    } else {
+                                        listO = f.playurls.map(function (p) {
+                                            return {
+                                                name: p[0],
+                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
+                                            };
+                                        });
+                                    }
+                                });
+                                list = list.concat(listY);
+                                list = list.concat(list1);
+                                list = list.concat(list2);
+                                list = list.concat(lists);
+                                list = list.concat(listO);
+                                return [list, is_end];
+                            }) : [listY, is_end];
+                        });
+                    };
+                    return {
+                        v: (0, _redisTool2.default)('hgetall', 'url: ' + encodeURIComponent(url)).then(function (item) {
+                            var sendList = function sendList(raw_list, is_end, etime) {
+                                var choose = raw_list[index - 1];
+                                if (!choose) {
+                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                }
+                                saveList(kuboGetlist, raw_list, is_end, etime);
+                                return [(0, _assign2.default)({
+                                    index: index,
+                                    showId: index,
+                                    id: choose.id,
+                                    title: choose.name
+                                }, choose.id.match(/^(kdy|kyu)_/) ? {
+                                    index: (index * 1000 + sub_index) / 1000,
+                                    showId: (index * 1000 + sub_index) / 1000,
+                                    id: choose.id + '_' + sub_index
+                                } : {}), is_end, raw_list.length];
+                            };
+                            return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : kuboGetlist().then(function (_ref17) {
+                                var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
+                                    raw_list = _ref18[0],
+                                    is_end = _ref18[1];
+
+                                return sendList(raw_list, is_end, -1);
+                            });
+                        })
+                    };
                 case 'cartoonmad':
                     if (!url.match(/\d+/)) {
                         (0, _utility.handleError)(new _utility.HoError('comic id invalid'));
@@ -3155,10 +3540,10 @@ exports.default = {
                                     }, is_end, raw_list.length];
                                 });
                             };
-                            return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(function (_ref17) {
-                                var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
-                                    raw_list = _ref18[0],
-                                    is_end = _ref18[1];
+                            return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(function (_ref19) {
+                                var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
+                                    raw_list = _ref20[0],
+                                    is_end = _ref20[1];
 
                                 return sendList(raw_list, is_end, -1);
                             });
@@ -3169,7 +3554,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
     },
     saveSingle: function saveSingle(type, id) {
         var url = null;
@@ -3203,6 +3588,85 @@ exports.default = {
                         });
                         return [json_data['data']['movie']['title'], newTag, new _set2.default(), 'yify', json_data['data']['movie']['small_cover_image'], url];
                     });
+                });
+            case 'kubo':
+                url = 'http://www.99kubo.com/vod-read-id-' + id + '.html';
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+                    var vmain = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
+                    var img = (0, _utility.findTag)((0, _utility.findTag)(vmain, 'div', 'vpic')[0], 'img')[0];
+                    var name = img.attribs.alt;
+                    var thumb = img.attribs.src;
+                    var tags = new _set2.default(['kubo', '酷播', '影片', 'video']);
+                    (0, _utility.findTag)((0, _utility.findTag)(vmain, 'div', 'vshow')[0], 'p').forEach(function (p) {
+                        var t = (0, _utility.findTag)(p)[0];
+                        if (t) {
+                            var match = (0, _utility.findTag)(p)[0].match(/^別名:(.*)$/);
+                            if (match) {
+                                match[1].split('/').forEach(function (m) {
+                                    return tags.add(m);
+                                });
+                            } else {
+                                if (t === '類型：') {
+                                    (0, _utility.findTag)(p, 'a').forEach(function (a) {
+                                        return tags.add((0, _utility.findTag)(a)[0]);
+                                    });
+                                } else if (t === '分類：') {
+                                    (0, _utility.findTag)(p, 'font').forEach(function (a) {
+                                        return tags.add((0, _utility.findTag)(a)[0]);
+                                    });
+                                    var _type = (0, _utility.findTag)((0, _utility.findTag)(p, 'a')[0])[0];
+                                    tags.add(_type);
+                                    for (var _i15 in _constants.KUBO_TYPE) {
+                                        var index = _constants.KUBO_TYPE[_i15].indexOf(_type);
+                                        if (index !== -1) {
+                                            if (_i15 === '0') {
+                                                tags.add('movie').add('電影');
+                                                switch (index) {
+                                                    case 0:
+                                                        tags.add('action').add('動作');
+                                                        break;
+                                                    case 1:
+                                                        tags.add('comedy').add('喜劇');
+                                                        break;
+                                                    case 2:
+                                                        tags.add('romance').add('浪漫');
+                                                        break;
+                                                    case 3:
+                                                        tags.add('sci-fi').add('科幻');
+                                                        break;
+                                                    case 4:
+                                                        tags.add('horror').add('恐怖');
+                                                        break;
+                                                    case 5:
+                                                        tags.add('drama').add('劇情');
+                                                        break;
+                                                    case 6:
+                                                        tags.add('war').add('戰爭');
+                                                        break;
+                                                    case 7:
+                                                        tags.add('animation').add('動畫');
+                                                        break;
+                                                }
+                                            } else if (_i15 === '1') {
+                                                tags.add('tv show').add('電視劇');
+                                            } else if (_i15 === '2') {
+                                                tags.add('tv show').add('電視劇').add('綜藝節目');
+                                            } else if (_i15 === '3') {
+                                                tags.add('animation').add('動畫');
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    var newTag = new _set2.default();
+                    tags.forEach(function (t) {
+                        var index = _constants.TRANS_LIST.indexOf(t);
+                        newTag.add(index !== -1 ? _constants.TRANS_LIST_CH[index] : t);
+                    });
+                    return [img.attribs.alt, newTag, new _set2.default(), 'kubo', img.attribs.src, url];
                 });
             case 'cartoonmad':
                 url = 'http://www.cartoonmad.com/comic/' + id + '.html';
@@ -3315,18 +3779,83 @@ var bilibiliVideoUrl = exports.bilibiliVideoUrl = function bilibiliVideoUrl(url)
             (0, _utility.handleError)(new _utility.HoError('cannot get list'));
         }
         return {
-            title: json_data.list[page].part,
+            title: json_data.list[page - 1].part,
             video: [],
             embed: ['//static.hdslb.com/miniloader.swf?aid=' + id[2] + '&page=' + page]
         };
     });
 };
 
+var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
+    var subIndex = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+
+    console.log(url);
+    if (id === 'kdy') {
+        return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+            var iframes = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container')[0], 'div', 'youtube-player')[0], 'iframe');
+            if (subIndex > iframes.length) {
+                subIndex = iframes.length;
+            }
+            var getUrl = function getUrl(youUrl) {
+                return youUrl.match(/www\.youtube\.com/) ? youtubeVideoUrl('you', 'http://www.youtube.com/watch?v=' + youUrl.match(/embed\/(.*)$/)[1]) : youtubeVideoUrl('dym', 'http://www.dailymotion.com/embed/video/' + youUrl.match(/url\=(.*)$/)[1]);
+            };
+            if (!iframes[subIndex - 1]) {
+                console.log(iframes);
+                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+            }
+            return getUrl(iframes[subIndex - 1].attribs.src).then(function (ret_obj) {
+                return (0, _assign2.default)(ret_obj, iframes.length > 1 ? { sub: iframes.length } : {});
+            });
+        });
+    } else if (id === 'kud') {
+        return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+            var ret_obj = { video: [] };
+            _kubo.JuicyCodes.Run((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0])[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+            _kubo.kuboInfo.sources.forEach(function (s) {
+                if (s.type === 'video/mp4') {
+                    ret_obj.video.splice(0, 0, s.file);
+                }
+            });
+            if (ret_obj.video.length < 1) {
+                console.log(ret_obj.video);
+                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+            }
+            return ret_obj;
+        });
+    } else if (id === 'kyu') {
+        return (0, _apiTool2.default)('url', 'http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=' + new Date().getTime(), {
+            referer: 'http://forum.99kubo.com/',
+            post: { url: new Buffer(url).toString('base64') }
+        }).then(function (raw_data) {
+            var json_data = (0, _utility.getJson)(raw_data);
+            if (json_data['code'] === '404') {
+                console.log(json_data);
+                (0, _utility.handleError)(new _utility.HoError('try later'));
+            }
+            if (!json_data['mp4']) {
+                console.log(json_data);
+                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+            }
+            if (subIndex > json_data['mp4'].length) {
+                subIndex = json_data['mp4'].length;
+            }
+            if (!json_data['mp4'][subIndex - 1]) {
+                console.log(json_data);
+                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+            }
+            return (0, _assign2.default)({ video: [json_data['mp4'][subIndex - 1].url] }, json_data['mp4'].length > 1 ? { sub: json_data['mp4'].length } : {});
+        });
+    } else {
+        return _promise2.default.resolve({
+            video: [],
+            url: [url]
+        });
+    }
+};
+
 var youtubeVideoUrl = exports.youtubeVideoUrl = function youtubeVideoUrl(id, url) {
-    var ret_obj = {
-        title: id,
-        video: []
-    };
+    console.log(url);
+    var ret_obj = { video: [] };
     if (id === 'lin') {
         ret_obj['iframe'] = ['//tv.line.me/embed/' + url.match(/[^\/]+$/)[0] + '?isAutoPlay=true'];
     } else if (id === 'iqi') {

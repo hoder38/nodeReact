@@ -303,8 +303,25 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function (re
     var index = req.params.pageToken ? Number(req.params.pageToken.match(/^\d+/)) : 1;
     var pageToken = req.params.pageToken ? req.params.pageToken.match(/[^\d]+$/) : false;
     var itemList = [];
-    _externalTool2.default.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index)).then(function (list) {
+    _externalTool2.default.getSingleList('kubo', StorageTagTool.getKuboQuery(parentList.cur, req.params.sortName, index)).then(function (list) {
         return itemList = list.map(function (item) {
+            return {
+                name: item.name,
+                id: 'kub_' + item.id,
+                tags: [].concat((0, _toConsumableArray3.default)(item.tags), ['first item']),
+                recycle: 0,
+                isOwn: false,
+                utime: new Date(item.date).getTime() / 1000,
+                thumb: item.thumb,
+                noDb: true,
+                status: 3,
+                count: item.count
+            };
+        });
+    }).then(function () {
+        return _externalTool2.default.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index));
+    }).then(function (list) {
+        return [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
             return {
                 name: item.name,
                 id: 'yif_' + item.id,
@@ -317,7 +334,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function (re
                 status: 3,
                 count: item.rating
             };
-        });
+        })));
     }).then(function () {
         return _externalTool2.default.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index));
     }).then(function (list) {
@@ -592,7 +609,7 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (req, res, next) {
     console.log('media setTime');
-    var id = req.params.id.match(/^(you|ypl|yif|mad|bbl)_(.*)$/);
+    var id = req.params.id.match(/^(you|ypl|yif|mad|bbl|kub)_(.*)$/);
     var playlist = 0;
     var playlistId = null;
     var obj = req.params.obj;
@@ -733,7 +750,10 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
                 } else if (playlist > 2) {
                     var playurl = null;
                     var playtype = null;
-                    if (playlist === 4) {
+                    if (playlist === 3) {
+                        playurl = 'http://www.99kubo.com/vod-read-id-' + playlistId + '.html';
+                        playtype = 'kubo';
+                    } else if (playlist === 4) {
                         playurl = 'https://yts.ag/api/v2/movie_details.json?movie_id=' + playlistId;
                         playtype = 'yify';
                     } else if (playlist === 5) {
@@ -776,7 +796,7 @@ router.get('/media/record/:id/:time/:pId?', function (req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         (0, _utility.handleError)(new _utility.HoError('timestamp is not vaild'));
     }
-    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl)_/) ? (0, _utility.isValidString)(req.params.id, 'name', 'external is not vaild') : (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
+    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? (0, _utility.isValidString)(req.params.id, 'name', 'external is not vaild') : (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
     var data = req.params.time === '0' ? ['hdel', id.toString()] : ['hmset', (0, _defineProperty3.default)({}, id.toString(), req.params.time)];
     return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function (ret) {
         return res.json({ apiOK: true });

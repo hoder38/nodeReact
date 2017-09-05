@@ -403,7 +403,7 @@ function process(collection) {
                         genre = _constants.GENRE_LIST[_constants.GENRE_LIST_CH.indexOf(normal)];
                         query_term = null;
                     } else {
-                        query_term = denormalize(s);
+                        query_term = s;
                         genre = null;
                     }
                 } else if (index.index === 13) {
@@ -445,7 +445,7 @@ function process(collection) {
                             query_term = null;
                             s_country = -1;
                         } else {
-                            query_term = denormalize(s);
+                            query_term = s;
                             s_year = 0;
                             s_country = -1;
                         }
@@ -547,7 +547,7 @@ function process(collection) {
                         comic_type = mIndex;
                         query_term = null;
                     } else {
-                        query_term = denormalize(s);
+                        query_term = s;
                         comic_type = -1;
                     }
                 } else if (index.index === 14) {
@@ -577,6 +577,58 @@ function process(collection) {
                     console.log(url);
                     return url;
                 }
+            } else {
+                return false;
+            }
+        },
+        getKuboQuery: function getKuboQuery(search_arr, sortName, page) {
+            var searchWord = null;
+            var year = 0;
+            var type = 0;
+            var country = '';
+            search_arr.forEach(function (s) {
+                var normal = normalize(s);
+                var index = isDefaultTag(normal);
+                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
+                    if (s.match(/^\d\d\d\d$/)) {
+                        if (Number(s) < 2100 && Number(s) > 1800) {
+                            year = Number(s);
+                            searchWord = null;
+                            country = '';
+                        } else {
+                            searchWord = s;
+                            year = 0;
+                            country = '';
+                        }
+                    } else if (_constants.KUBO_COUNTRY.includes(normal)) {
+                        country = normal;
+                        searchWord = null;
+                        year = 0;
+                    } else {
+                        searchWord = s;
+                        year = 0;
+                        country = '';
+                    }
+                    //movie
+                } else if (index.index === 18) {
+                    type = 1;
+                    //tv series
+                } else if (index.index === 19) {
+                    type = 2;
+                    //tv show
+                } else if (index.index === 20) {
+                    type = 41;
+                    //animation
+                } else if (index.index === 21) {
+                    type = 3;
+                }
+            });
+            if (type) {
+                var order = sortName === 'mtime' ? 'vod_addtime' : 'vod_hits_month';
+                var sOrder = sortName === 'mtime' ? 1 : 2;
+                var url = searchWord ? 'http://www.99kubo.com/index.php?s=Vod-innersearch-q-' + encodeURIComponent(searchWord) + '-order-' + sOrder + '-page-' + page : 'http://www.99kubo.com/vod-search-id-' + type + '-cid--tag--area-' + country + '-tag--year-' + year + '-wd--actor--order-' + order + '%20desc-p-' + page + '.html';
+                console.log(url);
+                return url;
             } else {
                 return false;
             }
@@ -1346,7 +1398,7 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
                         console.log(_ret6.nosql);
                         return _ret6;
                     }
-                } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16) {} else if (index.index === 5) {
+                } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21) {} else if (index.index === 5) {
                     is_first = false;
                 } else if (index.index === 7) {
                     console.log('no local');

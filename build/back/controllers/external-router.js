@@ -295,7 +295,7 @@ router.get('/2drive/:uid', function (req, res, next) {
 
 router.get('/getSingle/:uid', function (req, res, next) {
     console.log('external getSingle');
-    var id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi)_(.*)/);
+    var id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
     if (!id) {
         (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'));
     }
@@ -305,6 +305,23 @@ router.get('/getSingle/:uid', function (req, res, next) {
     switch (id[1]) {
         case 'dym':
             url = 'http://www.dailymotion.com/embed/video/' + id[2];
+            break;
+        case 'kud':
+            idsub = id[2].match(/^(\d+)_(\d+)_(.*)$/);
+            url = 'http://www.99kubo.com/168player/?url=' + new Buffer(idsub[3], 'base64').toString() + '&kubovid=' + idsub[2] + '&kubocid=' + idsub[1];
+            break;
+        case 'kyu':
+            idsub = id[2].match(/^(.*)_(\d+)$/);
+            subIndex = Number(idsub[2]);
+            url = 'http://v.youku.com/v_show/id_' + idsub[1] + '.html';
+            break;
+        case 'kdy':
+            idsub = id[2].match(/^(.*)_(\d+)$/);
+            subIndex = Number(idsub[2]);
+            url = 'http://www.99kubo.com/168player/youtube.php?' + idsub[1];
+            break;
+        case 'kur':
+            url = 'http://www.99kubo.com/' + new Buffer(id[2], 'base64').toString();
             break;
         case 'bil':
             idsub = id[2].match(/^([^_]+)_(\d+)$/);
@@ -327,7 +344,7 @@ router.get('/getSingle/:uid', function (req, res, next) {
             break;
     }
     var getUrl = function getUrl() {
-        return id[1] === 'bil' ? (0, _externalTool.bilibiliVideoUrl)(url) : (0, _externalTool.youtubeVideoUrl)(id[1], url);
+        return id[1] === 'bil' ? (0, _externalTool.bilibiliVideoUrl)(url) : id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'kyu' || id[1] === 'kur' ? (0, _externalTool.kuboVideoUrl)(id[1], url, subIndex) : (0, _externalTool.youtubeVideoUrl)(id[1], url);
     };
     getUrl().then(function (ret_obj) {
         return res.json(ret_obj);
@@ -435,10 +452,10 @@ router.post('/upload/url', function (req, res, next) {
                 return (0, _apiTool2.default)('download', req.user, decodeUrl, {
                     is_check: false,
                     filePath: filePath,
-                    rest: function rest(_ref13) {
-                        var _ref14 = (0, _slicedToArray3.default)(_ref13, 2),
-                            pathname = _ref14[0],
-                            filename = _ref14[1];
+                    rest: function rest(_ref15) {
+                        var _ref16 = (0, _slicedToArray3.default)(_ref15, 2),
+                            pathname = _ref16[0],
+                            filename = _ref16[1];
 
                         console.log(filename);
                         var getFile = function getFile() {
@@ -508,12 +525,12 @@ router.post('/upload/url', function (req, res, next) {
                                 });
                             });
                         };
-                        return getFile().then(function (_ref15) {
-                            var _ref16 = (0, _slicedToArray3.default)(_ref15, 4),
-                                filename = _ref16[0],
-                                setTag = _ref16[1],
-                                optTag = _ref16[2],
-                                db_obj = _ref16[3];
+                        return getFile().then(function (_ref17) {
+                            var _ref18 = (0, _slicedToArray3.default)(_ref17, 4),
+                                filename = _ref18[0],
+                                setTag = _ref18[1],
+                                optTag = _ref18[2],
+                                db_obj = _ref18[3];
 
                             return streamClose(filename, setTag, optTag, db_obj);
                         });
@@ -554,11 +571,11 @@ router.post('/upload/url', function (req, res, next) {
                     first: req.body.hide ? 0 : 1,
                     status: db_obj && (db_obj['magnet'] || db_obj['mega']) ? 9 : 0
                 };
-                return _mediaHandleTool2.default.handleTag(filePath, data, name, '', data['status']).then(function (_ref17) {
-                    var _ref18 = (0, _slicedToArray3.default)(_ref17, 3),
-                        mediaType = _ref18[0],
-                        mediaTag = _ref18[1],
-                        DBdata = _ref18[2];
+                return _mediaHandleTool2.default.handleTag(filePath, data, name, '', data['status']).then(function (_ref19) {
+                    var _ref20 = (0, _slicedToArray3.default)(_ref19, 3),
+                        mediaType = _ref20[0],
+                        mediaTag = _ref20[1],
+                        DBdata = _ref20[2];
 
                     if (is_media) {
                         DBdata['status'] = is_media;
@@ -672,11 +689,11 @@ router.post('/upload/url', function (req, res, next) {
                                         if (!(0, _mime.isVideo)(db_obj['playList'][index]) && !(0, _mime.isDoc)(db_obj['playList'][index]) && !(0, _mime.isZipbook)(db_obj['playList'][index])) {
                                             return _promise2.default.resolve();
                                         }
-                                        return _mediaHandleTool2.default.handleTag(filePath + '/real/' + db_obj['playList'][index], {}, (0, _path.basename)(db_obj['playList'][index]), '', 0).then(function (_ref19) {
-                                            var _ref20 = (0, _slicedToArray3.default)(_ref19, 3),
-                                                mediaType = _ref20[0],
-                                                mediaTag = _ref20[1],
-                                                DBdata = _ref20[2];
+                                        return _mediaHandleTool2.default.handleTag(filePath + '/real/' + db_obj['playList'][index], {}, (0, _path.basename)(db_obj['playList'][index]), '', 0).then(function (_ref21) {
+                                            var _ref22 = (0, _slicedToArray3.default)(_ref21, 3),
+                                                mediaType = _ref22[0],
+                                                mediaTag = _ref22[1],
+                                                DBdata = _ref22[2];
 
                                             mediaType['fileIndex'] = index;
                                             mediaType['realPath'] = db_obj['playList'][index];
@@ -932,6 +949,36 @@ router.post('/upload/url', function (req, res, next) {
                                 }];
                             });
                         });
+                    } else if (decodeUrl.match(/^(https|http):\/\/www\.99kubo\.com\//)) {
+                        return (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
+                            owner: 'kubo',
+                            url: encodeURIComponent(decodeUrl)
+                        }, { limit: 1 }).then(function (items) {
+                            if (items.length > 0) {
+                                (0, _utility.handleError)(new _utility.HoError('already has one'));
+                            }
+                            var kubo_id = decodeUrl.match(/(\d+)\.html$/);
+                            if (!kubo_id) {
+                                (0, _utility.handleError)(new _utility.HoError('kubo url invalid'));
+                            }
+                            is_media = 3;
+                            return _externalTool2.default.saveSingle('kubo', kubo_id[1]).then(function (_ref5) {
+                                var _ref6 = (0, _slicedToArray3.default)(_ref5, 6),
+                                    media_name = _ref6[0],
+                                    setTag = _ref6[1],
+                                    optTag = _ref6[2],
+                                    owner = _ref6[3],
+                                    thumb = _ref6[4],
+                                    url = _ref6[5];
+
+                                return [media_name, setTag, optTag, {
+                                    owner: owner,
+                                    untag: 0,
+                                    thumb: thumb,
+                                    url: url
+                                }];
+                            });
+                        });
                     } else if (decodeUrl.match(/^(https|http):\/\/www\.cartoonmad\.com\/comic\//)) {
                         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
                             owner: 'cartoonmad',
@@ -945,14 +992,14 @@ router.post('/upload/url', function (req, res, next) {
                                 (0, _utility.handleError)(new _utility.HoError('cartoonmad url invalid'));
                             }
                             is_media = 2;
-                            return _externalTool2.default.saveSingle('cartoonmad', cartoonmad_id[1]).then(function (_ref5) {
-                                var _ref6 = (0, _slicedToArray3.default)(_ref5, 6),
-                                    media_name = _ref6[0],
-                                    setTag = _ref6[1],
-                                    optTag = _ref6[2],
-                                    owner = _ref6[3],
-                                    thumb = _ref6[4],
-                                    url = _ref6[5];
+                            return _externalTool2.default.saveSingle('cartoonmad', cartoonmad_id[1]).then(function (_ref7) {
+                                var _ref8 = (0, _slicedToArray3.default)(_ref7, 6),
+                                    media_name = _ref8[0],
+                                    setTag = _ref8[1],
+                                    optTag = _ref8[2],
+                                    owner = _ref8[3],
+                                    thumb = _ref8[4],
+                                    url = _ref8[5];
 
                                 return [media_name, setTag, optTag, {
                                     owner: owner,
@@ -975,14 +1022,14 @@ router.post('/upload/url', function (req, res, next) {
                                 (0, _utility.handleError)(new _utility.HoError('bilibili url invalid'));
                             }
                             is_media = 3;
-                            return _externalTool2.default.saveSingle('bilibili', bili_id[1]).then(function (_ref7) {
-                                var _ref8 = (0, _slicedToArray3.default)(_ref7, 6),
-                                    media_name = _ref8[0],
-                                    setTag = _ref8[1],
-                                    optTag = _ref8[2],
-                                    owner = _ref8[3],
-                                    thumb = _ref8[4],
-                                    url = _ref8[5];
+                            return _externalTool2.default.saveSingle('bilibili', bili_id[1]).then(function (_ref9) {
+                                var _ref10 = (0, _slicedToArray3.default)(_ref9, 6),
+                                    media_name = _ref10[0],
+                                    setTag = _ref10[1],
+                                    optTag = _ref10[2],
+                                    owner = _ref10[3],
+                                    thumb = _ref10[4],
+                                    url = _ref10[5];
 
                                 return [media_name, setTag, optTag, {
                                     owner: owner,
@@ -994,12 +1041,12 @@ router.post('/upload/url', function (req, res, next) {
                         });
                     } else if (decodeUrl.match(/^(https|http):\/\/mega\./)) {
                         return (0, _apiToolPlaylist2.default)('mega add', req.user, decodeUrl, filePath, {
-                            rest: function rest(_ref9) {
-                                var _ref10 = (0, _slicedToArray3.default)(_ref9, 4),
-                                    filename = _ref10[0],
-                                    setTag = _ref10[1],
-                                    optTag = _ref10[2],
-                                    db_obj = _ref10[3];
+                            rest: function rest(_ref11) {
+                                var _ref12 = (0, _slicedToArray3.default)(_ref11, 4),
+                                    filename = _ref12[0],
+                                    setTag = _ref12[1],
+                                    optTag = _ref12[2],
+                                    db_obj = _ref12[3];
 
                                 return streamClose(filename, setTag, optTag, db_obj);
                             },
@@ -1015,12 +1062,12 @@ router.post('/upload/url', function (req, res, next) {
                 return pureDownload(err);
             }).then(function (result) {
                 return Array.isArray(result) ? result : [];
-            }).then(function (_ref11) {
-                var _ref12 = (0, _slicedToArray3.default)(_ref11, 4),
-                    filename = _ref12[0],
-                    setTag = _ref12[1],
-                    optTag = _ref12[2],
-                    db_obj = _ref12[3];
+            }).then(function (_ref13) {
+                var _ref14 = (0, _slicedToArray3.default)(_ref13, 4),
+                    filename = _ref14[0],
+                    setTag = _ref14[1],
+                    optTag = _ref14[2],
+                    db_obj = _ref14[3];
 
                 return streamClose(filename, setTag, optTag, db_obj);
             }).catch(function (err) {
@@ -1081,7 +1128,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
     }
     console.log(season);
     console.log(episode);
-    var idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope)_/);
+    var idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
     var type = 'youtube';
     if (idMatch) {
         switch (idMatch[1]) {
@@ -1096,6 +1143,18 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
                 break;
             case 'ope':
                 type = 'openload';
+                break;
+            case 'kud':
+                type = 'kubodrive';
+                break;
+            case 'kyu':
+                type = 'kuboyouku';
+                break;
+            case 'kdy':
+                type = 'kubodymyou';
+                break;
+            case 'kur':
+                type = 'kubourl';
                 break;
         }
     }
@@ -1131,10 +1190,10 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
             return [items[0]._id, filePath];
         });
     };
-    getId().then(function (_ref21) {
-        var _ref22 = (0, _slicedToArray3.default)(_ref21, 2),
-            id = _ref22[0],
-            filePath = _ref22[1];
+    getId().then(function (_ref23) {
+        var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
+            id = _ref24[0],
+            filePath = _ref24[1];
 
         var folderPath = (0, _path.dirname)(filePath);
         var mkfolder = function mkfolder() {
@@ -1411,10 +1470,10 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
             });
         }
     };
-    getId().then(function (_ref23) {
-        var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
-            id = _ref24[0],
-            filePath = _ref24[1];
+    getId().then(function (_ref25) {
+        var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
+            id = _ref26[0],
+            filePath = _ref26[1];
 
         var vtt = filePath + '.vtt';
         if (!(0, _fs.existsSync)(vtt)) {
