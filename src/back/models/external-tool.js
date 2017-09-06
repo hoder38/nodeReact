@@ -480,9 +480,15 @@ export default {
                         const a = findTag(findTag(findTag(tr, 'td')[0], 'div')[0], 'a')[0];
                         const td = findTag(tr, 'td')[1];
                         const a1 = findTag(findTag(td, 'h3')[0], 'a')[0];
-                        const bs = findTag(a1, 'b').map(b => findTag(b)[0]);
                         let name = '';
-                        findTag(a1).forEach((n, i) => name = bs[i] ? `${name}${n}${bs[i]}` : `${name}${n}`);
+                        a1.children.forEach(c => {
+                            if (c.data) {
+                                name = `${name}${c.data}`;
+                            } else {
+                                const t = findTag(c)[0];
+                                name = t ? `${name}${t}` : `${name}${findTag(findTag(c, 'b')[0])[0]}`;
+                            }
+                        });
                         name = name.match(/^(.*)-([^\-]+)$/);
                         let tags = new Set([normalize(name[2])]);
                         let count = 0;
@@ -2600,7 +2606,11 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
     } else if (id === 'kud') {
         return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
             let ret_obj = {video: []};
-            JuicyCodes.Run(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0])[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+            const script = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
+            if (!script) {
+                handleError(new HoError('cannot find mp4'));
+            }
+            JuicyCodes.Run(findTag(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
             kuboInfo.sources.forEach(s => {
                 if (s.type === 'video/mp4') {
                     ret_obj.video.splice(0, 0, s.file);
