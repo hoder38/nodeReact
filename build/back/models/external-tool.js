@@ -590,12 +590,14 @@ exports.default = {
                             var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'div')[0], 'a')[0];
                             var td = (0, _utility.findTag)(tr, 'td')[1];
                             var a1 = (0, _utility.findTag)((0, _utility.findTag)(td, 'h3')[0], 'a')[0];
-                            var bs = (0, _utility.findTag)(a1, 'b').map(function (b) {
-                                return (0, _utility.findTag)(b)[0];
-                            });
                             var name = '';
-                            (0, _utility.findTag)(a1).forEach(function (n, i) {
-                                return name = bs[i] ? '' + name + n + bs[i] : '' + name + n;
+                            a1.children.forEach(function (c) {
+                                if (c.data) {
+                                    name = '' + name + c.data;
+                                } else {
+                                    var t = (0, _utility.findTag)(c)[0];
+                                    name = t ? '' + name + t : '' + name + (0, _utility.findTag)((0, _utility.findTag)(c, 'b')[0])[0];
+                                }
                             });
                             name = name.match(/^(.*)-([^\-]+)$/);
                             var tags = new _set2.default([(0, _tagTool.normalize)(name[2])]);
@@ -3810,7 +3812,11 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
     } else if (id === 'kud') {
         return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
             var ret_obj = { video: [] };
-            _kubo.JuicyCodes.Run((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0])[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+            var script = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
+            if (!script) {
+                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+            }
+            _kubo.JuicyCodes.Run((0, _utility.findTag)(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
             _kubo.kuboInfo.sources.forEach(function (s) {
                 if (s.type === 'video/mp4') {
                     ret_obj.video.splice(0, 0, s.file);
