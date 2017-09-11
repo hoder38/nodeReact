@@ -19,6 +19,7 @@ export const UNACTIVE_DAY = 5
 export const UNACTIVE_HIT = 10
 export const HANDLE_TIME = 7200
 export const NOISE_TIME = 172800;
+export const NOISE_SIZE = 104857600;
 export const QUERY_LIMIT = 20
 export const MAX_RETRY = 10
 export const RELATIVE_LIMIT = 100;

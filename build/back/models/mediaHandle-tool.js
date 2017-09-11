@@ -655,6 +655,20 @@ exports.default = {
                     }();
 
                     if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                } else if (mediaType['type'] === 'video' && (0, _fs.statSync)(uploadPath).size > _constants.NOISE_SIZE) {
+                    var _ret6 = function () {
+                        var cmdline = 'cat ' + _constants.STATIC_PATH + '/noise >> "' + uploadPath + '"';
+                        console.log(cmdline);
+                        return {
+                            v: new _promise2.default(function (resolve, reject) {
+                                return _child_process2.default.exec(cmdline, function (err, output) {
+                                    return err ? reject(err) : resolve(output);
+                                });
+                            })
+                        };
+                    }();
+
+                    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                 } else {
                     return _promise2.default.resolve();
                 }
@@ -992,7 +1006,7 @@ exports.default = {
 
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { mediaType: { $exists: true } }).then(function (items) {
             if (items.length > 0) {
-                var _ret6 = function () {
+                var _ret7 = function () {
                     var timeoutItems = [];
                     items.forEach(function (i) {
                         if (i.mediaType.type) {
@@ -1022,7 +1036,7 @@ exports.default = {
                     });
                     console.log(timeoutItems);
                     if (timeoutItems.length > 0) {
-                        var _ret7 = function () {
+                        var _ret8 = function () {
                             var recur_check = function recur_check(index) {
                                 var single_check = function single_check() {
                                     var filePath = (0, _utility.getFileLocation)(timeoutItems[index].item.owner, timeoutItems[index].item._id);
@@ -1084,11 +1098,11 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                        if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                     }
                 }();
 
-                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
             }
         });
     }

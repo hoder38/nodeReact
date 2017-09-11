@@ -1,6 +1,6 @@
-import { STORAGEDB, STATIC_PATH } from '../constants'
+import { STORAGEDB, STATIC_PATH, NOISE_SIZE } from '../constants'
 import Mkdirp from 'mkdirp'
-import { existsSync as FsExistsSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, renameSync as FsRenameSync } from 'fs'
+import { existsSync as FsExistsSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, renameSync as FsRenameSync, statSync as FsStatSync } from 'fs'
 import { join as PathJoin, dirname as PathDirname } from 'path'
 import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool'
@@ -419,6 +419,10 @@ export default {
                     const cmdline = `cat ${STATIC_PATH}/noise >> "${uploadPath}"`;
                     console.log(cmdline);
                     return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => GoogleApi('delete', {fileId: add_noise}));
+                } else if (mediaType['type'] === 'video' && FsStatSync(uploadPath).size > NOISE_SIZE) {
+                    const cmdline = `cat ${STATIC_PATH}/noise >> "${uploadPath}"`;
+                    console.log(cmdline);
+                    return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output)));
                 } else {
                     return Promise.resolve();
                 }
