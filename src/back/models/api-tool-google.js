@@ -52,6 +52,8 @@ export default function api(name, data) {
             return copyFile(data);
             case 'move parent':
             return moveParent(data);
+            case 'send mail':
+            return sendMail(data);
             case 'upload':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
@@ -208,6 +210,44 @@ const setToken = () => {
         oauth2Client.setCredentials(tokens);
     })) : Promise.resolve();
 }
+
+function sendMail(data) {
+    const gmail = googleapis.gmail({
+        version: 'v1',
+        auth: oauth2Client,
+    });
+    return new Promise((resolve, reject) => gmail.messages.send({
+        part: 'snippet,statistics',
+        id: data['id'],
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.items)));
+}
+
+var mail = [
+  'Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n',
+  'MIME-Version: 1.0\r\n',
+  'From: sender@gmail.com\r\n',
+  'To: receiver@gmail.com\r\n',
+  'Subject: Subject Text\r\n\r\n',
+
+  '--foo_bar_baz\r\n',
+  'Content-Type: text/plain; charset="UTF-8"\r\n',
+  'MIME-Version: 1.0\r\n',
+  'Content-Transfer-Encoding: 7bit\r\n\r\n',
+
+  'The actual message text goes here\r\n\r\n',
+
+  '--foo_bar_baz\r\n',
+  'Content-Type: image/png\r\n',
+  'MIME-Version: 1.0\r\n',
+  'Content-Transfer-Encoding: base64\r\n',
+  'Content-Disposition: attachment; filename="example.png"\r\n\r\n',
+
+   pngData, '\r\n\r\n',
+
+   '--foo_bar_baz--'
+].join('');
+
+    var base64EncodedEmail = btoa(message).replace(/\+/g, '-').replace(/\//g, '_');
 
 function youtubeAPI(method, data) {
     const youtube = googleapis.youtube({
