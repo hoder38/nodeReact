@@ -39,7 +39,7 @@ exports.default = function (name) {
         case 'download':
             if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                 console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                expire().catch(function (err) {
+                expire(name, args).catch(function (err) {
                     return (0, _utility.handleError)(err, 'Api');
                 });
             } else {
@@ -155,7 +155,7 @@ function handle_err(err, user) {
     }, 0);
 }
 
-function expire() {
+function expire(name, args) {
     console.log('expire ' + api_ing + ' ' + api_pool.length);
     return setLock().then(function (go) {
         if (!go) {

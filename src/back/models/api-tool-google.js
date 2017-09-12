@@ -55,7 +55,7 @@ export default function api(name, data) {
             case 'upload':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire().catch(err => handleError(err, 'Google api'));
+                expire(name, data).catch(err => handleError(err, 'Google api'));
             } else {
                 api_ing++;
                 console.log(`go ${api_ing} ${api_pool.length}`);
@@ -65,7 +65,7 @@ export default function api(name, data) {
             case 'download':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire().catch(err => handleError(err, 'Google api'));
+                expire(name, data).catch(err => handleError(err, 'Google api'));
             } else {
                 api_ing++;
                 console.log(`go ${api_ing} ${api_pool.length}`);
@@ -75,7 +75,7 @@ export default function api(name, data) {
             case 'download media':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire().catch(err => handleError(err, 'Google api'));
+                expire(name, data).catch(err => handleError(err, 'Google api'));
             } else {
                 api_ing++;
                 console.log(`go ${api_ing} ${api_pool.length}`);
@@ -85,7 +85,7 @@ export default function api(name, data) {
             case 'download present':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire().catch(err => handleError(err, 'Google api'));
+                expire(name, data).catch(err => handleError(err, 'Google api'));
             } else {
                 api_ing++;
                 console.log(`go ${api_ing} ${api_pool.length}`);
@@ -95,7 +95,7 @@ export default function api(name, data) {
             case 'download doc':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
-                expire().catch(err => handleError(err, 'Google api'));
+                expire(name, data).catch(err => handleError(err, 'Google api'));
             } else {
                 api_ing++;
                 console.log(`go ${api_ing} ${api_pool.length}`);
@@ -148,15 +148,15 @@ function get(rest=null) {
     return Promise.resolve();
 }
 
-function expire() {
+function expire(name, data) {
     console.log(`expire google ${api_ing} ${api_pool.length}`);
     return setLock().then(go => {
         if (!go) {
             return Promise.resolve();
         }
         api_pool.push({
-            name: name,
-            data: data,
+            name,
+            data,
         });
         const now = new Date().getTime()/1000;
         if (!api_duration) {

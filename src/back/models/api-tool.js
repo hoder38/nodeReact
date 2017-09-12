@@ -30,7 +30,7 @@ export default function(name, ...args) {
         case 'download':
         if (api_ing >= API_LIMIT(ENV_TYPE)) {
             console.log(`reach limit ${api_ing} ${api_pool.length}`);
-            expire().catch(err => handleError(err, 'Api'));
+            expire(name, args).catch(err => handleError(err, 'Api'));
         } else {
             api_ing++;
             console.log(`go ${api_ing} ${api_pool.length}`);
@@ -74,15 +74,15 @@ function handle_err(err, user) {
     }, 0);
 }
 
-function expire() {
+function expire(name, args) {
     console.log(`expire ${api_ing} ${api_pool.length}`);
     return setLock().then(go => {
         if (!go) {
             return Promise.resolve();
         }
         api_pool.push({
-            name: name,
-            args: args,
+            name,
+            args,
         });
         const now = new Date().getTime()/1000;
         if (!api_duration) {

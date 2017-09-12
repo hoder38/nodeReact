@@ -130,7 +130,7 @@ function api(name, data) {
             case 'upload':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                    expire().catch(function (err) {
+                    expire(name, data).catch(function (err) {
                         return (0, _utility.handleError)(err, 'Google api');
                     });
                 } else {
@@ -152,7 +152,7 @@ function api(name, data) {
             case 'download':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                    expire().catch(function (err) {
+                    expire(name, data).catch(function (err) {
                         return (0, _utility.handleError)(err, 'Google api');
                     });
                 } else {
@@ -174,7 +174,7 @@ function api(name, data) {
             case 'download media':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                    expire().catch(function (err) {
+                    expire(name, data).catch(function (err) {
                         return (0, _utility.handleError)(err, 'Google api');
                     });
                 } else {
@@ -196,7 +196,7 @@ function api(name, data) {
             case 'download present':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                    expire().catch(function (err) {
+                    expire(name, data).catch(function (err) {
                         return (0, _utility.handleError)(err, 'Google api');
                     });
                 } else {
@@ -218,7 +218,7 @@ function api(name, data) {
             case 'download doc':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
-                    expire().catch(function (err) {
+                    expire(name, data).catch(function (err) {
                         return (0, _utility.handleError)(err, 'Google api');
                     });
                 } else {
@@ -327,7 +327,7 @@ function get() {
     return _promise2.default.resolve();
 }
 
-function expire() {
+function expire(name, data) {
     console.log('expire google ' + api_ing + ' ' + api_pool.length);
     return setLock().then(function (go) {
         if (!go) {
