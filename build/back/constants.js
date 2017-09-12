@@ -29,7 +29,8 @@ var HANDLE_TIME = exports.HANDLE_TIME = 7200;
 var NOISE_TIME = exports.NOISE_TIME = 172800;
 var NOISE_SIZE = exports.NOISE_SIZE = 104857600;
 var QUERY_LIMIT = exports.QUERY_LIMIT = 20;
-var MAX_RETRY = exports.MAX_RETRY = 10;
+//export const MAX_RETRY = 10
+var MAX_RETRY = exports.MAX_RETRY = 1;
 var RELATIVE_LIMIT = exports.RELATIVE_LIMIT = 100;
 var RELATIVE_UNION = exports.RELATIVE_UNION = 2;
 var RELATIVE_INTER = exports.RELATIVE_INTER = 3;
