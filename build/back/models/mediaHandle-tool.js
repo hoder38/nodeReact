@@ -1129,8 +1129,18 @@ var errorMedia = exports.errorMedia = function errorMedia(err, fileID, fileIndex
     var _ref13;
 
     return err.name === 'HoError' && err.message === 'timeout' ? (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (_ref13 = {}, (0, _defineProperty3.default)(_ref13, 'mediaType.' + fileIndex + '.timeout', true), (0, _defineProperty3.default)(_ref13, 'status', 9), _ref13) : { 'mediaType.timeout': true } }).then(function () {
+        console.log(123);
+        console.log(fileID);
+        console.log(typeof fileIndex === 'undefined' ? 'undefined' : (0, _typeof3.default)(fileIndex));
+        console.log(err);
+        console.log(fileIndex);
         throw err;
     }) : (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.err', err) : { 'mediaType.err': err } }).then(function () {
+        console.log(456);
+        console.log(fileID);
+        console.log(err);
+        console.log(typeof fileIndex === 'undefined' ? 'undefined' : (0, _typeof3.default)(fileIndex));
+        console.log(fileIndex);
         throw err;
     });
 };

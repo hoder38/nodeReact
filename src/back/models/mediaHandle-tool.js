@@ -746,8 +746,18 @@ export const errorMedia = (err, fileID, fileIndex) => (err.name === 'HoError' &&
     [`mediaType.${fileIndex}.timeout`]: true,
     status: 9,
 } : {'mediaType.timeout': true}}).then(() => {
+    console.log(123);
+    console.log(fileID);
+    console.log(typeof fileIndex);
+    console.log(err);
+    console.log(fileIndex);
     throw err;
 }) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => {
+    console.log(456);
+    console.log(fileID);
+    console.log(err);
+    console.log(typeof fileIndex);
+    console.log(fileIndex);
     throw err;
 });
 
