@@ -4,16 +4,24 @@ import Passport from 'passport'
 import { Strategy } from 'passport-local'
 import { createHash } from 'crypto'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, HoError, isValidString } from '../util/utility'
+import { handleError, handleReject, HoError, isValidString } from '../util/utility'
 
 const router = Express.Router()
 
 //passport
 Passport.use(new Strategy(function(username, password, done){
     console.log('login');
-    Mongo('find', USERDB, {username: isValidString(username, 'name', 'username is not vaild', 401)}, {limit: 1}).then(users => {
-        if (users.length < 1 || createHash('md5').update(isValidString(password, 'passwd', 'passwd is not vaild', 401)).digest('hex') !== users[0].password) {
-            handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+    const validUsername = isValidString(username, 'name');
+    if (!validUsername) {
+        handleError(new HoError('username is not vaild', {code: 401}), done);
+    }
+    Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
+        const validPassword = isValidString(password, 'passwd');
+        if (!validPassword) {
+            return handleReject(new HoError('passwd is not vaild', {code: 401}));
+        }
+        if (users.length < 1 || createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
+            return handleReject(new HoError('Incorrect username or password', {cdoe: 401}))
         }
         done(null, users[0])
     }).catch(err => handleError(err, done))

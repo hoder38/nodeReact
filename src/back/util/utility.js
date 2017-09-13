@@ -12,7 +12,7 @@ import Ass2vtt from 'ass-to-vtt'
 
 let pwCheck = {}
 
-export function isValidString(str, type, msg=null, code=400) {
+export function isValidString(str, type) {
     if (typeof str === 'string' || typeof str === 'number') {
         typeof str === 'string' ? str = new Buffer(str, 'utf-8').toString() : str.toString()
         switch (type) {
@@ -82,9 +82,6 @@ export function isValidString(str, type, msg=null, code=400) {
         }
     }
     console.log(`invalid string ${type} ${str}`);
-    if (msg) {
-        handleError(new HoError(msg, {code: code}))
-    }
     return false
 }
 
@@ -131,6 +128,7 @@ function showError(err, type) {
     }
 }
 
+//final error
 export function handleError(err, type=null, ...args) {
     if (err) {
         if (type) {
@@ -148,6 +146,17 @@ export function handleError(err, type=null, ...args) {
             showError(err, 'Delay')
             throw err
         }
+    }
+}
+
+//middle error
+export function handleReject(err, fun=null, ...args) {
+    showError(err, 'Reject');
+    if (fun) {
+        console.log(fun);
+        return fun(err, ...args);
+    } else {
+        return Promise.reject(err);
     }
 }
 
@@ -352,14 +361,13 @@ const bufferToString = buffer => {
 }
 
 export const getJson = raw_data => {
-    let json_data = null;
     try {
-        json_data = JSON.parse(raw_data);
+        return JSON.parse(raw_data);
     } catch (x) {
         console.log(raw_data);
-        handleError(new HoError('json parse error'));
+        showError(x, 'Json parse');
+        return false;
     }
-    return json_data;
 }
 
 export const torrent2Magnet = torInfo => {

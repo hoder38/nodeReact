@@ -92,7 +92,7 @@ router.put('/delTag/:tag', function(req, res, next) {
 router.post('/newRow', function(req, res, next) {
     console.log('new rank');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
     RankTool.newRow(req.body).then(result => {
         sendWs({
@@ -106,7 +106,7 @@ router.post('/newRow', function(req, res, next) {
 router.delete('/delRow/:uid', function(req, res, next) {
     console.log('del rank');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
     RankTool.delRow(req.params.uid).then(() => {
         sendWs({

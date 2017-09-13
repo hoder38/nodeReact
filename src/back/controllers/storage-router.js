@@ -1,6 +1,6 @@
 import { STORAGEDB, RELATIVE_LIMIT, ADULT_LIST, GENRE_LIST_CH, GAME_LIST_CH, MUSIC_LIST } from '../constants'
 import Express from 'express'
-import { checkLogin, handleError, checkAdmin, isValidString, selectRandom, getStorageItem, HoError } from '../util/utility'
+import { checkLogin, handleError, handleReject, checkAdmin, isValidString, selectRandom, getStorageItem, HoError } from '../util/utility'
 import TagTool from '../models/tag-tool'
 import GoogleApi from '../models/api-tool-google'
 import External from '../models/external-tool'
@@ -355,7 +355,10 @@ router.put('/sendTag/:uid', function(req, res, next){
 
 router.put('/addTagUrl', function(req, res, next) {
     console.log('storage addTagUrl');
-    const url = isValidString(req.body.url, 'url', 'invalid tag url');
+    const url = isValidString(req.body.url, 'url');
+    if (!url) {
+        handleError(new HoError('invalid tag url'), next);
+    }
     const getTaglist = () => {
         if (req.body.url.match(/^(http|https):\/\/store\.steampowered\.com\/app\//)) {
             console.log('steam');
@@ -407,14 +410,18 @@ router.put('/recover/:uid', function(req, res, next) {
     console.log('storage recover file');
     if (!checkAdmin(1, req.user)) {
         console.log(user);
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
-    return Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+    const id = isValidString(req.params.uid, 'uid');
+    if (!id) {
+        handleError(new HoError('uid is not vaild'), next);
+    }
+    return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length === 0) {
-            handleError(new HoError('file can not be fund!!!'));
+            return handleReject(new HoError('file can not be fund!!!'));
         }
         if (items[0].recycle !== 1) {
-            handleError(new HoError('recycle file first!!!'));
+            return handleReject(new HoError('recycle file first!!!'));
         }
         return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {recycle: 0}}).then(item2 => {
             sendWs({
@@ -428,7 +435,11 @@ router.put('/recover/:uid', function(req, res, next) {
 
 router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
     console.log('media saveParent');
-    StorageTagTool.searchTags(req.session).saveArray(isValidString(req.body.name, 'name', 'name is not vaild'), req.params.sortName, req.params.sortType);
+    const name = isValidString(req.body.name, 'name');
+    if (!name) {
+        handleError(new HoError('name is not vaild'), next);
+    }
+    StorageTagTool.searchTags(req.session).saveArray(name, req.params.sortName, req.params.sortType);
     res.json({apiOK: true});
 });
 
@@ -455,9 +466,15 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             playlist = 6;
             playlistId = id[2];
         }
-        id = isValidString(req.params.id, 'name', 'youtube is not vaild');
+        id = isValidString(req.params.id, 'name');
+        if (!id) {
+            handleError(new HoError('youtube is not vaild'), next);
+        }
     } else {
-        id = isValidString(req.params.id, 'uid', 'file is not vaild');
+        id = isValidString(req.params.id, 'uid');
+        if (!id) {
+            handleError(new HoError('file is not vaild'), next);
+        }
         if (obj && obj.match(/^(you_.*|external|\d+(\.\d+)?)$/)) {
             playlist = 2;
             if (obj === 'external') {
@@ -465,13 +482,19 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             }
         }
     }
-    const type = isValidString(req.params.type, 'name', 'type is not vaild');
+    const type = isValidString(req.params.type, 'name');
+    if (!type) {
+        handleError(new HoError('type is not vaild'), next);
+    }
     const first = () => {
         if (playlist && obj) {
             if (!obj.match(/^(you_|\d+(\.\d+)?$)/)) {
-                handleError(new HoError('external is not vaild'));
+                return handleReject(new HoError('external is not vaild'));
             }
-            obj = isValidString(obj, 'name', 'external is not vaild');
+            obj = isValidString(obj, 'name');
+            if (!obj) {
+                return handleReject(new HoError('external is not vaild'));
+            }
             const pageToken = req.params.pageToken ? isValidString(req.params.pageToken, 'name') : false;
             return Redis('hmset', `record: ${req.user._id}`, {[id.toString()]: pageToken ? `${obj}>>${pageToken}` : obj});
         } else {
@@ -503,7 +526,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
         }
         const ret_rest = (obj, is_end, total, obj_arr=null, pageN=null, pageP=null, pageToken=null, is_new=false) => {
             if (total < 1) {
-                handleError(new HoError('playlist is empty'));
+                return handleReject(new HoError('playlist is empty'));
             }
             const new_rest = is_new => is_new ? Redis('hmset', `record: ${req.user._id}`, {[id.toString()]: pageToken ? `${obj.id}>>${pageToken}` : obj.id}) : Promise.resolve();
             return new_rest(is_new).then(() => obj.id ? setTag(obj.id).then(item1 => Object.assign({playlist: Object.assign({
@@ -527,7 +550,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             } else if (playlist === 2) {
                 return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items1 => {
                     if (items1.length < 1) {
-                        handleError(new HoError('cannot find external'));
+                        return handleReject(new HoError('cannot find external'));
                     }
                     return External.getSingleId(items1[0].owner, decodeURIComponent(items1[0].url), recordTime, rPageToken, req.params.back).then(([obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new]) => ret_rest(obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new));
                 });
@@ -562,9 +585,12 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
 router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     console.log('media record');
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
-        handleError(new HoError('timestamp is not vaild'));
+        handleError(new HoError('timestamp is not vaild'), next);
     }
-    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? isValidString(req.params.id, 'name', 'external is not vaild') : isValidString(req.params.id, 'uid', 'file is not vaild');
+    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? isValidString(req.params.id, 'name') : isValidString(req.params.id, 'uid');
+    if (!id) {
+        handleError(new HoError('file is not vaild'), next);
+    }
     const data = req.params.time === '0' ? [
         'hdel',
         id.toString(),
@@ -590,11 +616,11 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res
         saveName = 'music';
         break;
         default:
-        handleError(new HoError('unknown type'));
+        handleError(new HoError('unknown type'), next);
     }
     let sql = StorageTagTool.saveSql(Number(req.params.page), saveName, req.params.back, req.user, req.session);
     if (!sql) {
-        handleError(new HoError('query error'));
+        handleError(new HoError('query error'), next);
     }
     console.log(sql);
     if (sql.empty) {
@@ -614,9 +640,13 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res
 
 router.get('/torrent/query/:id', function (req, res,next) {
     console.log('torrent query');
-    Mongo('find', STORAGEDB, {_id: isValidString(req.params.id, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+    const id = isValidString(req.params.id, 'uid');
+    if (!id) {
+        handleError(new HoError('file is not vaild'), next);
+    }
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length < 1 || items[0].status !== 9) {
-            handleError(new HoError('playlist can not be fund!!!'));
+            return handleReject(new HoError('playlist can not be fund!!!'));
         }
         return Redis('hget', `record: ${req.user._id}`, items[0]._id.toString()).then(item => {
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
@@ -643,14 +673,20 @@ router.get('/torrent/query/:id', function (req, res,next) {
 
 router.put('/zipPassword/:uid', function (req, res, next){
     console.log('zip password');
-    const id = isValidString(req.params.uid, 'uid', 'file is not vaild');
-    const pwd = isValidString(req.body.pwd, 'altpwd', 'password is not vaild');
+    const id = isValidString(req.params.uid, 'uid');
+    if (!id) {
+        handleError(new HoError('file is not vaild'), next);
+    }
+    const pwd = isValidString(req.body.pwd, 'altpwd');
+    if (!pwd) {
+        handleError(new HoError('password is not vaild'), next);
+    }
     Mongo('find', STORAGEDB, {
         _id: id,
         status: 9,
     }, {limit: 1}).then(items => {
         if (items.length < 1) {
-            handleError(new HoError('zip can not be fund!!!'));
+            return handleReject(new HoError('zip can not be fund!!!'));
         }
         return Mongo('update', STORAGEDB, {
             _id: id,

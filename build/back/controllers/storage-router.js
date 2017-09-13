@@ -505,7 +505,10 @@ router.put('/sendTag/:uid', function (req, res, next) {
 
 router.put('/addTagUrl', function (req, res, next) {
     console.log('storage addTagUrl');
-    var url = (0, _utility.isValidString)(req.body.url, 'url', 'invalid tag url');
+    var url = (0, _utility.isValidString)(req.body.url, 'url');
+    if (!url) {
+        (0, _utility.handleError)(new _utility.HoError('invalid tag url'), next);
+    }
     var getTaglist = function getTaglist() {
         if (req.body.url.match(/^(http|https):\/\/store\.steampowered\.com\/app\//)) {
             console.log('steam');
@@ -580,14 +583,18 @@ router.put('/recover/:uid', function (req, res, next) {
     console.log('storage recover file');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
         console.log(user);
-        (0, _utility.handleError)(new _utility.HoError('permission denied'));
+        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
-    return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
+    return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length === 0) {
-            (0, _utility.handleError)(new _utility.HoError('file can not be fund!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('file can not be fund!!!'));
         }
         if (items[0].recycle !== 1) {
-            (0, _utility.handleError)(new _utility.HoError('recycle file first!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('recycle file first!!!'));
         }
         return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $set: { recycle: 0 } }).then(function (item2) {
             (0, _sendWs2.default)({
@@ -603,7 +610,11 @@ router.put('/recover/:uid', function (req, res, next) {
 
 router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)', function (req, res, next) {
     console.log('media saveParent');
-    StorageTagTool.searchTags(req.session).saveArray((0, _utility.isValidString)(req.body.name, 'name', 'name is not vaild'), req.params.sortName, req.params.sortType);
+    var name = (0, _utility.isValidString)(req.body.name, 'name');
+    if (!name) {
+        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+    }
+    StorageTagTool.searchTags(req.session).saveArray(name, req.params.sortName, req.params.sortType);
     res.json({ apiOK: true });
 });
 
@@ -630,9 +641,15 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
             playlist = 6;
             playlistId = id[2];
         }
-        id = (0, _utility.isValidString)(req.params.id, 'name', 'youtube is not vaild');
+        id = (0, _utility.isValidString)(req.params.id, 'name');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('youtube is not vaild'), next);
+        }
     } else {
-        id = (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
+        id = (0, _utility.isValidString)(req.params.id, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('file is not vaild'), next);
+        }
         if (obj && obj.match(/^(you_.*|external|\d+(\.\d+)?)$/)) {
             playlist = 2;
             if (obj === 'external') {
@@ -640,13 +657,19 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
             }
         }
     }
-    var type = (0, _utility.isValidString)(req.params.type, 'name', 'type is not vaild');
+    var type = (0, _utility.isValidString)(req.params.type, 'name');
+    if (!type) {
+        (0, _utility.handleError)(new _utility.HoError('type is not vaild'), next);
+    }
     var first = function first() {
         if (playlist && obj) {
             if (!obj.match(/^(you_|\d+(\.\d+)?$)/)) {
-                (0, _utility.handleError)(new _utility.HoError('external is not vaild'));
+                return (0, _utility.handleReject)(new _utility.HoError('external is not vaild'));
             }
-            obj = (0, _utility.isValidString)(obj, 'name', 'external is not vaild');
+            obj = (0, _utility.isValidString)(obj, 'name');
+            if (!obj) {
+                return (0, _utility.handleReject)(new _utility.HoError('external is not vaild'));
+            }
             var pageToken = req.params.pageToken ? (0, _utility.isValidString)(req.params.pageToken, 'name') : false;
             return (0, _redisTool2.default)('hmset', 'record: ' + req.user._id, (0, _defineProperty3.default)({}, id.toString(), pageToken ? obj + '>>' + pageToken : obj));
         } else {
@@ -689,7 +712,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
                 var is_new = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : false;
 
                 if (total < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('playlist is empty'));
+                    return (0, _utility.handleReject)(new _utility.HoError('playlist is empty'));
                 }
                 var new_rest = function new_rest(is_new) {
                     return is_new ? (0, _redisTool2.default)('hmset', 'record: ' + req.user._id, (0, _defineProperty3.default)({}, id.toString(), pageToken ? obj.id + '>>' + pageToken : obj.id)) : _promise2.default.resolve();
@@ -731,7 +754,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
                 } else if (playlist === 2) {
                     return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items1) {
                         if (items1.length < 1) {
-                            (0, _utility.handleError)(new _utility.HoError('cannot find external'));
+                            return (0, _utility.handleReject)(new _utility.HoError('cannot find external'));
                         }
                         return _externalTool2.default.getSingleId(items1[0].owner, decodeURIComponent(items1[0].url), recordTime, rPageToken, req.params.back).then(function (_ref3) {
                             var _ref4 = (0, _slicedToArray3.default)(_ref3, 8),
@@ -794,9 +817,12 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
 router.get('/media/record/:id/:time/:pId?', function (req, res, next) {
     console.log('media record');
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
-        (0, _utility.handleError)(new _utility.HoError('timestamp is not vaild'));
+        (0, _utility.handleError)(new _utility.HoError('timestamp is not vaild'), next);
     }
-    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? (0, _utility.isValidString)(req.params.id, 'name', 'external is not vaild') : (0, _utility.isValidString)(req.params.id, 'uid', 'file is not vaild');
+    var id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? (0, _utility.isValidString)(req.params.id, 'name') : (0, _utility.isValidString)(req.params.id, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('file is not vaild'), next);
+    }
     var data = req.params.time === '0' ? ['hdel', id.toString()] : ['hmset', (0, _defineProperty3.default)({}, id.toString(), req.params.time)];
     return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function (ret) {
         return res.json({ apiOK: true });
@@ -820,11 +846,11 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function (req, re
             saveName = 'music';
             break;
         default:
-            (0, _utility.handleError)(new _utility.HoError('unknown type'));
+            (0, _utility.handleError)(new _utility.HoError('unknown type'), next);
     }
     var sql = StorageTagTool.saveSql(Number(req.params.page), saveName, req.params.back, req.user, req.session);
     if (!sql) {
-        (0, _utility.handleError)(new _utility.HoError('query error'));
+        (0, _utility.handleError)(new _utility.HoError('query error'), next);
     }
     console.log(sql);
     if (sql.empty) {
@@ -848,9 +874,13 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function (req, re
 
 router.get('/torrent/query/:id', function (req, res, next) {
     console.log('torrent query');
-    (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.id, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+    var id = (0, _utility.isValidString)(req.params.id, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('file is not vaild'), next);
+    }
+    (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length < 1 || items[0].status !== 9) {
-            (0, _utility.handleError)(new _utility.HoError('playlist can not be fund!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('playlist can not be fund!!!'));
         }
         return (0, _redisTool2.default)('hget', 'record: ' + req.user._id, items[0]._id.toString()).then(function (item) {
             StorageTagTool.setLatest(items[0]._id, req.session).then(function () {
@@ -883,14 +913,20 @@ router.get('/torrent/query/:id', function (req, res, next) {
 
 router.put('/zipPassword/:uid', function (req, res, next) {
     console.log('zip password');
-    var id = (0, _utility.isValidString)(req.params.uid, 'uid', 'file is not vaild');
-    var pwd = (0, _utility.isValidString)(req.body.pwd, 'altpwd', 'password is not vaild');
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('file is not vaild'), next);
+    }
+    var pwd = (0, _utility.isValidString)(req.body.pwd, 'altpwd');
+    if (!pwd) {
+        (0, _utility.handleError)(new _utility.HoError('password is not vaild'), next);
+    }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
         _id: id,
         status: 9
     }, { limit: 1 }).then(function (items) {
         if (items.length < 1) {
-            (0, _utility.handleError)(new _utility.HoError('zip can not be fund!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('zip can not be fund!!!'));
         }
         return (0, _mongoTool2.default)('update', _constants.STORAGEDB, {
             _id: id,

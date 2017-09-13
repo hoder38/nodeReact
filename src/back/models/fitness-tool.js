@@ -2,18 +2,27 @@ import { FITNESSDB, FITNESS_POINT, CHART_LIMIT } from '../constants'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
 import Redis from '../models/redis-tool'
-import { isValidString, handleError, HoError, completeZero } from '../util/utility'
+import { isValidString, handleError, handleReject, HoError, completeZero } from '../util/utility'
 
 const FitnessTagTool = TagTool(FITNESSDB);
 
 export default {
     newRow: function(data) {
         if (!data['price'] || !data['desc'] || !data['name']) {
-            handleError(new HoError('parameter lost!!!'));
+            return handleReject(new HoError('parameter lost!!!'));
         }
-        const name = isValidString(data['name'], 'name', 'name not vaild!!!');
-        const price = isValidString(data['price'], 'int', 'price not vaild!!!');
-        const desc = isValidString(data['desc'], 'desc', 'description not vaild!!!');
+        const name = isValidString(data['name'], 'name');
+        if (!name) {
+            return handleReject(new HoError('name not vaild!!!'));
+        }
+        const price = isValidString(data['price'], 'int');
+        if (!price) {
+            return handleReject(new HoError('price not vaild!!!'));
+        }
+        const desc = isValidString(data['desc'], 'desc');
+        if (!desc) {
+            return handleReject(new HoError('description not vaild!!!'));
+        }
         let setTag = new Set();
         setTag.add(normalize(name)).add('sport').add('運動');
         //setTag.add(normalize(name)).add('game').add('遊戲');
@@ -39,12 +48,34 @@ export default {
         });
     },
     editRow: function(uid, data, session) {
-        const name = data['name'] ? isValidString(data['name'], 'name', 'name not vaild!!!') : '';
-        const price = data['price'] ? isValidString(data['price'], 'int', 'price not vaild!!!') : '';
-        const desc = data['desc'] ? isValidString(data['desc'], 'desc', 'description not vaild!!!') : '';
-        return Mongo('find', FITNESSDB, {_id: isValidString(uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        let name = '';
+        if (data['name']) {
+            name = isValidString(data['name'], 'name');
+            if (!name) {
+                return handleReject(new HoError('description not vaild!!!'));
+            }
+        }
+        let price = '';
+        if (data['price']) {
+            price = isValidString(data['price'], 'int');
+            if (!price) {
+                return handleReject(new HoError('price not vaild!!!'));
+            }
+        }
+        let desc = '';
+        if (data['desc']) {
+            desc = isValidString(data['desc'], 'desc');
+            if (!desc) {
+                return handleReject(new HoError('description not vaild!!!'));
+            }
+        }
+        const id = isValidString(uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild!!!'));
+        }
+        return Mongo('find', FITNESSDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('fitness row does not exist!!!'));
+                return handleReject(new HoError('fitness row does not exist!!!'));
             }
             let update_data = {};
             let setTag = new Set(items[0].tags);
@@ -71,9 +102,13 @@ export default {
         });
     },
     delRow: function(uid) {
-        return Mongo('find', FITNESSDB, {_id: isValidString(uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild!!!'));
+        }
+        return Mongo('find', FITNESSDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('fitness row does not exist!!!'));
+                return handleReject(new HoError('fitness row does not exist!!!'));
             }
             return Mongo('remove', FITNESSDB, {
                 _id: items[0]._id,
@@ -91,14 +126,20 @@ export default {
         }).then(items => (items.length < 1) ? 0 : items[0].count);
     },
     exchange: function(uid, user, exchange, session) {
-        const id = isValidString(uid, 'uid', 'uid is not vaild');
-        const number = isValidString(exchange, 'int', 'exchange is not vaild');
+        const id = isValidString(uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild!!!'));
+        }
+        const number = isValidString(exchange, 'int');
+        if (!number) {
+            return handleReject(new HoError('exchange is not vaild!!!'));
+        }
         const end = (id=null, itemCount=0) => Mongo('find', `${FITNESSDB}Count`, {
             owner: user._id,
             itemId: objectID(FITNESS_POINT),
         }).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('point row does not exist!!!'));
+                return handleReject(new HoError('point row does not exist!!!'));
             }
             FitnessTagTool.setLatest(id, session).catch(err => handleError(err, 'Set latest'));
             return id ? Redis('hmget', `chart: ${user._id}`, [FITNESS_POINT, id.toString()]).then(item => {
@@ -112,11 +153,11 @@ export default {
         });
         return Mongo('find', `${FITNESSDB}Stat`, {owner: user._id}).then(items2 => {
             if (items2.length < 1) {
-                handleError(new HoError('fitness stat row does not exist!!!'));
+                return handleReject(new HoError('fitness stat row does not exist!!!'));
             }
             return Mongo('find', FITNESSDB, {_id: id}).then(items => {
                 if (items.length < 1) {
-                    handleError(new HoError('fitness row does not exist!!!'));
+                    return handleReject(new HoError('fitness row does not exist!!!'));
                 }
                 switch(items[0].type) {
                     case 1:
@@ -165,18 +206,24 @@ export default {
                     });
                     break;
                     default:
-                    handleError(new HoError('fitness type unknown!!!'));
+                    return handleReject(new HoError('fitness type unknown!!!'));
                 }
             });
         });
     },
     getStat: function(uid, index=0, typeId=FITNESS_POINT) {
-        const tId = isValidString(typeId, 'uid', 'uid is not vaild');
-        const cIndex = isValidString(index, 'perm', 'index is not vaild');
-        if (cIndex > CHART_LIMIT) {
-            handleError(new HoError('index is not vaild'));
+        const tId = isValidString(typeId, 'uid');
+        if (!tId) {
+            return handleReject(new HoError('uid is not vaild!!!'));
         }
-        const id = isValidString(uid, 'uid', 'uid is not vaild');
+        const cIndex = isValidString(index, 'perm');
+        if (!cIndex || cIndex > CHART_LIMIT) {
+            return handleReject(new HoError('index is not vaild!!!'));
+        }
+        const id = isValidString(uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild!!!'));
+        }
         const date = new Date();
         const getStart = () => Mongo('find', `${FITNESSDB}Stat`, {owner: id}).then(items => {
             const get = () => (items.length < 1) ? Mongo('insert', `${FITNESSDB}Stat`, {
@@ -256,7 +303,7 @@ export default {
             });
         })) : Mongo('find', FITNESSDB, {_id: tId}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('fitness type unknown!!!'));
+                return handleReject(new HoError('fitness type unknown!!!'));
             }
             return getStart().then(([start, chart]) => {
                 chart[cIndex - 1] = tId;
@@ -265,7 +312,10 @@ export default {
         });
     },
     resetDate: function(uid) {
-        const id = isValidString(uid, 'uid', 'uid is not vaild');
+        const id = isValidString(uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild!!!'));
+        }
         const date = new Date();
         return Mongo('update', `${FITNESSDB}Stat`, {owner: id}, {$set: {
             start: Number(`${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`),

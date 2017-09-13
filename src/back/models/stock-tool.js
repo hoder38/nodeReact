@@ -8,7 +8,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
-import { handleError, HoError, findTag, completeZero, getJson, bufferToString, addPre, isValidString } from '../util/utility'
+import { handleError, handleReject, HoError, findTag, completeZero, getJson, bufferToString, addPre, isValidString } from '../util/utility'
 import { getExtname } from '../util/mime'
 
 const StockTagTool = TagTool(STOCKDB);
@@ -106,7 +106,7 @@ const getStockPrice = (type, index) => {
         const price = raw_data.match(/\d+\.\d+/);
         if (!price) {
             console.log(raw_data);
-            handleError(new HoError('stock price get fail'));
+            return handleReject(new HoError('stock price get fail'));
         }
         console.log(price[0]);
         return price[0];
@@ -1635,11 +1635,11 @@ const getTwseXml = (stockCode, year, quarter, filePath) => {
                     post.report_id = 'A';
                     return Api('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath});
                 } else {
-                    return Promise.reject(err);
+                    return handleReject(err);
                 }
             })
         } else {
-            return Promise.reject(err);
+            return handleReject(err);
         }
     });
 }
@@ -1733,7 +1733,7 @@ const getBasicStockData = (type, index) => {
             return result;
         });
         default:
-        handleError(new HoError('stock type unknown!!!'));
+        return handleReject(new HoError('stock type unknown!!!'));
     }
 }
 
@@ -2298,7 +2298,7 @@ export default {
         if (stage === 0) {
             return Mongo('find', STOCKDB, {_id: type}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    handleError(new HoError('can not find stock!!!'));
+                    return handleReject(new HoError('can not find stock!!!'));
                 }
                 cash = items[0].cash;
                 asset = items[0].asset;
@@ -2355,15 +2355,15 @@ export default {
                 const parseXml = () => initXml(xml_path).then(xml => {
                     cash = getCashflow(xml, cash, is_start);
                     if (!cash) {
-                        handleError(new HoError('xml cash parse error!!!'));
+                        return handleReject(new HoError('xml cash parse error!!!'));
                     }
                     asset = getAsset(xml, asset, is_start)
                     if (!asset) {
-                        handleError(new HoError('xml asset parse error!!!'));
+                        return handleReject(new HoError('xml asset parse error!!!'));
                     }
                     sales = getSales(xml, sales, cash, is_start)
                     if (!sales) {
-                        handleError(new HoError('xml sales parse error!!!'));
+                        return handleReject(new HoError('xml sales parse error!!!'));
                     }
                     wait = 0;
                     is_start = true;
@@ -2398,7 +2398,7 @@ export default {
                         return parseXml();
                     }
                 } else {
-                    return getTwseXml(index, year, quarter, xml_path).catch(err => (err.code !== 'HPE_INVALID_CONSTANT') ? Promise.reject(err) : Promise.resolve(err)).then(err => {
+                    return getTwseXml(index, year, quarter, xml_path).catch(err => (err.code !== 'HPE_INVALID_CONSTANT') ? handleReject(err) : Promise.resolve(err)).then(err => {
                         const filesize = err ? 0 : FsStatSync(xml_path)['size'];
                         console.log(filesize);
                         if (wait > 150000 || filesize === 350 || err) {
@@ -2547,7 +2547,7 @@ export default {
     getStockPER: function(id) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('can not find stock!!!'));
+                return handleReject(new HoError('can not find stock!!!'));
             }
             const yearEPS = getEPS(items[0].sales);
             return (yearEPS.eps > 0) ? getStockPrice(items[0].type, items[0].index).then(price => [Math.ceil(price / yearEPS.eps * 1000) / 1000, items[0].index, yearEPS.start]) : [-Math.floor(-yearEPS.eps*1000)/1000, items[0].index, yearEPS.start];
@@ -2556,7 +2556,7 @@ export default {
     getStockYield: function(id) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('can not find stock!!!'));
+                return handleReject(new HoError('can not find stock!!!'));
             }
             switch(items[0].type) {
                 case 'twse':
@@ -2564,7 +2564,7 @@ export default {
                     let dividends = 0;
                     const table = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                     if (!table) {
-                        handleError(new HoError('查詢過於頻繁,請稍後再試!!'));
+                        return handleReject(new HoError('查詢過於頻繁,請稍後再試!!'));
                     }
                     findTag(findTag(table, 'tr', 'odd')[0], 'td').forEach(d => {
                         const t = findTag(d)[0];
@@ -2579,7 +2579,7 @@ export default {
                     return getStockPrice(items[0].type, items[0].index).then(price => (dividends > 0) ? Math.ceil(price / dividends * 1000) / 1000 : 0);
                 });
                 default:
-                handleError(new HoError('stock type unknown!!!'));
+                return handleReject(new HoError('stock type unknown!!!'));
             }
         });
     },
@@ -2592,7 +2592,7 @@ export default {
         console.log(month_str);
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('can not find stock!!!'));
+                return handleReject(new HoError('can not find stock!!!'));
             }
             switch(items[0].type) {
                 case 'twse':
@@ -2737,7 +2737,7 @@ export default {
                                             etime,
                                         }).catch(err => handleError(err, 'Redis'));
                                     }
-                                    handleError(new HoError(`${items[0].type}${items[0].index} 稍後再查詢!!`));
+                                    return handleReject(new HoError(`${items[0].type}${items[0].index} 稍後再查詢!!`));
                                 }
                                 return rest_predict(index);
                             });
@@ -2756,14 +2756,14 @@ export default {
                     });
                 });
                 default:
-                handleError(new HoError('stock type unknown!!!'));
+                return handleReject(new HoError('stock type unknown!!!'));
             }
         });
     },
     getStockPoint: function(id, price, session) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('can not find stock!!!'));
+                return handleReject(new HoError('can not find stock!!!'));
             }
             const getPrice = () => price ? Promise.resolve(price) : getStockPrice(items[0].type, items[0].index);
             return getPrice().then(price => {
@@ -2797,7 +2797,7 @@ export default {
         console.log(month_str);
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('can not find stock!!!'));
+                return handleReject(new HoError('can not find stock!!!'));
             }
             switch(items[0].type) {
                 case 'twse':
@@ -2916,6 +2916,9 @@ export default {
                     }
                     const getTpexList = () => Api('url', `http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
                         const json_data = getJson(raw_data);
+                        if (!json_data) {
+                            return handleReject(new HoError('json parse error!!!'));
+                        }
                         let high = [];
                         let low = [];
                         let vol = [];
@@ -3061,7 +3064,7 @@ export default {
                     });
                 });
                 default:
-                handleError(new HoError('stock type unknown!!!'));
+                return handleReject(new HoError('stock type unknown!!!'));
             }
         });
     },
@@ -3084,7 +3087,7 @@ export const getStockList = (type, stocktype=0) => {
             });
         }));
         default:
-        handleError(new HoError('stock type unknown!!!'));
+        return handleReject(new HoError('stock type unknown!!!'));
     }
 }
 
@@ -3092,7 +3095,7 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com
     const form = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0];
     if (!form) {
         console.log(raw_data);
-        handleError(new HoError('cannot find form'));
+        return handleReject(new HoError('cannot find form'));
     }
     const tds = findTag(findTag(findTag(findTag(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
     let filename = false;
@@ -3104,7 +3107,7 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com
         }
     }
     if (!filename) {
-        handleError(new HoError('cannot find annual location'));
+        return handleReject(new HoError('cannot find annual location'));
     }
     console.log(filename);
     return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
@@ -3131,9 +3134,7 @@ export const getSingleAnnual = (year, folder, index) => {
                         return recur_annual(cYear, annual_folder);
                     }
                 },
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             })));
         } else {
             cYear--;

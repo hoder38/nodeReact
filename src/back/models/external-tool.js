@@ -9,7 +9,7 @@ import Redis from '../models/redis-tool'
 import GoogleApi from '../models/api-tool-google'
 import { normalize, isDefaultTag } from '../models/tag-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility'
+import { handleError, handleReject, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility'
 import { addPost } from '../util/mime'
 import Api from './api-tool'
 import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo'
@@ -173,12 +173,16 @@ export default {
                             adultonly = 1;
                         }
                     });
+                    const url = isValidString(external_item.url, 'url');
+                    if (!url) {
+                        return handleReject(new HoError('url is not vaild'));
+                    }
                     return Mongo('insert', STORAGEDB, {
                         _id: objectID(),
                         name,
                         owner: type,
                         utime: Math.round(new Date().getTime() / 1000),
-                        url: isValidString(external_item.url, 'url', 'url is not vaild'),
+                        url,
                         size: 0,
                         count: 0,
                         first: 1,
@@ -222,7 +226,10 @@ export default {
                     if (count > 0) {
                         return nextEztv(index + 1, list);
                     }
-                    const url = isValidString(external_item.url, 'url', 'url is not vaild');
+                    const url = isValidString(external_item.url, 'url');
+                    if (!url) {
+                        return handleReject(new HoError('url is not vaild'));
+                    }
                     return Api('url', external_item.url, {referer: 'https://eztv.ag/'}).then(raw_data => {
                         const tables = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
                         const info = tables[1] ? findTag(findTag(tables[1], 'tr')[1], 'td')[0] : findTag(findTag(findTag(findTag(findTag(findTag(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
@@ -310,7 +317,7 @@ export default {
             }
             return clearExtenal().then(() => eztvList());
             default:
-            handleError(new HoError('unknown external type'));
+            return handleReject(new HoError('unknown external type'));
         }
     },
     getSingleList: function(type, url, post=null) {
@@ -324,7 +331,7 @@ export default {
                 is_json: true,
             }).then(raw_data => {
                 if (raw_data['status'] !== 'ok' || !raw_data['data']) {
-                    handleError(new HoError('yify api fail'));
+                    return handleReject(new HoError('yify api fail'));
                 }
                 return raw_data['data']['movies'] ? raw_data['data']['movies'].map(m => {
                     let tags = new Set(['movie', '電影']);
@@ -366,7 +373,7 @@ export default {
                 }).then(raw_data => {
                     if (!raw_data || raw_data['message'] !== 'success' || !raw_data['result'] || !raw_data['result']['list']) {
                         console.log(raw_data);
-                        handleError(new HoError('bilibili api fail'));
+                        return handleReject(new HoError('bilibili api fail'));
                     }
                     return raw_data['result']['list'].map(l => ({
                         id: l['season_id'],
@@ -384,7 +391,7 @@ export default {
                 }).then(json_data => {
                     if (!json_data || (json_data.code !== 0 && json_data.code !== 1)) {
                         console.log(json_data);
-                        handleError(new HoError('bilibili api fail'));
+                        return handleReject(new HoError('bilibili api fail'));
                     }
                     let list = [];
                     if (json_data['html']) {
@@ -424,7 +431,7 @@ export default {
                 if (main) {
                     const type_id = url.match(/vod-search-id-(\d+)/);
                     if (!type_id) {
-                        handleError(new HoError('unknown kubo type'));
+                        return handleReject(new HoError('unknown kubo type'));
                     }
                     return findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(l => {
                         const a = findTag(l, 'a')[0];
@@ -599,7 +606,7 @@ export default {
             return Api('url', 'http://www.bls.gov/bls/newsrels.htm#latest-releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}/${date.getFullYear()}`;
@@ -621,7 +628,7 @@ export default {
             return Api('url', 'http://www.census.gov/economic-indicators/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -643,7 +650,7 @@ export default {
             return Api('url', 'http://www.bea.gov/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
@@ -668,7 +675,7 @@ export default {
             return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -697,7 +704,7 @@ export default {
             return Api('url', 'https://www.conference-board.org/data/consumerconfidence.cfm').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 let docDate = `${date.getDate()} ${MONTH_SHORTS[date.getMonth()]}. ${date.getFullYear()}`;
@@ -727,7 +734,7 @@ export default {
             return Api('url', 'http://www.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${completeZero(date.getDate(), 2)} ${MONTH_SHORTS[date.getMonth()]} ${date.getFullYear()}`;
@@ -748,7 +755,7 @@ export default {
             return Api('url', 'http://www.oecd.org/newsroom/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
@@ -769,7 +776,7 @@ export default {
             return Api('url', 'http://www.dol.gov/newsroom/releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${completeZero(date.getDate(), 2)}, ${date.getFullYear()}`;
@@ -793,7 +800,7 @@ export default {
             return Api('url', 'http://www.realtor.org/topics/existing-home-sales').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
@@ -826,7 +833,7 @@ export default {
             return Api('url', 'http://www.sca.isr.umich.edu/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -845,7 +852,7 @@ export default {
             return Api('url', 'http://www.federalreserve.gov/feeds/speeches_and_testimony.xml').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 let docDate = `${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`;
@@ -893,7 +900,7 @@ export default {
             return Api('url', 'http://www.seaj.or.jp/english/statistics/page_en.php?CMD=1').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
@@ -916,7 +923,7 @@ export default {
             return Api('url', 'http://www.tri.org.tw').then(raw_data => {
                 const date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 const docDate = `${date.getFullYear() - 1911}.${date.getMonth() + 1}.${date.getDate()}`;
                 console.log(docDate);
@@ -935,13 +942,16 @@ export default {
             return Api('url', 'http://index.ndc.gov.tw/n/json/data/news', {post: {}}).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
                 const json_data = getJson(raw_data);
+                if (!json_data) {
+                    return handleReject(new HoError('json parse error!!!'));
+                }
                 for (let i of json_data) {
                     if (i.date === docDate) {
                         const list_match = i.content.match(/href="([^"]+pdf)".*?title="(.*?\d\d\d\d?年\d\d?月[^"]+)/g);
@@ -965,7 +975,7 @@ export default {
             return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
@@ -1025,7 +1035,7 @@ export default {
             return Api('url', 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(raw_data => {
                 const date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
@@ -1051,7 +1061,7 @@ export default {
             return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
@@ -1063,7 +1073,7 @@ export default {
                 let html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
                 if (!html) {
                     console.log(raw_data);
-                    handleError(new HoError('empty html'));
+                    return handleReject(new HoError('empty html'));
                 }
                 const html2 = findTag(html, 'html')[0];
                 let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
@@ -1094,7 +1104,7 @@ export default {
                     html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
                     if (!html) {
                         console.log(raw_data);
-                        handleError(new HoError('empty html'));
+                        return handleReject(new HoError('empty html'));
                     }
                     const html2 = findTag(html, 'html')[0];
                     lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
@@ -1129,7 +1139,7 @@ export default {
             return Api('url', 'http://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
-                    handleError(new HoError('date invalid'));
+                    return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${completeZero(date.getDate(), 2)} ${MONTH_SHORTS[date.getMonth()]} ${date.getFullYear()}`;
@@ -1147,7 +1157,7 @@ export default {
                 return list;
             });
             default:
-            return Promise.reject(handleError(new HoError('unknown external type')));
+            return handleReject(new HoError('unknown external type'));
         }
     },
     save2Drive: function(type, obj, parent) {
@@ -1161,7 +1171,7 @@ export default {
             return Api('url', obj.url).then(raw_data => {
                 const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper-basic')[0], 'div', 'main-content-full-width')[0], 'div', 'bodytext')[0], 'h4')[1], 'a')[0];
                 if (!findTag(a)[0].match(/PDF/i)) {
-                    handleError(new HoError('cannot find release'));
+                    return handleReject(new HoError('cannot find release'));
                 }
                 const url = addPre(a.attribs.href, 'http://www.bls.gov');
                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
@@ -1172,9 +1182,7 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             });
             case 'cen':
@@ -1187,9 +1195,7 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             })));
             case 'bea':
             console.log(obj);
@@ -1203,15 +1209,13 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
                 const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                 if (!findTag(a)[0].match(/^Full Release/)) {
-                    handleError(new HoError('cannot find release'));
+                    return handleReject(new HoError('cannot find release'));
                 }
                 const url = addPre(a.attribs.href, 'http://www.bea.gov');
                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
@@ -1222,9 +1226,7 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             });
             case 'ism':
@@ -1237,9 +1239,7 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             });
             case 'cbo':
             console.log(obj);
@@ -1251,9 +1251,7 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             });
             case 'sem':
             console.log(obj);
@@ -1265,16 +1263,14 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             });
             case 'oec':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
                 const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')[2], 'strong')[0], 'a')[0];
                 if (!findTag(a)[0].match(/pdf/i)) {
-                    handleError(new HoError('cannot find release'));
+                    return handleReject(new HoError('cannot find release'));
                 }
                 const url = addPre(a.attribs.href, 'http://www.oecd.org');
                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
@@ -1285,9 +1281,7 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             });
             case 'dol':
@@ -1300,9 +1294,7 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             })));
             case 'rea':
             console.log(obj);
@@ -1314,9 +1306,7 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             });
             case 'sca':
             console.log(obj);
@@ -1328,9 +1318,7 @@ export default {
                 body: obj.url,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             });
             case 'fed':
             console.log(obj);
@@ -1344,9 +1332,7 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
@@ -1363,9 +1349,7 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => {
-                                throw err;
-                            },
+                            errhandle: err => handleReject(err),
                         })));
                     }
                 }
@@ -1377,9 +1361,7 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 });
             });
             case 'sea':
@@ -1392,9 +1374,7 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             })));
             case 'tri':
             console.log(obj);
@@ -1408,9 +1388,7 @@ export default {
                     filePath,
                     parent,
                     rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 })));
             }));
             case 'ndc':
@@ -1423,9 +1401,7 @@ export default {
                 filePath,
                 parent,
                 rest: () => updateDocDate(type, obj.date),
-                errhandle: err => {
-                    throw err;
-                },
+                errhandle: err => handleReject(err),
             })));
             case 'sta':
             console.log(obj);
@@ -1446,9 +1422,7 @@ export default {
                                     filePath,
                                     parent,
                                     rest: () => updateDocDate(type, obj.date),
-                                    errhandle: err => {
-                                        throw err;
-                                    },
+                                    errhandle: err => handleReject(err),
                                 })));
                             }
                         }
@@ -1469,9 +1443,7 @@ export default {
                                             filePath,
                                             parent,
                                             rest: () => updateDocDate(type, obj.date),
-                                            errhandle: err => {
-                                                throw err;
-                                            },
+                                            errhandle: err => handleReject(err),
                                         })));
                                     }
                                 }
@@ -1496,9 +1468,7 @@ export default {
                             filePath,
                             parent,
                             rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => {
-                                throw err;
-                            },
+                            errhandle: err => handleReject(err),
                         })));
                     }
                 };
@@ -1522,9 +1492,7 @@ export default {
                                 filePath,
                                 parent,
                                 rest: () => updateDocDate(type, obj.date),
-                                errhandle: err => {
-                                    throw err;
-                                },
+                                errhandle: err => handleReject(err),
                             })));
                         }
                     }
@@ -1555,9 +1523,7 @@ export default {
                             filePath: subPath,
                             parent,
                             rest: () => recur_down(dIndex + 1),
-                            errhandle: err => {
-                                throw err;
-                            },
+                            errhandle: err => handleReject(err),
                         })));
                     } else {
                         return updateDocDate(type, obj.date);
@@ -1571,13 +1537,11 @@ export default {
                     body: obj.url,
                     parent,
                     rest: () => recur_down(0),
-                    errhandle: err => {
-                        throw err;
-                    },
+                    errhandle: err => handleReject(err),
                 });
             });
             default:
-            handleError(new HoError('unknown external type'));
+            return handleReject(new HoError('unknown external type'));
         }
     },
     parseTagUrl: function(type, url) {
@@ -1757,13 +1721,13 @@ export default {
                 return [...taglist].map(t => toValidName(t.toLowerCase()));
             });
             default:
-            return Promise.reject(handleError(new HoError('unknown external type')));
+            return handleReject(new HoError('unknown external type'));
         }
     },
     youtubePlaylist: function(id, index, pageToken=null, back=false) {
         return GoogleApi('y playItem', Object.assign({id: id}, pageToken ? {pageToken} : {})).then(([vId_arr, total, nPageToken, pPageToken]) => {
             if (total <= 0) {
-                handleError(new HoError('playlist is empty'));
+                return handleReject(new HoError('playlist is empty'));
             }
             let ret_obj = back ? vId_arr[vId_arr.length-1] : vId_arr[0];
             let is_new = true;
@@ -1785,7 +1749,7 @@ export default {
         let sub_index = 0;
         if ((typeof index) === 'number' || index.match(/^[\d\.]+$/)) {
             if (index < 1) {
-                handleError(new HoError('index must > 0'));
+                return handleReject(new HoError('index must > 0'));
             }
             sub_index = Math.round((+index)*1000)%1000;
             if (sub_index === 0) {
@@ -1793,7 +1757,7 @@ export default {
             }
             index = Math.floor(+index);
         } else if (type !== 'youtube'){
-            handleError(new HoError('index invalid'));
+            return handleReject(new HoError('index invalid'));
         }
         console.log(url);
         const saveList = (getlist, raw_list, is_end, etime) => {
@@ -1819,7 +1783,7 @@ export default {
             case 'lovetv':
             let prefix = url.match(/^((http|https):\/\/[^\/]+)\//);
             if (!prefix) {
-                handleError(new HoError('invaild url'));
+                return handleReject(new HoError('invaild url'));
             }
             prefix = prefix[1];
             const lovetvGetlist = () => Api('url', url).then(raw_data => {
@@ -1871,12 +1835,16 @@ export default {
                     url: encodeURIComponent(url),
                 }).then(items => {
                     if (items.length < 1) {
-                        handleError(new HoError('cannot find lovetv url'));
+                        return handleReject(new HoError('cannot find lovetv url'));
                     }
                     const nextLove = (index, dramaIndex, list) => {
                         for (let i of list) {
                             if (i.name === items[0].name) {
-                                return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {url: isValidString(i.url, 'url', 'url is not vaild')}}).then(item => {
+                                const validUrl = isValidString(i.url, 'url');
+                                if (!validUrl) {
+                                    return handleReject(new HoError('url is not vaild'));
+                                }
+                                return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {url: validUrl}}).then(item => {
                                     url = i.url;
                                     return lovetvGetlist();
                                 });
@@ -1886,7 +1854,7 @@ export default {
                         if (dramaIndex < dramaList.length) {
                             return recur_loveList(dramaIndex, nextLove);
                         }
-                        handleError(new HoError('cannot find lovetv'));
+                        return handleReject(new HoError('cannot find lovetv'));
                     }
                     return recur_loveList(0, nextLove);
                 }) : [list, is_end];
@@ -1895,7 +1863,7 @@ export default {
                 const sendList = (raw_list, is_end, etime) => {
                     const choose = raw_list[index - 1];
                     if (!choose) {
-                        handleError(new HoError('cannot find external index'));
+                        return handleReject(new HoError('cannot find external index'));
                     }
                     return Api('url', !choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).then(raw_data => {
                         let obj = [];
@@ -1950,7 +1918,7 @@ export default {
                         getV(findTag(vs, 'div', 'video_div_s2')[0], '_s2');
                         getV(findTag(vs, 'div', 'video_div_s3')[0], '_s3');
                         if (!obj) {
-                            handleError(new HoError('no source'));
+                            return handleReject(new HoError('no source'));
                         }
                         if (sub_index > obj.length) {
                             sub_index = 1;
@@ -2039,7 +2007,7 @@ export default {
                             console.log('too much');
                             const show_name = url.match(/^https:\/\/[^\/]+\/shows\/\d+\/([^\/]+)/);
                             if (!show_name) {
-                                handleError(new HoError('unknown name!!!'));
+                                return handleReject(new HoError('unknown name!!!'));
                             }
                             return Api('url', `https://eztv.ag/search/${show_name[1]}`, {referer: 'https://eztv.ag/'}).then(raw_data => {
                                 const tr1 = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border');
@@ -2058,7 +2026,7 @@ export default {
                 const sendList = (raw_list, is_end, etime) => {
                     const choose = raw_list[index - 1];
                     if (!choose) {
-                        handleError(new HoError('cannot find external index'));
+                        return handleReject(new HoError('cannot find external index'));
                     }
                     const chooseMag = choose.splice(choose.length - 1, 1)[0];
                     let ret_obj = {
@@ -2068,7 +2036,9 @@ export default {
                         complete: false,
                     };
                     const final_check = () => {
-                        isValidString(chooseMag.magnet, 'url', 'magnet is not vaild');
+                        if (!isValidString(chooseMag.magnet, 'url')) {
+                            return handleReject(new HoError('magnet is not vaild'));
+                        }
                         return Mongo('find', STORAGEDB, {magnet: {
                             $regex: chooseMag.magnet.match(/^magnet:[^&]+/)[0].match(/[^:]+$/)[0],
                             $options: 'i',
@@ -2096,8 +2066,11 @@ export default {
             case 'yify':
             const yifyGetlist = () => Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
                 const json_data = getJson(raw_data);
+                if (!json_data) {
+                    return handleReject(new HoError('json parse error!!!'));
+                }
                 if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
-                    handleError(new HoError('yify api fail'));
+                    return handleReject(new HoError('yify api fail'));
                 }
                 let magnet = null;
                 for (let i of json_data['data']['movie']['torrents']) {
@@ -2112,7 +2085,9 @@ export default {
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
-                    isValidString(raw_list[0].magnet, 'url', 'magnet is not vaild');
+                    if (!isValidString(raw_list[0].magnet, 'url')) {
+                        return handleReject(new HoError('magnet is not vaild'));
+                    }
                     saveList(yifyGetlist, raw_list, is_end, etime);
                     return Mongo('find', STORAGEDB, {magnet: {
                         $regex: raw_list[0].magnet.match(/^magnet:[^&]+/)[0].match(/[^:]+$/)[0],
@@ -2131,12 +2106,15 @@ export default {
             const bilibiliGetlist = () => {
                 const bili_id = url.match(/(av)?\d+/);
                 if (!bili_id) {
-                    handleError(new HoError('bilibili id invalid'));
+                    return handleReject(new HoError('bilibili id invalid'));
                 }
                 const getBangumi = sId => Api('url', `http://bangumi.bilibili.com/jsonp/seasoninfo/${sId}.ver?callback=seasonListCallback&jsonp=jsonp&_=${new Date().getTime()}`, {referer: url}).then(raw_data => {
                     const json_data = getJson(raw_data.match(/^[^\(]+\((.*)\);$/)[1]);
+                    if (!json_data) {
+                        return handleReject(new HoError('json parse error!!!'));
+                    }
                     if (!json_data.result || !json_data.result.episodes) {
-                        handleError(new HoError('cannot get episodes'));
+                        return handleReject(new HoError('cannot get episodes'));
                     }
                     return [
                         json_data.result.episodes.map(e => ({
@@ -2168,7 +2146,7 @@ export default {
                 const sendList = (raw_list, is_end, etime) => {
                     const choose = raw_list[index - 1];
                     if (!choose) {
-                        handleError(new HoError('cannot find external index'));
+                        return handleReject(new HoError('cannot find external index'));
                     }
                     saveList(bilibiliGetlist, raw_list, is_end, etime);
                     return [{
@@ -2287,7 +2265,7 @@ export default {
                 const sendList = (raw_list, is_end, etime) => {
                     const choose = raw_list[index - 1];
                     if (!choose) {
-                        handleError(new HoError('cannot find external index'));
+                        return handleReject(new HoError('cannot find external index'));
                     }
                     saveList(kuboGetlist, raw_list, is_end, etime);
                     return [Object.assign({
@@ -2305,7 +2283,7 @@ export default {
             });
             case 'cartoonmad':
             if (!url.match(/\d+/)) {
-                handleError(new HoError('comic id invalid'));
+                return handleReject(new HoError('comic id invalid'));
             }
             const madGetlist = () => Api('url', url, {
                 referer: 'http://www.cartoonmad.com/',
@@ -2330,7 +2308,7 @@ export default {
                 const sendList = (raw_list, is_end, etime) => {
                     const choose = raw_list[index - 1];
                     if (!choose) {
-                        handleError(new HoError('cannot find external index'));
+                        return handleReject(new HoError('cannot find external index'));
                     }
                     return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `http://www.cartoomad.com${choose}` : `http://www.cartoomad.com/${choose}` : choose, {
                         referer: 'http://www.cartoonmad.com/',
@@ -2356,7 +2334,7 @@ export default {
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
             default:
-            handleError(new HoError('unknown external type'));
+            return handleReject(new HoError('unknown external type'));
         }
     },
     saveSingle: function(type, id) {
@@ -2368,8 +2346,11 @@ export default {
                 url = `https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=${mid}`;
                 return Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
                     const json_data = getJson(raw_data);
+                    if (!json_data) {
+                        return handleReject(new HoError('json parse error!!!'));
+                    }
                     if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
-                        handleError(new HoError('yify api fail'));
+                        return handleReject(new HoError('yify api fail'));
                     }
                     let setTag = new Set(['yify', 'video', '影片', 'movie', '電影']);
                     setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
@@ -2542,7 +2523,7 @@ export default {
                 ];
             });
             default:
-            handleError(new HoError('unknown external type'));
+            return handleReject(new HoError('unknown external type'));
         }
     },
 }
@@ -2555,7 +2536,7 @@ export const subHdUrl = str => Api('url', `http://subhd.com/search/${encodeURICo
     const big_item = findTag(list, 'div', 'box')[0];
     if (!big_item) {
         console.log(raw_data);
-        handleError(new HoError('sub data error!!!'));
+        return handleReject(new HoError('sub data error!!!'));
     }
     const sub_id = findTag(findTag(findTag(findTag(findTag(findTag(big_item, 'div', 'pull-left lb_r')[0], 'table')[0], 'tr')[0], 'td')[0], 'h4')[0], 'a')[0].attribs.href;
     return Api('url', 'http://subhd.com/ajax/down_ajax', {
@@ -2564,7 +2545,7 @@ export const subHdUrl = str => Api('url', `http://subhd.com/search/${encodeURICo
         referer: `http://subhd.com${sub_id}`,
     }).then(data => {
         console.log(data);
-        return data.success ? data.url : Promise.reject(new HoError('too many times!!!'));
+        return data.success ? data.url : handleReject(new HoError('too many times!!!'));
     });
 });
 
@@ -2572,13 +2553,16 @@ export const bilibiliVideoUrl = url => {
     console.log(url);
     const id = url.match(/(av)?(\d+)\/(index_(\d+)\.html)?$/);
     if (!id) {
-        handleError(new HoError('bilibili id invalid'));
+        return handleReject(new HoError('bilibili id invalid'));
     }
     const page = id[3] ? Number(id[4]) : 1;
     return Api('url', `http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=${id[2]}&page=1&batch=true`, {referer: 'http://api.bilibili.com/'}).then(raw_data => {
         const json_data = getJson(raw_data);
+        if (!json_data) {
+            return handleReject(new HoError('json parse error!!!'));
+        }
         if (!json_data.list) {
-            handleError(new HoError('cannot get list'));
+            return handleReject(new HoError('cannot get list'));
         }
         return {
             title: json_data.list[page - 1].part,
@@ -2599,7 +2583,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             const getUrl = youUrl => youUrl.match(/www\.youtube\.com/) ? youtubeVideoUrl('you', `http://www.youtube.com/watch?v=${youUrl.match(/embed\/(.*)$/)[1]}`) : youtubeVideoUrl('dym', `http://www.dailymotion.com/embed/video/${youUrl.match(/url\=(.*)$/)[1]}`);
             if (!iframes[subIndex - 1]) {
                 console.log(iframes);
-                handleError(new HoError('cannot find mp4'));
+                return handleReject(new HoError('cannot find mp4'));
             }
             return getUrl(iframes[subIndex - 1].attribs.src).then(ret_obj => Object.assign(ret_obj, (iframes.length > 1) ? {sub : iframes.length} : {}));
         });
@@ -2608,7 +2592,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             let ret_obj = {video: []};
             const script = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
             if (!script) {
-                handleError(new HoError('cannot find mp4'));
+                return handleReject(new HoError('cannot find mp4'));
             }
             JuicyCodes.Run(findTag(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
             kuboInfo.sources.forEach(s => {
@@ -2618,7 +2602,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             });
             if (ret_obj.video.length < 1) {
                 console.log(ret_obj.video);
-                handleError(new HoError('cannot find mp4'));
+                return handleReject(new HoError('cannot find mp4'));
             }
             return ret_obj;
         });
@@ -2628,20 +2612,23 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             post: {url: new Buffer(url).toString('base64')},
         }).then(raw_data => {
             const json_data = getJson(raw_data);
+            if (!json_data) {
+                return handleReject(new HoError('json parse error!!!'));
+            }
             if (json_data['code'] === '404') {
                 console.log(json_data);
-                handleError(new HoError('try later'));
+                return handleReject(new HoError('try later'));
             }
             if (!json_data['mp4']) {
                 console.log(json_data);
-                handleError(new HoError('cannot find mp4'));
+                return handleReject(new HoError('cannot find mp4'));
             }
             if (subIndex > json_data['mp4'].length) {
                 subIndex = json_data['mp4'].length;
             }
             if (!json_data['mp4'][subIndex - 1]) {
                 console.log(json_data);
-                handleError(new HoError('cannot find mp4'));
+                return handleReject(new HoError('cannot find mp4'));
             }
             return Object.assign({video: [json_data['mp4'][subIndex - 1].url]}, (json_data['mp4'].length > 1) ? {sub : json_data['mp4'].length} : {});
         });

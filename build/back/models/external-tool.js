@@ -252,12 +252,16 @@ exports.default = {
                                     adultonly = 1;
                                 }
                             });
+                            var url = (0, _utility.isValidString)(external_item.url, 'url');
+                            if (!url) {
+                                return (0, _utility.handleReject)(new _utility.HoError('url is not vaild'));
+                            }
                             return (0, _mongoTool2.default)('insert', _constants.STORAGEDB, (0, _defineProperty3.default)({
                                 _id: (0, _mongoTool.objectID)(),
                                 name: name,
                                 owner: type,
                                 utime: Math.round(new Date().getTime() / 1000),
-                                url: (0, _utility.isValidString)(external_item.url, 'url', 'url is not vaild'),
+                                url: url,
                                 size: 0,
                                 count: 0,
                                 first: 1,
@@ -306,7 +310,10 @@ exports.default = {
                             if (count > 0) {
                                 return nextEztv(index + 1, list);
                             }
-                            var url = (0, _utility.isValidString)(external_item.url, 'url', 'url is not vaild');
+                            var url = (0, _utility.isValidString)(external_item.url, 'url');
+                            if (!url) {
+                                return (0, _utility.handleReject)(new _utility.HoError('url is not vaild'));
+                            }
                             return (0, _apiTool2.default)('url', external_item.url, { referer: 'https://eztv.ag/' }).then(function (raw_data) {
                                 var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
                                 var info = tables[1] ? (0, _utility.findTag)((0, _utility.findTag)(tables[1], 'tr')[1], 'td')[0] : (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
@@ -403,7 +410,9 @@ exports.default = {
                         })
                     };
                 default:
-                    (0, _utility.handleError)(new _utility.HoError('unknown external type'));
+                    return {
+                        v: (0, _utility.handleReject)(new _utility.HoError('unknown external type'))
+                    };
             }
         }();
 
@@ -422,7 +431,7 @@ exports.default = {
                     is_json: true
                 }).then(function (raw_data) {
                     if (raw_data['status'] !== 'ok' || !raw_data['data']) {
-                        (0, _utility.handleError)(new _utility.HoError('yify api fail'));
+                        return (0, _utility.handleReject)(new _utility.HoError('yify api fail'));
                     }
                     return raw_data['data']['movies'] ? raw_data['data']['movies'].map(function (m) {
                         var tags = new _set2.default(['movie', '電影']);
@@ -466,7 +475,7 @@ exports.default = {
                     }).then(function (raw_data) {
                         if (!raw_data || raw_data['message'] !== 'success' || !raw_data['result'] || !raw_data['result']['list']) {
                             console.log(raw_data);
-                            (0, _utility.handleError)(new _utility.HoError('bilibili api fail'));
+                            return (0, _utility.handleReject)(new _utility.HoError('bilibili api fail'));
                         }
                         return raw_data['result']['list'].map(function (l) {
                             return {
@@ -486,7 +495,7 @@ exports.default = {
                     }).then(function (json_data) {
                         if (!json_data || json_data.code !== 0 && json_data.code !== 1) {
                             console.log(json_data);
-                            (0, _utility.handleError)(new _utility.HoError('bilibili api fail'));
+                            return (0, _utility.handleReject)(new _utility.HoError('bilibili api fail'));
                         }
                         var list = [];
                         if (json_data['html']) {
@@ -527,7 +536,9 @@ exports.default = {
                         var _ret2 = function () {
                             var type_id = url.match(/vod-search-id-(\d+)/);
                             if (!type_id) {
-                                (0, _utility.handleError)(new _utility.HoError('unknown kubo type'));
+                                return {
+                                    v: (0, _utility.handleReject)(new _utility.HoError('unknown kubo type'))
+                                };
                             }
                             return {
                                 v: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(function (l) {
@@ -737,7 +748,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.bls.gov/bls/newsrels.htm#latest-releases').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = (0, _utility.completeZero)(date.getMonth() + 1, 2) + '/' + (0, _utility.completeZero)(date.getDate(), 2) + '/' + date.getFullYear();
@@ -759,7 +770,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.census.gov/economic-indicators/').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
@@ -781,7 +792,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.bea.gov/').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getMonth() + 1 + '/' + date.getDate() + '/' + date.getFullYear();
@@ -806,7 +817,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
@@ -835,7 +846,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'https://www.conference-board.org/data/consumerconfidence.cfm').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getDate() + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + '. ' + date.getFullYear();
@@ -865,7 +876,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = (0, _utility.completeZero)(date.getDate(), 2) + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + ' ' + date.getFullYear();
@@ -886,7 +897,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.oecd.org/newsroom/').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getDate() + ' ' + _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getFullYear();
@@ -907,7 +918,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.dol.gov/newsroom/releases').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + (0, _utility.completeZero)(date.getDate(), 2) + ', ' + date.getFullYear();
@@ -931,7 +942,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.realtor.org/topics/existing-home-sales').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
@@ -986,7 +997,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.sca.isr.umich.edu/').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
@@ -1005,7 +1016,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.federalreserve.gov/feeds/speeches_and_testimony.xml').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = '' + date.getFullYear() + (0, _utility.completeZero)(date.getMonth() + 1, 2) + (0, _utility.completeZero)(date.getDate(), 2);
@@ -1074,7 +1085,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.seaj.or.jp/english/statistics/page_en.php?CMD=1').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
@@ -1097,7 +1108,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.tri.org.tw').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     var docDate = date.getFullYear() - 1911 + '.' + (date.getMonth() + 1) + '.' + date.getDate();
                     console.log(docDate);
@@ -1116,13 +1127,16 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://index.ndc.gov.tw/n/json/data/news', { post: {} }).then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
                     var list = [];
                     var json_data = (0, _utility.getJson)(raw_data);
+                    if (!json_data) {
+                        return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                    }
                     var _iteratorNormalCompletion4 = true;
                     var _didIteratorError4 = false;
                     var _iteratorError4 = undefined;
@@ -1189,7 +1203,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '/' + (date.getMonth() + 1) + '/' + date.getDate();
@@ -1271,7 +1285,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
@@ -1319,7 +1333,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
@@ -1331,7 +1345,7 @@ exports.default = {
                     var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
                     if (!html) {
                         console.log(raw_data);
-                        (0, _utility.handleError)(new _utility.HoError('empty html'));
+                        return (0, _utility.handleReject)(new _utility.HoError('empty html'));
                     }
                     var html2 = (0, _utility.findTag)(html, 'html')[0];
                     var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
@@ -1409,7 +1423,7 @@ exports.default = {
                             html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
                             if (!html) {
                                 console.log(raw_data);
-                                (0, _utility.handleError)(new _utility.HoError('empty html'));
+                                return (0, _utility.handleReject)(new _utility.HoError('empty html'));
                             }
                             var html2 = (0, _utility.findTag)(html, 'html')[0];
                             lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
@@ -1493,7 +1507,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', 'http://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
-                        (0, _utility.handleError)(new _utility.HoError('date invalid'));
+                        return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = (0, _utility.completeZero)(date.getDate(), 2) + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + ' ' + date.getFullYear();
@@ -1511,7 +1525,7 @@ exports.default = {
                     return list;
                 });
             default:
-                return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown external type')));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown external type'));
         }
     },
     save2Drive: function save2Drive(type, obj, parent) {
@@ -1531,7 +1545,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper-basic')[0], 'div', 'main-content-full-width')[0], 'div', 'bodytext')[0], 'h4')[1], 'a')[0];
                     if (!(0, _utility.findTag)(a)[0].match(/PDF/i)) {
-                        (0, _utility.handleError)(new _utility.HoError('cannot find release'));
+                        return (0, _utility.handleReject)(new _utility.HoError('cannot find release'));
                     }
                     var url = (0, _utility.addPre)(a.attribs.href, 'http://www.bls.gov');
                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
@@ -1547,7 +1561,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    throw err;
+                                    return (0, _utility.handleReject)(err);
                                 }
                             });
                         });
@@ -1568,7 +1582,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                throw err;
+                                return (0, _utility.handleReject)(err);
                             }
                         });
                     });
@@ -1590,7 +1604,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    throw err;
+                                    return (0, _utility.handleReject)(err);
                                 }
                             });
                         });
@@ -1599,7 +1613,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul', 'related_files')[0], 'li')[0], 'a')[0];
                     if (!(0, _utility.findTag)(a)[0].match(/^Full Release/)) {
-                        (0, _utility.handleError)(new _utility.HoError('cannot find release'));
+                        return (0, _utility.handleReject)(new _utility.HoError('cannot find release'));
                     }
                     var url = (0, _utility.addPre)(a.attribs.href, 'http://www.bea.gov');
                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
@@ -1615,7 +1629,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    throw err;
+                                    return (0, _utility.handleReject)(err);
                                 }
                             });
                         });
@@ -1634,7 +1648,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        throw err;
+                        return (0, _utility.handleReject)(err);
                     }
                 });
             case 'cbo':
@@ -1650,7 +1664,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        throw err;
+                        return (0, _utility.handleReject)(err);
                     }
                 });
             case 'sem':
@@ -1666,7 +1680,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        throw err;
+                        return (0, _utility.handleReject)(err);
                     }
                 });
             case 'oec':
@@ -1674,7 +1688,7 @@ exports.default = {
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')[2], 'strong')[0], 'a')[0];
                     if (!(0, _utility.findTag)(a)[0].match(/pdf/i)) {
-                        (0, _utility.handleError)(new _utility.HoError('cannot find release'));
+                        return (0, _utility.handleReject)(new _utility.HoError('cannot find release'));
                     }
                     var url = (0, _utility.addPre)(a.attribs.href, 'http://www.oecd.org');
                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
@@ -1690,7 +1704,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    throw err;
+                                    return (0, _utility.handleReject)(err);
                                 }
                             });
                         });
@@ -1711,7 +1725,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                throw err;
+                                return (0, _utility.handleReject)(err);
                             }
                         });
                     });
@@ -1729,7 +1743,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        throw err;
+                        return (0, _utility.handleReject)(err);
                     }
                 });
             case 'sca':
@@ -1745,7 +1759,7 @@ exports.default = {
                         return updateDocDate(type, obj.date);
                     },
                     errhandle: function errhandle(err) {
-                        throw err;
+                        return (0, _utility.handleReject)(err);
                     }
                 });
             case 'fed':
@@ -1765,7 +1779,7 @@ exports.default = {
                                     return updateDocDate(type, obj.date);
                                 },
                                 errhandle: function errhandle(err) {
-                                    throw err;
+                                    return (0, _utility.handleReject)(err);
                                 }
                             });
                         });
@@ -1792,7 +1806,7 @@ exports.default = {
                                                     return updateDocDate(type, obj.date);
                                                 },
                                                 errhandle: function errhandle(err) {
-                                                    throw err;
+                                                    return (0, _utility.handleReject)(err);
                                                 }
                                             });
                                         });
@@ -1814,7 +1828,7 @@ exports.default = {
                             return updateDocDate(type, obj.date);
                         },
                         errhandle: function errhandle(err) {
-                            throw err;
+                            return (0, _utility.handleReject)(err);
                         }
                     });
                 });
@@ -1833,7 +1847,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                throw err;
+                                return (0, _utility.handleReject)(err);
                             }
                         });
                     });
@@ -1856,7 +1870,7 @@ exports.default = {
                                         return updateDocDate(type, obj.date);
                                     },
                                     errhandle: function errhandle(err) {
-                                        throw err;
+                                        return (0, _utility.handleReject)(err);
                                     }
                                 });
                             });
@@ -1878,7 +1892,7 @@ exports.default = {
                                 return updateDocDate(type, obj.date);
                             },
                             errhandle: function errhandle(err) {
-                                throw err;
+                                return (0, _utility.handleReject)(err);
                             }
                         });
                     });
@@ -1916,7 +1930,7 @@ exports.default = {
                                                                 return updateDocDate(type, obj.date);
                                                             },
                                                             errhandle: function errhandle(err) {
-                                                                throw err;
+                                                                return (0, _utility.handleReject)(err);
                                                             }
                                                         });
                                                     });
@@ -1979,7 +1993,7 @@ exports.default = {
                                                                             return updateDocDate(type, obj.date);
                                                                         },
                                                                         errhandle: function errhandle(err) {
-                                                                            throw err;
+                                                                            return (0, _utility.handleReject)(err);
                                                                         }
                                                                     });
                                                                 });
@@ -2053,7 +2067,7 @@ exports.default = {
                                                         return updateDocDate(type, obj.date);
                                                     },
                                                     errhandle: function errhandle(err) {
-                                                        throw err;
+                                                        return (0, _utility.handleReject)(err);
                                                     }
                                                 });
                                             });
@@ -2114,7 +2128,7 @@ exports.default = {
                                                             return updateDocDate(type, obj.date);
                                                         },
                                                         errhandle: function errhandle(err) {
-                                                            throw err;
+                                                            return (0, _utility.handleReject)(err);
                                                         }
                                                     });
                                                 });
@@ -2173,7 +2187,7 @@ exports.default = {
                                                     return recur_down(dIndex + 1);
                                                 },
                                                 errhandle: function errhandle(err) {
-                                                    throw err;
+                                                    return (0, _utility.handleReject)(err);
                                                 }
                                             });
                                         });
@@ -2197,12 +2211,12 @@ exports.default = {
                             return recur_down(0);
                         },
                         errhandle: function errhandle(err) {
-                            throw err;
+                            return (0, _utility.handleReject)(err);
                         }
                     });
                 });
             default:
-                (0, _utility.handleError)(new _utility.HoError('unknown external type'));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown external type'));
         }
     },
     parseTagUrl: function parseTagUrl(type, url) {
@@ -2489,7 +2503,7 @@ exports.default = {
                     });
                 });
             default:
-                return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown external type')));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown external type'));
         }
     },
     youtubePlaylist: function youtubePlaylist(id, index) {
@@ -2504,7 +2518,7 @@ exports.default = {
                 pPageToken = _ref2[3];
 
             if (total <= 0) {
-                (0, _utility.handleError)(new _utility.HoError('playlist is empty'));
+                return (0, _utility.handleReject)(new _utility.HoError('playlist is empty'));
             }
             var ret_obj = back ? vId_arr[vId_arr.length - 1] : vId_arr[0];
             var is_new = true;
@@ -2552,7 +2566,7 @@ exports.default = {
         var sub_index = 0;
         if (typeof index === 'number' || index.match(/^[\d\.]+$/)) {
             if (index < 1) {
-                (0, _utility.handleError)(new _utility.HoError('index must > 0'));
+                return (0, _utility.handleReject)(new _utility.HoError('index must > 0'));
             }
             sub_index = Math.round(+index * 1000) % 1000;
             if (sub_index === 0) {
@@ -2560,7 +2574,7 @@ exports.default = {
             }
             index = Math.floor(+index);
         } else if (type !== 'youtube') {
-            (0, _utility.handleError)(new _utility.HoError('index invalid'));
+            return (0, _utility.handleReject)(new _utility.HoError('index invalid'));
         }
         console.log(url);
         var saveList = function saveList(getlist, raw_list, is_end, etime) {
@@ -2598,7 +2612,9 @@ exports.default = {
                 case 'lovetv':
                     var prefix = url.match(/^((http|https):\/\/[^\/]+)\//);
                     if (!prefix) {
-                        (0, _utility.handleError)(new _utility.HoError('invaild url'));
+                        return {
+                            v: (0, _utility.handleReject)(new _utility.HoError('invaild url'))
+                        };
                     }
                     prefix = prefix[1];
                     var lovetvGetlist = function lovetvGetlist() {
@@ -2694,7 +2710,7 @@ exports.default = {
                                 url: encodeURIComponent(url)
                             }).then(function (items) {
                                 if (items.length < 1) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find lovetv url'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find lovetv url'));
                                 }
                                 var nextLove = function nextLove(index, dramaIndex, list) {
                                     var _iteratorNormalCompletion24 = true;
@@ -2706,8 +2722,14 @@ exports.default = {
                                             var i = _step24.value;
 
                                             if (i.name === items[0].name) {
+                                                var validUrl = (0, _utility.isValidString)(i.url, 'url');
+                                                if (!validUrl) {
+                                                    return {
+                                                        v: (0, _utility.handleReject)(new _utility.HoError('url is not vaild'))
+                                                    };
+                                                }
                                                 return {
-                                                    v: (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $set: { url: (0, _utility.isValidString)(i.url, 'url', 'url is not vaild') } }).then(function (item) {
+                                                    v: (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $set: { url: validUrl } }).then(function (item) {
                                                         url = i.url;
                                                         return lovetvGetlist();
                                                     })
@@ -2739,7 +2761,7 @@ exports.default = {
                                     if (dramaIndex < dramaList.length) {
                                         return recur_loveList(dramaIndex, nextLove);
                                     }
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find lovetv'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find lovetv'));
                                 };
                                 return recur_loveList(0, nextLove);
                             }) : [list, is_end];
@@ -2750,7 +2772,7 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find external index'));
                                 }
                                 return (0, _apiTool2.default)('url', !choose.url.match(/^(http|https):\/\//) ? '' + prefix + choose.url : choose.url).then(function (raw_data) {
                                     var obj = [];
@@ -2954,7 +2976,7 @@ exports.default = {
                                     getV((0, _utility.findTag)(vs, 'div', 'video_div_s2')[0], '_s2');
                                     getV((0, _utility.findTag)(vs, 'div', 'video_div_s3')[0], '_s3');
                                     if (!obj) {
-                                        (0, _utility.handleError)(new _utility.HoError('no source'));
+                                        return (0, _utility.handleReject)(new _utility.HoError('no source'));
                                     }
                                     if (sub_index > obj.length) {
                                         sub_index = 1;
@@ -3074,7 +3096,7 @@ exports.default = {
                                     console.log('too much');
                                     var show_name = url.match(/^https:\/\/[^\/]+\/shows\/\d+\/([^\/]+)/);
                                     if (!show_name) {
-                                        (0, _utility.handleError)(new _utility.HoError('unknown name!!!'));
+                                        return (0, _utility.handleReject)(new _utility.HoError('unknown name!!!'));
                                     }
                                     return (0, _apiTool2.default)('url', 'https://eztv.ag/search/' + show_name[1], { referer: 'https://eztv.ag/' }).then(function (raw_data) {
                                         var tr1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border');
@@ -3094,7 +3116,7 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find external index'));
                                 }
                                 var chooseMag = choose.splice(choose.length - 1, 1)[0];
                                 var ret_obj = {
@@ -3104,7 +3126,9 @@ exports.default = {
                                     complete: false
                                 };
                                 var final_check = function final_check() {
-                                    (0, _utility.isValidString)(chooseMag.magnet, 'url', 'magnet is not vaild');
+                                    if (!(0, _utility.isValidString)(chooseMag.magnet, 'url')) {
+                                        return (0, _utility.handleReject)(new _utility.HoError('magnet is not vaild'));
+                                    }
                                     return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { magnet: {
                                             $regex: chooseMag.magnet.match(/^magnet:[^&]+/)[0].match(/[^:]+$/)[0],
                                             $options: 'i'
@@ -3144,8 +3168,11 @@ exports.default = {
                     var yifyGetlist = function yifyGetlist() {
                         return (0, _apiTool2.default)('url', url, { referer: 'https://yts.ag/' }).then(function (raw_data) {
                             var json_data = (0, _utility.getJson)(raw_data);
+                            if (!json_data) {
+                                return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                            }
                             if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
-                                (0, _utility.handleError)(new _utility.HoError('yify api fail'));
+                                return (0, _utility.handleReject)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
                             var _iteratorNormalCompletion33 = true;
@@ -3184,7 +3211,9 @@ exports.default = {
                     return {
                         v: (0, _redisTool2.default)('hgetall', 'url: ' + encodeURIComponent(url)).then(function (item) {
                             var sendList = function sendList(raw_list, is_end, etime) {
-                                (0, _utility.isValidString)(raw_list[0].magnet, 'url', 'magnet is not vaild');
+                                if (!(0, _utility.isValidString)(raw_list[0].magnet, 'url')) {
+                                    return (0, _utility.handleReject)(new _utility.HoError('magnet is not vaild'));
+                                }
                                 saveList(yifyGetlist, raw_list, is_end, etime);
                                 return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { magnet: {
                                         $regex: raw_list[0].magnet.match(/^magnet:[^&]+/)[0].match(/[^:]+$/)[0],
@@ -3212,13 +3241,16 @@ exports.default = {
                     var bilibiliGetlist = function bilibiliGetlist() {
                         var bili_id = url.match(/(av)?\d+/);
                         if (!bili_id) {
-                            (0, _utility.handleError)(new _utility.HoError('bilibili id invalid'));
+                            return (0, _utility.handleReject)(new _utility.HoError('bilibili id invalid'));
                         }
                         var getBangumi = function getBangumi(sId) {
                             return (0, _apiTool2.default)('url', 'http://bangumi.bilibili.com/jsonp/seasoninfo/' + sId + '.ver?callback=seasonListCallback&jsonp=jsonp&_=' + new Date().getTime(), { referer: url }).then(function (raw_data) {
                                 var json_data = (0, _utility.getJson)(raw_data.match(/^[^\(]+\((.*)\);$/)[1]);
+                                if (!json_data) {
+                                    return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                                }
                                 if (!json_data.result || !json_data.result.episodes) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot get episodes'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot get episodes'));
                                 }
                                 return [json_data.result.episodes.map(function (e) {
                                     return {
@@ -3263,7 +3295,7 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find external index'));
                                 }
                                 saveList(bilibiliGetlist, raw_list, is_end, etime);
                                 return [{
@@ -3466,7 +3498,7 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find external index'));
                                 }
                                 saveList(kuboGetlist, raw_list, is_end, etime);
                                 return [(0, _assign2.default)({
@@ -3491,7 +3523,9 @@ exports.default = {
                     };
                 case 'cartoonmad':
                     if (!url.match(/\d+/)) {
-                        (0, _utility.handleError)(new _utility.HoError('comic id invalid'));
+                        return {
+                            v: (0, _utility.handleReject)(new _utility.HoError('comic id invalid'))
+                        };
                     }
                     var madGetlist = function madGetlist() {
                         return (0, _apiTool2.default)('url', url, {
@@ -3519,7 +3553,7 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('cannot find external index'));
                                 }
                                 return (0, _apiTool2.default)('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? 'http://www.cartoomad.com' + choose : 'http://www.cartoomad.com/' + choose : choose, {
                                     referer: 'http://www.cartoonmad.com/',
@@ -3552,7 +3586,9 @@ exports.default = {
                         })
                     };
                 default:
-                    (0, _utility.handleError)(new _utility.HoError('unknown external type'));
+                    return {
+                        v: (0, _utility.handleReject)(new _utility.HoError('unknown external type'))
+                    };
             }
         }();
 
@@ -3571,8 +3607,11 @@ exports.default = {
                     url = 'https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=' + mid;
                     return (0, _apiTool2.default)('url', url, { referer: 'https://yts.ag/' }).then(function (raw_data) {
                         var json_data = (0, _utility.getJson)(raw_data);
+                        if (!json_data) {
+                            return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                        }
                         if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
-                            (0, _utility.handleError)(new _utility.HoError('yify api fail'));
+                            return (0, _utility.handleReject)(new _utility.HoError('yify api fail'));
                         }
                         var setTag = new _set2.default(['yify', 'video', '影片', 'movie', '電影']);
                         setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
@@ -3741,7 +3780,7 @@ exports.default = {
                     return [name, newTag, new _set2.default(), 'bilibili', thumb, url];
                 });
             default:
-                (0, _utility.handleError)(new _utility.HoError('unknown external type'));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown external type'));
         }
     }
 };
@@ -3754,7 +3793,7 @@ var subHdUrl = exports.subHdUrl = function subHdUrl(str) {
         var big_item = (0, _utility.findTag)(list, 'div', 'box')[0];
         if (!big_item) {
             console.log(raw_data);
-            (0, _utility.handleError)(new _utility.HoError('sub data error!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('sub data error!!!'));
         }
         var sub_id = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(big_item, 'div', 'pull-left lb_r')[0], 'table')[0], 'tr')[0], 'td')[0], 'h4')[0], 'a')[0].attribs.href;
         return (0, _apiTool2.default)('url', 'http://subhd.com/ajax/down_ajax', {
@@ -3763,7 +3802,7 @@ var subHdUrl = exports.subHdUrl = function subHdUrl(str) {
             referer: 'http://subhd.com' + sub_id
         }).then(function (data) {
             console.log(data);
-            return data.success ? data.url : _promise2.default.reject(new _utility.HoError('too many times!!!'));
+            return data.success ? data.url : (0, _utility.handleReject)(new _utility.HoError('too many times!!!'));
         });
     });
 };
@@ -3772,13 +3811,16 @@ var bilibiliVideoUrl = exports.bilibiliVideoUrl = function bilibiliVideoUrl(url)
     console.log(url);
     var id = url.match(/(av)?(\d+)\/(index_(\d+)\.html)?$/);
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('bilibili id invalid'));
+        return (0, _utility.handleReject)(new _utility.HoError('bilibili id invalid'));
     }
     var page = id[3] ? Number(id[4]) : 1;
     return (0, _apiTool2.default)('url', 'http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=' + id[2] + '&page=1&batch=true', { referer: 'http://api.bilibili.com/' }).then(function (raw_data) {
         var json_data = (0, _utility.getJson)(raw_data);
+        if (!json_data) {
+            return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+        }
         if (!json_data.list) {
-            (0, _utility.handleError)(new _utility.HoError('cannot get list'));
+            return (0, _utility.handleReject)(new _utility.HoError('cannot get list'));
         }
         return {
             title: json_data.list[page - 1].part,
@@ -3803,7 +3845,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             };
             if (!iframes[subIndex - 1]) {
                 console.log(iframes);
-                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
             return getUrl(iframes[subIndex - 1].attribs.src).then(function (ret_obj) {
                 return (0, _assign2.default)(ret_obj, iframes.length > 1 ? { sub: iframes.length } : {});
@@ -3814,7 +3856,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             var ret_obj = { video: [] };
             var script = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
             if (!script) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
             _kubo.JuicyCodes.Run((0, _utility.findTag)(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
             _kubo.kuboInfo.sources.forEach(function (s) {
@@ -3824,7 +3866,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             });
             if (ret_obj.video.length < 1) {
                 console.log(ret_obj.video);
-                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
             return ret_obj;
         });
@@ -3834,20 +3876,23 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             post: { url: new Buffer(url).toString('base64') }
         }).then(function (raw_data) {
             var json_data = (0, _utility.getJson)(raw_data);
+            if (!json_data) {
+                return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+            }
             if (json_data['code'] === '404') {
                 console.log(json_data);
-                (0, _utility.handleError)(new _utility.HoError('try later'));
+                return (0, _utility.handleReject)(new _utility.HoError('try later'));
             }
             if (!json_data['mp4']) {
                 console.log(json_data);
-                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
             if (subIndex > json_data['mp4'].length) {
                 subIndex = json_data['mp4'].length;
             }
             if (!json_data['mp4'][subIndex - 1]) {
                 console.log(json_data);
-                (0, _utility.handleError)(new _utility.HoError('cannot find mp4'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
             return (0, _assign2.default)({ video: [json_data['mp4'][subIndex - 1].url] }, json_data['mp4'].length > 1 ? { sub: json_data['mp4'].length } : {});
         });

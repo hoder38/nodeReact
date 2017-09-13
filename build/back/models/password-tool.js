@@ -39,22 +39,53 @@ var PasswordTagTool = (0, _tagTool2.default)(_constants.PASSWORDDB);
 exports.default = {
     newRow: function newRow(data, user) {
         if (!data['username'] || !data['password'] || !data['conpassword'] || !data['name']) {
-            (0, _utility.handleError)(new _utility.HoError('parameter lost!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('parameter lost!!!'));
         }
-        var name = (0, _utility.isValidString)(data['name'], 'name', 'name not vaild!!!');
-        var username = (0, _utility.isValidString)(data['username'], 'name', 'username not vaild!!!');
-        var password = (0, _utility.isValidString)(data['password'], 'altpwd', 'password not vaild!!!');
-        var conpassword = (0, _utility.isValidString)(data['conpassword'], 'altpwd', 'password not vaild!!!');
+        var name = (0, _utility.isValidString)(data['name'], 'name');
+        if (!name) {
+            return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+        }
+        var username = (0, _utility.isValidString)(data['username'], 'name');
+        if (!username) {
+            return (0, _utility.handleReject)(new _utility.HoError('username is not vaild!!!'));
+        }
+        var password = (0, _utility.isValidString)(data['password'], 'altpwd');
+        if (!password) {
+            return (0, _utility.handleReject)(new _utility.HoError('password is not vaild!!!'));
+        }
+        var conpassword = (0, _utility.isValidString)(data['conpassword'], 'altpwd');
+        if (!conpassword) {
+            return (0, _utility.handleReject)(new _utility.HoError('password is not vaild!!!'));
+        }
         if (password !== conpassword) {
-            (0, _utility.handleError)(new _utility.HoError('password not equal!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('password not equal!!!'));
         }
-        var url = data['url'] ? (0, _utility.isValidString)(data['url'], 'url', 'url not vaild!!!') : '';
-        var email = data['email'] ? (0, _utility.isValidString)(data['email'], 'email', 'email not vaild!!!') : '';
+        var url = '';
+        if (data['url']) {
+            url = (0, _utility.isValidString)(data['url'], 'url');
+            if (!url) {
+                return (0, _utility.handleReject)(new _utility.HoError('url not vaild!!!'));
+            }
+        }
+        var email = '';
+        if (data['email']) {
+            email = (0, _utility.isValidString)(data['email'], 'email');
+            if (!email) {
+                return (0, _utility.handleReject)(new _utility.HoError('email not vaild!!!'));
+            }
+        }
         var crypted_password = encrypt(password);
         var important = data['important'] ? 1 : 0;
         if (important !== 0) {
-            if (!(0, _utility.userPWCheck)(user, data['userPW'] ? (0, _utility.isValidString)(data['userPW'], 'passwd', 'passwd is not valid') : '')) {
-                (0, _utility.handleError)(new _utility.HoError('permission denied'));
+            var userPW = '';
+            if (data['userPW']) {
+                userPW = (0, _utility.isValidString)(data['userPW'], 'passwd');
+                if (!userPW) {
+                    return (0, _utility.handleReject)(new _utility.HoError('passwd not vaild!!!'));
+                }
+            }
+            if (!(0, _utility.userPWCheck)(user, userPW)) {
+                return (0, _utility.handleReject)(new _utility.HoError('permission denied'));
             }
         }
         var setTag = new _set2.default();
@@ -90,26 +121,73 @@ exports.default = {
         });
     },
     editRow: function editRow(uid, data, user, session) {
-        var password = data['password'] ? (0, _utility.isValidString)(data['password'], 'altpwd', 'password not vaild!!!') : '';
-        var conpassword = data['password'] ? (0, _utility.isValidString)(data['conpassword'], 'altpwd', 'password not vaild!!!') : '';
-        if (password !== conpassword) {
-            (0, _utility.handleError)(new _utility.HoError('password not equal!!!'));
+        var password = '';
+        if (data['password']) {
+            password = (0, _utility.isValidString)(data['password'], 'altpwd');
+            if (!password) {
+                return (0, _utility.handleReject)(new _utility.HoError('password not vaild!!!'));
+            }
         }
-        var name = data['name'] ? (0, _utility.isValidString)(data['name'], 'name', 'name not vaild!!!') : '';
-        var username = data['username'] ? (0, _utility.isValidString)(data['username'], 'name', 'username not vaild!!!') : '';
-        var url = data['url'] ? (0, _utility.isValidString)(data['url'], 'url', 'url not vaild!!!') : '';
-        var email = data['email'] ? (0, _utility.isValidString)(data['email'], 'email', 'email not vaild!!!') : '';
+        var conpassword = '';
+        if (data['password']) {
+            conpassword = (0, _utility.isValidString)(data['conpassword'], 'altpwd');
+            if (!conpassword) {
+                return (0, _utility.handleReject)(new _utility.HoError('password not vaild!!!'));
+            }
+        }
+        if (password !== conpassword) {
+            return (0, _utility.handleReject)(new _utility.HoError('password not equal!!!'));
+        }
+        var name = '';
+        if (data['name']) {
+            name = (0, _utility.isValidString)(data['name'], 'name');
+            if (!name) {
+                return (0, _utility.handleReject)(new _utility.HoError('name not vaild!!!'));
+            }
+        }
+        var username = '';
+        if (data['username']) {
+            username = (0, _utility.isValidString)(data['username'], 'name');
+            if (!username) {
+                return (0, _utility.handleReject)(new _utility.HoError('username not vaild!!!'));
+            }
+        }
+        var url = '';
+        if (data['url']) {
+            url = (0, _utility.isValidString)(data['url'], 'url');
+            if (!url) {
+                return (0, _utility.handleReject)(new _utility.HoError('url not vaild!!!'));
+            }
+        }
+        var email = '';
+        if (data['email']) {
+            email = (0, _utility.isValidString)(data['email'], 'email');
+            if (!email) {
+                return (0, _utility.handleReject)(new _utility.HoError('email not vaild!!!'));
+            }
+        }
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid not vaild!!!'));
+        }
         return (0, _mongoTool2.default)('find', _constants.PASSWORDDB, {
-            _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild'),
+            _id: id,
             owner: user._id
         }, { limit: 1 }).then(function (pws) {
             if (pws.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('password row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('password row does not exist!!!'));
             }
             var update_data = (0, _assign2.default)(data.hasOwnProperty('important') ? { important: data['important'] ? 1 : 0 } : {});
             if (pws[0].important !== 0 || data.hasOwnProperty('important') && pws[0].important !== update_data['important']) {
-                if (!(0, _utility.userPWCheck)(user, data['userPW'] ? (0, _utility.isValidString)(data['userPW'], 'passwd', 'passwd is not valid') : '')) {
-                    (0, _utility.handleError)(new _utility.HoError('permission denied'));
+                var userPW = '';
+                if (data['userPW']) {
+                    userPW = (0, _utility.isValidString)(data['userPW'], 'passwd');
+                    if (!userPW) {
+                        return (0, _utility.handleReject)(new _utility.HoError('passwd not vaild!!!'));
+                    }
+                }
+                if (!(0, _utility.userPWCheck)(user, userPW)) {
+                    return (0, _utility.handleReject)(new _utility.HoError('permission denied'));
                 }
             }
             var setTag = new _set2.default(pws[0].tags);
@@ -151,16 +229,27 @@ exports.default = {
         });
     },
     delRow: function delRow(uid, userPW, user) {
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid not vaild!!!'));
+        }
         return (0, _mongoTool2.default)('find', _constants.PASSWORDDB, {
-            _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild'),
+            _id: id,
             owner: user._id
         }, { limit: 1 }).then(function (pws) {
             if (pws.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('password row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('password row does not exist!!!'));
             }
             if (pws[0].important !== 0) {
-                if (!(0, _utility.userPWCheck)(user, userPW ? (0, _utility.isValidString)(userPW, 'passwd', 'passwd is not valid') : '')) {
-                    (0, _utility.handleError)(new _utility.HoError('permission denied'));
+                var validUserPW = '';
+                if (userPW) {
+                    validUserPW = (0, _utility.isValidString)(userPW, 'passwd');
+                    if (!validUserPW) {
+                        return (0, _utility.handleReject)(new _utility.HoError('passwd not vaild!!!'));
+                    }
+                }
+                if (!(0, _utility.userPWCheck)(user, validUserPW)) {
+                    return (0, _utility.handleReject)(new _utility.HoError('permission denied'));
                 }
             }
             return (0, _mongoTool2.default)('remove', _constants.PASSWORDDB, {
@@ -173,17 +262,30 @@ exports.default = {
     getPassword: function getPassword(uid, userPW, user, session) {
         var type = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : null;
 
-        var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
-        return (0, _mongoTool2.default)('find', _constants.PASSWORDDB, { _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild'), owner: user._id }, (0, _assign2.default)({
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid not vaild!!!'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.PASSWORDDB, {
+            _id: id,
+            owner: user._id
+        }, (0, _assign2.default)({
             _id: 0,
             important: 1
         }, type === 'pre' ? { prePassword: 1 } : { password: 1 }), { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('can not find password object!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('can not find password object!!!'));
             }
             if (items[0].important !== 0) {
-                if (!(0, _utility.userPWCheck)(user, userPW ? (0, _utility.isValidString)(userPW, 'passwd', 'passwd is not valid') : '')) {
-                    (0, _utility.handleError)(new _utility.HoError('permission denied'));
+                var validUserPW = '';
+                if (userPW) {
+                    validUserPW = (0, _utility.isValidString)(userPW, 'passwd');
+                    if (!validUserPW) {
+                        return (0, _utility.handleReject)(new _utility.HoError('passwd not vaild!!!'));
+                    }
+                }
+                if (!(0, _utility.userPWCheck)(user, validUserPW)) {
+                    return (0, _utility.handleReject)(new _utility.HoError('permission denied'));
                 }
             }
             PasswordTagTool.setLatest(id, session).catch(function (err) {

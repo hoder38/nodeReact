@@ -405,7 +405,7 @@ function process(action) {
             });
             return _promise2.default.resolve();
         default:
-            return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown playlist action!!!')));
+            return (0, _utility.handleReject)(new _utility.HoError('unknown playlist action!!!'));
     }
 }
 
@@ -468,7 +468,7 @@ var startMega = function startMega(user, url, filePath, data) {
             playList = (0, _utility.sortList)(playList);
             if (playList.length < 1) {
                 megaComplete();
-                (0, _utility.handleError)(new _utility.HoError('mega empty'), data['errhandle']);
+                return (0, _utility.handleReject)(new _utility.HoError('mega empty'), data['errhandle']);
             }
             if (playList.length === 1) {
                 (0, _fs.renameSync)(real + '/' + playList[0], filePath + '_t');
@@ -766,7 +766,7 @@ var startZip = function startZip(user, index, id, owner, name, pwd, zip_type) {
                             console.log(DBdata);
                             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: id }, { $set: DBdata }).then(function (item2) {
                                 return _mediaHandleTool2.default.handleMediaUpload(mediaType, filePath, id, user).catch(function (err) {
-                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, id, mediaType['fileIndex']);
+                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, id, mediaType['fileIndex']);
                                 });
                             });
                         });
@@ -784,7 +784,7 @@ function zipAdd(user, index, id, owner, name) {
     var filePath = (0, _utility.getFileLocation)(owner, id);
     var zip_type = (0, _fs.existsSync)(filePath + '_zip_c') ? 4 : (0, _fs.existsSync)(filePath + '_7z_c') ? 5 : (0, _fs.existsSync)(filePath + '_zip') ? 1 : (0, _fs.existsSync)(filePath + '.1.rar') ? 2 : (0, _fs.existsSync)(filePath + '_7z') ? 3 : 0;
     if (!zip_type) {
-        (0, _utility.handleError)(new _utility.HoError('not zip'));
+        return (0, _utility.handleReject)(new _utility.HoError('not zip'));
     }
     return setLock('zip').then(function (go) {
         if (!go) {
@@ -862,7 +862,7 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
             return file.path;
         });
         if (playList.length < 1) {
-            (0, _utility.handleError)(new _utility.HoError('empty content!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('empty content!!!'));
         }
         playList = (0, _utility.sortList)(playList);
         var tIndex = -1;
@@ -874,7 +874,7 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
         }
         if (tIndex < 0 || tIndex >= engine.files.length) {
             return torrentComplete().then(function () {
-                return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown index')));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown index'));
             });
         } else {
             var _ret7 = function () {
@@ -1027,7 +1027,7 @@ var startTorrent = function startTorrent(user, id, owner, index, hash, engine) {
                             console.log(DBdata);
                             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: id }, { $set: DBdata }).then(function (item2) {
                                 return _mediaHandleTool2.default.handleMediaUpload(mediaType, filePath, id, user).catch(function (err) {
-                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, id, mediaType['fileIndex']);
+                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, id, mediaType['fileIndex']);
                                 });
                             });
                         });
@@ -1044,7 +1044,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner) {
 
     var shortTorrent = torrent.match(/^[^&]+/);
     if (!shortTorrent) {
-        (0, _utility.handleError)(new _utility.HoError('not torrent'));
+        return (0, _utility.handleReject)(new _utility.HoError('not torrent'));
     }
     shortTorrent = shortTorrent[0];
     var filePath = (0, _utility.getFileLocation)(owner, id);

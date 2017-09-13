@@ -109,9 +109,13 @@ loop_fresh();
 router.get('/preview/:uid', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('preview file');
-        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        }
+        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1 || items[0].status !== 2 && items[0].status !== 3 && items[0].status !== 5 && items[0].status !== 6 && items[0].status !== 10) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
             }
             var previewPath = null;
             if (items[0].status === 5) {
@@ -129,7 +133,7 @@ router.get('/preview/:uid', function (req, res, next) {
             }
             if (!(0, _fs.existsSync)(previewPath)) {
                 console.log(previewPath);
-                (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
             }
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             (0, _fs.createReadStream)(previewPath).pipe(res);
@@ -142,9 +146,13 @@ router.get('/preview/:uid', function (req, res, next) {
 router.get('/download/:uid', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('download file');
-        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        }
+        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length === 0) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
             }
             var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
             console.log(filePath);
@@ -159,7 +167,7 @@ router.get('/download/:uid', function (req, res, next) {
                 }
             }
             if (!(0, _fs.existsSync)(filePath) && !ret_string) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
             }
             StorageTagTool.setLatest(items[0]._id, req.session).then(function () {
                 return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $inc: { count: 1 } });
@@ -194,7 +202,10 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
         };
         var id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
         if (id) {
-            var id_valid = (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild');
+            var id_valid = (0, _utility.isValidString)(req.params.uid, 'name');
+            if (!id_valid) {
+                (0, _utility.handleError)(new _utility.HoError('external is not vaild'), next);
+            }
             var filePath = null;
             switch (id[1]) {
                 case 'dym':
@@ -236,12 +247,16 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
             }
             sendSub(filePath);
         } else {
-            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+            var _id_valid = (0, _utility.isValidString)(req.params.uid, 'uid');
+            if (!_id_valid) {
+                (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+            }
+            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
                 }
                 if (items[0].status === 3) {
                     sendSub((0, _utility.getFileLocation)(items[0].owner, items[0]._id));
@@ -258,7 +273,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
                         }
                     }
                     if (!(0, _mime.isVideo)(items[0]['playList'][fileIndex])) {
-                        (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
                     }
                     sendSub((0, _utility.getFileLocation)(items[0].owner, items[0]._id), fileIndex);
                 }
@@ -275,18 +290,22 @@ router.get('/video/:uid/file', function (req, res, next) {
         stream_count++;
         if (stream_count > (0, _config.STREAM_LIMIT)(_ver.ENV_TYPE) && !(0, _utility.checkAdmin)(1, req.user)) {
             console.log(stream_count);
-            (0, _utility.handleError)(new _utility.HoError('stream request too many!!!'));
+            (0, _utility.handleError)(new _utility.HoError('stream request too many!!!'), next);
         }
-        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        }
+        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1 || items[0].status !== 3 && items[0].status !== 4) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find video!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find video!!!'));
             }
             var videoPath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
             console.log(videoPath);
             var finalPath = videoPath + '_complete';
             if (!(0, _fs.existsSync)(finalPath)) {
                 if (!(0, _fs.existsSync)(videoPath)) {
-                    (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
                 }
                 finalPath = videoPath;
             }
@@ -323,9 +342,13 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
     (0, _utility.checkLogin)(req, res, function () {
         console.log('torrent');
         var fileIndex = !isNaN(req.params.index) ? Number(req.params.index) : 0;
-        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        }
+        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('torrent can not be fund!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('torrent can not be fund!!!'));
             }
             if (req.params.index === 'v') {
                 for (var i in items[0]['playList']) {
@@ -342,11 +365,11 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 stream_count++;
                 if (stream_count > (0, _config.STREAM_LIMIT)(_ver.ENV_TYPE) && !(0, _utility.checkAdmin)(1, req.user)) {
                     console.log(stream_count);
-                    (0, _utility.handleError)(new _utility.HoError('stream request too many!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('stream request too many!!!'));
                 }
                 var outputPath = (0, _fs.existsSync)(comPath) ? comPath : (0, _fs.existsSync)(bufferPath) ? bufferPath : null;
                 if ((0, _fs.existsSync)(bufferPath + '_error') || !outputPath) {
-                    (0, _utility.handleError)(new _utility.HoError('video error!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('video error!!!'));
                 }
                 console.log(outputPath);
                 var total = (0, _fs.statSync)(outputPath).size;
@@ -376,7 +399,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 var torrentDoc = function torrentDoc() {
                     if (req.params.type === 'images' || req.params.type === 'resources') {
                         if (!req.params.number) {
-                            (0, _utility.handleError)(new _utility.HoError('cannot find img name!!!'));
+                            return (0, _utility.handleReject)(new _utility.HoError('cannot find img name!!!'));
                         }
                         return _promise2.default.resolve(req.params.type === 'images' ? [bufferPath + '_doc/images/' + req.params.number, 'image/jpeg'] : [bufferPath + '_doc/resources/sheet.css', 'text/css']);
                     } else {
@@ -413,7 +436,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
 
                     console.log(docFilePath);
                     if (!(0, _fs.existsSync)(docFilePath)) {
-                        (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
                     }
                     res.writeHead(200, { 'Content-Type': docMime });
                     (0, _fs.createReadStream)(docFilePath).pipe(res);
@@ -421,7 +444,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             } else {
                 var data = fileIndex === 0 || fileIndex === items[0].playList.length - 1 ? ['hdel', items[0]._id.toString()] : ['hmset', (0, _defineProperty3.default)({}, items[0]._id.toString(), '0&' + fileIndex)];
                 return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function () {
-                    return (0, _fs.existsSync)(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : (0, _utility.handleError)(new _utility.HoError('need download first!!!'));
+                    return (0, _fs.existsSync)(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : (0, _utility.handleReject)(new _utility.HoError('need download first!!!'));
                 });
             }
         }).catch(function (err) {
@@ -433,9 +456,13 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
 router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png||sheet\.css)?', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('image');
-        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        }
+        (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
             }
             var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
             var getRecord = function getRecord() {
@@ -444,7 +471,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                 }
                 if (req.params.type === 'images' || req.params.type === 'resources') {
                     if (!req.params.number) {
-                        (0, _utility.handleError)(new _utility.HoError('cannot find img name!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('cannot find img name!!!'));
                     }
                     return _promise2.default.resolve(req.params.type === 'images' ? [filePath + '_doc/images/' + req.params.number, 'image/jpeg'] : [filePath + '_doc/resources/sheet.css', 'text/css']);
                 } else if (!isNaN(req.params.type)) {
@@ -470,7 +497,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
 
                 console.log(docFilePath);
                 if (!(0, _fs.existsSync)(docFilePath)) {
-                    (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
                 }
                 res.writeHead(200, { 'Content-Type': docMime });
                 (0, _fs.createReadStream)(docFilePath).pipe(res);
@@ -508,16 +535,16 @@ router.post('/upload/file', function (req, res, next) {
                     }).then(function (torrent) {
                         var magnet = (0, _utility.torrent2Magnet)(torrent);
                         if (!magnet) {
-                            (0, _utility.handleError)(new _utility.HoError('magnet create fail'));
+                            return (0, _utility.handleReject)(new _utility.HoError('magnet create fail'));
                         }
                         console.log(magnet);
                         var encodeTorrent = (0, _utility.isValidString)(magnet, 'url');
                         if (encodeTorrent === false) {
-                            (0, _utility.handleError)(new _utility.HoError('magnet is not vaild'));
+                            return (0, _utility.handleReject)(new _utility.HoError('magnet is not vaild'));
                         }
                         var shortTorrent = magnet.match(/^magnet:[^&]+/);
                         if (!shortTorrent) {
-                            (0, _utility.handleError)(new _utility.HoError('magnet create fail'));
+                            return (0, _utility.handleReject)(new _utility.HoError('magnet create fail'));
                         }
                         return new _promise2.default(function (resolve2, reject2) {
                             return (0, _fs.unlink)(filePath, function (err) {
@@ -536,7 +563,7 @@ router.post('/upload/file', function (req, res, next) {
                                 } }, { limit: 1 });
                         }).then(function (items) {
                             if (items.length > 0) {
-                                (0, _utility.handleError)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
                             }
                             return (0, _apiToolPlaylist2.default)('torrent info', magnet, filePath).then(function (info) {
                                 var setTag = new _set2.default(['torrent', 'playlist', '播放列表']);
@@ -556,7 +583,7 @@ router.post('/upload/file', function (req, res, next) {
                                     return file.path;
                                 });
                                 if (playList.length < 1) {
-                                    (0, _utility.handleError)(new _utility.HoError('empty content!!!'));
+                                    return (0, _utility.handleReject)(new _utility.HoError('empty content!!!'));
                                 }
                                 playList = (0, _utility.sortList)(playList);
                                 return resolve(['Playlist ' + info.name, setTag, optTag, {
@@ -653,6 +680,9 @@ router.post('/upload/file', function (req, res, next) {
                         setTag.add((0, _tagTool.normalize)(DBdata['name'])).add((0, _tagTool.normalize)(req.user.username));
                         if (req.body.path) {
                             var bodyPath = (0, _utility.getJson)(req.body.path);
+                            if (!bodyPath) {
+                                return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                            }
                             if (Array.isArray(bodyPath) && bodyPath.length > 0) {
                                 bodyPath.forEach(function (p) {
                                     return setTag.add((0, _tagTool.normalize)(p));
@@ -712,7 +742,7 @@ router.post('/upload/file', function (req, res, next) {
                                         other: []
                                     });
                                 }).catch(function (err) {
-                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, item[0]['_id'], mediaType['fileIndex']);
+                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, item[0]['_id'], mediaType['fileIndex']);
                                 });
                             });
                         });
@@ -730,11 +760,11 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
         console.log('upload subtitle');
         console.log(req.files);
         if (req.files.file.size > 10 * 1024 * 1024) {
-            (0, _utility.handleError)(new _utility.HoError('size too large!!!'));
+            (0, _utility.handleError)(new _utility.HoError('size too large!!!'), next);
         }
         var ext = (0, _mime.isSub)(req.files.file.name);
         if (!ext) {
-            (0, _utility.handleError)(new _utility.HoError('not valid subtitle!!!'));
+            (0, _utility.handleError)(new _utility.HoError('not valid subtitle!!!'), next);
         }
         var convertSub = function convertSub(filePath, id) {
             return new _promise2.default(function (resolve, reject) {
@@ -819,21 +849,32 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     ex_type = 'kubourl';
                     break;
             }
-            var id = (0, _utility.isValidString)(req.params.uid, 'name', 'external is not vaild');
+            var id = (0, _utility.isValidString)(req.params.uid, 'name');
+            if (!id) {
+                (0, _utility.handleError)(new _utility.HoError('external is not vaild'), next);
+            }
             var filePath = (0, _utility.getFileLocation)(ex_type, id);
-            saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath, id).catch(function (err) {
+            var json_data = (0, _utility.getJson)(req.body.lang);
+            if (!json_data) {
+                (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
+            }
+            saveSub(json_data === 'en' ? filePath + '.en' : filePath, id).catch(function (err) {
                 return (0, _utility.handleError)(err, next);
             });
         } else {
-            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+            var _id = (0, _utility.isValidString)(req.params.uid, 'uid');
+            if (!_id) {
+                (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+            }
+            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: _id }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('file not exist!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('file not exist!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
                 }
                 if (items[0].thumb) {
-                    (0, _utility.handleError)(new _utility.HoError('external file, please open video'));
+                    return (0, _utility.handleReject)(new _utility.HoError('external file, please open video'));
                 }
                 var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
                 if (items[0].status === 9) {
@@ -849,11 +890,15 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                         }
                     }
                     if (!(0, _mime.isVideo)(items[0]['playList'][fileIndex])) {
-                        (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
                     }
                     filePath = filePath + '/' + fileIndex;
                 }
-                return saveSub((0, _utility.getJson)(req.body.lang) === 'en' ? filePath + '.en' : filePath, items[0]._id);
+                var json_data = (0, _utility.getJson)(req.body.lang);
+                if (!json_data) {
+                    return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                }
+                return saveSub(json_data === 'en' ? filePath + '.en' : filePath, items[0]._id);
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, next);
             });

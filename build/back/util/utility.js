@@ -5,10 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.addPre = exports.findTag = exports.completeZero = exports.sortList = exports.torrent2Magnet = exports.getJson = exports.SRT2VTT = exports.deleteFolderRecursive = exports.getFileLocation = exports.getRankItem = exports.getFitnessItem = exports.getStockItem = exports.getPasswordItem = exports.getStorageItem = exports.big5Encode = exports.checkAdmin = undefined;
 
-var _promise = require('babel-runtime/core-js/promise');
-
-var _promise2 = _interopRequireDefault(_promise);
-
 var _assign = require('babel-runtime/core-js/object/assign');
 
 var _assign2 = _interopRequireDefault(_assign);
@@ -25,6 +21,10 @@ var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
 var _getIterator3 = _interopRequireDefault(_getIterator2);
 
+var _promise = require('babel-runtime/core-js/promise');
+
+var _promise2 = _interopRequireDefault(_promise);
+
 var _create = require('babel-runtime/core-js/object/create');
 
 var _create2 = _interopRequireDefault(_create);
@@ -38,6 +38,7 @@ exports.toValidName = toValidName;
 exports.userPWCheck = userPWCheck;
 exports.HoError = HoError;
 exports.handleError = handleError;
+exports.handleReject = handleReject;
 exports.showLog = showLog;
 exports.checkLogin = checkLogin;
 exports.selectRandom = selectRandom;
@@ -73,9 +74,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var pwCheck = {};
 
 function isValidString(str, type) {
-    var msg = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    var code = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 400;
-
     if (typeof str === 'string' || typeof str === 'number') {
         typeof str === 'string' ? str = new Buffer(str, 'utf-8').toString() : str.toString();
         switch (type) {
@@ -147,9 +145,6 @@ function isValidString(str, type) {
         }
     }
     console.log('invalid string ' + type + ' ' + str);
-    if (msg) {
-        handleError(new HoError(msg, { code: code }));
-    }
     return false;
 }
 
@@ -204,6 +199,7 @@ function showError(err, type) {
     }
 }
 
+//final error
 function handleError(err) {
     var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
@@ -228,6 +224,24 @@ function handleError(err) {
             showError(err, 'Delay');
             throw err;
         }
+    }
+}
+
+//middle error
+function handleReject(err) {
+    var fun = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+    showError(err, 'Reject');
+    if (fun) {
+        console.log(fun);
+
+        for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+            args[_key2 - 2] = arguments[_key2];
+        }
+
+        return fun.apply(undefined, [err].concat(args));
+    } else {
+        return _promise2.default.reject(err);
     }
 }
 
@@ -502,14 +516,13 @@ var bufferToString = function bufferToString(buffer) {
 };
 
 var getJson = exports.getJson = function getJson(raw_data) {
-    var json_data = null;
     try {
-        json_data = JSON.parse(raw_data);
+        return JSON.parse(raw_data);
     } catch (x) {
         console.log(raw_data);
-        handleError(new HoError('json parse error'));
+        showError(x, 'Json parse');
+        return false;
     }
-    return json_data;
 };
 
 var torrent2Magnet = exports.torrent2Magnet = function torrent2Magnet(torInfo) {
