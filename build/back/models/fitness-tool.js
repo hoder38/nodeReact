@@ -51,11 +51,20 @@ var FitnessTagTool = (0, _tagTool2.default)(_constants.FITNESSDB);
 exports.default = {
     newRow: function newRow(data) {
         if (!data['price'] || !data['desc'] || !data['name']) {
-            (0, _utility.handleError)(new _utility.HoError('parameter lost!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('parameter lost!!!'));
         }
-        var name = (0, _utility.isValidString)(data['name'], 'name', 'name not vaild!!!');
-        var price = (0, _utility.isValidString)(data['price'], 'int', 'price not vaild!!!');
-        var desc = (0, _utility.isValidString)(data['desc'], 'desc', 'description not vaild!!!');
+        var name = (0, _utility.isValidString)(data['name'], 'name');
+        if (!name) {
+            return (0, _utility.handleReject)(new _utility.HoError('name not vaild!!!'));
+        }
+        var price = (0, _utility.isValidString)(data['price'], 'int');
+        if (!price) {
+            return (0, _utility.handleReject)(new _utility.HoError('price not vaild!!!'));
+        }
+        var desc = (0, _utility.isValidString)(data['desc'], 'desc');
+        if (!desc) {
+            return (0, _utility.handleReject)(new _utility.HoError('description not vaild!!!'));
+        }
         var setTag = new _set2.default();
         setTag.add((0, _tagTool.normalize)(name)).add('sport').add('運動');
         //setTag.add(normalize(name)).add('game').add('遊戲');
@@ -81,12 +90,34 @@ exports.default = {
         });
     },
     editRow: function editRow(uid, data, session) {
-        var name = data['name'] ? (0, _utility.isValidString)(data['name'], 'name', 'name not vaild!!!') : '';
-        var price = data['price'] ? (0, _utility.isValidString)(data['price'], 'int', 'price not vaild!!!') : '';
-        var desc = data['desc'] ? (0, _utility.isValidString)(data['desc'], 'desc', 'description not vaild!!!') : '';
-        return (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var name = '';
+        if (data['name']) {
+            name = (0, _utility.isValidString)(data['name'], 'name');
+            if (!name) {
+                return (0, _utility.handleReject)(new _utility.HoError('description not vaild!!!'));
+            }
+        }
+        var price = '';
+        if (data['price']) {
+            price = (0, _utility.isValidString)(data['price'], 'int');
+            if (!price) {
+                return (0, _utility.handleReject)(new _utility.HoError('price not vaild!!!'));
+            }
+        }
+        var desc = '';
+        if (data['desc']) {
+            desc = (0, _utility.isValidString)(data['desc'], 'desc');
+            if (!desc) {
+                return (0, _utility.handleReject)(new _utility.HoError('description not vaild!!!'));
+            }
+        }
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('fitness row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('fitness row does not exist!!!'));
             }
             var update_data = {};
             var setTag = new _set2.default(items[0].tags);
@@ -115,9 +146,13 @@ exports.default = {
         });
     },
     delRow: function delRow(uid) {
-        return (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('fitness row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('fitness row does not exist!!!'));
             }
             return (0, _mongoTool2.default)('remove', _constants.FITNESSDB, {
                 _id: items[0]._id,
@@ -139,8 +174,14 @@ exports.default = {
         });
     },
     exchange: function exchange(uid, user, _exchange, session) {
-        var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
-        var number = (0, _utility.isValidString)(_exchange, 'int', 'exchange is not vaild');
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+        }
+        var number = (0, _utility.isValidString)(_exchange, 'int');
+        if (!number) {
+            return (0, _utility.handleReject)(new _utility.HoError('exchange is not vaild!!!'));
+        }
         var end = function end() {
             var id = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
             var itemCount = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -149,7 +190,7 @@ exports.default = {
                 itemId: (0, _mongoTool.objectID)(_constants.FITNESS_POINT)
             }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('point row does not exist!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('point row does not exist!!!'));
                 }
                 FitnessTagTool.setLatest(id, session).catch(function (err) {
                     return (0, _utility.handleError)(err, 'Set latest');
@@ -167,11 +208,11 @@ exports.default = {
         };
         return (0, _mongoTool2.default)('find', _constants.FITNESSDB + 'Stat', { owner: user._id }).then(function (items2) {
             if (items2.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('fitness stat row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('fitness stat row does not exist!!!'));
             }
             return (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: id }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('fitness row does not exist!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('fitness row does not exist!!!'));
                 }
                 switch (items[0].type) {
                     case 1:
@@ -232,7 +273,7 @@ exports.default = {
                         });
                         break;
                     default:
-                        (0, _utility.handleError)(new _utility.HoError('fitness type unknown!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('fitness type unknown!!!'));
                 }
             });
         });
@@ -241,12 +282,18 @@ exports.default = {
         var index = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
         var typeId = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : _constants.FITNESS_POINT;
 
-        var tId = (0, _utility.isValidString)(typeId, 'uid', 'uid is not vaild');
-        var cIndex = (0, _utility.isValidString)(index, 'perm', 'index is not vaild');
-        if (cIndex > _constants.CHART_LIMIT) {
-            (0, _utility.handleError)(new _utility.HoError('index is not vaild'));
+        var tId = (0, _utility.isValidString)(typeId, 'uid');
+        if (!tId) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
         }
-        var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
+        var cIndex = (0, _utility.isValidString)(index, 'perm');
+        if (!cIndex || cIndex > _constants.CHART_LIMIT) {
+            return (0, _utility.handleReject)(new _utility.HoError('index is not vaild!!!'));
+        }
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+        }
         var date = new Date();
         var getStart = function getStart() {
             return (0, _mongoTool2.default)('find', _constants.FITNESSDB + 'Stat', { owner: id }).then(function (items) {
@@ -348,7 +395,7 @@ exports.default = {
             });
         }) : (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: tId }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('fitness type unknown!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('fitness type unknown!!!'));
             }
             return getStart().then(function (_ref5) {
                 var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
@@ -365,7 +412,10 @@ exports.default = {
         });
     },
     resetDate: function resetDate(uid) {
-        var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+        }
         var date = new Date();
         return (0, _mongoTool2.default)('update', _constants.FITNESSDB + 'Stat', { owner: id }, { $set: {
                 start: Number('' + date.getFullYear() + (0, _utility.completeZero)(date.getMonth() + 1, 2) + (0, _utility.completeZero)(date.getDate(), 2)),

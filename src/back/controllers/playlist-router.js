@@ -10,7 +10,7 @@ import Mongo, { objectID } from '../models/mongo-tool'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility'
+import { checkLogin, isValidString, handleError, handleReject, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility'
 import { extType, isVideo, supplyTag, addPost } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -31,7 +31,7 @@ router.put('/join', function(req, res, next){
         }
     });
     if (uids.length < 2) {
-        handleError(new HoError('must large than one split'));
+        handleError(new HoError('must large than one split'), next);
     }
     let join_items = [];
     Promise.all(uids.map(u => Mongo('find', STORAGEDB, {_id: u}, {limit: 1}))).then(items => {
@@ -42,7 +42,7 @@ router.put('/join', function(req, res, next){
             }
         });
         if (join_items.length < 2) {
-            handleError(new HoError('must large than one split'));
+            return handleReject(new HoError('must large than one split'));
         }
         return join_items;
     }).then(join_items => {
@@ -54,7 +54,7 @@ router.put('/join', function(req, res, next){
             }
         }
         if (!main_match) {
-            handleError(new HoError('need the first split'));
+            return handleReject(new HoError('need the first split'));
         }
         const zip_type = main_match[3] ? 2 : main_match[4] ? 3 : 1;
         const pattern = zip_type === 2 ? new RegExp('\\.part(\\d+)\\.rar' + '$', 'i') : zip_type === 3 ? new RegExp('\\.7z\\.(\\d+)' + '$', 'i') : new RegExp('\\.zip\\.(\\d+)' + '$', 'i');
@@ -68,7 +68,7 @@ router.put('/join', function(req, res, next){
             }
         }
         if (Object.keys(order_items).length < 2) {
-            handleError(new HoError('must large than one split'));
+            return handleReject(new HoError('must large than one split'));
         }
         return [order_items, zip_type];
     }).then(([order_items, zip_type]) => {
@@ -100,7 +100,7 @@ router.put('/join', function(req, res, next){
             return recur_copy(2).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath1, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
                 name: order_items[1].name,
-            })).catch(err => handleError(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
+            })).catch(err => handleReject(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
         } else {
             //cat
             const ext = zip_type === 3 ? '_7z' : '_zip';
@@ -125,7 +125,7 @@ router.put('/join', function(req, res, next){
             return unlinkC().then(() => new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output)))).then(output => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
                 name: order_items[1].name,
-            })).catch(err => handleError(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
+            })).catch(err => handleReject(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
         }
     }).catch(err => handleError(err, next));
 });
@@ -133,19 +133,23 @@ router.put('/join', function(req, res, next){
 router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
     console.log('torrent copy');
     const index = Number(req.params.index);
-    Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+    const id = isValidString(req.params.uid, 'uid');
+    if (!id) {
+        handleError(new HoError('uid is not vaild'), next);
+    }
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length < 1) {
-            handleError(new HoError('torrent can not be found!!!'));
+            return handleReject(new HoError('torrent can not be found!!!'));
         }
         if (items[0].status !== 9) {
-            handleError(new HoError('file type error!!!'));
+            return handleReject(new HoError('file type error!!!'));
         }
         if (!items[0].playList[index]) {
-            handleError(new HoError('torrent index can not be found!!!'));
+            return handleReject(new HoError('torrent index can not be found!!!'));
         }
         const origPath = `${getFileLocation(items[0].owner, items[0]._id)}/${index}_complete`;
         if (!FsExistsSync(origPath)) {
-            handleError(new HoError('please download first!!!'));
+            return handleReject(new HoError('please download first!!!'));
         }
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
@@ -264,7 +268,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
                                 select: setArr,
                                 option: supplyTag(setArr, optArr),
                                 other: [],
-                            })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                            })).catch(err => handleReject(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
                         });
                     });
                 });
@@ -275,9 +279,13 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
 
 router.get('/all/download/:uid', function(req, res, next) {
     console.log('torrent all downlad');
-    Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+    const id = isValidString(req.params.uid, 'uid');
+    if (!id) {
+        handleError(new HoError('uid is not vaild'), next);
+    }
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length === 0) {
-            handleError(new HoError('playlist can not be fund!!!'));
+            return handleReject(new HoError('playlist can not be fund!!!'));
         }
         const filePath = getFileLocation(items[0].owner, items[0]._id);
         let queueItems = [];
@@ -314,9 +322,13 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
     console.log('torrent check');
     let index = !isNaN(req.params.index) ? Number(req.params.index) : 0;
     const bufferSize = Number(req.params.size);
-    Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+    const id = isValidString(req.params.uid, 'uid');
+    if (!id) {
+        handleError(new HoError('uid is not vaild'), next);
+    }
+    Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length < 1) {
-            handleError(new HoError('torrent can not be fund!!!'));
+            return handleReject(new HoError('torrent can not be fund!!!'));
         }
         if (req.params.index === 'v') {
             for (let i in items[0]['playList']) {
@@ -329,7 +341,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function(req, res, next) {
         const filePath = getFileLocation(items[0].owner, items[0]._id);
         const bufferPath = `${filePath}/${index}`;
         if (FsExistsSync(`${bufferPath}_error`)) {
-            handleError(new HoError('torrent video error!!!'));
+            return handleReject(new HoError('torrent video error!!!'));
         }
         const realPath = `${filePath}/real/${items[0]['playList'][index]}`;
         const comPath = `${bufferPath}_complete`;

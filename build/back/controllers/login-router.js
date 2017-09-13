@@ -63,9 +63,17 @@ var router = _express2.default.Router();
 //passport
 _passport2.default.use(new _passportLocal.Strategy(function (username, password, done) {
     console.log('login');
-    (0, _mongoTool2.default)('find', _constants.USERDB, { username: (0, _utility.isValidString)(username, 'name', 'username is not vaild', 401) }, { limit: 1 }).then(function (users) {
-        if (users.length < 1 || (0, _crypto.createHash)('md5').update((0, _utility.isValidString)(password, 'passwd', 'passwd is not vaild', 401)).digest('hex') !== users[0].password) {
-            (0, _utility.handleError)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
+    var validUsername = (0, _utility.isValidString)(username, 'name');
+    if (!validUsername) {
+        (0, _utility.handleError)(new _utility.HoError('username is not vaild', { code: 401 }), done);
+    }
+    (0, _mongoTool2.default)('find', _constants.USERDB, { username: validUsername }, { limit: 1 }).then(function (users) {
+        var validPassword = (0, _utility.isValidString)(password, 'passwd');
+        if (!validPassword) {
+            return (0, _utility.handleReject)(new _utility.HoError('passwd is not vaild', { code: 401 }));
+        }
+        if (users.length < 1 || (0, _crypto.createHash)('md5').update(validPassword).digest('hex') !== users[0].password) {
+            return (0, _utility.handleReject)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
         }
         done(null, users[0]);
     }).catch(function (err) {

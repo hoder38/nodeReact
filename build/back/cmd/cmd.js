@@ -46,8 +46,12 @@ function cmdUpdateDrive() {
     console.log(drive_batch);
     console.log('cmdUpdateDrive');
     console.log(new Date());
+    var username = (0, _utility.isValidString)(singleUser, 'name');
+    if (!username) {
+        return (0, _utility.handleReject)(new _utility.HoError('user name not valid!!!'));
+    }
     var isSingle = function isSingle() {
-        return (0, _mongoTool2.default)('find', _constants.USERDB, (0, _assign2.default)({ auto: { $exists: true } }, singleUser ? { username: (0, _utility.isValidString)(singleUser, 'name', 'user name not valid!!!') } : {}));
+        return (0, _mongoTool2.default)('find', _constants.USERDB, (0, _assign2.default)({ auto: { $exists: true } }, singleUser ? { username: username } : {}));
     };
     return isSingle().then(function (userlist) {
         return (0, _apiToolGoogle.userDrive)(userlist, 0, drive_batch);
@@ -56,7 +60,7 @@ function cmdUpdateDrive() {
 
 var dbDump = function dbDump(collection) {
     if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
-        (0, _utility.handleError)(new _utility.HoError('Collection not find'));
+        return (0, _utility.handleReject)(new _utility.HoError('Collection not find'));
     }
     var folderPath = '/mnt/mongodb/backup/' + collection;
     var mkfolder = function mkfolder() {
@@ -94,7 +98,7 @@ var dbDump = function dbDump(collection) {
 
 var dbRestore = function dbRestore(collection) {
     if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
-        (0, _utility.handleError)(new _utility.HoError('Collection not find'));
+        return (0, _utility.handleReject)(new _utility.HoError('Collection not find'));
     }
     var folderPath = '/mnt/mongodb/backup/' + collection;
     var recur_insert = function recur_insert(index, store) {

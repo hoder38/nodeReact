@@ -92,7 +92,7 @@ router.put('/delTag/:tag', function(req, res, next) {
 router.post('/newRow', function(req, res, next) {
     console.log('new fitness');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
     FitnessTool.newRow(req.body).then(result => {
         sendWs({
@@ -106,7 +106,7 @@ router.post('/newRow', function(req, res, next) {
 router.put('/editRow/:uid', function(req, res, next) {
     console.log('edit fitness');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
     FitnessTool.editRow(req.params.uid, req.body, req.session).then(() => {
         sendWs({
@@ -120,7 +120,7 @@ router.put('/editRow/:uid', function(req, res, next) {
 router.delete('/delRow/:uid', function(req, res, next) {
     console.log('del fitness');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'));
+        handleError(new HoError('permission denied'), next);
     }
     FitnessTool.delRow(req.params.uid).then(() => {
         sendWs({

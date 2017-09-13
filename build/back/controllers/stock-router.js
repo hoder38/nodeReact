@@ -159,7 +159,11 @@ router.put('/delTag/:tag', function (req, res, next) {
 
 router.get('/querySimple/:uid', function (req, res, next) {
     console.log('stock query simple');
-    _stockTool2.default.getSingleStock((0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild'), req.session).then(function (result) {
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
+    _stockTool2.default.getSingleStock(id, req.session).then(function (result) {
         return res.json(result);
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -168,7 +172,10 @@ router.get('/querySimple/:uid', function (req, res, next) {
 
 router.get('/getPER/:uid', function (req, res, next) {
     console.log('stock get per');
-    var id = (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild');
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
     _stockTool2.default.getStockPER(id).then(function (_ref) {
         var _ref2 = (0, _slicedToArray3.default)(_ref, 3),
             result = _ref2[0],
@@ -188,7 +195,11 @@ router.get('/getPER/:uid', function (req, res, next) {
 
 router.get('/getPredictPER/:uid', function (req, res, next) {
     console.log('stock get predict');
-    _stockTool2.default.getPredictPER((0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild'), req.session).then(function (_ref3) {
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
+    _stockTool2.default.getPredictPER(id, req.session).then(function (_ref3) {
         var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
             result = _ref4[0],
             index = _ref4[1];
@@ -201,7 +212,11 @@ router.get('/getPredictPER/:uid', function (req, res, next) {
 
 router.get('/getPoint/:uid/:price?', function (req, res, next) {
     console.log('stock get point');
-    _stockTool2.default.getStockPoint((0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild'), req.params.price ? !req.params.price.match(/\d+(\.\d+)?/) ? (0, _utility.handleError)(new _utility.HoError('price is not vaild')) : Number(req.params.price) : 0, req.session).then(function (point) {
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
+    _stockTool2.default.getStockPoint(id, req.params.price ? !req.params.price.match(/\d+(\.\d+)?/) ? (0, _utility.handleError)(new _utility.HoError('price is not vaild'), next) : Number(req.params.price) : 0, req.session).then(function (point) {
         return res.json({ point: point });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -210,7 +225,11 @@ router.get('/getPoint/:uid/:price?', function (req, res, next) {
 
 router.get('/getInterval/:uid', function (req, res, next) {
     console.log('stock get interval');
-    _stockTool2.default.getInterval((0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild'), req.session).then(function (_ref5) {
+    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    if (!id) {
+        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+    }
+    _stockTool2.default.getInterval(id, req.session).then(function (_ref5) {
         var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
             result = _ref6[0],
             index = _ref6[1];
@@ -223,12 +242,15 @@ router.get('/getInterval/:uid', function (req, res, next) {
 
 router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function (req, res, next) {
     console.log('stock filter');
-    var name = (0, _utility.isValidString)(req.params.tag, 'name', 'name is not vaild');
+    var name = (0, _utility.isValidString)(req.params.tag, 'name');
+    if (!name) {
+        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+    }
     var per = false;
     if (req.body.per) {
         per = req.body.per.match(/^([<>])(\d+)$/);
         if (!per) {
-            (0, _utility.handleError)(new _utility.HoError('per is not vaild'));
+            (0, _utility.handleError)(new _utility.HoError('per is not vaild'), next);
         }
         per[2] = Number(per[2]);
     }
@@ -236,7 +258,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.yield) {
         yieldNumber = req.body.yield.match(/^([<>])(\d+)$/);
         if (!yieldNumber) {
-            (0, _utility.handleError)(new _utility.HoError('yield is not vaild'));
+            (0, _utility.handleError)(new _utility.HoError('yield is not vaild'), next);
         }
         yieldNumber[2] = Number(yieldNumber[2]);
     }
@@ -244,7 +266,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.p) {
         pp = req.body.p.match(/^([<>])(\d+)$/);
         if (!pp) {
-            (0, _utility.handleError)(new _utility.HoError('p is not vaild'));
+            (0, _utility.handleError)(new _utility.HoError('p is not vaild'), next);
         }
         pp[2] = Number(pp[2]);
     }
@@ -252,7 +274,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.s) {
         ss = req.body.s.match(/^([<>])(\-?\d+)$/);
         if (!ss) {
-            (0, _utility.handleError)(new _utility.HoError('s is not vaild'));
+            (0, _utility.handleError)(new _utility.HoError('s is not vaild'), next);
         }
         ss[2] = Number(ss[2]);
     }
@@ -260,12 +282,12 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.m) {
         mm = req.body.m.match(/^([<>])(\d+\.?\d*)$/);
         if (!mm) {
-            (0, _utility.handleError)(new _utility.HoError('m is not vaild'));
+            (0, _utility.handleError)(new _utility.HoError('m is not vaild'), next);
         }
         mm[2] = Number(mm[2]);
     }
     if (stockFiltering) {
-        (0, _utility.handleError)(new _utility.HoError('there is another filter running'));
+        (0, _utility.handleError)(new _utility.HoError('there is another filter running'), next);
     }
     stockFiltering = true;
     var first = true;

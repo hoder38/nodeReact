@@ -30,9 +30,13 @@ var RankTagTool = (0, _tagTool2.default)(_constants.RANKDB);
 
 exports.default = {
     getChart: function getChart(uid, user, session) {
-        return (0, _mongoTool2.default)('find', _constants.RANKDB, { _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild') }).then(function (items) {
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid not vaild!!!'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.RANKDB, { _id: id }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('rank cannot find!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('rank cannot find!!!'));
             }
             var getName = function getName() {
                 return items[0].type === _constants.FITNESSDB && items[0].itemId.equals((0, _mongoTool.objectID)(_constants.FITNESS_POINT)) ? _promise2.default.resolve('point') : (0, _mongoTool2.default)('find', items[0].type, { _id: items[0].itemId }).then(function (items1) {
@@ -53,7 +57,7 @@ exports.default = {
             return getName().then(function (itemName) {
                 return findData().then(function (itemData) {
                     if (itemData.length < 1) {
-                        (0, _utility.handleError)(new _utility.HoError('no data!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('no data!!!'));
                     }
                     var data = [];
                     var labels = [];
@@ -81,7 +85,7 @@ exports.default = {
                             owner: user._id
                         }).then(function (items1) {
                             if (items1.length < 1) {
-                                (0, _utility.handleError)(new _utility.HoError('rank cannot find user!!!'));
+                                return (0, _utility.handleReject)(new _utility.HoError('rank cannot find user!!!'));
                             }
                             labels.push(user.username);
                             data.push(items1[0].count);
@@ -107,16 +111,22 @@ exports.default = {
     },
     newRow: function newRow(data) {
         if (!data['name'] || !data['item']) {
-            (0, _utility.handleError)(new _utility.HoError('parameter lost!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('parameter lost!!!'));
         }
-        var name = (0, _utility.isValidString)(data['name'], 'name', 'name not vaild!!!');
-        var id = (0, _utility.isValidString)(data['item'], 'uid', 'item not vaild!!!');
+        var name = (0, _utility.isValidString)(data['name'], 'name');
+        if (!name) {
+            return (0, _utility.handleReject)(new _utility.HoError('name not vaild!!!'));
+        }
+        var id = (0, _utility.isValidString)(data['item'], 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('item not vaild!!!'));
+        }
         var date = new Date();
         var start = Number('' + date.getFullYear() + (0, _utility.completeZero)(date.getMonth() + 1, 2) + (0, _utility.completeZero)(date.getDate(), 2));
         var getItem = function getItem() {
             return id.equals((0, _mongoTool.objectID)(_constants.FITNESS_POINT)) ? _promise2.default.resolve('point') : (0, _mongoTool2.default)('find', _constants.FITNESSDB, { _id: id }).then(function (items1) {
                 if (items1.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('fitness row does not exist!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('fitness row does not exist!!!'));
                 }
                 return items1[0].name;
             });
@@ -128,7 +138,7 @@ exports.default = {
                 start: start
             }).then(function (items) {
                 if (items.length > 0) {
-                    (0, _utility.handleError)(new _utility.HoError('double rank!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('double rank!!!'));
                 }
                 var setTag = new _set2.default();
                 setTag.add((0, _tagTool.normalize)(name)).add(date.getFullYear().toString()).add(_constants.FITNESSDB).add('sport').add('運動').add((0, _tagTool.normalize)(itemName));
@@ -178,9 +188,13 @@ exports.default = {
         });
     },
     delRow: function delRow(uid) {
-        return (0, _mongoTool2.default)('find', _constants.RANKDB, { _id: (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild') }, { limit: 1 }).then(function (items) {
+        var id = (0, _utility.isValidString)(uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid not vaild!!!'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.RANKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                (0, _utility.handleError)(new _utility.HoError('rank row does not exist!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('rank row does not exist!!!'));
             }
             return (0, _mongoTool2.default)('remove', _constants.RANKDB, {
                 _id: items[0]._id,

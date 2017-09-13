@@ -10,7 +10,7 @@ import OpenSubtitle from 'opensubtitles-api'
 import Mongo from '../models/mongo-tool'
 import Api from './api-tool'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import { handleError, HoError, getFileLocation, checkAdmin, SRT2VTT, deleteFolderRecursive, sortList } from '../util/utility'
+import { handleError, handleReject, HoError, getFileLocation, checkAdmin, SRT2VTT, deleteFolderRecursive, sortList } from '../util/utility'
 import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime'
 import { computeHash } from '../util/os-torrent-hash.js'
 import sendWs from '../util/sendWs'
@@ -243,7 +243,7 @@ export default function process(action, ...args) {
         megaStop(...args).catch((err) => handle_err(err, args[0], 'Mega api')).then(rest => megaGet(rest)).catch(err => handleError(err, 'Mega api'));
         return Promise.resolve();
         default:
-        return Promise.reject(handleError(new HoError('unknown playlist action!!!')));
+        return handleReject(new HoError('unknown playlist action!!!'));
     }
 }
 
@@ -290,7 +290,7 @@ const startMega = (user, url, filePath, data) => {
             playList = sortList(playList);
             if (playList.length < 1) {
                 megaComplete();
-                handleError(new HoError('mega empty'), data['errhandle']);
+                return handleReject(new HoError('mega empty'), data['errhandle']);
             }
             if (playList.length === 1) {
                 FsRenameSync(`${real}/${playList[0]}`, `${filePath}_t`);
@@ -481,7 +481,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
                         console.log(DBdata);
-                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
+                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleReject(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
             }
@@ -494,7 +494,7 @@ function zipAdd(user, index, id, owner, name, pwd='') {
     const filePath = getFileLocation(owner, id);
     const zip_type = FsExistsSync(`${filePath}_zip_c`) ? 4 : FsExistsSync(`${filePath}_7z_c`) ? 5 : FsExistsSync(`${filePath}_zip`) ? 1 : FsExistsSync(`${filePath}.1.rar`) ? 2 : FsExistsSync(`${filePath}_7z`) ? 3 : 0;
     if (!zip_type) {
-        handleError(new HoError('not zip'));
+        return handleReject(new HoError('not zip'));
     }
     return setLock('zip').then(go => {
         if (!go) {
@@ -547,7 +547,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
     const comPath = `${bufferPath}_complete`;
     let playList = engine.files.map(file => file.path);
     if (playList.length < 1) {
-        handleError(new HoError('empty content!!!'));
+        return handleReject(new HoError('empty content!!!'));
     }
     playList = sortList(playList);
     let tIndex = -1;
@@ -558,7 +558,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
         }
     }
     if (tIndex < 0 || tIndex >= engine.files.length) {
-        return torrentComplete().then(() => Promise.reject(handleError(new HoError('unknown index'))));
+        return torrentComplete().then(() => handleReject(new HoError('unknown index')));
     } else {
         const file = engine.files[tIndex];
         console.log(tIndex);
@@ -668,7 +668,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                         DBdata['status'] = 9;
                         DBdata[`mediaType.${index}`] = mediaType;
                         console.log(DBdata);
-                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleError(err, errorMedia, id, mediaType['fileIndex'])));
+                        return Mongo('update', STORAGEDB, {_id: id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, id, user).catch(err => handleReject(err, errorMedia, id, mediaType['fileIndex'])));
                     });
                 }
             }
@@ -680,7 +680,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
 function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
     let shortTorrent = torrent.match(/^[^&]+/);
     if (!shortTorrent) {
-        handleError(new HoError('not torrent'));
+        return handleReject(new HoError('not torrent'));
     }
     shortTorrent = shortTorrent[0];
     const filePath = getFileLocation(owner, id);

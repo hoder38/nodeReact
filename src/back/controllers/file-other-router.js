@@ -12,7 +12,7 @@ import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility'
+import { checkLogin, isValidString, handleError, handleReject, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility'
 import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -31,9 +31,13 @@ loop_fresh();
 router.get('/preview/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('preview file');
-        Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1 || (items[0].status !== 2 && items[0].status !== 3 && items[0].status !== 5 && items[0].status !== 6 && items[0].status !== 10)) {
-                handleError(new HoError('cannot find file!!!'));
+                return handleReject(new HoError('cannot find file!!!'));
             }
             let previewPath = null;
             if (items[0].status === 5) {
@@ -51,7 +55,7 @@ router.get('/preview/:uid', function(req, res, next) {
             }
             if (!FsExistsSync(previewPath)) {
                 console.log(previewPath);
-                handleError(new HoError('cannot find file!!!'));
+                return handleReject(new HoError('cannot find file!!!'));
             }
             res.writeHead(200, {'Content-Type': 'image/jpeg'});
             FsCreateReadStream(previewPath).pipe(res);
@@ -62,9 +66,13 @@ router.get('/preview/:uid', function(req, res, next) {
 router.get('/download/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('download file');
-        Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length === 0) {
-                handleError(new HoError('cannot find file!!!'));
+                return handleReject(new HoError('cannot find file!!!'));
             }
             let filePath = getFileLocation(items[0].owner, items[0]._id);
             console.log(filePath);
@@ -79,7 +87,7 @@ router.get('/download/:uid', function(req, res, next) {
                 }
             }
             if (!FsExistsSync(filePath) && !ret_string) {
-                handleError(new HoError('cannot find file!!!'));
+                return handleReject(new HoError('cannot find file!!!'));
             }
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
             if (ret_string) {
@@ -106,7 +114,10 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
         }
         const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
         if (id) {
-            const id_valid = isValidString(req.params.uid, 'name', 'external is not vaild');
+            const id_valid = isValidString(req.params.uid, 'name');
+            if (!id_valid) {
+                handleError(new HoError('external is not vaild'), next);
+            }
             let filePath = null;
             switch(id[1]) {
                 case 'dym':
@@ -148,12 +159,16 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
             }
             sendSub(filePath);
         } else {
-            Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+            const id_valid = isValidString(req.params.uid, 'uid');
+            if (!id_valid) {
+                handleError(new HoError('uid is not vaild'), next);
+            }
+            Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    handleError(new HoError('cannot find file!!!'));
+                    return handleReject(new HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    handleError(new HoError('file type error!!!'));
+                    return handleReject(new HoError('file type error!!!'));
                 }
                 if (items[0].status === 3) {
                     sendSub(getFileLocation(items[0].owner, items[0]._id));
@@ -170,7 +185,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
                         }
                     }
                     if (!isVideo(items[0]['playList'][fileIndex])) {
-                        handleError(new HoError('file type error!!!'));
+                        return handleReject(new HoError('file type error!!!'));
                     }
                     sendSub(getFileLocation(items[0].owner, items[0]._id), fileIndex);
                 }
@@ -185,18 +200,22 @@ router.get('/video/:uid/file', function(req, res, next) {
         stream_count++;
         if (stream_count > STREAM_LIMIT(ENV_TYPE) && !checkAdmin(1, req.user)) {
             console.log(stream_count);
-            handleError(new HoError('stream request too many!!!'));
+            handleError(new HoError('stream request too many!!!'), next);
         }
-        Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1 || (items[0].status !== 3 && items[0].status !== 4)) {
-                handleError(new HoError('cannot find video!!!'));
+                return handleReject(new HoError('cannot find video!!!'));
             }
             const videoPath = getFileLocation(items[0].owner, items[0]._id);
             console.log(videoPath);
             let finalPath = `${videoPath}_complete`;
             if (!FsExistsSync(finalPath)) {
                 if (!FsExistsSync(videoPath)) {
-                    handleError(new HoError('cannot find file!!!'));
+                    return handleReject(new HoError('cannot find file!!!'));
                 }
                 finalPath = videoPath;
             }
@@ -231,9 +250,13 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
     checkLogin(req, res, () => {
         console.log('torrent');
         let fileIndex = !isNaN(req.params.index) ? Number(req.params.index) : 0;
-        Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('torrent can not be fund!!!'));
+                return handleReject(new HoError('torrent can not be fund!!!'));
             }
             if (req.params.index === 'v') {
                 for (let i in items[0]['playList']) {
@@ -250,11 +273,11 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 stream_count++;
                 if (stream_count > STREAM_LIMIT(ENV_TYPE) && !checkAdmin(1, req.user)) {
                     console.log(stream_count);
-                    handleError(new HoError('stream request too many!!!'));
+                    return handleReject(new HoError('stream request too many!!!'));
                 }
                 const outputPath = FsExistsSync(comPath) ? comPath : FsExistsSync(bufferPath) ? bufferPath : null;
                 if (FsExistsSync(`${bufferPath}_error`) || !outputPath) {
-                    handleError(new HoError('video error!!!'));
+                    return handleReject(new HoError('video error!!!'));
                 }
                 console.log(outputPath);
                 const total = FsStatSync(outputPath).size;
@@ -284,7 +307,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 const torrentDoc = () => {
                     if (req.params.type === 'images' || req.params.type === 'resources') {
                         if (!req.params.number) {
-                            handleError(new HoError('cannot find img name!!!'));
+                            return handleReject(new HoError('cannot find img name!!!'));
                         }
                         return Promise.resolve((req.params.type === 'images') ? [`${bufferPath}_doc/images/${req.params.number}`, 'image/jpeg'] : [`${bufferPath}_doc/resources/sheet.css`, 'text/css']);
                     } else {
@@ -315,7 +338,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                 return torrentDoc().then(([docFilePath, docMime]) => {
                     console.log(docFilePath);
                     if (!FsExistsSync(docFilePath)) {
-                        handleError(new HoError('cannot find file!!!'));
+                        return handleReject(new HoError('cannot find file!!!'));
                     }
                     res.writeHead(200, {'Content-Type': docMime});
                     FsCreateReadStream(docFilePath).pipe(res);
@@ -328,7 +351,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     'hmset',
                     {[items[0]._id.toString()]: `0&${fileIndex}`},
                 ];
-                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!')));
+                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleReject(new HoError('need download first!!!')));
             }
         }).catch(err => handleError(err, next));
     });
@@ -337,9 +360,13 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
 router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png||sheet\.css)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('image');
-        Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                handleError(new HoError('cannot find file!!!'));
+                return handleReject(new HoError('cannot find file!!!'));
             }
             const filePath = getFileLocation(items[0].owner, items[0]._id);
             const getRecord = () => {
@@ -348,7 +375,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                 }
                 if (req.params.type === 'images' || req.params.type === 'resources') {
                     if (!req.params.number) {
-                        handleError(new HoError('cannot find img name!!!'));
+                        return handleReject(new HoError('cannot find img name!!!'));
                     }
                     return Promise.resolve((req.params.type === 'images') ? [`${filePath}_doc/images/${req.params.number}`, 'image/jpeg'] : [`${filePath}_doc/resources/sheet.css`, 'text/css']);
                 } else if (!isNaN(req.params.type)) {
@@ -372,7 +399,7 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
             return getRecord().then(([docFilePath, docMime]) => {
                 console.log(docFilePath);
                 if (!FsExistsSync(docFilePath)) {
-                    handleError(new HoError('cannot find file!!!'));
+                    return handleReject(new HoError('cannot find file!!!'));
                 }
                 res.writeHead(200, {'Content-Type': docMime});
                 FsCreateReadStream(docFilePath).pipe(res);
@@ -394,23 +421,23 @@ router.post('/upload/file', function(req, res, next) {
             stream.on('close', () => isTorrent(req.files.file.name) ? new Promise((resolve2, reject2) => ReadTorrent(filePath, (err, torrent) => err ? reject2(err) : resolve2(torrent))).then(torrent => {
                 const magnet = torrent2Magnet(torrent);
                 if (!magnet) {
-                    handleError(new HoError('magnet create fail'));
+                    return handleReject(new HoError('magnet create fail'));
                 }
                 console.log(magnet);
                 const encodeTorrent = isValidString(magnet, 'url');
                 if (encodeTorrent === false) {
-                    handleError(new HoError('magnet is not vaild'));
+                    return handleReject(new HoError('magnet is not vaild'));
                 }
                 const shortTorrent = magnet.match(/^magnet:[^&]+/);
                 if (!shortTorrent) {
-                    handleError(new HoError('magnet create fail'));
+                    return handleReject(new HoError('magnet create fail'));
                 }
                 return new Promise((resolve2, reject2) => FsUnlink(filePath, err => err ? reject2(err) : resolve2())).then(() => new Promise((resolve2, reject2) => Mkdirp(filePath, err => err ? reject2(err) : resolve2()))).then(() => Mongo('find', STORAGEDB, {magnet: {
                     $regex: shortTorrent[0].match(/[^:]+$/)[0],
                     $options: 'i',
                 }}, {limit: 1})).then(items => {
                     if (items.length > 0) {
-                        handleError(new HoError('already has one'));
+                        return handleReject(new HoError('already has one'));
                     }
                     return PlaylistApi('torrent info', magnet, filePath).then(info => {
                         let setTag = new Set(['torrent', 'playlist', '播放列表']);
@@ -426,7 +453,7 @@ router.post('/upload/file', function(req, res, next) {
                             return file.path;
                         });
                         if (playList.length < 1) {
-                            handleError(new HoError('empty content!!!'));
+                            return handleReject(new HoError('empty content!!!'));
                         }
                         playList = sortList(playList);
                         return resolve([`Playlist ${info.name}`, setTag, optTag, {
@@ -484,6 +511,9 @@ router.post('/upload/file', function(req, res, next) {
                     setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
                     if (req.body.path) {
                         const bodyPath = getJson(req.body.path);
+                        if (!bodyPath) {
+                            return handleReject(new HoError('json parse error!!!'));
+                        }
                         if (Array.isArray(bodyPath) && bodyPath.length > 0) {
                             bodyPath.forEach(p => setTag.add(normalize(p)));
                         }
@@ -535,7 +565,7 @@ router.post('/upload/file', function(req, res, next) {
                                 select: setArr,
                                 option: supplyTag(setArr, optArr),
                                 other: [],
-                            })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                            })).catch(err => handleReject(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
                         });
                     });
                 });
@@ -549,11 +579,11 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
         console.log('upload subtitle');
         console.log(req.files);
         if (req.files.file.size > (10 * 1024 * 1024)) {
-            handleError(new HoError('size too large!!!'));
+            handleError(new HoError('size too large!!!'), next);
         }
         const ext = isSub(req.files.file.name);
         if (!ext) {
-            handleError(new HoError('not valid subtitle!!!'));
+            handleError(new HoError('not valid subtitle!!!'), next);
         }
         const convertSub = (filePath, id) => new Promise((resolve, reject) => FsUnlink(req.files.file.path, err => err ? reject(err) : resolve())).then(() => SRT2VTT(filePath, ext).then(() => {
             sendWs({
@@ -618,19 +648,30 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 ex_type = 'kubourl';
                 break;
             }
-            const id = isValidString(req.params.uid, 'name', 'external is not vaild');
+            const id = isValidString(req.params.uid, 'name');
+            if (!id) {
+                handleError(new HoError('external is not vaild'), next);
+            }
             const filePath = getFileLocation(ex_type, id);
-            saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath, id).catch(err => handleError(err, next));
+            const json_data = getJson(req.body.lang);
+            if (!json_data) {
+                handleError(new HoError('json parse error!!!'), next);
+            }
+            saveSub((json_data === 'en') ? `${filePath}.en` : filePath, id).catch(err => handleError(err, next));
         } else {
-            Mongo('find', STORAGEDB, {_id: isValidString(req.params.uid, 'uid', 'uid is not vaild')}, {limit: 1}).then(items => {
+            const id = isValidString(req.params.uid, 'uid');
+            if (!id) {
+                handleError(new HoError('uid is not vaild'), next);
+            }
+            Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
                 if (items.length < 1 ) {
-                    handleError(new HoError('file not exist!!!'));
+                    return handleReject(new HoError('file not exist!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    handleError(new HoError('file type error!!!'));
+                    return handleReject(new HoError('file type error!!!'));
                 }
                 if (items[0].thumb) {
-                    handleError(new HoError('external file, please open video'));
+                    return handleReject(new HoError('external file, please open video'));
                 }
                 let filePath = getFileLocation(items[0].owner, items[0]._id);
                 if (items[0].status === 9) {
@@ -646,11 +687,15 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                         }
                     }
                     if (!isVideo(items[0]['playList'][fileIndex])) {
-                        handleError(new HoError('file type error!!!'));
+                        return handleReject(new HoError('file type error!!!'));
                     }
                     filePath = `${filePath}/${fileIndex}`;
                 }
-                return saveSub((getJson(req.body.lang) === 'en') ? `${filePath}.en` : filePath, items[0]._id);
+                const json_data = getJson(req.body.lang);
+                if (!json_data) {
+                    return handleReject(new HoError('json parse error!!!'));
+                }
+                return saveSub((json_data === 'en') ? `${filePath}.en` : filePath, items[0]._id);
             }).catch(err => handleError(err, next));
         }
     });

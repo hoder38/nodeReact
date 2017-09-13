@@ -11,7 +11,7 @@ import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unl
 import Mongo from '../models/mongo-tool'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import External from '../models/external-tool'
-import { handleError, HoError, deleteFolderRecursive, SRT2VTT } from '../util/utility'
+import { handleError, handleReject, HoError, deleteFolderRecursive, SRT2VTT } from '../util/utility'
 import { mediaMIME, isSub } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -103,7 +103,7 @@ export default function api(name, data) {
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
             default:
-            return Promise.reject(handleError(new HoError('unknown api')));
+            return handleReject(new HoError('unknown api'));
         }
     });
 }
@@ -140,7 +140,7 @@ function get(rest=null) {
                 case 'download doc':
                 return downloadDoc(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
                 default:
-                return Promise.reject(handleError(new HoError('unknown google api'))).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
+                return handleReject(new HoError('unknown google api')).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
             }
         }
     }
@@ -179,7 +179,7 @@ function expire(name, data) {
                         case 'download doc':
                         return downloadDoc(fun.data).catch(err => handle_err(err, fun.data.user)).then(rest => get(rest));
                         default:
-                        return Promise.reject(handleError(new HoError('unknown google api'))).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
+                        return handleReject(new HoError('unknown google api')).catch(err => handleError(err, 'Google api')).then(rest => get(rest));
                     }
                 }
             }
@@ -192,7 +192,7 @@ function expire(name, data) {
 
 const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('find', 'accessToken', {api: 'google'}, {limit: 1}).then(token => {
     if (token.length === 0) {
-        handleError(new HoError('can not find token'));
+        return handleReject(new HoError('can not find token'));
     }
     console.log('first');
     tokens = token[0];
@@ -217,7 +217,7 @@ function youtubeAPI(method, data) {
     switch (method) {
         case 'y search':
         if (!data['order'] || !data['maxResults'] || !data['type']) {
-            handleError(new HoError('search parameter lost!!!'));
+            return handleReject(new HoError('search parameter lost!!!'));
         }
         if (data['id_arr'] && data['id_arr'].length > 0) {
             data['maxResults'] = (data['id_arr'].length > 20) ? 0 : data['maxResults'] - data['id_arr'].length;
@@ -243,7 +243,7 @@ function youtubeAPI(method, data) {
             type: type,
         }, data['keyword'] ? {q: data['keyword']} : {}, data['channelId'] ? {channelId: data['channelId']} : {}, data['pageToken'] ? {pageToken: data['pageToken']} : {}), (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
             if (!metadata.items) {
-                handleError(new HoError('search error'));
+                return handleReject(new HoError('search error'));
             }
             let video_id = new Set();
             let playlist_id = new Set();
@@ -281,7 +281,7 @@ function youtubeAPI(method, data) {
         }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.items)));
         case 'y channel':
         if (!data['id']) {
-            handleError(new HoError('channel parameter lost!!!'));
+            return handleReject(new HoError('channel parameter lost!!!'));
         }
         return new Promise((resolve, reject) => youtube.channels.list({
             part: 'snippet, brandingSettings',
@@ -297,7 +297,7 @@ function youtubeAPI(method, data) {
         }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.items)));
         case 'y playItem':
         if (!data['id']) {
-            handleError(new HoError('playItem parameter lost!!!'));
+            return handleReject(new HoError('playItem parameter lost!!!'));
         }
         return new Promise((resolve, reject) => youtube.playlistItems.list(Object.assign({
             part: 'snippet',
@@ -315,13 +315,13 @@ function youtubeAPI(method, data) {
         ])));
         default:
         console.log(method);
-        handleError(new HoError('youtube api unknown!!!'));
+        return handleReject(new HoError('youtube api unknown!!!'));
     }
 }
 
 function upload(data) {
     if (!data['type'] || !data['name'] || (!data['filePath'] && !data['body'])) {
-        handleError(new HoError('upload parameter lost!!!'), data['errhandle']);
+        return handleReject(new HoError('upload parameter lost!!!'), data['errhandle']);
     }
     let parent = {};
     let mimeType = '*/*';
@@ -330,7 +330,7 @@ function upload(data) {
         parent = {id: GOOGLE_MEDIA_FOLDER(ENV_TYPE)};
         mimeType = mediaMIME(data['name']);
         if (!mimeType) {
-            handleError(new HoError('upload mime type unknown!!!'), data['errhandle']);
+            return handleReject(new HoError('upload mime type unknown!!!'), data['errhandle']);
         }
         break;
         case 'backup':
@@ -344,7 +344,7 @@ function upload(data) {
         }
         break;
         default:
-        handleError(new HoError('upload type unknown!!!'), data['errhandle']);
+        return handleReject(new HoError('upload type unknown!!!'), data['errhandle']);
     }
     let param = data['filePath'] ? {
         resource: {
@@ -384,7 +384,7 @@ function upload(data) {
         handleError(err, 'google upload');
         if (index > MAX_RETRY) {
             console.log(data);
-            handleError(err, data['errhandle']);
+            return handleReject(err, data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc(index + 1));
     });
@@ -398,7 +398,7 @@ function stopApi() {
 
 function list(data) {
     if (!data['folderId']) {
-        handleError(new HoError('list parameter lost!!!'));
+        return handleReject(new HoError('list parameter lost!!!'));
     }
     const find_name = data['name'] ? ` and title = '${data['name']}'` : '';
     const proc = index => new Promise((resolve, reject) => googleapis.drive({
@@ -407,7 +407,7 @@ function list(data) {
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'${find_name}`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata))).then(metadata => {
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
         if (metadata && metadata.items) {
             return metadata.items;
         } else {
@@ -422,7 +422,7 @@ function list(data) {
 
 function listFile(data) {
     if (!data['folderId']) {
-        handleError(new HoError('list parameter lost!!!'));
+        return handleReject(new HoError('list parameter lost!!!'));
     }
     if (data['max']) {
         max = data['max'];
@@ -433,13 +433,13 @@ function listFile(data) {
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (index > MAX_RETRY) ? Promise.reject(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), OATH_WAITING * 1000)) : Promise.reject(err));
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (index > MAX_RETRY) ? handleReject(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), OATH_WAITING * 1000)) : handleReject(err));
     return proc(1);
 }
 
 function create(data) {
     if (!data['name'] || !data['parent']) {
-        handleError(new HoError('create parameter lost!!!'));
+        return handleReject(new HoError('create parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
@@ -448,12 +448,12 @@ function create(data) {
         title: data['name'],
         mimeType: 'application/vnd.google-apps.folder',
         parents: [{id: data['parent']}],
-    }}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata)));
+    }}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
 }
 
 function download(data) {
     if (!data['url'] || !data['filePath']) {
-        handleError(new HoError('download parameter lost!!!'), data['errhandle']);
+        return handleReject(new HoError('download parameter lost!!!'), data['errhandle']);
     }
     const temp = `${data['filePath']}_t`;
     const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
@@ -463,12 +463,7 @@ function download(data) {
     }}).then(res => checkTmp().then(() => new Promise((resolve, reject) => {
         const dest = FsCreateWriteStream(temp);
         res.body.pipe(dest);
-        dest.on('finish', () => {
-            if ((res.headers['content-length'] && Number(res.headers['content-length']) !== FsStatSync(data['filePath'])['size'])) {
-                handleError(new HoError('incomplete download'));
-            }
-            return resolve();
-        }).on('error', err => reject(err));
+        dest.on('finish', () => (res.headers['content-length'] && Number(res.headers['content-length']) !== FsStatSync(data['filePath'])['size']) ? handleReject(new HoError('incomplete download')) : resolve()).on('error', err => reject(err));
     }))).then(() => {
         FsRenameSync(temp, data['filePath']);
         if (data['rest']) {
@@ -479,7 +474,7 @@ function download(data) {
         handleError(err, 'Google Fetch');
         if (index > MAX_RETRY) {
             console.log(data['url']);
-            handleError(new HoError('timeout'), data['errhandle']);
+            return handleReject(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
     });
@@ -488,27 +483,27 @@ function download(data) {
 
 function deleteFile(data) {
     if (!data['fileId']) {
-        handleError(new HoError('delete parameter lost!!!'));
+        return handleReject(new HoError('delete parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
-    }).files.trash({fileId: data['fileId']}, err => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve()));
+    }).files.trash({fileId: data['fileId']}, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()));
 }
 
 function getFile(data) {
     if (!data['fileId']) {
-        handleError(new HoError('get parameter lost!!!'));
+        return handleReject(new HoError('get parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
-    }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(handleError(err)) : resolve(metadata)));
+    }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
 }
 
 function copyFile(data) {
     if (!data['fileId']) {
-        handleError(new HoError('copy parameter lost!!!'));
+        return handleReject(new HoError('copy parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
@@ -518,7 +513,7 @@ function copyFile(data) {
 
 function moveParent(data) {
     if (!data['fileId'] || !data['rmFolderId'] || !data['addFolderId']) {
-        handleError(new HoError('move parent parameter lost!!!'));
+        return handleReject(new HoError('move parent parameter lost!!!'));
     }
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
@@ -532,7 +527,7 @@ function moveParent(data) {
 
 function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
+        return handleReject(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     const proc = index => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, ['-F'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
         let info = [];
@@ -558,7 +553,7 @@ function downloadMedia(data) {
         }
         console.log(media_id);
         if (!media_id) {
-            handleError(new HoError('quality low'));
+            return handleReject(new HoError('quality low'));
         }
         const getSavePath = () => FsExistsSync(data['filePath']) ? FsExistsSync(`${data['filePath']}_t`) ? new Promise((resolve, reject) => FsUnlink(`${data['filePath']}_t`, err => err ? reject(err) : resolve(`${data['filePath']}_t`))) : Promise.resolve(`${data['filePath']}_t`) : Promise.resolve(data['filePath']);
         return getSavePath().then(savePath => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, [`--format=${media_id}`, '-o', savePath, '--write-thumbnail'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
@@ -578,7 +573,7 @@ function downloadMedia(data) {
         handleError(err, 'Youtubedl Fetch');
         if (index > MAX_RETRY) {
             console.log(data['key']);
-            handleError(new HoError('timeout'), data['errhandle']);
+            return handleReject(new HoError('timeout'), data['errhandle']);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), Math.pow(2, index) * 10 * 1000));
     });
@@ -587,7 +582,7 @@ function downloadMedia(data) {
 
 function downloadPresent(data) {
     if (!data['exportlink'] || !data['alternate'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
+        return handleReject(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     let number = 0;
     const present_html = `${data['filePath']}_b.htm`;
@@ -603,7 +598,7 @@ function downloadPresent(data) {
             number++;
             const pageid = output.match(/\"p(\d+)\"/);
             if (!pageid) {
-                handleError(new HoError('can not find present'));
+                return handleReject(new HoError('can not find present'));
             }
             return download({
                 url: `${exportlink}${pageid[1]}`,
@@ -618,14 +613,14 @@ function downloadPresent(data) {
                 return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](number)).catch(err => data['errhandle'](err));
             }
         } else {
-            handleError(err, data['errhandle']);
+            return handleReject(err, data['errhandle']);
         }
     });
 }
 
 function downloadDoc(data) {
     if (!data['exportlink'] || !data['filePath']) {
-        handleError(new HoError('get parameter lost!!!'), data['errhandle']);
+        return handleReject(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     const zip = `${data['filePath']}.zip`;
     return download({
@@ -633,7 +628,7 @@ function downloadDoc(data) {
         filePath: zip,
     }).then(() => {
         if (!FsExistsSync(zip)) {
-            handleError(new HoError('cannot find zip'));
+            return handleReject(new HoError('cannot find zip'));
         }
         const dir = `${data['filePath']}_doc`;
         const docDir = () => FsExistsSync(dir) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(dir, err => err ? reject(err) : resolve()));
@@ -702,7 +697,7 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
             body: tags.toString(),
         });
         default:
-        handleError(new HoError(`recycle ${recycle} denied!!!`));
+        return handleReject(new HoError(`recycle ${recycle} denied!!!`));
     }
 }
 
@@ -766,7 +761,7 @@ export function googleDownloadSubtitle(url, filePath) {
             }
         });
         if (!choose && !en) {
-            handleError(new HoError('sub donot have chinese and english!!!'));
+            return handleReject(new HoError('sub donot have chinese and english!!!'));
         }
         const preSub = (sub, lang) => {
             if (sub) {
@@ -790,7 +785,7 @@ export function googleDownloadSubtitle(url, filePath) {
         const ext = preSub(choose, '');
         const en_ext = preSub(en, '.en');
         if (!ext && !en_ext) {
-            handleError(new HoError('sub ext not support!!!'));
+            return handleReject(new HoError('sub ext not support!!!'));
         }
         const renameSub = (sub, lang, sub_ext) => {
             if (sub_ext) {
@@ -863,7 +858,7 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
                     name: 'uploaded',
                 }).then(uploadedList =>  {
                     if (uploadedList.length < 1 ) {
-                        handleError(new HoError('do not have uploaded folder!!!'));
+                        return handleReject(new HoError('do not have uploaded folder!!!'));
                     }
                     uploaded = uploadedList[0].id;
                 });
@@ -872,7 +867,7 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
                     name: 'handling',
                 }).then(handlingList =>  {
                     if (handlingList.length < 1 ) {
-                        handleError(new HoError('do not have handling folder!!!'));
+                        return handleReject(new HoError('do not have handling folder!!!'));
                     }
                     handling = handlingList[0].id;
                 });
@@ -893,7 +888,7 @@ export function autoDoc(userlist, index, type, date=null) {
     console.log(userlist[index].username);
     date = date ? date : new Date();
     if (!DOC_TYPE.hasOwnProperty(type)) {
-        handleError(new HoError('do not have this country!!!'));
+        return handleReject(new HoError('do not have this country!!!'));
     }
     let downloaded = null;
     let downloaded_data = {
@@ -902,7 +897,7 @@ export function autoDoc(userlist, index, type, date=null) {
     };
     return api('list folder', downloaded_data).then(downloadedList => {
         if (downloadedList.length < 1) {
-            handleError(new HoError('do not have downloaded folder!!!'));
+            return handleReject(new HoError('do not have downloaded folder!!!'));
         }
         downloaded = downloadedList[0].id;
         const download_ext_doc = (tIndex, doc_type) => External.getSingleList(doc_type[tIndex], date).then(doclist => {

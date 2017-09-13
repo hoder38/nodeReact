@@ -159,10 +159,32 @@ function process(collection) {
                 parentList = tags.getArray();
             } else if (!index) {
                 var defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(collection === _constants.STOCKDB && defau.index === 31 || collection === _constants.STORAGEDB && defau.index === 31 ? tagName : (0, _utility.isValidString)(tagName, 'name', 'name is not vaild'), exactly);
+                var validTagName = '';
+                if (collection === _constants.STOCKDB && defau.index === 31 || collection === _constants.STORAGEDB && defau.index === 31) {
+                    validTagName = tagName;
+                } else {
+                    validTagName = (0, _utility.isValidString)(tagName, 'name');
+                    if (!validTagName) {
+                        return (0, _utility.handleReject)(new _utility.HoError('name not vaild!!!'));
+                    }
+                }
+                parentList = tags.getArray(validTagName, exactly);
             } else {
                 var _defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(collection === _constants.STOCKDB && _defau.index === 31 || collection === 'storage' && _defau.index === 31 ? tagName : (0, _utility.isValidString)(tagName, 'name', 'name is not vaild'), exactly, (0, _utility.isValidString)(index, 'parentIndex', 'parentIndex is not vaild'));
+                var _validTagName = '';
+                if (collection === _constants.STOCKDB && _defau.index === 31 || collection === _constants.STORAGEDB && _defau.index === 31) {
+                    _validTagName = tagName;
+                } else {
+                    _validTagName = (0, _utility.isValidString)(tagName, 'name');
+                    if (!_validTagName) {
+                        return (0, _utility.handleReject)(new _utility.HoError('name not vaild!!!'));
+                    }
+                }
+                var validIndex = (0, _utility.isValidString)(index, 'parentIndex');
+                if (!validIndex) {
+                    return (0, _utility.handleReject)(new _utility.HoError('parentIndex is not vaild!!!'));
+                }
+                parentList = tags.getArray(_validTagName, exactly, validIndex);
             }
             var sql = getQuerySql(user, parentList.cur, parentList.exactly);
             return sql ? (0, _mongoTool2.default)('find', collection, sql.nosql, sql.select ? sql.select : {}, (0, _assign2.default)({
@@ -221,7 +243,10 @@ function process(collection) {
             }) : returnPath([], parentList);
         },
         singleQuery: function singleQuery(uid, user, session) {
-            var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
+            var id = (0, _utility.isValidString)(uid, 'uid');
+            if (!id) {
+                return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+            }
             var parentList = this.searchTags(session).getArray();
             var sql = getQuerySql(user, parentList.cur, parentList.exactly);
             if (sql) {
@@ -772,7 +797,10 @@ function process(collection) {
         addTag: function addTag(uid, tag, user) {
             var checkValid = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 
-            var name = (0, _utility.isValidString)(tag, 'name', 'name is not vaild');
+            var name = (0, _utility.isValidString)(tag, 'name');
+            if (!name) {
+                return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+            }
             var id = (0, _utility.isValidString)(uid, 'uid');
             if (id === false) {
                 return new _promise2.default(function (resolve, reject) {
@@ -782,12 +810,12 @@ function process(collection) {
             var tagType = getQueryTag(user, name);
             if (!tagType.type) {
                 console.log(tagType);
-                return _promise2.default.reject(new _utility.HoError('not authority set default tag!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('not authority set default tag!!!'));
             }
             if (tagType.type === 2) {
                 return (0, _mongoTool2.default)('find', collection, { _id: id }, { limit: 1 }).then(function (items) {
                     if (items.length < 1) {
-                        (0, _utility.handleError)(new _utility.HoError('can not find object!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('can not find object!!!'));
                     }
                     return tagType.tag.hasOwnProperty('adultonly') && items[0].adultonly === tagType.tag.adultonly || tagType.tag.hasOwnProperty('first') && items[0].first === tagType.tag.first || tagType.tag.hasOwnProperty('important') && items[0].important === tagType.tag.important ? {
                         id: items[0]._id,
@@ -810,7 +838,7 @@ function process(collection) {
             } else if (tagType.type === 1) {
                 return (0, _mongoTool2.default)('find', collection, { _id: id }, { limit: 1 }).then(function (items) {
                     if (items.length < 1) {
-                        (0, _utility.handleError)(new _utility.HoError('can not find object!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('can not find object!!!'));
                     }
                     if (!items[0].tags.includes(tagType.tag.tags)) {
                         tagType.tag[user._id.toString()] = tagType.tag.tags;
@@ -831,7 +859,7 @@ function process(collection) {
                 });
             } else {
                 console.log(tagType);
-                return _promise2.default.reject(new _utility.HoError('unknown add tag type!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown add tag type!!!'));
             }
         },
         delTag: function delTag(uid, tag, user) {
@@ -839,7 +867,10 @@ function process(collection) {
 
             var name = (0, _utility.isValidString)(tag, 'name');
             if (name === false) {
-                name = (0, _utility.isValidString)(tag, 'url', 'name is not vaild');
+                name = (0, _utility.isValidString)(tag, 'url');
+                if (!name) {
+                    return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+                }
             }
             var id = (0, _utility.isValidString)(uid, 'uid');
             if (id === false) {
@@ -850,11 +881,11 @@ function process(collection) {
             var tagType = getQueryTag(user, name, 0);
             if (!tagType.type) {
                 console.log(tagType);
-                return _promise2.default.reject(new _utility.HoError('not authority delete default tag!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('not authority delete default tag!!!'));
             }
             return (0, _mongoTool2.default)('find', collection, { _id: id }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('can not find object!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('can not find object!!!'));
                 }
                 if (tagType.type === 2) {
                     return (0, _mongoTool2.default)('update', collection, { _id: id }, { $set: tagType.tag }).then(function (item1) {
@@ -868,7 +899,7 @@ function process(collection) {
                     if (tagType.tag.tags === normalize(items[0].name)) {
                         console.log(tagType.tag.tags);
                         console.log(normalize(items[0].name));
-                        (0, _utility.handleError)(new _utility.HoError('can not delete file name!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('can not delete file name!!!'));
                     }
                     if ((0, _utility.checkAdmin)(1, user)) {
                         console.log('authority del tag');
@@ -912,7 +943,7 @@ function process(collection) {
                     }
                 } else {
                     console.log(tagType);
-                    return _promise2.default.reject(new _utility.HoError('unknown del tag type!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('unknown del tag type!!!'));
                 }
             });
         },
@@ -922,7 +953,11 @@ function process(collection) {
             tags.reverse();
             var history = [];
             var select = [];
-            var normal = normalize((0, _utility.isValidString)(objName, 'name', 'name is not vaild'));
+            var validName = (0, _utility.isValidString)(objName, 'name');
+            if (!validName) {
+                return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+            }
+            var normal = normalize(validName);
             var handle_tag = function handle_tag(index) {
                 return tags[index].select ? _this.addTag(uid, tags[index].tag, user) : _this.delTag(uid, tags[index].tag, user);
             };
@@ -940,11 +975,14 @@ function process(collection) {
                         return recur_tag(index);
                     }
                 }).then(function () {
-                    var id = (0, _utility.isValidString)(uid, 'uid', 'uid is not vaild');
+                    var id = (0, _utility.isValidString)(uid, 'uid');
+                    if (!id) {
+                        return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+                    }
                     return (0, _mongoTool2.default)('update', collection, { _id: id }, { $set: { untag: 0 } }).then(function (item) {
                         return (0, _mongoTool2.default)('find', collection, { _id: id }, { limit: 1 }).then(function (items) {
                             if (items.length < 1) {
-                                (0, _utility.handleError)(new _utility.HoError('can not find object!!!'));
+                                return (0, _utility.handleReject)(new _utility.HoError('can not find object!!!'));
                             }
                             return {
                                 history: history,
@@ -1073,9 +1111,13 @@ function process(collection) {
         getBookmark: function getBookmark(id, sortName, sortType, user, session) {
             var _this2 = this;
 
-            return (0, _mongoTool2.default)('find', collection + 'User', { _id: (0, _utility.isValidString)(id, 'uid', 'bookmark is not vaild') }, { limit: 1 }).then(function (items) {
+            var validId = (0, _utility.isValidString)(id, 'uid');
+            if (!validId) {
+                return (0, _utility.handleReject)(new _utility.HoError('bookmark is not vaild!!!'));
+            }
+            return (0, _mongoTool2.default)('find', collection + 'User', { _id: validId }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('can not find bookmark!!!'));
+                    return (0, _utility.handleReject)(new _utility.HoError('can not find bookmark!!!'));
                 }
                 _this2.searchTags(session).setArray(items[0]._id, items[0].tag, items[0].exactly);
                 return _this2.tagQuery(0, null, null, null, sortName, sortType, user, session);
@@ -1094,7 +1136,7 @@ function process(collection) {
                 bexactly = parentList.exactly;
             }
             if (bpath.length <= 0) {
-                return _promise2.default.reject(new _utility.HoError('empty parent list!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('empty parent list!!!'));
             }
             return (0, _mongoTool2.default)('find', collection + 'User', {
                 userId: user._id,
@@ -1115,7 +1157,7 @@ function process(collection) {
                 }) : (0, _mongoTool2.default)('count', collection + 'User', { userId: user._id }).then(function (count) {
                     if (count >= _constants.BOOKMARK_LIMIT) {
                         console.log(count);
-                        (0, _utility.handleError)(new _utility.HoError('too much bookmark!!!'));
+                        return (0, _utility.handleReject)(new _utility.HoError('too much bookmark!!!'));
                     }
                     return (0, _mongoTool2.default)('insert', collection + 'User', {
                         userId: user._id,
@@ -1136,8 +1178,12 @@ function process(collection) {
             });
         },
         delBookmark: function delBookmark(id) {
+            var validId = (0, _utility.isValidString)(id, 'uid');
+            if (!validId) {
+                return (0, _utility.handleReject)(new _utility.HoError('bookmark is not vaild!!!'));
+            }
             return (0, _mongoTool2.default)('remove', collection + 'User', {
-                _id: (0, _utility.isValidString)(id, 'uid', 'bookmark is not vaild'),
+                _id: validId,
                 $isolated: 1
             }).then(function (item) {
                 return { id: id };
@@ -1150,16 +1196,19 @@ function process(collection) {
             return _constants.ADULTONLY_PARENT;
         },
         parentQuery: function parentQuery(tagName, sortName, sortType, page, user) {
-            var name = (0, _utility.isValidString)(tagName, 'name', 'name is not vaild');
+            var name = (0, _utility.isValidString)(tagName, 'name');
+            if (!name) {
+                return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+            }
             if (!inParentArray(name)) {
                 if ((0, _utility.checkAdmin)(2, user)) {
                     if (!inAdultonlyArray(name)) {
                         console.log(name);
-                        (0, _utility.handleError)(new _utility.HoError('name is not allow'));
+                        return (0, _utility.handleReject)(new _utility.HoError('name is not allow'));
                     }
                 } else {
                     console.log(name);
-                    (0, _utility.handleError)(new _utility.HoError('name is not allow'));
+                    return (0, _utility.handleReject)(new _utility.HoError('name is not allow'));
                 }
             }
             return (0, _mongoTool2.default)('find', collection + 'Dir', { parent: name }, {
@@ -1178,9 +1227,13 @@ function process(collection) {
         queryParentTag: function queryParentTag(id, single, sortName, sortType, user, session) {
             var _this3 = this;
 
-            return (0, _mongoTool2.default)('find', collection + 'Dir', { _id: (0, _utility.isValidString)(id, 'uid', 'parent is not vaild') }, { limit: 1 }).then(function (parents) {
+            var validId = (0, _utility.isValidString)(id, 'uid');
+            if (!validId) {
+                return (0, _utility.handleReject)(new _utility.HoError('parent is not vaild!!!'));
+            }
+            return (0, _mongoTool2.default)('find', collection + 'Dir', { _id: validId }, { limit: 1 }).then(function (parents) {
                 if (parents.length < 1) {
-                    (0, _utility.handleError)(new _utility.HoError('can not find dir'));
+                    return (0, _utility.handleReject)(new _utility.HoError('can not find dir'));
                 }
                 if (single === 'single') {
                     _this3.searchTags(session).resetArray();
@@ -1193,19 +1246,26 @@ function process(collection) {
             });
         },
         addParent: function addParent(parentName, tagName, user) {
-            var name = (0, _utility.isValidString)(parentName, 'name', 'name is not vaild');
+            var name = (0, _utility.isValidString)(parentName, 'name');
+            if (!name) {
+                return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+            }
             if (!inParentArray(name)) {
                 if ((0, _utility.checkAdmin)(2, user)) {
                     if (!inAdultonlyArray(name)) {
                         console.log(name);
-                        (0, _utility.handleError)(new _utility.HoError('name is not allow'));
+                        return (0, _utility.handleReject)(new _utility.HoError('name is not allow'));
                     }
                 } else {
                     console.log(name);
-                    (0, _utility.handleError)(new _utility.HoError('name is not allow'));
+                    return (0, _utility.handleReject)(new _utility.HoError('name is not allow'));
                 }
             }
-            var normal = normalize((0, _utility.isValidString)(tagName, 'name', 'tag name is not vaild'));
+            var validName = (0, _utility.isValidString)(tagName, 'name');
+            if (!validName) {
+                return (0, _utility.handleReject)(new _utility.HoError('tag name is not vaild!!!'));
+            }
+            var normal = normalize(validName);
             return (0, _mongoTool2.default)('find', collection + 'Dir', {
                 parent: name,
                 name: normal
@@ -1228,11 +1288,14 @@ function process(collection) {
         delParent: function delParent(uid, user) {
             if (!(0, _utility.checkAdmin)(1, user)) {
                 console.log(user);
-                (0, _utility.handleError)(new _utility.HoError('permission denied'));
+                return (0, _utility.handleReject)(new _utility.HoError('permission denied'));
             }
-            var id = (0, _utility.isValidString)(uid, 'uid', 'parent is not vaild');
+            var id = (0, _utility.isValidString)(uid, 'uid');
+            if (!id) {
+                return (0, _utility.handleReject)(new _utility.HoError('parent is not vaild!!!'));
+            }
             return (0, _mongoTool2.default)('remove', collection + 'Dir', {
-                _id: id,
+                _id: _id,
                 $isolated: 1
             }).then(function (parent) {
                 return parent ? { id: id } : { apiOK: true };

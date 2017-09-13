@@ -38,10 +38,10 @@ router.get('/s', function (req, res, next) {
         limit: 1
     }).then(function (items) {
         if (items.length < 1) {
-            (0, _utility.handleError)(new _utility.HoError('cannot find url'));
+            return (0, _utility.handleReject)(new _utility.HoError('cannot find url'));
         }
         if (!items[0].url) {
-            (0, _utility.handleError)(new _utility.HoError('dont have url'));
+            return (0, _utility.handleReject)(new _utility.HoError('dont have url'));
         }
         var url = decodeURIComponent(items[0].url);
         res.header('Content-Type', 'text/plain');

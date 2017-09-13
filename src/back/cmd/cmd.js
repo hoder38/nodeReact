@@ -6,20 +6,24 @@ import { userDrive, autoDoc } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, isValidString, HoError } from '../util/utility'
+import { handleError, handleReject, isValidString, HoError } from '../util/utility'
 
 function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     drive_batch = isNaN(drive_batch) ? DRIVE_LIMIT : Number(drive_batch);
     console.log(drive_batch);
     console.log('cmdUpdateDrive');
     console.log(new Date());
-    const isSingle = () => Mongo('find', USERDB, Object.assign({auto: {$exists: true}}, singleUser ? {username: isValidString(singleUser, 'name', 'user name not valid!!!')} : {}));
+    const username = isValidString(singleUser, 'name');
+    if (!username) {
+        return handleReject(new HoError('user name not valid!!!'));
+    }
+    const isSingle = () => Mongo('find', USERDB, Object.assign({auto: {$exists: true}}, singleUser ? {username} : {}));
     return isSingle().then(userlist => userDrive(userlist, 0, drive_batch));
 }
 
 const dbDump = collection => {
     if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
-        handleError(new HoError('Collection not find'));
+        return handleReject(new HoError('Collection not find'));
     }
     const folderPath = `/mnt/mongodb/backup/${collection}`;
     const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
@@ -41,7 +45,7 @@ const dbDump = collection => {
 
 const dbRestore = collection => {
     if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
-        handleError(new HoError('Collection not find'));
+        return handleReject(new HoError('Collection not find'));
     }
     const folderPath = `/mnt/mongodb/backup/${collection}`;
     const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store));

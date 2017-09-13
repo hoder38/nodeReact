@@ -238,7 +238,7 @@ function api(name, data) {
                     }, 500);
                 });
             default:
-                return _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown api')));
+                return (0, _utility.handleReject)(new _utility.HoError('unknown api'));
         }
     });
 }
@@ -311,7 +311,7 @@ function get() {
                         };
                     default:
                         return {
-                            v: _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown google api'))).catch(function (err) {
+                            v: (0, _utility.handleReject)(new _utility.HoError('unknown google api')).catch(function (err) {
                                 return (0, _utility.handleError)(err, 'Google api');
                             }).then(function (rest) {
                                 return get(rest);
@@ -390,7 +390,7 @@ function expire(name, data) {
                                 };
                             default:
                                 return {
-                                    v: _promise2.default.reject((0, _utility.handleError)(new _utility.HoError('unknown google api'))).catch(function (err) {
+                                    v: (0, _utility.handleReject)(new _utility.HoError('unknown google api')).catch(function (err) {
                                         return (0, _utility.handleError)(err, 'Google api');
                                     }).then(function (rest) {
                                         return get(rest);
@@ -412,7 +412,7 @@ function expire(name, data) {
 var checkOauth = function checkOauth() {
     return !tokens.access_token || !tokens.expiry_date ? (0, _mongoTool2.default)('find', 'accessToken', { api: 'google' }, { limit: 1 }).then(function (token) {
         if (token.length === 0) {
-            (0, _utility.handleError)(new _utility.HoError('can not find token'));
+            return (0, _utility.handleReject)(new _utility.HoError('can not find token'));
         }
         console.log('first');
         tokens = token[0];
@@ -448,7 +448,9 @@ function youtubeAPI(method, data) {
         switch (method) {
             case 'y search':
                 if (!data['order'] || !data['maxResults'] || !data['type']) {
-                    (0, _utility.handleError)(new _utility.HoError('search parameter lost!!!'));
+                    return {
+                        v: (0, _utility.handleReject)(new _utility.HoError('search parameter lost!!!'))
+                    };
                 }
                 if (data['id_arr'] && data['id_arr'].length > 0) {
                     data['maxResults'] = data['id_arr'].length > 20 ? 0 : data['maxResults'] - data['id_arr'].length;
@@ -479,7 +481,7 @@ function youtubeAPI(method, data) {
                         });
                     }).then(function (metadata) {
                         if (!metadata.items) {
-                            (0, _utility.handleError)(new _utility.HoError('search error'));
+                            return (0, _utility.handleReject)(new _utility.HoError('search error'));
                         }
                         var video_id = new _set2.default();
                         var playlist_id = new _set2.default();
@@ -526,7 +528,9 @@ function youtubeAPI(method, data) {
                 };
             case 'y channel':
                 if (!data['id']) {
-                    (0, _utility.handleError)(new _utility.HoError('channel parameter lost!!!'));
+                    return {
+                        v: (0, _utility.handleReject)(new _utility.HoError('channel parameter lost!!!'))
+                    };
                 }
                 return {
                     v: new _promise2.default(function (resolve, reject) {
@@ -556,7 +560,9 @@ function youtubeAPI(method, data) {
                 };
             case 'y playItem':
                 if (!data['id']) {
-                    (0, _utility.handleError)(new _utility.HoError('playItem parameter lost!!!'));
+                    return {
+                        v: (0, _utility.handleReject)(new _utility.HoError('playItem parameter lost!!!'))
+                    };
                 }
                 return {
                     v: new _promise2.default(function (resolve, reject) {
@@ -577,7 +583,9 @@ function youtubeAPI(method, data) {
                 };
             default:
                 console.log(method);
-                (0, _utility.handleError)(new _utility.HoError('youtube api unknown!!!'));
+                return {
+                    v: (0, _utility.handleReject)(new _utility.HoError('youtube api unknown!!!'))
+                };
         }
     }();
 
@@ -586,7 +594,7 @@ function youtubeAPI(method, data) {
 
 function upload(data) {
     if (!data['type'] || !data['name'] || !data['filePath'] && !data['body']) {
-        (0, _utility.handleError)(new _utility.HoError('upload parameter lost!!!'), data['errhandle']);
+        return (0, _utility.handleReject)(new _utility.HoError('upload parameter lost!!!'), data['errhandle']);
     }
     var parent = {};
     var mimeType = '*/*';
@@ -595,7 +603,7 @@ function upload(data) {
             parent = { id: (0, _config.GOOGLE_MEDIA_FOLDER)(_ver.ENV_TYPE) };
             mimeType = (0, _mime.mediaMIME)(data['name']);
             if (!mimeType) {
-                (0, _utility.handleError)(new _utility.HoError('upload mime type unknown!!!'), data['errhandle']);
+                return (0, _utility.handleReject)(new _utility.HoError('upload mime type unknown!!!'), data['errhandle']);
             }
             break;
         case 'backup':
@@ -609,7 +617,7 @@ function upload(data) {
             }
             break;
         default:
-            (0, _utility.handleError)(new _utility.HoError('upload type unknown!!!'), data['errhandle']);
+            return (0, _utility.handleReject)(new _utility.HoError('upload type unknown!!!'), data['errhandle']);
     }
     var param = data['filePath'] ? {
         resource: {
@@ -664,7 +672,7 @@ function upload(data) {
             (0, _utility.handleError)(err, 'google upload');
             if (index > _constants.MAX_RETRY) {
                 console.log(data);
-                (0, _utility.handleError)(err, data['errhandle']);
+                return (0, _utility.handleReject)(err, data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -685,7 +693,7 @@ function stopApi() {
 
 function list(data) {
     if (!data['folderId']) {
-        (0, _utility.handleError)(new _utility.HoError('list parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('list parameter lost!!!'));
     }
     var find_name = data['name'] ? ' and title = \'' + data['name'] + '\'' : '';
     var proc = function proc(index) {
@@ -697,7 +705,7 @@ function list(data) {
                 q: '\'' + data['folderId'] + '\' in parents and trashed = false and mimeType = \'application/vnd.google-apps.folder\'' + find_name,
                 maxResults: data['max'] ? data['max'] : _constants.DRIVE_LIMIT
             }, function (err, metadata) {
-                return err && err.code !== 'ECONNRESET' ? reject((0, _utility.handleError)(err)) : resolve(metadata);
+                return err && err.code !== 'ECONNRESET' ? reject(err) : resolve(metadata);
             });
         }).then(function (metadata) {
             if (metadata && metadata.items) {
@@ -719,7 +727,7 @@ function list(data) {
 
 function listFile(data) {
     if (!data['folderId']) {
-        (0, _utility.handleError)(new _utility.HoError('list parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('list parameter lost!!!'));
     }
     if (data['max']) {
         max = data['max'];
@@ -733,16 +741,16 @@ function listFile(data) {
                 q: '\'' + data['folderId'] + '\' in parents and trashed = false and mimeType != \'application/vnd.google-apps.folder\'',
                 maxResults: data['max'] ? data['max'] : _constants.DRIVE_LIMIT
             }, function (err, metadata) {
-                return err && err.code !== 'ECONNRESET' ? reject((0, _utility.handleError)(err)) : resolve(metadata);
+                return err && err.code !== 'ECONNRESET' ? reject(err) : resolve(metadata);
             });
         }).then(function (metadata) {
             return metadata.items;
         }).catch(function (err) {
-            return err.code == '401' ? index > _constants.MAX_RETRY ? _promise2.default.reject(err) : new _promise2.default(function (resolve, reject) {
+            return err.code == '401' ? index > _constants.MAX_RETRY ? (0, _utility.handleReject)(err) : new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
                     return resolve(proc(index + 1));
                 }, _constants.OATH_WAITING * 1000);
-            }) : _promise2.default.reject(err);
+            }) : (0, _utility.handleReject)(err);
         });
     };
     return proc(1);
@@ -750,7 +758,7 @@ function listFile(data) {
 
 function create(data) {
     if (!data['name'] || !data['parent']) {
-        (0, _utility.handleError)(new _utility.HoError('create parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('create parameter lost!!!'));
     }
     return new _promise2.default(function (resolve, reject) {
         return _googleapis2.default.drive({
@@ -761,14 +769,14 @@ function create(data) {
                 mimeType: 'application/vnd.google-apps.folder',
                 parents: [{ id: data['parent'] }]
             } }, function (err, metadata) {
-            return err && err.code !== 'ECONNRESET' ? reject((0, _utility.handleError)(err)) : resolve(metadata);
+            return err && err.code !== 'ECONNRESET' ? reject(err) : resolve(metadata);
         });
     });
 }
 
 function download(data) {
     if (!data['url'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('download parameter lost!!!'), data['errhandle']);
+        return (0, _utility.handleReject)(new _utility.HoError('download parameter lost!!!'), data['errhandle']);
     }
     var temp = data['filePath'] + '_t';
     var checkTmp = function checkTmp() {
@@ -788,10 +796,7 @@ function download(data) {
                     var dest = (0, _fs.createWriteStream)(temp);
                     res.body.pipe(dest);
                     dest.on('finish', function () {
-                        if (res.headers['content-length'] && Number(res.headers['content-length']) !== (0, _fs.statSync)(data['filePath'])['size']) {
-                            (0, _utility.handleError)(new _utility.HoError('incomplete download'));
-                        }
-                        return resolve();
+                        return res.headers['content-length'] && Number(res.headers['content-length']) !== (0, _fs.statSync)(data['filePath'])['size'] ? (0, _utility.handleReject)(new _utility.HoError('incomplete download')) : resolve();
                     }).on('error', function (err) {
                         return reject(err);
                     });
@@ -817,7 +822,7 @@ function download(data) {
             (0, _utility.handleError)(err, 'Google Fetch');
             if (index > _constants.MAX_RETRY) {
                 console.log(data['url']);
-                (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
+                return (0, _utility.handleReject)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -831,35 +836,35 @@ function download(data) {
 
 function deleteFile(data) {
     if (!data['fileId']) {
-        (0, _utility.handleError)(new _utility.HoError('delete parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('delete parameter lost!!!'));
     }
     return new _promise2.default(function (resolve, reject) {
         return _googleapis2.default.drive({
             version: 'v2',
             auth: oauth2Client
         }).files.trash({ fileId: data['fileId'] }, function (err) {
-            return err && err.code !== 'ECONNRESET' ? reject((0, _utility.handleError)(err)) : resolve();
+            return err && err.code !== 'ECONNRESET' ? reject(err) : resolve();
         });
     });
 }
 
 function getFile(data) {
     if (!data['fileId']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('get parameter lost!!!'));
     }
     return new _promise2.default(function (resolve, reject) {
         return _googleapis2.default.drive({
             version: 'v2',
             auth: oauth2Client
         }).files.get({ fileId: data['fileId'] }, function (err, metadata) {
-            return err && err.code !== 'ECONNRESET' ? reject((0, _utility.handleError)(err)) : resolve(metadata);
+            return err && err.code !== 'ECONNRESET' ? reject(err) : resolve(metadata);
         });
     });
 }
 
 function copyFile(data) {
     if (!data['fileId']) {
-        (0, _utility.handleError)(new _utility.HoError('copy parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('copy parameter lost!!!'));
     }
     return new _promise2.default(function (resolve, reject) {
         return _googleapis2.default.drive({
@@ -873,7 +878,7 @@ function copyFile(data) {
 
 function moveParent(data) {
     if (!data['fileId'] || !data['rmFolderId'] || !data['addFolderId']) {
-        (0, _utility.handleError)(new _utility.HoError('move parent parameter lost!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('move parent parameter lost!!!'));
     }
     return new _promise2.default(function (resolve, reject) {
         return _googleapis2.default.drive({
@@ -891,7 +896,7 @@ function moveParent(data) {
 
 function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
+        return (0, _utility.handleReject)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var proc = function proc(index) {
         return new _promise2.default(function (resolve, reject) {
@@ -944,7 +949,7 @@ function downloadMedia(data) {
             }
             console.log(media_id);
             if (!media_id) {
-                (0, _utility.handleError)(new _utility.HoError('quality low'));
+                return (0, _utility.handleReject)(new _utility.HoError('quality low'));
             }
             var getSavePath = function getSavePath() {
                 return (0, _fs.existsSync)(data['filePath']) ? (0, _fs.existsSync)(data['filePath'] + '_t') ? new _promise2.default(function (resolve, reject) {
@@ -994,7 +999,7 @@ function downloadMedia(data) {
             (0, _utility.handleError)(err, 'Youtubedl Fetch');
             if (index > _constants.MAX_RETRY) {
                 console.log(data['key']);
-                (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
+                return (0, _utility.handleReject)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
@@ -1008,7 +1013,7 @@ function downloadMedia(data) {
 
 function downloadPresent(data) {
     if (!data['exportlink'] || !data['alternate'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
+        return (0, _utility.handleReject)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var number = 0;
     var present_html = data['filePath'] + '_b.htm';
@@ -1035,7 +1040,7 @@ function downloadPresent(data) {
                 number++;
                 var pageid = output.match(/\"p(\d+)\"/);
                 if (!pageid) {
-                    (0, _utility.handleError)(new _utility.HoError('can not find present'));
+                    return (0, _utility.handleReject)(new _utility.HoError('can not find present'));
                 }
                 return download({
                     url: '' + exportlink + pageid[1],
@@ -1065,14 +1070,14 @@ function downloadPresent(data) {
                 };
             }
         } else {
-            (0, _utility.handleError)(err, data['errhandle']);
+            return (0, _utility.handleReject)(err, data['errhandle']);
         }
     });
 }
 
 function downloadDoc(data) {
     if (!data['exportlink'] || !data['filePath']) {
-        (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
+        return (0, _utility.handleReject)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
     var zip = data['filePath'] + '.zip';
     return download({
@@ -1080,7 +1085,7 @@ function downloadDoc(data) {
         filePath: zip
     }).then(function () {
         if (!(0, _fs.existsSync)(zip)) {
-            (0, _utility.handleError)(new _utility.HoError('cannot find zip'));
+            return (0, _utility.handleReject)(new _utility.HoError('cannot find zip'));
         }
         var dir = data['filePath'] + '_doc';
         var docDir = function docDir() {
@@ -1185,7 +1190,7 @@ function googleBackup(user, id, name, filePath, tags, recycle) {
                 body: tags.toString()
             });
         default:
-            (0, _utility.handleError)(new _utility.HoError('recycle ' + recycle + ' denied!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('recycle ' + recycle + ' denied!!!'));
     }
 }
 
@@ -1260,7 +1265,7 @@ function googleDownloadSubtitle(url, filePath) {
                 }
             });
             if (!choose && !en) {
-                (0, _utility.handleError)(new _utility.HoError('sub donot have chinese and english!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('sub donot have chinese and english!!!'));
             }
             var preSub = function preSub(sub, lang) {
                 if (sub) {
@@ -1284,7 +1289,7 @@ function googleDownloadSubtitle(url, filePath) {
             var ext = preSub(choose, '');
             var en_ext = preSub(en, '.en');
             if (!ext && !en_ext) {
-                (0, _utility.handleError)(new _utility.HoError('sub ext not support!!!'));
+                return (0, _utility.handleReject)(new _utility.HoError('sub ext not support!!!'));
             }
             var renameSub = function renameSub(sub, lang, sub_ext) {
                 if (sub_ext) {
@@ -1370,7 +1375,7 @@ function userDrive(userlist, index) {
                             name: 'uploaded'
                         }).then(function (uploadedList) {
                             if (uploadedList.length < 1) {
-                                (0, _utility.handleError)(new _utility.HoError('do not have uploaded folder!!!'));
+                                return (0, _utility.handleReject)(new _utility.HoError('do not have uploaded folder!!!'));
                             }
                             uploaded = uploadedList[0].id;
                         });
@@ -1381,7 +1386,7 @@ function userDrive(userlist, index) {
                             name: 'handling'
                         }).then(function (handlingList) {
                             if (handlingList.length < 1) {
-                                (0, _utility.handleError)(new _utility.HoError('do not have handling folder!!!'));
+                                return (0, _utility.handleReject)(new _utility.HoError('do not have handling folder!!!'));
                             }
                             handling = handlingList[0].id;
                         });
@@ -1414,7 +1419,7 @@ function autoDoc(userlist, index, type) {
     console.log(userlist[index].username);
     date = date ? date : new Date();
     if (!_constants.DOC_TYPE.hasOwnProperty(type)) {
-        (0, _utility.handleError)(new _utility.HoError('do not have this country!!!'));
+        return (0, _utility.handleReject)(new _utility.HoError('do not have this country!!!'));
     }
     var downloaded = null;
     var downloaded_data = {
@@ -1423,7 +1428,7 @@ function autoDoc(userlist, index, type) {
     };
     return api('list folder', downloaded_data).then(function (downloadedList) {
         if (downloadedList.length < 1) {
-            (0, _utility.handleError)(new _utility.HoError('do not have downloaded folder!!!'));
+            return (0, _utility.handleReject)(new _utility.HoError('do not have downloaded folder!!!'));
         }
         downloaded = downloadedList[0].id;
         var download_ext_doc = function download_ext_doc(tIndex, doc_type) {

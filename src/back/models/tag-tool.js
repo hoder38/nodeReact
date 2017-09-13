@@ -1,7 +1,7 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
 import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY } from '../constants'
-import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
+import { checkAdmin, isValidString, selectRandom, handleError, handleReject, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
 
@@ -81,10 +81,32 @@ export default function process(collection) {
                 parentList = tags.getArray();
             } else if (!index) {
                 const defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(((collection === STOCKDB && defau.index === 31) || (collection === STORAGEDB && defau.index === 31)) ? tagName : isValidString(tagName, 'name', 'name is not vaild'), exactly);
+                let validTagName = '';
+                if ((collection === STOCKDB && defau.index === 31) || (collection === STORAGEDB && defau.index === 31)) {
+                    validTagName = tagName;
+                } else {
+                    validTagName = isValidString(tagName, 'name');
+                    if (!validTagName) {
+                        return handleReject(new HoError('name not vaild!!!'));
+                    }
+                }
+                parentList = tags.getArray(validTagName, exactly);
             } else {
                 const defau = isDefaultTag(normalize(tagName));
-                parentList = tags.getArray(((collection === STOCKDB && defau.index === 31) || (collection === 'storage' && defau.index === 31)) ? tagName : isValidString(tagName, 'name', 'name is not vaild'), exactly, isValidString(index, 'parentIndex', 'parentIndex is not vaild'));
+                let validTagName = '';
+                if ((collection === STOCKDB && defau.index === 31) || (collection === STORAGEDB && defau.index === 31)) {
+                    validTagName = tagName;
+                } else {
+                    validTagName = isValidString(tagName, 'name');
+                    if (!validTagName) {
+                        return handleReject(new HoError('name not vaild!!!'));
+                    }
+                }
+                const validIndex = isValidString(index, 'parentIndex');
+                if (!validIndex) {
+                    return handleReject(new HoError('parentIndex is not vaild!!!'));
+                }
+                parentList = tags.getArray(validTagName, exactly, validIndex);
             }
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
             return sql ? Mongo('find', collection, sql.nosql, sql.select ? sql.select : {}, Object.assign({
@@ -116,7 +138,10 @@ export default function process(collection) {
             }) : returnPath([], parentList);
         },
         singleQuery: function(uid, user, session) {
-            const id = isValidString(uid, 'uid', 'uid is not vaild');
+            const id = isValidString(uid, 'uid');
+            if (!id) {
+                return handleReject(new HoError('uid is not vaild!!!'));
+            }
             const parentList = this.searchTags(session).getArray();
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
             if (sql) {
@@ -581,7 +606,10 @@ export default function process(collection) {
             });
         },
         addTag: function(uid, tag, user, checkValid=true) {
-            const name = isValidString(tag, 'name', 'name is not vaild');
+            const name = isValidString(tag, 'name');
+            if (!name) {
+                return handleReject(new HoError('name is not vaild!!!'));
+            }
             const id = isValidString(uid, 'uid');
             if (id === false) {
                 return new Promise((resolve, reject) => checkValid ? reject(new HoError('uid is not vaild')) : resolve({}));
@@ -589,12 +617,12 @@ export default function process(collection) {
             let tagType = getQueryTag(user, name);
             if (!tagType.type) {
                 console.log(tagType);
-                return Promise.reject(new HoError('not authority set default tag!!!'));
+                return handleReject(new HoError('not authority set default tag!!!'));
             }
             if (tagType.type === 2) {
                 return Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                     if (items.length < 1) {
-                        handleError(new HoError('can not find object!!!'));
+                        return handleReject(new HoError('can not find object!!!'));
                     }
                     return (tagType.tag.hasOwnProperty('adultonly') && items[0].adultonly === tagType.tag.adultonly) || (tagType.tag.hasOwnProperty('first') && items[0].first === tagType.tag.first) || (tagType.tag.hasOwnProperty('important') && items[0].important === tagType.tag.important) ? {
                         id: items[0]._id,
@@ -615,7 +643,7 @@ export default function process(collection) {
             } else if (tagType.type === 1) {
                 return Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                     if (items.length < 1) {
-                        handleError(new HoError('can not find object!!!'));
+                        return handleReject(new HoError('can not find object!!!'));
                     }
                     if (!items[0].tags.includes(tagType.tag.tags)) {
                         tagType.tag[user._id.toString()] = tagType.tag.tags;
@@ -634,13 +662,16 @@ export default function process(collection) {
                 });
             } else {
                 console.log(tagType);
-                return Promise.reject(new HoError('unknown add tag type!!!'));
+                return handleReject(new HoError('unknown add tag type!!!'));
             }
         },
         delTag: function(uid, tag, user, checkValid=true) {
             let name = isValidString(tag, 'name');
             if (name === false) {
-                name = isValidString(tag, 'url', 'name is not vaild');
+                name = isValidString(tag, 'url');
+                if (!name) {
+                    return handleReject(new HoError('name is not vaild!!!'));
+                }
             }
             const id = isValidString(uid, 'uid');
             if (id === false) {
@@ -649,11 +680,11 @@ export default function process(collection) {
             let tagType = getQueryTag(user, name, 0);
             if (!tagType.type) {
                 console.log(tagType);
-                return Promise.reject(new HoError('not authority delete default tag!!!'));
+                return handleReject(new HoError('not authority delete default tag!!!'));
             }
             return Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    handleError(new HoError('can not find object!!!'));
+                    return handleReject(new HoError('can not find object!!!'));
                 }
                 if (tagType.type === 2) {
                     return Mongo('update', collection, { _id: id}, {$set: tagType.tag}).then(item1 => ({
@@ -665,7 +696,7 @@ export default function process(collection) {
                     if (tagType.tag.tags === normalize(items[0].name)) {
                         console.log(tagType.tag.tags);
                         console.log(normalize(items[0].name));
-                        handleError(new HoError('can not delete file name!!!'));
+                        return handleReject(new HoError('can not delete file name!!!'));
                     }
                     if (checkAdmin(1, user)) {
                         console.log('authority del tag');
@@ -705,7 +736,7 @@ export default function process(collection) {
                     }
                 } else {
                     console.log(tagType);
-                    return Promise.reject(new HoError('unknown del tag type!!!'));
+                    return handleReject(new HoError('unknown del tag type!!!'));
                 }
             });
         },
@@ -713,7 +744,11 @@ export default function process(collection) {
             tags.reverse();
             let history = [];
             let select = [];
-            const normal = normalize(isValidString(objName, 'name', 'name is not vaild'));
+            const validName = isValidString(objName, 'name');
+            if (!validName) {
+                return handleReject(new HoError('name is not vaild!!!'));
+            }
+            const normal = normalize(validName);
             const handle_tag = index => tags[index].select ? this.addTag(uid, tags[index].tag, user) : this.delTag(uid, tags[index].tag, user);
             const recur_tag = index => handle_tag(index).then(result => {
                 if (result.tag !== normal) {
@@ -726,10 +761,13 @@ export default function process(collection) {
                     return recur_tag(index);
                 }
             }).then(() => {
-                const id = isValidString(uid, 'uid', 'uid is not vaild');
+                const id = isValidString(uid, 'uid');
+                if (!id) {
+                    return handleReject(new HoError('uid is not vaild!!!'));
+                }
                 return Mongo('update', collection, {_id: id}, {$set: {untag: 0}}).then(item => Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                     if (items.length < 1) {
-                        handleError(new HoError('can not find object!!!'));
+                        return handleReject(new HoError('can not find object!!!'));
                     }
                     return {
                         history,
@@ -849,9 +887,13 @@ export default function process(collection) {
             }))}));
         },
         getBookmark: function(id, sortName, sortType, user, session) {
-            return Mongo('find', `${collection}User`, {_id: isValidString(id, 'uid', 'bookmark is not vaild')}, {limit: 1}).then(items => {
+            const validId = isValidString(id, 'uid');
+            if (!validId) {
+                return handleReject(new HoError('bookmark is not vaild!!!'));
+            }
+            return Mongo('find', `${collection}User`, {_id: validId}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    handleError(new HoError('can not find bookmark!!!'));
+                    return handleReject(new HoError('can not find bookmark!!!'));
                 }
                 this.searchTags(session).setArray(items[0]._id, items[0].tag, items[0].exactly);
                 return this.tagQuery(0, null, null, null, sortName, sortType, user, session);
@@ -870,14 +912,14 @@ export default function process(collection) {
                 bexactly = parentList.exactly;
             }
             if (bpath.length <= 0) {
-                return Promise.reject(new HoError('empty parent list!!!'));
+                return handleReject(new HoError('empty parent list!!!'));
             }
             return Mongo('find', `${collection}User`, {
                 userId: user._id,
-                name: name,
+                name,
             }, {limit: 1}).then(items => (items.length > 0) ? Mongo('update', `${collection}User`, {
                 userId: user._id,
-                name: name,
+                name,
             }, {$set: {
                 tag: bpath,
                 exactly: bexactly,
@@ -890,7 +932,7 @@ export default function process(collection) {
             }) : Mongo('count', `${collection}User`, {userId: user._id}).then(count => {
                 if (count >= BOOKMARK_LIMIT) {
                     console.log(count);
-                    handleError(new HoError('too much bookmark!!!'));
+                    return handleReject(new HoError('too much bookmark!!!'));
                 }
                 return Mongo('insert', `${collection}User`, {
                     userId: user._id,
@@ -910,8 +952,12 @@ export default function process(collection) {
             }));
         },
         delBookmark: function(id) {
+            const validId = isValidString(id, 'uid');
+            if (!validId) {
+                return handleReject(new HoError('bookmark is not vaild!!!'));
+            }
             return Mongo('remove', `${collection}User`, {
-                _id: isValidString(id, 'uid', 'bookmark is not vaild'),
+                _id: validId,
                 $isolated: 1,
             }).then(item => ({id: id}));
         },
@@ -922,16 +968,19 @@ export default function process(collection) {
             return ADULTONLY_PARENT;
         },
         parentQuery: function(tagName, sortName, sortType, page, user) {
-            const name = isValidString(tagName, 'name', 'name is not vaild');
+            const name = isValidString(tagName, 'name');
+            if (!name) {
+                return handleReject(new HoError('name is not vaild!!!'));
+            }
             if (!inParentArray(name)) {
                 if (checkAdmin(2, user)) {
                     if(!inAdultonlyArray(name)) {
                         console.log(name);
-                        handleError(new HoError('name is not allow'));
+                        return handleReject(new HoError('name is not allow'));
                     }
                 } else {
                     console.log(name);
-                    handleError(new HoError('name is not allow'));
+                    return handleReject(new HoError('name is not allow'));
                 }
             }
             return Mongo('find', `${collection}Dir` ,{parent: name}, {
@@ -947,9 +996,13 @@ export default function process(collection) {
             }))}));
         },
         queryParentTag: function(id, single, sortName, sortType, user, session) {
-            return Mongo('find', `${collection}Dir` ,{_id: isValidString(id, 'uid', 'parent is not vaild')}, {limit: 1}).then(parents => {
+            const validId = isValidString(id, 'uid');
+            if (!validId) {
+                return handleReject(new HoError('parent is not vaild!!!'));
+            }
+            return Mongo('find', `${collection}Dir` ,{_id: validId}, {limit: 1}).then(parents => {
                 if (parents.length < 1) {
-                    handleError(new HoError('can not find dir'));
+                    return handleReject(new HoError('can not find dir'));
                 }
                 if (single === 'single') {
                     this.searchTags(session).resetArray();
@@ -958,19 +1011,26 @@ export default function process(collection) {
             });
         },
         addParent: function(parentName, tagName, user) {
-            const name = isValidString(parentName, 'name', 'name is not vaild');
+            const name = isValidString(parentName, 'name');
+            if (!name) {
+                return handleReject(new HoError('name is not vaild!!!'));
+            }
             if (!inParentArray(name)) {
                 if (checkAdmin(2, user)) {
                     if(!inAdultonlyArray(name)) {
                         console.log(name);
-                        handleError(new HoError('name is not allow'));
+                        return handleReject(new HoError('name is not allow'));
                     }
                 } else {
                     console.log(name);
-                    handleError(new HoError('name is not allow'));
+                    return handleReject(new HoError('name is not allow'));
                 }
             }
-            const normal = normalize(isValidString(tagName, 'name', 'tag name is not vaild'));
+            const validName = isValidString(tagName, 'name');
+            if (!validName) {
+                return handleReject(new HoError('tag name is not vaild!!!'));
+            }
+            const normal = normalize(validName);
             return Mongo('find', `${collection}Dir` ,{
                 parent: name,
                 name: normal,
@@ -989,13 +1049,16 @@ export default function process(collection) {
         delParent: function(uid, user) {
             if (!checkAdmin(1, user)) {
                 console.log(user);
-                handleError(new HoError('permission denied'));
+                return handleReject(new HoError('permission denied'));
             }
-            const id = isValidString(uid, 'uid', 'parent is not vaild');
+            const id = isValidString(uid, 'uid');
+            if (!id) {
+                return handleReject(new HoError('parent is not vaild!!!'));
+            }
             return Mongo('remove', `${collection}Dir`, {
-                _id: id,
+                _id,
                 $isolated: 1,
-            }).then(parent => parent ? {id: id} : {apiOK: true});
+            }).then(parent => parent ? {id} : {apiOK: true});
         },
         setLatest: function(latest, session, saveName=false) {
             const tags = this.searchTags(session);

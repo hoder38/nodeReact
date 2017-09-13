@@ -107,9 +107,7 @@ app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT
 app.get('*', function(req, res, next) {
     console.log('view');
     const stream = FsCreateReadStream(`${STATIC_PATH}/${APP_HTML(ENV_TYPE)}`);
-    stream.on('error', function(err) {
-        handleError(err);
-    });
+    stream.on('error', err => handleError(err));
     stream.pipe(res);
 })
 
