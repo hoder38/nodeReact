@@ -1686,29 +1686,62 @@ exports.default = {
             case 'oec':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')[2], 'strong')[0], 'a')[0];
-                    if (!(0, _utility.findTag)(a)[0].match(/pdf/i)) {
-                        return (0, _utility.handleReject)(new _utility.HoError('cannot find release'));
-                    }
-                    var url = (0, _utility.addPre)(a.attribs.href, 'http://www.oecd.org');
-                    driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
-                    console.log(driveName);
-                    return mkFolder((0, _path.dirname)(filePath)).then(function () {
-                        return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
-                            return (0, _apiToolGoogle2.default)('upload', {
-                                type: 'auto',
-                                name: driveName,
-                                filePath: filePath,
-                                parent: parent,
-                                rest: function rest() {
-                                    return updateDocDate(type, obj.date);
-                                },
-                                errhandle: function errhandle(err) {
-                                    return (0, _utility.handleReject)(err);
+                    var _iteratorNormalCompletion12 = true;
+                    var _didIteratorError12 = false;
+                    var _iteratorError12 = undefined;
+
+                    try {
+                        for (var _iterator12 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                            var p = _step12.value;
+
+                            var s = (0, _utility.findTag)(p, 'strong')[0];
+                            if (s) {
+                                var a = (0, _utility.findTag)(s, 'a')[0];
+                                if (a) {
+                                    if ((0, _utility.findTag)(a)[0].match(/pdf/i)) {
+                                        var _ret3 = function () {
+                                            var url = (0, _utility.addPre)(a.attribs.href, 'http://www.oecd.org');
+                                            driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
+                                            console.log(driveName);
+                                            return {
+                                                v: mkFolder((0, _path.dirname)(filePath)).then(function () {
+                                                    return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                                        return (0, _apiToolGoogle2.default)('upload', {
+                                                            type: 'auto',
+                                                            name: driveName,
+                                                            filePath: filePath,
+                                                            parent: parent,
+                                                            rest: function rest() {
+                                                                return updateDocDate(type, obj.date);
+                                                            },
+                                                            errhandle: function errhandle(err) {
+                                                                return (0, _utility.handleReject)(err);
+                                                            }
+                                                        });
+                                                    });
+                                                })
+                                            };
+                                        }();
+
+                                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                    }
                                 }
-                            });
-                        });
-                    });
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError12 = true;
+                        _iteratorError12 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                _iterator12.return();
+                            }
+                        } finally {
+                            if (_didIteratorError12) {
+                                throw _iteratorError12;
+                            }
+                        }
+                    }
                 });
             case 'dol':
                 console.log(obj);
@@ -1790,7 +1823,7 @@ exports.default = {
                     if (share) {
                         var a = (0, _utility.findTag)(share, 'a')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[1])[0].match(/pdf/i)) {
-                            var _ret3 = function () {
+                            var _ret4 = function () {
                                 var url = (0, _utility.addPre)(a.attribs.href, 'https://www.federalreserve.gov');
                                 driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                 console.log(driveName);
@@ -1814,7 +1847,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                         }
                     }
                     driveName = obj.name + ' ' + obj.date + '.txt';
@@ -1905,16 +1938,16 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(function (p) {
                         var as = (0, _utility.findTag)(p, 'a');
                         if (as.length > 0) {
-                            var _iteratorNormalCompletion12 = true;
-                            var _didIteratorError12 = false;
-                            var _iteratorError12 = undefined;
+                            var _iteratorNormalCompletion13 = true;
+                            var _didIteratorError13 = false;
+                            var _iteratorError13 = undefined;
 
                             try {
-                                for (var _iterator12 = (0, _getIterator3.default)(as), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                                    var a = _step12.value;
+                                for (var _iterator13 = (0, _getIterator3.default)(as), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                                    var a = _step13.value;
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
-                                        var _ret4 = function () {
+                                        var _ret5 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
                                             driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                             console.log(driveName);
@@ -1938,46 +1971,46 @@ exports.default = {
                                             };
                                         }();
 
-                                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError12 = true;
-                                _iteratorError12 = err;
+                                _didIteratorError13 = true;
+                                _iteratorError13 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                                        _iterator12.return();
+                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                                        _iterator13.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError12) {
-                                        throw _iteratorError12;
+                                    if (_didIteratorError13) {
+                                        throw _iteratorError13;
                                     }
                                 }
                             }
                         }
                         var bs = (0, _utility.findTag)(p, 'b');
                         if (bs.length > 0) {
-                            var _iteratorNormalCompletion13 = true;
-                            var _didIteratorError13 = false;
-                            var _iteratorError13 = undefined;
+                            var _iteratorNormalCompletion14 = true;
+                            var _didIteratorError14 = false;
+                            var _iteratorError14 = undefined;
 
                             try {
-                                for (var _iterator13 = (0, _getIterator3.default)(bs), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                    var b = _step13.value;
+                                for (var _iterator14 = (0, _getIterator3.default)(bs), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                                    var b = _step14.value;
 
                                     as = (0, _utility.findTag)(b, 'a');
                                     if (as.length > 0) {
-                                        var _iteratorNormalCompletion14 = true;
-                                        var _didIteratorError14 = false;
-                                        var _iteratorError14 = undefined;
+                                        var _iteratorNormalCompletion15 = true;
+                                        var _didIteratorError15 = false;
+                                        var _iteratorError15 = undefined;
 
                                         try {
-                                            for (var _iterator14 = (0, _getIterator3.default)(as), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                                                var _a = _step14.value;
+                                            for (var _iterator15 = (0, _getIterator3.default)(as), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                                                var _a = _step15.value;
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
-                                                    var _ret5 = function () {
+                                                    var _ret6 = function () {
                                                         var url = (0, _utility.addPre)(_a.attribs.href, 'http://www.stat.gov.tw');
                                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                                         console.log(driveName);
@@ -2001,36 +2034,36 @@ exports.default = {
                                                         };
                                                     }();
 
-                                                    if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                                                    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                                                 }
                                             }
                                         } catch (err) {
-                                            _didIteratorError14 = true;
-                                            _iteratorError14 = err;
+                                            _didIteratorError15 = true;
+                                            _iteratorError15 = err;
                                         } finally {
                                             try {
-                                                if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                                                    _iterator14.return();
+                                                if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                                                    _iterator15.return();
                                                 }
                                             } finally {
-                                                if (_didIteratorError14) {
-                                                    throw _iteratorError14;
+                                                if (_didIteratorError15) {
+                                                    throw _iteratorError15;
                                                 }
                                             }
                                         }
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError13 = true;
-                                _iteratorError13 = err;
+                                _didIteratorError14 = true;
+                                _iteratorError14 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                                        _iterator13.return();
+                                    if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                                        _iterator14.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError13) {
-                                        throw _iteratorError13;
+                                    if (_didIteratorError14) {
+                                        throw _iteratorError14;
                                     }
                                 }
                             }
@@ -2041,17 +2074,17 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url, { referer: 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281' }).then(function (raw_data) {
                     var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
-                    var _iteratorNormalCompletion15 = true;
-                    var _didIteratorError15 = false;
-                    var _iteratorError15 = undefined;
+                    var _iteratorNormalCompletion16 = true;
+                    var _didIteratorError16 = false;
+                    var _iteratorError16 = undefined;
 
                     try {
-                        for (var _iterator15 = (0, _getIterator3.default)(ps), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-                            var p = _step15.value;
+                        for (var _iterator16 = (0, _getIterator3.default)(ps), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                            var p = _step16.value;
 
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
-                                var _ret6 = function () {
+                                var _ret7 = function () {
                                     var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
@@ -2075,20 +2108,20 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                             }
                         }
                     } catch (err) {
-                        _didIteratorError15 = true;
-                        _iteratorError15 = err;
+                        _didIteratorError16 = true;
+                        _iteratorError16 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion15 && _iterator15.return) {
-                                _iterator15.return();
+                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                                _iterator16.return();
                             }
                         } finally {
-                            if (_didIteratorError15) {
-                                throw _iteratorError15;
+                            if (_didIteratorError16) {
+                                throw _iteratorError16;
                             }
                         }
                     }
@@ -2099,19 +2132,19 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'ctl00_holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
-                    var _iteratorNormalCompletion16 = true;
-                    var _didIteratorError16 = false;
-                    var _iteratorError16 = undefined;
+                    var _iteratorNormalCompletion17 = true;
+                    var _didIteratorError17 = false;
+                    var _iteratorError17 = undefined;
 
                     try {
-                        for (var _iterator16 = (0, _getIterator3.default)(files), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-                            var f = _step16.value;
+                        for (var _iterator17 = (0, _getIterator3.default)(files), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                            var f = _step17.value;
 
                             var kind = (0, _utility.findTag)(f, 'div', 'td-filesKind')[0];
                             if (kind) {
                                 var a = (0, _utility.findTag)(kind, 'a')[0];
                                 if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                                    var _ret7 = function () {
+                                    var _ret8 = function () {
                                         var url = a.attribs.href;
                                         url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
                                         driveName = obj.name + ' ' + obj.date + '.pdf';
@@ -2136,21 +2169,21 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                                 }
                             }
                         }
                     } catch (err) {
-                        _didIteratorError16 = true;
-                        _iteratorError16 = err;
+                        _didIteratorError17 = true;
+                        _iteratorError17 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
-                                _iterator16.return();
+                            if (!_iteratorNormalCompletion17 && _iterator17.return) {
+                                _iterator17.return();
                             }
                         } finally {
-                            if (_didIteratorError16) {
-                                throw _iteratorError16;
+                            if (_didIteratorError17) {
+                                throw _iteratorError17;
                             }
                         }
                     }
@@ -2171,7 +2204,7 @@ exports.default = {
                     }
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
-                            var _ret8 = function () {
+                            var _ret9 = function () {
                                 driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex]);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
@@ -2195,7 +2228,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                         } else {
                             return updateDocDate(type, obj.date);
                         }
@@ -2245,13 +2278,13 @@ exports.default = {
                             taglist.add((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(cast[1], 'a')[0], 'span')[0])[0]);
                         }
                     });
-                    var _iteratorNormalCompletion17 = true;
-                    var _didIteratorError17 = false;
-                    var _iteratorError17 = undefined;
+                    var _iteratorNormalCompletion18 = true;
+                    var _didIteratorError18 = false;
+                    var _iteratorError18 = undefined;
 
                     try {
-                        for (var _iterator17 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-                            var t = _step17.value;
+                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+                            var t = _step18.value;
 
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'h4')[0])[0] === 'Genres:') {
                                 (0, _utility.findTag)(t, 'a').forEach(function (a) {
@@ -2261,36 +2294,6 @@ exports.default = {
                                     if (index !== -1) {
                                         taglist.add(_constants.GENRE_LIST_CH[index]);
                                     }
-                                });
-                                break;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError17 = true;
-                        _iteratorError17 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion17 && _iterator17.return) {
-                                _iterator17.return();
-                            }
-                        } finally {
-                            if (_didIteratorError17) {
-                                throw _iteratorError17;
-                            }
-                        }
-                    }
-
-                    var _iteratorNormalCompletion18 = true;
-                    var _didIteratorError18 = false;
-                    var _iteratorError18 = undefined;
-
-                    try {
-                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-                            var _t = _step18.value;
-
-                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
-                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
-                                    return taglist.add((0, _utility.findTag)(a)[0]);
                                 });
                                 break;
                             }
@@ -2306,6 +2309,36 @@ exports.default = {
                         } finally {
                             if (_didIteratorError18) {
                                 throw _iteratorError18;
+                            }
+                        }
+                    }
+
+                    var _iteratorNormalCompletion19 = true;
+                    var _didIteratorError19 = false;
+                    var _iteratorError19 = undefined;
+
+                    try {
+                        for (var _iterator19 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+                            var _t = _step19.value;
+
+                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
+                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
+                                    return taglist.add((0, _utility.findTag)(a)[0]);
+                                });
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError19 = true;
+                        _iteratorError19 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion19 && _iterator19.return) {
+                                _iterator19.return();
+                            }
+                        } finally {
+                            if (_didIteratorError19) {
+                                throw _iteratorError19;
                             }
                         }
                     }
@@ -2375,13 +2408,13 @@ exports.default = {
             case 'dc':
                 return (0, _apiTool2.default)('url', url).then(function (raw_data) {
                     taglist.add('歐美').add('漫畫').add('comic').add(type);
-                    var _iteratorNormalCompletion19 = true;
-                    var _didIteratorError19 = false;
-                    var _iteratorError19 = undefined;
+                    var _iteratorNormalCompletion20 = true;
+                    var _didIteratorError20 = false;
+                    var _iteratorError20 = undefined;
 
                     try {
-                        for (var _iterator19 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-                            var div = _step19.value;
+                        for (var _iterator20 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+                            var div = _step20.value;
 
                             if (div.attribs.class !== 'center') {
                                 (0, _utility.findTag)(div, 'div').forEach(function (d, i) {
@@ -2390,13 +2423,13 @@ exports.default = {
                                         if (name.length > 0) {
                                             taglist.add(name[0]);
                                         } else {
-                                            var _iteratorNormalCompletion20 = true;
-                                            var _didIteratorError20 = false;
-                                            var _iteratorError20 = undefined;
+                                            var _iteratorNormalCompletion21 = true;
+                                            var _didIteratorError21 = false;
+                                            var _iteratorError21 = undefined;
 
                                             try {
-                                                for (var _iterator20 = (0, _getIterator3.default)(d.children), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
-                                                    var c = _step20.value;
+                                                for (var _iterator21 = (0, _getIterator3.default)(d.children), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+                                                    var c = _step21.value;
 
                                                     name = (0, _utility.findTag)(c);
                                                     if (c.type === 'tag' && name.length > 0) {
@@ -2405,16 +2438,16 @@ exports.default = {
                                                     }
                                                 }
                                             } catch (err) {
-                                                _didIteratorError20 = true;
-                                                _iteratorError20 = err;
+                                                _didIteratorError21 = true;
+                                                _iteratorError21 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion20 && _iterator20.return) {
-                                                        _iterator20.return();
+                                                    if (!_iteratorNormalCompletion21 && _iterator21.return) {
+                                                        _iterator21.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError20) {
-                                                        throw _iteratorError20;
+                                                    if (_didIteratorError21) {
+                                                        throw _iteratorError21;
                                                     }
                                                 }
                                             }
@@ -2445,16 +2478,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError19 = true;
-                        _iteratorError19 = err;
+                        _didIteratorError20 = true;
+                        _iteratorError20 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion19 && _iterator19.return) {
-                                _iterator19.return();
+                            if (!_iteratorNormalCompletion20 && _iterator20.return) {
+                                _iterator20.return();
                             }
                         } finally {
-                            if (_didIteratorError19) {
-                                throw _iteratorError19;
+                            if (_didIteratorError20) {
+                                throw _iteratorError20;
                             }
                         }
                     }
@@ -2525,13 +2558,13 @@ exports.default = {
             if (index === 1) {
                 is_new = false;
             } else {
-                var _iteratorNormalCompletion21 = true;
-                var _didIteratorError21 = false;
-                var _iteratorError21 = undefined;
+                var _iteratorNormalCompletion22 = true;
+                var _didIteratorError22 = false;
+                var _iteratorError22 = undefined;
 
                 try {
-                    for (var _iterator21 = (0, _getIterator3.default)(vId_arr), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-                        var i = _step21.value;
+                    for (var _iterator22 = (0, _getIterator3.default)(vId_arr), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                        var i = _step22.value;
 
                         if (i.id === index) {
                             ret_obj = i;
@@ -2540,16 +2573,16 @@ exports.default = {
                         }
                     }
                 } catch (err) {
-                    _didIteratorError21 = true;
-                    _iteratorError21 = err;
+                    _didIteratorError22 = true;
+                    _iteratorError22 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion21 && _iterator21.return) {
-                            _iterator21.return();
+                        if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                            _iterator22.return();
                         }
                     } finally {
-                        if (_didIteratorError21) {
-                            throw _iteratorError21;
+                        if (_didIteratorError22) {
+                            throw _iteratorError22;
                         }
                     }
                 }
@@ -2598,7 +2631,7 @@ exports.default = {
             });
         };
 
-        var _ret9 = function () {
+        var _ret10 = function () {
             switch (type) {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
@@ -2639,13 +2672,13 @@ exports.default = {
                                     }
                                 });
                             } else {
-                                var _iteratorNormalCompletion22 = true;
-                                var _didIteratorError22 = false;
-                                var _iteratorError22 = undefined;
+                                var _iteratorNormalCompletion23 = true;
+                                var _didIteratorError23 = false;
+                                var _iteratorError23 = undefined;
 
                                 try {
-                                    for (var _iterator22 = (0, _getIterator3.default)(outer), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                        var o = _step22.value;
+                                    for (var _iterator23 = (0, _getIterator3.default)(outer), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
+                                        var o = _step23.value;
 
                                         var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
                                         var name = (0, _utility.findTag)(a)[0];
@@ -2662,28 +2695,28 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError22 = true;
-                                    _iteratorError22 = err;
+                                    _didIteratorError23 = true;
+                                    _iteratorError23 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion22 && _iterator22.return) {
-                                            _iterator22.return();
+                                        if (!_iteratorNormalCompletion23 && _iterator23.return) {
+                                            _iterator23.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError22) {
-                                            throw _iteratorError22;
+                                        if (_didIteratorError23) {
+                                            throw _iteratorError23;
                                         }
                                     }
                                 }
                             }
                             var is_end = false;
-                            var _iteratorNormalCompletion23 = true;
-                            var _didIteratorError23 = false;
-                            var _iteratorError23 = undefined;
+                            var _iteratorNormalCompletion24 = true;
+                            var _didIteratorError24 = false;
+                            var _iteratorError24 = undefined;
 
                             try {
-                                for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-                                    var _i = _step23.value;
+                                for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+                                    var _i = _step24.value;
 
                                     if (_i.url.match(/大結局/)) {
                                         is_end = true;
@@ -2691,16 +2724,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError23 = true;
-                                _iteratorError23 = err;
+                                _didIteratorError24 = true;
+                                _iteratorError24 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion23 && _iterator23.return) {
-                                        _iterator23.return();
+                                    if (!_iteratorNormalCompletion24 && _iterator24.return) {
+                                        _iterator24.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError23) {
-                                        throw _iteratorError23;
+                                    if (_didIteratorError24) {
+                                        throw _iteratorError24;
                                     }
                                 }
                             }
@@ -2713,13 +2746,13 @@ exports.default = {
                                     return (0, _utility.handleReject)(new _utility.HoError('cannot find lovetv url'));
                                 }
                                 var nextLove = function nextLove(index, dramaIndex, list) {
-                                    var _iteratorNormalCompletion24 = true;
-                                    var _didIteratorError24 = false;
-                                    var _iteratorError24 = undefined;
+                                    var _iteratorNormalCompletion25 = true;
+                                    var _didIteratorError25 = false;
+                                    var _iteratorError25 = undefined;
 
                                     try {
                                         var _loop = function _loop() {
-                                            var i = _step24.value;
+                                            var i = _step25.value;
 
                                             if (i.name === items[0].name) {
                                                 var validUrl = (0, _utility.isValidString)(i.url, 'url');
@@ -2737,22 +2770,22 @@ exports.default = {
                                             }
                                         };
 
-                                        for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                            var _ret10 = _loop();
+                                        for (var _iterator25 = (0, _getIterator3.default)(list), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+                                            var _ret11 = _loop();
 
-                                            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                            if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                                         }
                                     } catch (err) {
-                                        _didIteratorError24 = true;
-                                        _iteratorError24 = err;
+                                        _didIteratorError25 = true;
+                                        _iteratorError25 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion24 && _iterator24.return) {
-                                                _iterator24.return();
+                                            if (!_iteratorNormalCompletion25 && _iterator25.return) {
+                                                _iterator25.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError24) {
-                                                throw _iteratorError24;
+                                            if (_didIteratorError25) {
+                                                throw _iteratorError25;
                                             }
                                         }
                                     }
@@ -2789,40 +2822,15 @@ exports.default = {
                                                         obj.push('bil_av' + vIds[0] + '_' + _i2);
                                                     }
                                                 } else if (t === 1) {
-                                                    var _iteratorNormalCompletion25 = true;
-                                                    var _didIteratorError25 = false;
-                                                    var _iteratorError25 = undefined;
-
-                                                    try {
-                                                        for (var _iterator25 = (0, _getIterator3.default)(vIds), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                                                            var _i3 = _step25.value;
-
-                                                            obj.push('you_' + _i3);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError25 = true;
-                                                        _iteratorError25 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion25 && _iterator25.return) {
-                                                                _iterator25.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError25) {
-                                                                throw _iteratorError25;
-                                                            }
-                                                        }
-                                                    }
-                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion26 = true;
                                                     var _didIteratorError26 = false;
                                                     var _iteratorError26 = undefined;
 
                                                     try {
                                                         for (var _iterator26 = (0, _getIterator3.default)(vIds), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-                                                            var _i4 = _step26.value;
+                                                            var _i3 = _step26.value;
 
-                                                            obj.push('yuk_' + _i4);
+                                                            obj.push('you_' + _i3);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError26 = true;
@@ -2838,17 +2846,16 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 3) {
-                                                    //open
+                                                } else if (t === 10) {
                                                     var _iteratorNormalCompletion27 = true;
                                                     var _didIteratorError27 = false;
                                                     var _iteratorError27 = undefined;
 
                                                     try {
                                                         for (var _iterator27 = (0, _getIterator3.default)(vIds), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
-                                                            var _i5 = _step27.value;
+                                                            var _i4 = _step27.value;
 
-                                                            obj.push('ope_' + _i5);
+                                                            obj.push('yuk_' + _i4);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError27 = true;
@@ -2864,17 +2871,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 12) {
-                                                    //up2stream
+                                                } else if (t === 3) {
+                                                    //open
                                                     var _iteratorNormalCompletion28 = true;
                                                     var _didIteratorError28 = false;
                                                     var _iteratorError28 = undefined;
 
                                                     try {
                                                         for (var _iterator28 = (0, _getIterator3.default)(vIds), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-                                                            var _i6 = _step28.value;
+                                                            var _i5 = _step28.value;
 
-                                                            obj.push('up2_' + _i6);
+                                                            obj.push('ope_' + _i5);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError28 = true;
@@ -2890,17 +2897,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 19) {
-                                                    //愛奇藝
+                                                } else if (t === 12) {
+                                                    //up2stream
                                                     var _iteratorNormalCompletion29 = true;
                                                     var _didIteratorError29 = false;
                                                     var _iteratorError29 = undefined;
 
                                                     try {
                                                         for (var _iterator29 = (0, _getIterator3.default)(vIds), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-                                                            var _i7 = _step29.value;
+                                                            var _i6 = _step29.value;
 
-                                                            obj.push('iqi_' + _i7);
+                                                            obj.push('up2_' + _i6);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError29 = true;
@@ -2916,17 +2923,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else if (t === 6) {
-                                                    //line tv
+                                                } else if (t === 19) {
+                                                    //愛奇藝
                                                     var _iteratorNormalCompletion30 = true;
                                                     var _didIteratorError30 = false;
                                                     var _iteratorError30 = undefined;
 
                                                     try {
                                                         for (var _iterator30 = (0, _getIterator3.default)(vIds), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
-                                                            var _i8 = _step30.value;
+                                                            var _i7 = _step30.value;
 
-                                                            obj.push('lin_' + _i8);
+                                                            obj.push('iqi_' + _i7);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError30 = true;
@@ -2942,16 +2949,17 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                } else {
+                                                } else if (t === 6) {
+                                                    //line tv
                                                     var _iteratorNormalCompletion31 = true;
                                                     var _didIteratorError31 = false;
                                                     var _iteratorError31 = undefined;
 
                                                     try {
                                                         for (var _iterator31 = (0, _getIterator3.default)(vIds), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-                                                            var _i9 = _step31.value;
+                                                            var _i8 = _step31.value;
 
-                                                            obj.push('dym_' + _i9);
+                                                            obj.push('lin_' + _i8);
                                                         }
                                                     } catch (err) {
                                                         _didIteratorError31 = true;
@@ -2964,6 +2972,31 @@ exports.default = {
                                                         } finally {
                                                             if (_didIteratorError31) {
                                                                 throw _iteratorError31;
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    var _iteratorNormalCompletion32 = true;
+                                                    var _didIteratorError32 = false;
+                                                    var _iteratorError32 = undefined;
+
+                                                    try {
+                                                        for (var _iterator32 = (0, _getIterator3.default)(vIds), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
+                                                            var _i9 = _step32.value;
+
+                                                            obj.push('dym_' + _i9);
+                                                        }
+                                                    } catch (err) {
+                                                        _didIteratorError32 = true;
+                                                        _iteratorError32 = err;
+                                                    } finally {
+                                                        try {
+                                                            if (!_iteratorNormalCompletion32 && _iterator32.return) {
+                                                                _iterator32.return();
+                                                            }
+                                                        } finally {
+                                                            if (_didIteratorError32) {
+                                                                throw _iteratorError32;
                                                             }
                                                         }
                                                     }
@@ -3062,13 +3095,13 @@ exports.default = {
                                 var trLength = tr.length;
                                 console.log(trLength);
                                 var is_end = false;
-                                var _iteratorNormalCompletion32 = true;
-                                var _didIteratorError32 = false;
-                                var _iteratorError32 = undefined;
+                                var _iteratorNormalCompletion33 = true;
+                                var _didIteratorError33 = false;
+                                var _iteratorError33 = undefined;
 
                                 try {
-                                    for (var _iterator32 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-                                        var _i12 = _step32.value;
+                                    for (var _iterator33 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
+                                        var _i12 = _step33.value;
 
                                         if ((0, _utility.findTag)(_i12)[0] === 'Ended') {
                                             is_end = true;
@@ -3076,16 +3109,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError32 = true;
-                                    _iteratorError32 = err;
+                                    _didIteratorError33 = true;
+                                    _iteratorError33 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion32 && _iterator32.return) {
-                                            _iterator32.return();
+                                        if (!_iteratorNormalCompletion33 && _iterator33.return) {
+                                            _iterator33.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError32) {
-                                            throw _iteratorError32;
+                                        if (_didIteratorError33) {
+                                            throw _iteratorError33;
                                         }
                                     }
                                 }
@@ -3175,29 +3208,29 @@ exports.default = {
                                 return (0, _utility.handleReject)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion33 = true;
-                            var _didIteratorError33 = false;
-                            var _iteratorError33 = undefined;
+                            var _iteratorNormalCompletion34 = true;
+                            var _didIteratorError34 = false;
+                            var _iteratorError34 = undefined;
 
                             try {
-                                for (var _iterator33 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
-                                    var _i13 = _step33.value;
+                                for (var _iterator34 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
+                                    var _i13 = _step34.value;
 
                                     if (_i13['quality'] === '1080p' || !magnet && _i13['quality'] === '720p') {
                                         magnet = 'magnet:?xt=urn:btih:' + _i13['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError33 = true;
-                                _iteratorError33 = err;
+                                _didIteratorError34 = true;
+                                _iteratorError34 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion33 && _iterator33.return) {
-                                        _iterator33.return();
+                                    if (!_iteratorNormalCompletion34 && _iterator34.return) {
+                                        _iterator34.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError33) {
-                                        throw _iteratorError33;
+                                    if (_didIteratorError34) {
+                                        throw _iteratorError34;
                                     }
                                 }
                             }
@@ -3320,20 +3353,20 @@ exports.default = {
                             var list = [];
                             var is_end = false;
                             var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
-                            var _iteratorNormalCompletion34 = true;
-                            var _didIteratorError34 = false;
-                            var _iteratorError34 = undefined;
+                            var _iteratorNormalCompletion35 = true;
+                            var _didIteratorError35 = false;
+                            var _iteratorError35 = undefined;
 
                             try {
-                                for (var _iterator34 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
-                                    var p = _step34.value;
-                                    var _iteratorNormalCompletion36 = true;
-                                    var _didIteratorError36 = false;
-                                    var _iteratorError36 = undefined;
+                                for (var _iterator35 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
+                                    var p = _step35.value;
+                                    var _iteratorNormalCompletion37 = true;
+                                    var _didIteratorError37 = false;
+                                    var _iteratorError37 = undefined;
 
                                     try {
-                                        for (var _iterator36 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-                                            var pt = _step36.value;
+                                        for (var _iterator37 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
+                                            var pt = _step37.value;
 
                                             if (pt.match(/完結/)) {
                                                 is_end = true;
@@ -3341,16 +3374,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError36 = true;
-                                        _iteratorError36 = err;
+                                        _didIteratorError37 = true;
+                                        _iteratorError37 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion36 && _iterator36.return) {
-                                                _iterator36.return();
+                                            if (!_iteratorNormalCompletion37 && _iterator37.return) {
+                                                _iterator37.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError36) {
-                                                throw _iteratorError36;
+                                            if (_didIteratorError37) {
+                                                throw _iteratorError37;
                                             }
                                         }
                                     }
@@ -3360,16 +3393,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError34 = true;
-                                _iteratorError34 = err;
+                                _didIteratorError35 = true;
+                                _iteratorError35 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion34 && _iterator34.return) {
-                                        _iterator34.return();
+                                    if (!_iteratorNormalCompletion35 && _iterator35.return) {
+                                        _iterator35.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError34) {
-                                        throw _iteratorError34;
+                                    if (_didIteratorError35) {
+                                        throw _iteratorError35;
                                     }
                                 }
                             }
@@ -3382,13 +3415,13 @@ exports.default = {
                                 if (div) {
                                     ul = div;
                                 }
-                                var _iteratorNormalCompletion35 = true;
-                                var _didIteratorError35 = false;
-                                var _iteratorError35 = undefined;
+                                var _iteratorNormalCompletion36 = true;
+                                var _didIteratorError36 = false;
+                                var _iteratorError36 = undefined;
 
                                 try {
-                                    for (var _iterator35 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
-                                        var l = _step35.value;
+                                    for (var _iterator36 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+                                        var l = _step36.value;
 
                                         var a = (0, _utility.findTag)(l, 'a')[0];
                                         var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.99kubo.com').match(/youtube\.php\?(.*)$/);
@@ -3405,16 +3438,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError35 = true;
-                                    _iteratorError35 = err;
+                                    _didIteratorError36 = true;
+                                    _iteratorError36 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion35 && _iterator35.return) {
-                                            _iterator35.return();
+                                        if (!_iteratorNormalCompletion36 && _iterator36.return) {
+                                            _iterator36.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError35) {
-                                            throw _iteratorError35;
+                                        if (_didIteratorError36) {
+                                            throw _iteratorError36;
                                         }
                                     }
                                 }
@@ -3592,7 +3625,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
     },
     saveSingle: function saveSingle(type, id) {
         var url = null;

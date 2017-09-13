@@ -1268,21 +1268,27 @@ export default {
             case 'oec':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')[2], 'strong')[0], 'a')[0];
-                if (!findTag(a)[0].match(/pdf/i)) {
-                    return handleReject(new HoError('cannot find release'));
+                for (let p of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')) {
+                    const s = findTag(p, 'strong')[0];
+                    if (s) {
+                        const a = findTag(s, 'a')[0];
+                        if (a) {
+                            if (findTag(a)[0].match(/pdf/i)) {
+                                const url = addPre(a.attribs.href, 'http://www.oecd.org');
+                                driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                                console.log(driveName);
+                                return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                                    type: 'auto',
+                                    name: driveName,
+                                    filePath,
+                                    parent,
+                                    rest: () => updateDocDate(type, obj.date),
+                                    errhandle: err => handleReject(err),
+                                })));
+                            }
+                        }
+                    }
                 }
-                const url = addPre(a.attribs.href, 'http://www.oecd.org');
-                driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
-                console.log(driveName);
-                return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                    type: 'auto',
-                    name: driveName,
-                    filePath,
-                    parent,
-                    rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => handleReject(err),
-                })));
             });
             case 'dol':
             console.log(obj);
