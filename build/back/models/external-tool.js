@@ -1134,7 +1134,7 @@ exports.default = {
                     console.log(docDate);
                     var list = [];
                     var json_data = (0, _utility.getJson)(raw_data);
-                    if (!json_data) {
+                    if (json_data === false) {
                         return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                     }
                     var _iteratorNormalCompletion4 = true;
@@ -3201,7 +3201,7 @@ exports.default = {
                     var yifyGetlist = function yifyGetlist() {
                         return (0, _apiTool2.default)('url', url, { referer: 'https://yts.ag/' }).then(function (raw_data) {
                             var json_data = (0, _utility.getJson)(raw_data);
-                            if (!json_data) {
+                            if (json_data === false) {
                                 return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                             }
                             if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
@@ -3279,7 +3279,7 @@ exports.default = {
                         var getBangumi = function getBangumi(sId) {
                             return (0, _apiTool2.default)('url', 'http://bangumi.bilibili.com/jsonp/seasoninfo/' + sId + '.ver?callback=seasonListCallback&jsonp=jsonp&_=' + new Date().getTime(), { referer: url }).then(function (raw_data) {
                                 var json_data = (0, _utility.getJson)(raw_data.match(/^[^\(]+\((.*)\);$/)[1]);
-                                if (!json_data) {
+                                if (json_data === false) {
                                     return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                                 }
                                 if (!json_data.result || !json_data.result.episodes) {
@@ -3640,7 +3640,7 @@ exports.default = {
                     url = 'https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=' + mid;
                     return (0, _apiTool2.default)('url', url, { referer: 'https://yts.ag/' }).then(function (raw_data) {
                         var json_data = (0, _utility.getJson)(raw_data);
-                        if (!json_data) {
+                        if (json_data === false) {
                             return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                         }
                         if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
@@ -3849,7 +3849,7 @@ var bilibiliVideoUrl = exports.bilibiliVideoUrl = function bilibiliVideoUrl(url)
     var page = id[3] ? Number(id[4]) : 1;
     return (0, _apiTool2.default)('url', 'http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=' + id[2] + '&page=1&batch=true', { referer: 'http://api.bilibili.com/' }).then(function (raw_data) {
         var json_data = (0, _utility.getJson)(raw_data);
-        if (!json_data) {
+        if (json_data === false) {
             return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
         }
         if (!json_data.list) {
@@ -3909,7 +3909,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             post: { url: new Buffer(url).toString('base64') }
         }).then(function (raw_data) {
             var json_data = (0, _utility.getJson)(raw_data);
-            if (!json_data) {
+            if (json_data === false) {
                 return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
             }
             if (json_data['code'] === '404') {

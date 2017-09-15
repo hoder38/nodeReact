@@ -511,7 +511,7 @@ router.post('/upload/file', function(req, res, next) {
                     setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
                     if (req.body.path) {
                         const bodyPath = getJson(req.body.path);
-                        if (!bodyPath) {
+                        if (bodyPath === false) {
                             return handleReject(new HoError('json parse error!!!'));
                         }
                         if (Array.isArray(bodyPath) && bodyPath.length > 0) {
@@ -654,7 +654,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
             }
             const filePath = getFileLocation(ex_type, id);
             const json_data = getJson(req.body.lang);
-            if (!json_data) {
+            if (json_data === false) {
                 handleError(new HoError('json parse error!!!'), next);
             }
             saveSub((json_data === 'en') ? `${filePath}.en` : filePath, id).catch(err => handleError(err, next));
@@ -692,7 +692,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                     filePath = `${filePath}/${fileIndex}`;
                 }
                 const json_data = getJson(req.body.lang);
-                if (!json_data) {
+                if (json_data === false) {
                     return handleReject(new HoError('json parse error!!!'));
                 }
                 return saveSub((json_data === 'en') ? `${filePath}.en` : filePath, items[0]._id);

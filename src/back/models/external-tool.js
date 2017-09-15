@@ -949,7 +949,7 @@ export default {
                 console.log(docDate);
                 let list = [];
                 const json_data = getJson(raw_data);
-                if (!json_data) {
+                if (json_data === false) {
                     return handleReject(new HoError('json parse error!!!'));
                 }
                 for (let i of json_data) {
@@ -2072,7 +2072,7 @@ export default {
             case 'yify':
             const yifyGetlist = () => Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
                 const json_data = getJson(raw_data);
-                if (!json_data) {
+                if (json_data === false) {
                     return handleReject(new HoError('json parse error!!!'));
                 }
                 if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
@@ -2116,7 +2116,7 @@ export default {
                 }
                 const getBangumi = sId => Api('url', `http://bangumi.bilibili.com/jsonp/seasoninfo/${sId}.ver?callback=seasonListCallback&jsonp=jsonp&_=${new Date().getTime()}`, {referer: url}).then(raw_data => {
                     const json_data = getJson(raw_data.match(/^[^\(]+\((.*)\);$/)[1]);
-                    if (!json_data) {
+                    if (json_data === false) {
                         return handleReject(new HoError('json parse error!!!'));
                     }
                     if (!json_data.result || !json_data.result.episodes) {
@@ -2352,7 +2352,7 @@ export default {
                 url = `https://yts.ag/api/v2/movie_details.json?with_cast=true&movie_id=${mid}`;
                 return Api('url', url, {referer: 'https://yts.ag/'}).then(raw_data => {
                     const json_data = getJson(raw_data);
-                    if (!json_data) {
+                    if (json_data === false) {
                         return handleReject(new HoError('json parse error!!!'));
                     }
                     if (json_data['status'] !== 'ok' || !json_data['data']['movie']) {
@@ -2564,7 +2564,7 @@ export const bilibiliVideoUrl = url => {
     const page = id[3] ? Number(id[4]) : 1;
     return Api('url', `http://api.bilibili.com/view?type=json&appkey=8e9fc618fbd41e28&id=${id[2]}&page=1&batch=true`, {referer: 'http://api.bilibili.com/'}).then(raw_data => {
         const json_data = getJson(raw_data);
-        if (!json_data) {
+        if (json_data === false) {
             return handleReject(new HoError('json parse error!!!'));
         }
         if (!json_data.list) {
@@ -2618,7 +2618,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             post: {url: new Buffer(url).toString('base64')},
         }).then(raw_data => {
             const json_data = getJson(raw_data);
-            if (!json_data) {
+            if (json_data === false) {
                 return handleReject(new HoError('json parse error!!!'));
             }
             if (json_data['code'] === '404') {

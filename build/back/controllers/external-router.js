@@ -404,7 +404,7 @@ router.post('/upload/url', function (req, res, next) {
             url_name = (0, _mime.addPost)(url_name, '1');
         }
         var json_data = (0, _utility.getJson)(req.body.type);
-        if (!json_data) {
+        if (json_data === false) {
             (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
         }
         _mediaHandleTool2.default.handleTag('', {
@@ -604,7 +604,7 @@ router.post('/upload/url', function (req, res, next) {
                     }
                 }
                 var json_data = (0, _utility.getJson)(req.body.type);
-                if (!json_data) {
+                if (json_data === false) {
                     return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                 }
                 var data = {

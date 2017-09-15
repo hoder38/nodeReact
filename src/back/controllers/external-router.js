@@ -279,7 +279,7 @@ router.post('/upload/url', function(req, res, next) {
             url_name = addPost(url_name, '1');
         }
         const json_data = getJson(req.body.type);
-        if (!json_data) {
+        if (json_data === false) {
             handleError(new HoError('json parse error!!!'), next);
         }
         MediaHandleTool.handleTag('', {
@@ -647,7 +647,7 @@ router.post('/upload/url', function(req, res, next) {
                 }
             }
             const json_data = getJson(req.body.type);
-            if (!json_data) {
+            if (json_data === false) {
                 return handleReject(new HoError('json parse error!!!'));
             }
             const data = {

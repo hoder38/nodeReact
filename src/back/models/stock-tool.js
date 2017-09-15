@@ -2916,7 +2916,7 @@ export default {
                     }
                     const getTpexList = () => Api('url', `http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
                         const json_data = getJson(raw_data);
-                        if (!json_data) {
+                        if (json_data === false) {
                             return handleReject(new HoError('json parse error!!!'));
                         }
                         let high = [];

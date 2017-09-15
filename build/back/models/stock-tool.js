@@ -3251,7 +3251,7 @@ exports.default = {
                         var getTpexList = function getTpexList() {
                             return (0, _apiTool2.default)('url', 'http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
                                 var json_data = (0, _utility.getJson)(raw_data);
-                                if (!json_data) {
+                                if (json_data === false) {
                                     return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                                 }
                                 var high = [];

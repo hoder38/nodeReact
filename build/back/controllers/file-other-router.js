@@ -680,7 +680,7 @@ router.post('/upload/file', function (req, res, next) {
                         setTag.add((0, _tagTool.normalize)(DBdata['name'])).add((0, _tagTool.normalize)(req.user.username));
                         if (req.body.path) {
                             var bodyPath = (0, _utility.getJson)(req.body.path);
-                            if (!bodyPath) {
+                            if (bodyPath === false) {
                                 return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                             }
                             if (Array.isArray(bodyPath) && bodyPath.length > 0) {
@@ -855,7 +855,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
             }
             var filePath = (0, _utility.getFileLocation)(ex_type, id);
             var json_data = (0, _utility.getJson)(req.body.lang);
-            if (!json_data) {
+            if (json_data === false) {
                 (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
             }
             saveSub(json_data === 'en' ? filePath + '.en' : filePath, id).catch(function (err) {
@@ -895,7 +895,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                     filePath = filePath + '/' + fileIndex;
                 }
                 var json_data = (0, _utility.getJson)(req.body.lang);
-                if (!json_data) {
+                if (json_data === false) {
                     return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
                 }
                 return saveSub(json_data === 'en' ? filePath + '.en' : filePath, items[0]._id);
