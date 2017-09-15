@@ -222,7 +222,7 @@ const MediaWidget = React.createClass({
     },
     componentDidUpdate : function(prevProps, prevState) {
         if (this._item.doc === 3 && (this.state.src !== prevState.src || this.props.full !== prevProps.full)) {
-            PDFJS.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.js';
+            PDFJS.workerSrc = '//npmcdn.com/pdfjs-dist@1.7.225/build/pdf.worker.js';
             const pid = (this.props.mediaType === 2) ? 'pdf1' : 'pdf2';
             const full = this.props.full;
             console.log(this.state.src);
