@@ -1,5 +1,5 @@
 import { GOOGLE_SCOPE } from '../constants'
-import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
+import { GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
 import { auth } from 'googleapis'
 import { createInterface } from 'readline'
 
