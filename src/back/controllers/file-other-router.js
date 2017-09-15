@@ -163,7 +163,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
             if (!id_valid) {
                 handleError(new HoError('uid is not vaild'), next);
             }
-            Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+            Mongo('find', STORAGEDB, {_id: id_valid}, {limit: 1}).then(items => {
                 if (items.length < 1) {
                     return handleReject(new HoError('cannot find file!!!'));
                 }
