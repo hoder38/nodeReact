@@ -251,7 +251,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
             if (!_id_valid) {
                 (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
             }
-            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
+            (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: _id_valid }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
                     return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
                 }

@@ -297,6 +297,40 @@ router.get('/2drive/:uid', function (req, res, next) {
     });
 });
 
+router.get('/2kindle/:uid', function (req, res, next) {
+    console.log('external 2 kindle');
+    (0, _mongoTool2.default)('find', _constants.USERDB, { _id: req.user._id }, { limit: 1 }).then(function (userlist) {
+        if (userlist.length < 1) {
+            return (0, _utility.handleReject)(new _utility.HoError('do not find user!!!'));
+        }
+        if (!userlist[0].kindle) {
+            return (0, _utility.handleReject)(new _utility.HoError('user dont have kindle device!!!'));
+        }
+        var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+        if (!id) {
+            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'));
+        }
+        return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
+            if (items.length < 1) {
+                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+            }
+            if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
+                return (0, _utility.handleReject)(new _utility.HoError('file cannot downlad!!!'));
+            }
+            return (0, _apiToolGoogle2.default)('send mail', {
+                user: req.user,
+                name: items[0].name,
+                filePath: (0, _utility.getFileLocation)(items[0].owner, items[0]._id),
+                kindle: userlist[0].kindle + '@kindle.com'
+            });
+        }).then(function () {
+            return res.json({ apiOK: true });
+        });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
 router.get('/getSingle/:uid', function (req, res, next) {
     console.log('external getSingle');
     var id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);

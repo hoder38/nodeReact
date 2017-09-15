@@ -78,7 +78,7 @@ sudo -i node /home/pi/release/nodeReact/build/back/cmd/cmd.js
 記得等db connect
 
 google auth:
-記得到google api console 開啟api
+記得到 https://console.developers.google.com/apis/dashboard?project=sanguine-mark-826&authuser=0&hl=zh-tw&duration=PT1H 開啟api
 sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/googledrive.js
 sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
 記得update db token

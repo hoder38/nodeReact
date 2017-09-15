@@ -48,7 +48,9 @@ router.route('/act/:uid?').get(function (req, res, next) {
                 id: users[0]._id,
                 newable: false,
                 auto: users[0].auto ? 'https://drive.google.com/open?id=' + users[0].auto + '&authuser=0' : '',
-                editAuto: false
+                kindle: users[0].kindle ? users[0].kindle + '@kindle.com' : '',
+                editAuto: false,
+                editKindle: true
             }] });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -59,6 +61,7 @@ router.route('/act/:uid?').get(function (req, res, next) {
                 desc: '',
                 editAuto: false,
                 newable: true,
+                editKindle: false,
                 id: 0
             }].concat((0, _toConsumableArray3.default)(users.map(function (user) {
                 return (0, _assign2.default)({
@@ -68,6 +71,8 @@ router.route('/act/:uid?').get(function (req, res, next) {
                     id: user._id,
                     newable: false,
                     editAuto: true,
+                    editKindle: true,
+                    kindle: user.kindle ? user.kindle + '@kindle.com' : '',
                     auto: user.auto ? 'https://drive.google.com/open?id=' + user.auto + '&authuser=0' : ''
                 }, user.perm === 1 ? {
                     unDay: user.unDay ? user.unDay : _constants.UNACTIVE_DAY,
@@ -101,13 +106,25 @@ router.route('/act/:uid?').get(function (req, res, next) {
         if (!(0, _utility.isValidString)(req.body.auto, 'url')) {
             (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
         }
-        var autoId = req.body.auto.match(/id=([^\&]*)/);
+        var autoId = req.body.auto.match(/id=([^\&]*)/i);
         if (!autoId || !autoId[1]) {
             (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
         }
         data['auto'] = autoId[1];
         ret['auto'] = 'https://drive.google.com/open?id=' + autoId[1] + '&authuser=0';
         needPerm = true;
+    }
+    if (req.body.kindle) {
+        if (!(0, _utility.isValidString)(req.body.kindle, 'email')) {
+            (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
+        }
+        var kindleId = req.body.kindle.match(/^([^@]+)@kindle\.com$/i);
+        if (!kindleId || !kindleId[1]) {
+            (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
+        }
+
+        data['kindle'] = kindleId[1].toLowerCase();
+        ret['kindle'] = data['kindle'] + '@kindle.com';
     }
     if (req.body.desc === '' || req.body.desc) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
@@ -280,7 +297,9 @@ router.route('/act/:uid?').get(function (req, res, next) {
             id: user[0]._id,
             newable: false,
             auto: '',
-            editAuto: true
+            editAuto: true,
+            kindle: '',
+            editKindle: true
         }, user[0].perm === 1 ? {
             unDay: user[0].unDay ? user[0].unDay : _constants.UNACTIVE_DAY,
             unHit: user[0].unHit ? user[0].unHit : _constants.UNACTIVE_HIT

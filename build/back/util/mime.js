@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getExtname = exports.changeExt = exports.mediaMIME = exports.isSub = exports.isDoc = exports.isZipbook = exports.isZip = exports.isTorrent = exports.isMusic = exports.isImage = exports.isVideo = exports.extType = exports.extTag = exports.addPost = exports.getOptionTag = undefined;
+exports.getExtname = exports.changeExt = exports.mediaMIME = exports.isKindle = exports.isSub = exports.isDoc = exports.isZipbook = exports.isZip = exports.isTorrent = exports.isMusic = exports.isImage = exports.isVideo = exports.extType = exports.extTag = exports.addPost = exports.getOptionTag = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -239,6 +239,17 @@ var isSub = exports.isSub = function isSub(name) {
         return false;
     }
     return _constants.SUB_EXT.includes(extName) ? extName : false;
+};
+
+var isKindle = exports.isKindle = function isKindle(name) {
+    var result = name.match(_constants.EXT_FILENAME);
+    var extName = '';
+    if (result && result[1]) {
+        extName = result[1].toLowerCase();
+    } else {
+        return false;
+    }
+    return _constants.KINDLE_EXT.includes(extName) ? extName : extName.match(/^azw\d$/) ? extName : false;
 };
 
 var mediaMIME = exports.mediaMIME = function mediaMIME(name) {

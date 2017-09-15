@@ -127,6 +127,8 @@ function api(name, data) {
                 return copyFile(data);
             case 'move parent':
                 return moveParent(data);
+            case 'send mail':
+                return sendMail(data);
             case 'upload':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
@@ -437,6 +439,61 @@ var setToken = function setToken() {
         });
     }) : _promise2.default.resolve();
 };
+
+//need utf8 ansi
+function sendMail(data) {
+    if (!data['name'] || !data['filePath'] && !data['kindle']) {
+        return (0, _utility.handleReject)(new _utility.HoError('mail parameter lost!!!'));
+    }
+    if (!(0, _mime.isKindle)(data['name'])) {
+        return (0, _utility.handleReject)(new _utility.HoError('Unsupported kindle format!!!'));
+    }
+    if (!(0, _fs.existsSync)(data['filePath'])) {
+        return (0, _utility.handleReject)(new _utility.HoError('file not exist!!!'));
+    }
+    if ((0, _fs.statSync)(data['filePath'])['size'] > _constants.KINDLE_LIMIT) {
+        return (0, _utility.handleReject)(new _utility.HoError('file too large!!!'));
+    }
+    var gmail = _googleapis2.default.gmail({
+        version: 'v1',
+        auth: oauth2Client
+    });
+    var kindle = 'hoder3388@kindle.com';
+    var temp = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/kindle' + new Date().getTime();
+    return new _promise2.default(function (resolve, reject) {
+        return (0, _fs.writeFile)(temp, ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['kindle'] + '\r\n', 'Subject: Kindle\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', 'book\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: */*\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: base64\r\n', 'Content-Disposition: attachment; filename="' + data['name'] + '"\r\n\r\n'].join(''), function (err) {
+            return err ? reject(err) : resolve();
+        });
+    }).then(function () {
+        return new _promise2.default(function (resolve, reject) {
+            var dest = (0, _fs.createWriteStream)(temp, { flags: 'a' });
+            (0, _fs.createReadStream)(data['filePath'], 'base64').pipe(dest);
+            dest.on('finish', function () {
+                return resolve();
+            }).on('error', function (err) {
+                return reject(err);
+            });
+        });
+    }).then(function () {
+        return new _promise2.default(function (resolve, reject) {
+            return gmail.users.messages.send({
+                userId: 'me',
+                media: {
+                    mimeType: 'message/rfc822',
+                    body: (0, _fs.createReadStream)(temp)
+                }
+            }, function (err) {
+                return err && err.code !== 'ECONNRESET' ? reject(err) : resolve();
+            });
+        });
+    }).then(function () {
+        return new _promise2.default(function (resolve, reject) {
+            return (0, _fs.unlink)(temp, function (err) {
+                return err ? reject(err) : resolve();
+            });
+        });
+    });
+}
 
 function youtubeAPI(method, data) {
     var youtube = _googleapis2.default.youtube({
