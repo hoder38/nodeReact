@@ -1,4 +1,4 @@
-import { GENRE_LIST_CH, MEDIA_LIST_CH, MUSIC_LIST, ADULT_LIST, GAME_LIST_CH, EXT_FILENAME, MEDIA_TAG, IMAGE_EXT, ZIP_EXT, VIDEO_EXT, MUSIC_EXT, DOC_EXT, MIME_EXT, TORRENT_EXT, SUB_EXT } from '../constants'
+import { GENRE_LIST_CH, MEDIA_LIST_CH, MUSIC_LIST, ADULT_LIST, GAME_LIST_CH, EXT_FILENAME, MEDIA_TAG, IMAGE_EXT, ZIP_EXT, VIDEO_EXT, MUSIC_EXT, DOC_EXT, MIME_EXT, TORRENT_EXT, SUB_EXT, KINDLE_EXT } from '../constants'
 
 export const getOptionTag = () => [
     ...MEDIA_LIST_CH,
@@ -222,6 +222,17 @@ export const isSub = name => {
         return false;
     }
     return SUB_EXT.includes(extName) ? extName : false;
+}
+
+export const isKindle = name => {
+    const result = name.match(EXT_FILENAME);
+    let extName = '';
+    if (result && result[1]) {
+        extName = result[1].toLowerCase();
+    } else {
+        return false;
+    }
+    return KINDLE_EXT.includes(extName) ? extName : extName.match(/^azw\d$/) ? extName : false;
 }
 
 export const mediaMIME = name => {

@@ -72,9 +72,16 @@ python
 megadl
 avconv or ffmpeg
 
+cmd:
 sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/cmd.js
 sudo -i node /home/pi/release/nodeReact/build/back/cmd/cmd.js
 記得等db connect
+
+google auth:
+記得到google api console 開啟api
+sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/googledrive.js
+sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
+記得update db token
 
 
 make p12

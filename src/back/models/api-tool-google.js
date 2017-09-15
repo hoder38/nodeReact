@@ -1,18 +1,18 @@
-import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE } from '../constants'
+import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE, KINDLE_LIMIT } from '../constants'
 import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
-import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT } from '../config'
+import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP } from '../config'
 import googleapis from 'googleapis'
 import Fetch from 'node-fetch'
 import Youtubedl from 'youtube-dl'
 import { join as PathJoin } from 'path'
 import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
-import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unlink as FsUnlink, renameSync as FsRenameSync, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, appendFileSync as FsAppendFileSync } from 'fs'
+import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unlink as FsUnlink, renameSync as FsRenameSync, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, writeFile as FsWriteFile } from 'fs'
 import Mongo from '../models/mongo-tool'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import External from '../models/external-tool'
 import { handleError, handleReject, HoError, deleteFolderRecursive, SRT2VTT } from '../util/utility'
-import { mediaMIME, isSub } from '../util/mime'
+import { mediaMIME, isSub, isKindle } from '../util/mime'
 import sendWs from '../util/sendWs'
 
 const OAuth2 = googleapis.auth.OAuth2;
@@ -211,43 +211,54 @@ const setToken = () => {
     })) : Promise.resolve();
 }
 
+//need utf8 ansi
 function sendMail(data) {
+    if (!data['name'] || (!data['filePath'] && !data['kindle'])) {
+        return handleReject(new HoError('mail parameter lost!!!'));
+    }
+    if (!isKindle(data['name'])) {
+        return handleReject(new HoError('Unsupported kindle format!!!'));
+    }
+    if (!FsExistsSync(data['filePath'])) {
+        return handleReject(new HoError('file not exist!!!'));
+    }
+    if (FsStatSync(data['filePath'])['size'] > KINDLE_LIMIT) {
+        return handleReject(new HoError('file too large!!!'));
+    }
     const gmail = googleapis.gmail({
         version: 'v1',
         auth: oauth2Client,
     });
-    return new Promise((resolve, reject) => gmail.messages.send({
-        part: 'snippet,statistics',
-        id: data['id'],
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.items)));
+    const kindle = 'hoder3388@kindle.com';
+    const temp = `${NAS_TMP(ENV_TYPE)}/kindle${new Date().getTime()}`;
+    return new Promise((resolve, reject) => FsWriteFile(temp, [
+        'Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n',
+        'MIME-Version: 1.0\r\n',
+        'From: me\r\n',
+        `To: ${data['kindle']}\r\n`,
+        'Subject: Kindle\r\n\r\n',
+        '--foo_bar_baz\r\n',
+        'Content-Type: text/plain; charset="UTF-8"\r\n',
+        'MIME-Version: 1.0\r\n',
+        'Content-Transfer-Encoding: 7bit\r\n\r\n',
+        'book\r\n\r\n',
+        '--foo_bar_baz\r\n',
+        'Content-Type: */*\r\n',
+        'MIME-Version: 1.0\r\n',
+        'Content-Transfer-Encoding: base64\r\n',
+        `Content-Disposition: attachment; filename="${data['name']}"\r\n\r\n`,
+    ].join(''), err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => {
+        const dest = FsCreateWriteStream(temp, {flags: 'a'});
+        FsCreateReadStream(data['filePath'], 'base64').pipe(dest);
+        dest.on('finish', () => resolve()).on('error', err => reject(err));
+    })).then(() => new Promise((resolve, reject) => gmail.users.messages.send({
+        userId: 'me',
+        media: {
+            mimeType: 'message/rfc822',
+            body: FsCreateReadStream(temp),
+        },
+    }, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()))).then(() => new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())));
 }
-
-var mail = [
-  'Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n',
-  'MIME-Version: 1.0\r\n',
-  'From: sender@gmail.com\r\n',
-  'To: receiver@gmail.com\r\n',
-  'Subject: Subject Text\r\n\r\n',
-
-  '--foo_bar_baz\r\n',
-  'Content-Type: text/plain; charset="UTF-8"\r\n',
-  'MIME-Version: 1.0\r\n',
-  'Content-Transfer-Encoding: 7bit\r\n\r\n',
-
-  'The actual message text goes here\r\n\r\n',
-
-  '--foo_bar_baz\r\n',
-  'Content-Type: image/png\r\n',
-  'MIME-Version: 1.0\r\n',
-  'Content-Transfer-Encoding: base64\r\n',
-  'Content-Disposition: attachment; filename="example.png"\r\n\r\n',
-
-   pngData, '\r\n\r\n',
-
-   '--foo_bar_baz--'
-].join('');
-
-    var base64EncodedEmail = btoa(message).replace(/\+/g, '-').replace(/\//g, '_');
 
 function youtubeAPI(method, data) {
     const youtube = googleapis.youtube({
@@ -389,11 +400,11 @@ function upload(data) {
     let param = data['filePath'] ? {
         resource: {
             title: data['name'],
-            mimeType: mimeType,
+            mimeType,
             parents: [parent],
         },
         media: {
-            mimeType: mimeType,
+            mimeType,
             body: FsCreateReadStream(data['filePath']),
         },
     } : {

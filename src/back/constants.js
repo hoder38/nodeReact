@@ -41,6 +41,7 @@ export const EXTERNAL_INTERVAL = 604800;
 export const STOCK_INTERVAL = 172800;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
+export const KINDLE_LIMIT = 52428800
 
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -701,6 +702,7 @@ export const DOC_EXT = {
 }
 export const TORRENT_EXT = ['torrent']
 export const SUB_EXT = ['srt', 'ass', 'ssa', 'vtt']
+export const KINDLE_EXT = ['azw', 'doc', 'docx', 'pdf', 'htm', 'html', 'txt', 'rtf', 'jpg', 'jpeg', 'gif', 'png', 'bmp', 'prc', 'mobi'];
 
 export const MIME_EXT = {
     jpg: 'image/jpeg',
@@ -753,3 +755,5 @@ export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
 export const CHART_LIMIT = 4;
 
 export const RANK_LIMIT = 10;
+
+export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/youtube https://mail.google.com/ https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send';

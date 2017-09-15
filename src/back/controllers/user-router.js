@@ -18,13 +18,16 @@ router.route('/act/:uid?').get(function(req, res, next) {
         id: users[0]._id,
         newable: false,
         auto: users[0].auto ? `https://drive.google.com/open?id=${users[0].auto}&authuser=0` : '',
+        kindle: users[0].kindle ? `${users[0].kindle}@kindle.com` : '',
         editAuto: false,
+        editKindle: true,
     }]})).catch(err => handleError(err, next)) : Mongo('find', USERDB).then(users => res.json({user_info: [{
         name: '',
         perm: '',
         desc: '',
         editAuto: false,
         newable: true,
+        editKindle: false,
         id: 0,
     }, ...users.map(user => Object.assign({
         name: user.username,
@@ -33,6 +36,8 @@ router.route('/act/:uid?').get(function(req, res, next) {
         id: user._id,
         newable: false,
         editAuto: true,
+        editKindle: true,
+        kindle: user.kindle ? `${user.kindle}@kindle.com` : '',
         auto: user.auto ? `https://drive.google.com/open?id=${user.auto}&authuser=0` : '',
     }, user.perm === 1 ? {
         unDay: user.unDay ? user.unDay : UNACTIVE_DAY,
@@ -62,13 +67,25 @@ router.route('/act/:uid?').get(function(req, res, next) {
         if (!isValidString(req.body.auto, 'url')) {
             handleError(new HoError('auto is not valid'), next);
         }
-        const autoId = req.body.auto.match(/id=([^\&]*)/)
+        const autoId = req.body.auto.match(/id=([^\&]*)/i)
         if (!autoId || !autoId[1]) {
             handleError(new HoError('auto is not valid'), next);
         }
         data['auto'] = autoId[1]
         ret['auto'] = `https://drive.google.com/open?id=${autoId[1]}&authuser=0`
         needPerm = true
+    }
+    if (req.body.kindle) {
+        if (!isValidString(req.body.kindle, 'email')) {
+            handleError(new HoError('kindle is not valid'), next);
+        }
+        const kindleId = req.body.kindle.match(/^([^@]+)@kindle\.com$/i);
+        if (!kindleId || !kindleId[1]) {
+            handleError(new HoError('kindle is not valid'), next);
+        }
+
+        data['kindle'] = kindleId[1].toLowerCase();
+        ret['kindle'] = `${data['kindle']}@kindle.com`;
     }
     if (req.body.desc === '' || req.body.desc) {
         if (!checkAdmin(1, req.user)) {
@@ -231,6 +248,8 @@ router.route('/act/:uid?').get(function(req, res, next) {
         newable: false,
         auto: '',
         editAuto: true,
+        kindle: '',
+        editKindle: true,
     }, user[0].perm === 1 ? {
         unDay: user[0].unDay ? user[0].unDay : UNACTIVE_DAY,
         unHit: user[0].unHit ? user[0].unHit : UNACTIVE_HIT,

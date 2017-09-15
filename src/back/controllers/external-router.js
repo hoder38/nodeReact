@@ -182,6 +182,36 @@ router.get('/2drive/:uid', function(req, res, next){
     }).catch(err => handleError(err, next));
 });
 
+router.get('/2kindle/:uid', function(req, res, next){
+    console.log('external 2 kindle');
+    Mongo('find', USERDB, {_id: req.user._id}, {limit: 1}).then(userlist => {
+        if (userlist.length < 1) {
+            return handleReject(new HoError('do not find user!!!'));
+        }
+        if (!userlist[0].kindle) {
+            return handleReject(new HoError('user dont have kindle device!!!'));
+        }
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            return handleReject(new HoError('uid is not vaild'));
+        }
+        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+            if (items.length < 1) {
+                return handleReject(new HoError('cannot find file!!!'));
+            }
+            if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
+                return handleReject(new HoError('file cannot downlad!!!'));
+            }
+            return GoogleApi('send mail', {
+                user: req.user,
+                name: items[0].name,
+                filePath: getFileLocation(items[0].owner, items[0]._id),
+                kindle: `${userlist[0].kindle}@kindle.com`,
+            });
+        }).then(() => res.json({apiOK: true}));
+    }).catch(err => handleError(err, next));
+});
+
 router.get('/getSingle/:uid', function(req, res, next) {
     console.log('external getSingle');
     const id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
