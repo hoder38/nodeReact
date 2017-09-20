@@ -218,7 +218,7 @@ export default function process(collection) {
                 } else if (index.index === 9) {
                     query.type = 10 + query.type%10;
                 //yv
-                } else if (index.index === 8) {
+                } else if (index.index === 8 || index.index === 22) {
                     query.type = Math.floor(query.type/10)*10 + 1;
                 } else if (index.index === 30) {
                     const index1 = isDefaultTag(i);
@@ -271,7 +271,7 @@ export default function process(collection) {
                         query_term = s;
                         genre = null;
                     }
-                } else if (index.index === 13) {
+                } else if (index.index === 13 || index.index === 22) {
                     search = true;
                 }
             });
@@ -292,7 +292,7 @@ export default function process(collection) {
                 return false;
             }
         },
-        getBiliQuery: function(search_arr, sortName, page) {
+        getBiliQuery: function(search_arr, sortName, page, is_movie=false) {
             const order = sortName === 'mtime' ? 2 : 0;
             const mOrder = sortName === 'count' ? 'hot' : 'default';
             const sOrder = sortName === 'count' ? 'click' : null;
@@ -323,9 +323,9 @@ export default function process(collection) {
                         query_term = denormalize(s);
                         s_country = -1;
                     }
-                } else if (index.index === 15) {
+                } else if (!is_movie && (index.index === 15 || index.index === 22)) {
                     search = 1;
-                } else if (index.index === 16) {
+                } else if (is_movie && (index.index === 16 || index.index === 22)) {
                     search = 2;
                 }
             });
@@ -415,7 +415,7 @@ export default function process(collection) {
                         query_term = s;
                         comic_type = -1;
                     }
-                } else if (index.index === 14) {
+                } else if (index.index === 14 || index.index === 22) {
                     search = true;
                 }
             });
@@ -484,7 +484,7 @@ export default function process(collection) {
                 } else if (index.index === 20) {
                     type = 41;
                 //animation
-                } else if (index.index === 21) {
+                } else if (index.index === 21 || index.index === 22) {
                     type = 3;
                 }
             });
@@ -1188,7 +1188,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                     console.log(ret.nosql);
                     return ret;
                 }
-            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21) {
+            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21 || index.index === 22) {
             } else if (index.index === 5) {
                 is_first = false;
             } else if (index.index === 7) {

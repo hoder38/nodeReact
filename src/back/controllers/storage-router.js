@@ -233,7 +233,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.count,
-    }))).then(() => External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index))).then(list => [...itemList, ...list.map(item => ({
+    }))).then(() => External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `yif_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -245,6 +245,17 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         status: 3,
         count: item.rating,
     }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+        name: item.name,
+        id: `bbl_${item.id}`,
+        tags: [...item.tags, 'first item'],
+        recycle: 0,
+        isOwn: false,
+        utime: item.date,
+        thumb: item.thumb,
+        noDb: true,
+        status: 3,
+        count: item.count,
+    }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index, true))).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `bbl_${item.id}`,
         tags: [...item.tags, 'first item'],

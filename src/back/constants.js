@@ -112,6 +112,7 @@ export const DEFAULT_TAGS = [
     'kubo tv series',
     'kubo tv show',
     'kubo animation',
+    'all external',
 ]
 
 //parent list
