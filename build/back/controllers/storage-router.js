@@ -321,7 +321,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function (re
     }).then(function () {
         return _externalTool2.default.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index));
     }).then(function (list) {
-        return [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
+        return itemList = [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
             return {
                 name: item.name,
                 id: 'yif_' + item.id,
@@ -337,6 +337,23 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function (re
         })));
     }).then(function () {
         return _externalTool2.default.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index));
+    }).then(function (list) {
+        return itemList = [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
+            return {
+                name: item.name,
+                id: 'bbl_' + item.id,
+                tags: [].concat((0, _toConsumableArray3.default)(item.tags), ['first item']),
+                recycle: 0,
+                isOwn: false,
+                utime: item.date,
+                thumb: item.thumb,
+                noDb: true,
+                status: 3,
+                count: item.count
+            };
+        })));
+    }).then(function () {
+        return _externalTool2.default.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index, true));
     }).then(function (list) {
         return itemList = [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
             return {

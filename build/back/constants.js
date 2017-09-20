@@ -87,7 +87,7 @@ var RE_WEBURL = exports.RE_WEBURL = new RegExp("^(url:)?" +
 "(?:/\\S*)?" + "$", "i");
 var EXT_FILENAME = exports.EXT_FILENAME = /(?:\.([^.]+))?$/;
 
-var DEFAULT_TAGS = exports.DEFAULT_TAGS = ['18+', 'handlemedia', 'unactive', 'handlerecycle', 'first item', 'all item', 'important', 'no local', 'youtube video', 'youtube playlist', 'youtube music', 'youtube music playlist', 'playlist unactive', 'yify movie', 'cartoonmad comic', 'bilibili animation', 'bilibili movie', '18-', 'kubo movie', 'kubo tv series', 'kubo tv show', 'kubo animation'];
+var DEFAULT_TAGS = exports.DEFAULT_TAGS = ['18+', 'handlemedia', 'unactive', 'handlerecycle', 'first item', 'all item', 'important', 'no local', 'youtube video', 'youtube playlist', 'youtube music', 'youtube music playlist', 'playlist unactive', 'yify movie', 'cartoonmad comic', 'bilibili animation', 'bilibili movie', '18-', 'kubo movie', 'kubo tv series', 'kubo tv show', 'kubo animation', 'all external'];
 
 //parent list
 var STORAGE_PARENT = exports.STORAGE_PARENT = [{
