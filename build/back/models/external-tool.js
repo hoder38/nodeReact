@@ -2159,7 +2159,8 @@ exports.default = {
             case 'cbc':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var dlPdf = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0], 'div', 'Body')[0], 'div', 'download')[0];
+                    var article = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0];
+                    var dlPdf = (0, _utility.findTag)(article, 'div', 'download')[0] ? (0, _utility.findTag)(article, 'div', 'download')[0] : (0, _utility.findTag)((0, _utility.findTag)(article, 'div', 'Body')[0], 'div', 'download')[0];
                     var downloadList = [];
                     if (dlPdf) {
                         (0, _utility.findTag)((0, _utility.findTag)(dlPdf, 'ul')[0], 'li').forEach(function (l) {

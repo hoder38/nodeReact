@@ -1497,7 +1497,8 @@ export default {
             case 'cbc':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const dlPdf = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0], 'div', 'Body')[0], 'div', 'download')[0];
+                const article = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0];
+                const dlPdf = findTag(article, 'div', 'download')[0] ? findTag(article, 'div', 'download')[0] : findTag(findTag(article, 'div', 'Body')[0], 'div', 'download')[0];
                 let downloadList = [];
                 if (dlPdf) {
                     findTag(findTag(dlPdf, 'ul')[0], 'li').forEach(l => {
