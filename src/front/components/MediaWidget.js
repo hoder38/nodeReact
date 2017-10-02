@@ -697,14 +697,14 @@ const MediaWidget = React.createClass({
         if (this._fix) {
             this._media.currentTime = this._media.currentTime >= 0.5 ? this._media.currentTime - 0.5 : 0
         } else {
-            this._media.currentTime = this._media.currentTime >= 15 ? this._media.currentTime - 15 : 0
+            this._media.currentTime = this._media.currentTime >= 5 ? this._media.currentTime - 5 : 0
         }
     },
     _forward: function() {
         if (this._fix) {
             this._media.currentTime += 0.5
         } else {
-            this._media.currentTime += 15
+            this._media.currentTime += 5
         }
     },
     _mediaCheck: function() {

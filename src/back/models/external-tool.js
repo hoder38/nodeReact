@@ -797,36 +797,26 @@ export default {
                 return list;
             });
             case 'rea':
-            return Api('url', 'http://www.realtor.org/topics/existing-home-sales').then(raw_data => {
+            return Api('url', 'https://www.nar.realtor/newsroom').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleReject(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
+                const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
                 console.log(docDate);
                 let list = [];
-                let link = false;
-                let today = false;
-                const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'page clearfix')[0], 'section', 'section-content')[0], 'div', 'zone-content-wrapper')[0], 'div', 'zone-content')[0], 'div', 'region-content')[0], 'div', 'region-inner region-content-inner')[0], 'div', 'block-system-main')[0], 'div', 'block-inner clearfix')[0], 'div', 'content clearfix')[0], 'div', 'clearfix panel-display omega-grid rotheme-12-twocol-8-4-stacked')[0], 'div', 'panel-panel grid-8')[0], 'div', 'grid-8 alpha omega')[0], 'div', 'inside')[0], 'div', 'panel-pane pane-entity-field pane-node-body')[0], 'div', 'pane-content')[0], 'div', 'field field-name-body field-type-text-with-summary field-label-hidden')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'ul')[0], 'li');
-                for (let l of lis) {
-                    const a = findTag(l, 'a')[0];
-                    if (findTag(a)[0] === 'Read the full news release') {
-                        link = a.attribs.href;
-                    }
-                    const dateMatch = a.attribs.href.match(/\d\d\d\d-\d\d-\d\d/);
-                    if (dateMatch && dateMatch[0] === docDate) {
-                        today = true;
-                    }
-                    if (link && today) {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div').forEach(d => {
+                    const content =  findTag(findTag(d, 'article')[0], 'div', 'card-view__content')[0];
+                    if (findTag(findTag(findTag(findTag(findTag(findTag(content, 'div', 'card-view__footer')[0], 'div', 'field field--publish-timestamp')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'span')[0])[0] === docDate) {
+                        const a = findTag(findTag(findTag(findTag(content, 'div', 'card-view__header')[0], 'div', 'field field--title')[0], 'h3', 'card-view__title')[0], 'a')[0];
                         list.push({
-                            url: addPre(link, 'http://www.realtor.org'),
-                            name: toValidName('Existing-Home Sales'),
+                            url: addPre(a.attribs.href, 'https://www.nar.realtor'),
+                            name: toValidName(findTag(a)[0]),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
-                        break;
                     }
-                }
+                });
                 return list;
             });
             case 'sca':
