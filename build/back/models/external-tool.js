@@ -3442,7 +3442,7 @@ exports.default = {
                                 });
                                 var jM = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
                                 if (jM) {
-                                    ff_urls = JSON.parse(jM[1].replace(/\\\"/g, '"'));
+                                    ff_urls = (0, _utility.getJson)(jM[1].replace(/\\\"/g, '"'));
                                 }
                                 var list1 = [];
                                 var list2 = [];
@@ -3453,7 +3453,7 @@ exports.default = {
                                         list = f.playurls.map(function (p) {
                                             return {
                                                 name: p[0],
-                                                id: 'kud_' + Pid + '_' + diy_vid + '_' + new Buffer(p[1]).toString('base64')
+                                                id: 'kud_' + Pid + '_' + diy_vid + '_' + p[2].match(/pid\-(\d+)\./)[1] + '_' + new Buffer(p[1]).toString('base64')
                                             };
                                         });
                                     } else if (f.playname === 'bj') {
@@ -3860,17 +3860,68 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             if (!script) {
                 return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
             }
-            _kubo.JuicyCodes.Run((0, _utility.findTag)(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
-            _kubo.kuboInfo.sources.forEach(function (s) {
-                if (s.type === 'video/mp4') {
-                    ret_obj.video.splice(0, 0, s.file);
+            var videoData = (0, _utility.findTag)(script)[0];
+            if (videoData) {
+                _kubo.JuicyCodes.Run(videoData.match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+                _kubo.kuboInfo.sources.forEach(function (s) {
+                    if (s.type === 'video/mp4') {
+                        ret_obj.video.splice(0, 0, s.file);
+                    }
+                });
+                if (ret_obj.video.length < 1) {
+                    console.log(ret_obj.video);
+                    return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
                 }
-            });
-            if (ret_obj.video.length < 1) {
-                console.log(ret_obj.video);
-                return (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'));
+                return ret_obj;
+            } else {
+                return (0, _apiTool2.default)('url', 'http://video.99kubo.com/redirect?id=' + url.match(/\&kubovid\=(\d+)/)[1] + '&pid=' + subIndex, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+                    var _iteratorNormalCompletion37 = true;
+                    var _didIteratorError37 = false;
+                    var _iteratorError37 = undefined;
+
+                    try {
+                        for (var _iterator37 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
+                            var _i16 = _step37.value;
+
+                            var _videoData = (0, _utility.findTag)(_i16)[0];
+                            if (_videoData) {
+                                var videoMatch = _videoData.match(/videoDetail = ([^\]]+\])/);
+                                if (videoMatch) {
+                                    var _ret12 = function () {
+                                        var bps = 0;
+                                        (0, _utility.getJson)(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"')).forEach(function (i) {
+                                            if (parseInt(i.bps) > bps) {
+                                                bps = parseInt(i.bps);
+                                                ret_obj.video.splice(0, 0, i.src);
+                                            } else {
+                                                ret_obj.video.push(i.src);
+                                            }
+                                        });
+                                        return {
+                                            v: ret_obj
+                                        };
+                                    }();
+
+                                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError37 = true;
+                        _iteratorError37 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion37 && _iterator37.return) {
+                                _iterator37.return();
+                            }
+                        } finally {
+                            if (_didIteratorError37) {
+                                throw _iteratorError37;
+                            }
+                        }
+                    }
+                });
             }
-            return ret_obj;
         });
     } else if (id === 'kyu') {
         return (0, _apiTool2.default)('url', 'http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=' + new Date().getTime(), {

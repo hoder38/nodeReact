@@ -226,8 +226,9 @@ router.get('/getSingle/:uid', function(req, res, next) {
         url = `http://www.dailymotion.com/embed/video/${id[2]}`;
         break;
         case 'kud':
-        idsub = id[2].match(/^(\d+)_(\d+)_(.*)$/);
-        url = `http://www.99kubo.com/168player/?url=${new Buffer(idsub[3], 'base64').toString()}&kubovid=${idsub[2]}&kubocid=${idsub[1]}`;
+        idsub = id[2].match(/^(\d+)_(\d+)_(\d+)_(.*)$/);
+        url = `http://www.99kubo.com/168player/?url=${new Buffer(idsub[4], 'base64').toString()}&kubovid=${idsub[2]}&kubocid=${idsub[1]}`;
+        subIndex = Number(idsub[3]);
         break;
         case 'kyu':
         idsub = id[2].match(/^(.*)_(\d+)$/);

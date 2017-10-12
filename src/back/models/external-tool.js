@@ -2216,7 +2216,7 @@ export default {
                     });
                     const jM = findTag(findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
                     if (jM) {
-                        ff_urls = JSON.parse(jM[1].replace(/\\\"/g, '"'));
+                        ff_urls = getJson(jM[1].replace(/\\\"/g, '"'));
                     }
                     let list1 = [];
                     let list2 = [];
@@ -2226,7 +2226,7 @@ export default {
                         if (f.playname === 'bj58') {
                             list = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kud_${Pid}_${diy_vid}_${new Buffer(p[1]).toString('base64')}`,
+                                id: `kud_${Pid}_${diy_vid}_${p[2].match(/pid\-(\d+)\./)[1]}_${new Buffer(p[1]).toString('base64')}`,
                             }));
                         } else if (f.playname === 'bj') {
                             list1 = f.playurls.map(p => ({
@@ -2591,17 +2591,41 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             if (!script) {
                 return handleReject(new HoError('cannot find mp4'));
             }
-            JuicyCodes.Run(findTag(script)[0].match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
-            kuboInfo.sources.forEach(s => {
-                if (s.type === 'video/mp4') {
-                    ret_obj.video.splice(0, 0, s.file);
+            const videoData = findTag(script)[0];
+            if (videoData) {
+                JuicyCodes.Run(videoData.match(/\((.*)\)/)[1].replace(/["\+]/g, ''));
+                kuboInfo.sources.forEach(s => {
+                    if (s.type === 'video/mp4') {
+                        ret_obj.video.splice(0, 0, s.file);
+                    }
+                });
+                if (ret_obj.video.length < 1) {
+                    console.log(ret_obj.video);
+                    return handleReject(new HoError('cannot find mp4'));
                 }
-            });
-            if (ret_obj.video.length < 1) {
-                console.log(ret_obj.video);
-                return handleReject(new HoError('cannot find mp4'));
+                return ret_obj;
+            } else {
+                return Api('url', `http://video.99kubo.com/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+                    for (let i of findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')) {
+                        const videoData = findTag(i)[0];
+                        if (videoData) {
+                            const videoMatch = videoData.match(/videoDetail = ([^\]]+\])/);
+                            if (videoMatch) {
+                                let bps = 0;
+                                getJson(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"')).forEach(i => {
+                                    if (parseInt(i.bps) > bps) {
+                                        bps = parseInt(i.bps);
+                                        ret_obj.video.splice(0, 0, i.src);
+                                    } else {
+                                        ret_obj.video.push(i.src);
+                                    }
+                                });
+                                return ret_obj;
+                            }
+                        }
+                    }
+                });
             }
-            return ret_obj;
         });
     } else if (id === 'kyu') {
         return Api('url', `http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
