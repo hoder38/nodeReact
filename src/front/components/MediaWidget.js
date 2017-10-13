@@ -22,7 +22,6 @@ const MediaWidget = React.createClass({
         this.props.setsub(this._refreshCue)
         this._type = null
         this._preType = null
-        this._keydown = true
         switch (this.props.mediaType) {
             case 2:
             this._type = 'image'
@@ -107,50 +106,21 @@ const MediaWidget = React.createClass({
                         }
                     }
                     this._video.onkeydown = e => {
-                        if (this._keydown) {
-                            switch(e.keyCode) {
-                                case 32:
-                                this._video.paused ? this._video.play() : this._video.pause()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 37:
-                                this._backward()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 38:
-                                this._video.volume = this._video.volume < 0.9 ? this._video.volume + 0.1 : 1
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 39:
-                                this._forward()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 40:
-                                this._video.volume = this._video.volume > 0.1 ? this._video.volume - 0.1 : 0
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 67:
-                                if (this._video && this._video.src && window.location.href !== this._video.src) {
-                                    if (this._video.textTracks[0] && this._video.textTracks[1]) {
-                                        if (this._video.textTracks[0].mode === 'showing') {
-                                            this._video.textTracks[0].mode = 'disabled'
-                                            this._video.textTracks[1].mode = 'showing'
-                                        } else if (this._video.textTracks[1].mode === 'showing') {
-                                            this._video.textTracks[1].mode = 'disabled'
-                                        } else {
-                                            this._video.textTracks[0].mode = 'showing'
-                                        }
-                                        this._keydown = false;
-                                        setTimeout(() => this._keydown = true, 300);
+                        switch(e.keyCode) {
+                            case 67:
+                            if (this._video && this._video.src && window.location.href !== this._video.src) {
+                                if (this._video.textTracks[0] && this._video.textTracks[1]) {
+                                    if (this._video.textTracks[0].mode === 'showing') {
+                                        this._video.textTracks[0].mode = 'disabled'
+                                        this._video.textTracks[1].mode = 'showing'
+                                    } else if (this._video.textTracks[1].mode === 'showing') {
+                                        this._video.textTracks[1].mode = 'disabled'
+                                    } else {
+                                        this._video.textTracks[0].mode = 'showing'
                                     }
                                 }
-                                break
                             }
+                            break
                         }
                     }
                 }
@@ -188,39 +158,6 @@ const MediaWidget = React.createClass({
                             this._preTime = this._audio.currentTime
                         }
                     }, 1000)
-                }
-                if (!is_firefox) {
-                    this._audio.onkeydown = e => {
-                        if (this._keydown) {
-                            switch(e.keyCode) {
-                                case 32:
-                                this._audio.paused ? this._audio.play() : this._audio.pause()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 37:
-                                this._backward()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 38:
-                                this._audio.volume = this._audio.volume < 0.9 ? this._audio.volume + 0.1 : 1
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 39:
-                                this._forward()
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                                case 40:
-                                this._audio.volume = this._audio.volume > 0.1 ? this._audio.volume - 0.1 : 0
-                                this._keydown = false;
-                                setTimeout(() => this._keydown = true, 300);
-                                break
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -725,13 +662,6 @@ const MediaWidget = React.createClass({
             this._media.currentTime = this._media.currentTime >= 0.5 ? this._media.currentTime - 0.5 : 0
         } else {
             this._media.currentTime = this._media.currentTime >= 5 ? this._media.currentTime - 5 : 0
-        }
-    },
-    _forward: function() {
-        if (this._fix) {
-            this._media.currentTime += 0.5
-        } else {
-            this._media.currentTime += 5
         }
     },
     _mediaCheck: function() {
