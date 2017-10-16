@@ -3889,14 +3889,22 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
                                 if (videoMatch) {
                                     var _ret12 = function () {
                                         var bps = 0;
-                                        (0, _utility.getJson)(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"')).forEach(function (i) {
-                                            if (parseInt(i.bps) > bps) {
-                                                bps = parseInt(i.bps);
-                                                ret_obj.video.splice(0, 0, i.src);
-                                            } else {
-                                                ret_obj.video.push(i.src);
+                                        (0, _utility.getJson)(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"').replace(/type/g, '"type"')).forEach(function (i) {
+                                            if (i.bps) {
+                                                if (parseInt(i.bps) > bps) {
+                                                    bps = parseInt(i.bps);
+                                                    ret_obj.video.splice(0, 0, i.src);
+                                                } else {
+                                                    ret_obj.video.push(i.src);
+                                                }
                                             }
                                         });
+                                        if (ret_obj.video.length < 1) {
+                                            console.log(ret_obj.video);
+                                            return {
+                                                v: (0, _utility.handleReject)(new _utility.HoError('cannot find mp4'))
+                                            };
+                                        }
                                         return {
                                             v: ret_obj
                                         };

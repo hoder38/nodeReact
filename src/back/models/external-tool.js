@@ -2612,14 +2612,20 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                             const videoMatch = videoData.match(/videoDetail = ([^\]]+\])/);
                             if (videoMatch) {
                                 let bps = 0;
-                                getJson(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"')).forEach(i => {
-                                    if (parseInt(i.bps) > bps) {
-                                        bps = parseInt(i.bps);
-                                        ret_obj.video.splice(0, 0, i.src);
-                                    } else {
-                                        ret_obj.video.push(i.src);
+                                getJson(videoMatch[1].replace(/'/g, '"').replace(/bps/g, '"bps"').replace(/src/g, '"src"').replace(/type/g, '"type"')).forEach(i => {
+                                    if (i.bps) {
+                                        if (parseInt(i.bps) > bps) {
+                                            bps = parseInt(i.bps);
+                                            ret_obj.video.splice(0, 0, i.src);
+                                        } else {
+                                            ret_obj.video.push(i.src);
+                                        }
                                     }
                                 });
+                                if (ret_obj.video.length < 1) {
+                                    console.log(ret_obj.video);
+                                    return handleReject(new HoError('cannot find mp4'));
+                                }
                                 return ret_obj;
                             }
                         }
