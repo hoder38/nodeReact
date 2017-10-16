@@ -105,23 +105,29 @@ const MediaWidget = React.createClass({
                             this._video.pause()
                         }
                     }
-                    this._video.onkeydown = e => {
-                        switch(e.keyCode) {
-                            case 67:
-                            if (this._video && this._video.src && window.location.href !== this._video.src) {
-                                if (this._video.textTracks[0] && this._video.textTracks[1]) {
-                                    if (this._video.textTracks[0].mode === 'showing') {
-                                        this._video.textTracks[0].mode = 'disabled'
-                                        this._video.textTracks[1].mode = 'showing'
-                                    } else if (this._video.textTracks[1].mode === 'showing') {
-                                        this._video.textTracks[1].mode = 'disabled'
-                                    } else {
-                                        this._video.textTracks[0].mode = 'showing'
-                                    }
+                }
+                this._video.onkeydown = e => {
+                    switch(e.keyCode) {
+                        case 67:
+                        if (this._video && this._video.src && window.location.href !== this._video.src) {
+                            if (this._video.textTracks[0] && this._video.textTracks[1]) {
+                                if (this._video.textTracks[0].mode === 'showing') {
+                                    this._video.textTracks[0].mode = 'disabled'
+                                    this._video.textTracks[1].mode = 'showing'
+                                } else if (this._video.textTracks[1].mode === 'showing') {
+                                    this._video.textTracks[1].mode = 'disabled'
+                                } else {
+                                    this._video.textTracks[0].mode = 'showing'
                                 }
                             }
-                            break
                         }
+                        break
+                        case 90:
+                        this._backward();
+                        break;
+                        case 88:
+                        this._forward();
+                        break;
                     }
                 }
             }
@@ -158,6 +164,16 @@ const MediaWidget = React.createClass({
                             this._preTime = this._audio.currentTime
                         }
                     }, 1000)
+                }
+                this._audio.onkeydown = e => {
+                    switch(e.keyCode) {
+                        case 90:
+                        this._backward();
+                        break;
+                        case 88:
+                        this._forward();
+                        break;
+                    }
                 }
             }
         }
@@ -662,6 +678,13 @@ const MediaWidget = React.createClass({
             this._media.currentTime = this._media.currentTime >= 0.5 ? this._media.currentTime - 0.5 : 0
         } else {
             this._media.currentTime = this._media.currentTime >= 5 ? this._media.currentTime - 5 : 0
+        }
+    },
+    _forward: function() {
+        if (this._fix) {
+            this._media.currentTime += 0.5
+        } else {
+            this._media.currentTime += 5
         }
     },
     _mediaCheck: function() {

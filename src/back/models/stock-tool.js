@@ -2700,7 +2700,11 @@ export default {
                                     if (!start_month) {
                                         start_month = `${year+1911}${month_str}`;
                                     }
-                                    findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0], 'tr').forEach(t => {
+                                    const table = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
+                                    if (!table) {
+                                        return handleReject(new HoError(`${items[0].type}${items[0].index} 稍後再查詢!!`));
+                                    }
+                                    findTag(table, 'tr').forEach(t => {
                                         const th = findTag(t, 'th')[0];
                                         const td = findTag(t, 'td');
                                         const text = (th && td[0]) ? findTag(th)[0] : td[0] ? findTag(td[0])[0] : '';

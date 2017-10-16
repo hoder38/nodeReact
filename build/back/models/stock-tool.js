@@ -2919,7 +2919,11 @@ exports.default = {
                                         if (!start_month) {
                                             start_month = '' + (year + 1911) + month_str;
                                         }
-                                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0], 'tr').forEach(function (t) {
+                                        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
+                                        if (!table) {
+                                            return (0, _utility.handleReject)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
+                                        }
+                                        (0, _utility.findTag)(table, 'tr').forEach(function (t) {
                                             var th = (0, _utility.findTag)(t, 'th')[0];
                                             var td = (0, _utility.findTag)(t, 'td');
                                             var text = th && td[0] ? (0, _utility.findTag)(th)[0] : td[0] ? (0, _utility.findTag)(td[0])[0] : '';
