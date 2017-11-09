@@ -2604,11 +2604,11 @@ exports.default = {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
                     return {
-                        v: youtube_id ? _this.youtubePlaylist(youtube_id[1], index, pageToken, back) : [{
+                        v: youtube_id ? _this.youtubePlaylist(youtube_id[1], index, pageToken, back) : _promise2.default.resolve([{
                             id: 'you_' + url.match(/v=([^&]+)/)[1],
                             index: 1,
                             showId: 1
-                        }, false, 1]
+                        }, false, 1])
                     };
                 case 'lovetv':
                     var prefix = url.match(/^((http|https):\/\/[^\/]+)\//);

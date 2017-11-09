@@ -597,7 +597,14 @@ var initXml = function initXml(filelocation) {
     }).then(function (data) {
         return new _promise2.default(function (resolve, reject) {
             return Xmlparser.parseString(data, function (err, result) {
-                return err ? reject(err) : resolve(result);
+                if (err) {
+                    console.log(err.code);
+                    console.log(err.message);
+                    console.log(data);
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
             });
         });
     });
