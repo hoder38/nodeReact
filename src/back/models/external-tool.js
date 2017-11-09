@@ -1771,11 +1771,11 @@ export default {
         switch (type) {
             case 'youtube':
             const youtube_id = url.match(/list=([^&]+)/);
-            return youtube_id ? this.youtubePlaylist(youtube_id[1], index, pageToken, back) : [{
+            return youtube_id ? this.youtubePlaylist(youtube_id[1], index, pageToken, back) : Promise.resolve([{
                 id: `you_${url.match(/v=([^&]+)/)[1]}`,
                 index: 1,
                 showId: 1,
-            }, false, 1];
+            }, false, 1]);
             case 'lovetv':
             let prefix = url.match(/^((http|https):\/\/[^\/]+)\//);
             if (!prefix) {

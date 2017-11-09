@@ -524,7 +524,16 @@ const getManagementIndex = (managementStatus, year, quarter) => {
     }
 }
 
-const initXml = filelocation => new Promise((resolve, reject) => FsReadFile(filelocation, 'utf8', (err, data) => err ? reject(err) : resolve(data))).then(data => new Promise((resolve, reject) => Xmlparser.parseString(data, (err, result) => err ? reject(err) : resolve(result))));
+const initXml = filelocation => new Promise((resolve, reject) => FsReadFile(filelocation, 'utf8', (err, data) => err ? reject(err) : resolve(data))).then(data => new Promise((resolve, reject) => Xmlparser.parseString(data, (err, result) => {
+    if (err) {
+        console.log(err.code);
+        console.log(err.message);
+        console.log(data);
+        return reject(err);
+    } else {
+        return resolve(result);
+    }
+})));
 
 const getCashflow = (xml, cash, no_cover) => {
     if (!xml.xbrl) {
