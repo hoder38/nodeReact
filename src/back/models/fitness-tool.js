@@ -217,7 +217,7 @@ export default {
             return handleReject(new HoError('uid is not vaild!!!'));
         }
         const cIndex = isValidString(index, 'perm');
-        if (!cIndex || cIndex > CHART_LIMIT) {
+        if (cIndex > CHART_LIMIT) {
             return handleReject(new HoError('index is not vaild!!!'));
         }
         const id = isValidString(uid, 'uid');
