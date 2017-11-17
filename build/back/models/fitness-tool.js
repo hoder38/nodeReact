@@ -287,7 +287,7 @@ exports.default = {
             return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
         }
         var cIndex = (0, _utility.isValidString)(index, 'perm');
-        if (!cIndex || cIndex > _constants.CHART_LIMIT) {
+        if (cIndex > _constants.CHART_LIMIT) {
             return (0, _utility.handleReject)(new _utility.HoError('index is not vaild!!!'));
         }
         var id = (0, _utility.isValidString)(uid, 'uid');
