@@ -100,18 +100,11 @@ const quarterIsEmpty = quarter => {
 }
 
 
-const getStockPrice = (type, index) => {
-    const name = (type === 'twse') ? `${index}.tw+${index}.two` : index;
-    return Api('url', `http://download.finance.yahoo.com/d/quotes.csv?s=${name}&f=l1`).then(raw_data => {
-        const price = raw_data.match(/\d+\.\d+/);
-        if (!price) {
-            console.log(raw_data);
-            return handleReject(new HoError('stock price get fail'));
-        }
-        console.log(price[0]);
-        return price[0];
-    });
-}
+const getStockPrice = (type, index) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+    const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0];
+    console.log(price);
+    return price;
+});
 
 const getEPS = sales => {
     let year = new Date().getFullYear();

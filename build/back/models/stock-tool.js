@@ -166,15 +166,10 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
 };
 
 var getStockPrice = function getStockPrice(type, index) {
-    var name = type === 'twse' ? index + '.tw+' + index + '.two' : index;
-    return (0, _apiTool2.default)('url', 'http://download.finance.yahoo.com/d/quotes.csv?s=' + name + '&f=l1').then(function (raw_data) {
-        var price = raw_data.match(/\d+\.\d+/);
-        if (!price) {
-            console.log(raw_data);
-            return (0, _utility.handleReject)(new _utility.HoError('stock price get fail'));
-        }
-        console.log(price[0]);
-        return price[0];
+    return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
+        var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0];
+        console.log(price);
+        return price;
     });
 };
 
