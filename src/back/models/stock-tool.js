@@ -101,8 +101,8 @@ const quarterIsEmpty = quarter => {
 
 
 const getStockPrice = (type, index) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
-    const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+\.\d+$/);
-    if (!price) {
+    const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+\(.\d+)?$/);
+    if (!price[0]) {
         console.log(raw_data);
         return handleReject(new HoError('stock price get fail'));
     }

@@ -167,8 +167,8 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
 
 var getStockPrice = function getStockPrice(type, index) {
     return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
-        var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+\.\d+$/);
-        if (!price) {
+        var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+\(.\d+)?$/);
+        if (!price[0]) {
             console.log(raw_data);
             return (0, _utility.handleReject)(new _utility.HoError('stock price get fail'));
         }
