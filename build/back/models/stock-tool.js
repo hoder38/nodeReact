@@ -3299,70 +3299,76 @@ exports.default = {
                             });
                         };
                         var getTwseList = function getTwseList() {
-                            return (0, _apiTool2.default)('url', 'http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=' + year + month_str + '01&stockNo=' + items[0].index).then(function (raw_data) {
-                                var high = [];
-                                var low = [];
-                                var vol = [];
-                                if (raw_data.length > 200) {
-                                    var year_str = year - 1911;
-                                    var data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
-                                    if (data_list && data_list.length > 0) {
-                                        console.log(data_list.length);
-                                        var tmp_index = -1;
-                                        var tmp_number = '';
-                                        var _iteratorNormalCompletion9 = true;
-                                        var _didIteratorError9 = false;
-                                        var _iteratorError9 = undefined;
+                            return new _promise2.default(function (resolve, reject) {
+                                return setTimeout(function () {
+                                    return resolve();
+                                }, 5000);
+                            }).then(function () {
+                                return (0, _apiTool2.default)('url', 'http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=' + year + month_str + '01&stockNo=' + items[0].index).then(function (raw_data) {
+                                    var high = [];
+                                    var low = [];
+                                    var vol = [];
+                                    if (raw_data.length > 200) {
+                                        var year_str = year - 1911;
+                                        var data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
+                                        if (data_list && data_list.length > 0) {
+                                            console.log(data_list.length);
+                                            var tmp_index = -1;
+                                            var tmp_number = '';
+                                            var _iteratorNormalCompletion9 = true;
+                                            var _didIteratorError9 = false;
+                                            var _iteratorError9 = undefined;
 
-                                        try {
-                                            for (var _iterator9 = (0, _getIterator3.default)(data_list), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                                                var i = _step9.value;
+                                            try {
+                                                for (var _iterator9 = (0, _getIterator3.default)(data_list), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                                                    var i = _step9.value;
 
-                                                var tmp_list_1 = [];
-                                                var tmp_list = i.split(',');
-                                                for (var j in tmp_list) {
-                                                    if (tmp_list[j].match(/^".*"$/)) {
-                                                        tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
-                                                    } else if (tmp_list[j].match(/^"/)) {
-                                                        tmp_index = j;
-                                                        tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                                    } else if (tmp_list[j].match(/"$/)) {
-                                                        tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                                        for (var k = tmp_index; k <= j; k++) {
-                                                            tmp_number = '' + tmp_number + tmp_list[k];
-                                                        }
-                                                        tmp_list_1.push(tmp_number);
-                                                        tmp_index = -1;
-                                                        tmp_number = '';
-                                                    } else {
-                                                        if (tmp_index === -1) {
-                                                            tmp_list_1.push(tmp_list[j]);
+                                                    var tmp_list_1 = [];
+                                                    var tmp_list = i.split(',');
+                                                    for (var j in tmp_list) {
+                                                        if (tmp_list[j].match(/^".*"$/)) {
+                                                            tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
+                                                        } else if (tmp_list[j].match(/^"/)) {
+                                                            tmp_index = j;
+                                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                                        } else if (tmp_list[j].match(/"$/)) {
+                                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                                            for (var k = tmp_index; k <= j; k++) {
+                                                                tmp_number = '' + tmp_number + tmp_list[k];
+                                                            }
+                                                            tmp_list_1.push(tmp_number);
+                                                            tmp_index = -1;
+                                                            tmp_number = '';
+                                                        } else {
+                                                            if (tmp_index === -1) {
+                                                                tmp_list_1.push(tmp_list[j]);
+                                                            }
                                                         }
                                                     }
+                                                    high.push(Number(tmp_list_1[4]));
+                                                    low.push(Number(tmp_list_1[5]));
+                                                    vol.push(Number(tmp_list_1[8]));
                                                 }
-                                                high.push(Number(tmp_list_1[4]));
-                                                low.push(Number(tmp_list_1[5]));
-                                                vol.push(Number(tmp_list_1[8]));
-                                            }
-                                        } catch (err) {
-                                            _didIteratorError9 = true;
-                                            _iteratorError9 = err;
-                                        } finally {
-                                            try {
-                                                if (!_iteratorNormalCompletion9 && _iterator9.return) {
-                                                    _iterator9.return();
-                                                }
+                                            } catch (err) {
+                                                _didIteratorError9 = true;
+                                                _iteratorError9 = err;
                                             } finally {
-                                                if (_didIteratorError9) {
-                                                    throw _iteratorError9;
+                                                try {
+                                                    if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                                                        _iterator9.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError9) {
+                                                        throw _iteratorError9;
+                                                    }
                                                 }
                                             }
                                         }
+                                        return [3, { high: high, low: low, vol: vol }];
+                                    } else {
+                                        return [3, { high: high, low: low, vol: vol }, true];
                                     }
-                                    return [3, { high: high, low: low, vol: vol }];
-                                } else {
-                                    return [3, { high: high, low: low, vol: vol }, true];
-                                }
+                                });
                             });
                         };
                         var recur_mi = function recur_mi(type, index) {

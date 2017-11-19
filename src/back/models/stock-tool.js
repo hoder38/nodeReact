@@ -2941,7 +2941,7 @@ export default {
                         }
                         return [2, {high, low, vol}];
                     });
-                    const getTwseList = () => Api('url', `http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
+                    const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => Api('url', `http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
                         let high = [];
                         let low = [];
                         let vol = [];
@@ -2984,7 +2984,7 @@ export default {
                         } else {
                             return [3, {high, low, vol}, true];
                         }
-                    });
+                    }));
                     const recur_mi = (type, index) => {
                         const getList = () => {
                             if (type === 2) {
