@@ -45,6 +45,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var router = _express2.default.Router();
 var StockTagTool = (0, _tagTool2.default)(_constants.STOCKDB);
 var stockFiltering = false;
+var stockIntervaling = false;
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function (req, res, next) {
     console.log('stock');
@@ -229,12 +230,17 @@ router.get('/getInterval/:uid', function (req, res, next) {
     if (!id) {
         (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
+    if (stockIntervaling) {
+        (0, _utility.handleError)(new _utility.HoError('there is another inverval running'), next);
+    }
+    stockIntervaling = true;
     _stockTool2.default.getInterval(id, req.session).then(function (_ref5) {
         var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
             result = _ref6[0],
             index = _ref6[1];
 
-        return res.json({ interval: index + ': ' + result });
+        stockIntervaling = false;
+        res.json({ interval: index + ': ' + result });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });

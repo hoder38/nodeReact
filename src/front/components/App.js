@@ -125,7 +125,21 @@ const App = React.createClass({
             exactly: [],
             his: [],
         }, '', '', 'name', 'desc', '')
+        this.props.fitnessset([], {
+            cur: [],
+            exactly: [],
+            his: [],
+        }, '', '', 'name', 'desc', '')
+        this.props.rankset([], {
+            cur: [],
+            exactly: [],
+            his: [],
+        }, '', '', 'name', 'desc', '')
         this.props.dirsset([])
+        this.props.resetmedia(2)
+        this.props.resetmedia(3)
+        this.props.resetmedia(4)
+        this.props.resetmedia([])
     },
     _doLogout: function() {
         doLogout().then(() => browserHistory.push(LOGIN_PAGE)).catch(err => this.props.addalert(err))

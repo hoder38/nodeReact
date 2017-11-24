@@ -92,7 +92,9 @@ const MediaWidget = React.createClass({
                 this._video.onplaying = () => {
                     clearInterval(timer)
                     timer = setInterval(() => {
-                        if (!this._video.paused && !this._video.seeking) {
+                        if (!this._video) {
+                            clearInterval(timer)
+                        } else if (!this._video.paused && !this._video.seeking) {
                             this._preTime = this._video.currentTime
                         }
                     }, 1000)
@@ -160,7 +162,9 @@ const MediaWidget = React.createClass({
                 this._audio.onplaying = () => {
                     clearInterval(timer)
                     timer = setInterval(() => {
-                        if (!this._audio.paused && !this._audio.seeking) {
+                        if (!this._audio) {
+                            clearInterval(timer)
+                        } else if (this._audio && !this._audio.paused && !this._audio.seeking) {
                             this._preTime = this._audio.currentTime
                         }
                     }, 1000)

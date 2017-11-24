@@ -8,6 +8,7 @@ import sendWs from '../util/sendWs'
 const router = Express.Router();
 const StockTagTool = TagTool(STOCKDB);
 let stockFiltering = false;
+let stockIntervaling = false;
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
     console.log('stock');
@@ -131,7 +132,14 @@ router.get('/getInterval/:uid', function(req, res,next) {
     if (!id) {
         handleError(new HoError('uid is not vaild'), next);
     }
-    StockTool.getInterval(id, req.session).then(([result, index]) => res.json({interval: `${index}: ${result}`})).catch(err => handleError(err, next));
+    if (stockIntervaling) {
+        handleError(new HoError('there is another inverval running'), next);
+    }
+    stockIntervaling = true;
+    StockTool.getInterval(id, req.session).then(([result, index]) => {
+        stockIntervaling = false;
+        res.json({interval: `${index}: ${result}`});
+    }).catch(err => handleError(err, next));
 });
 
 router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {

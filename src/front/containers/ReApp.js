@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush } from '../actions'
+import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush, setItem } from '../actions'
 import App from '../components/App'
 
 const mapStateToProps = state => ({
@@ -7,6 +7,7 @@ const mapStateToProps = state => ({
     sub: state.basicDataHandle.sub,
     pwCallback: state.glbPwHandle,
     cfCallback: state.glbCfHandle,
+    media: state.itemDataHandle,
 })
 
 const mapDispatchToProps = dispatch => ({
@@ -29,6 +30,7 @@ const mapDispatchToProps = dispatch => ({
     rankset: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(rankPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
     rankdel: id => dispatch(rankPop(id)),
     closeglbpw: () => dispatch(closeGlbPw()),
+    resetmedia: type => dispatch(setItem(null, null, null, null, type)),
 })
 
 const ReApp = connect(
