@@ -1655,9 +1655,9 @@ export const completeMimeTag = add => {
                     }
                 }
             }
-            console.log(items.length);
-            console.log(index);
-            console.log(search_number);
+            if (items.length === 0) {
+                console.log('end');
+            }
             items[index].tags.forEach(i => {
                 const tran_tag = getTag(i, TRANS_LIST, TRANS_LIST_CH);
                 if (tran_tag) {
