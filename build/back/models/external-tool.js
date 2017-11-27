@@ -1302,7 +1302,7 @@ exports.default = {
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleReject)(new _utility.HoError('date invalid'));
                     }
-                    date = new Date(new Date(date).setDate(date.getDate() - 1));
+                    //date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
                     var list = [];
@@ -1349,14 +1349,13 @@ exports.default = {
                     ;
                     var industrial = function industrial() {
                         return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
-                            var detail = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0];
-                            var texts = (0, _utility.findTag)(detail);
+                            var information = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divPageBottom')[0], 'div', 'container')[0], 'div', 'information')[0]);
                             var _iteratorNormalCompletion8 = true;
                             var _didIteratorError8 = false;
                             var _iteratorError8 = undefined;
 
                             try {
-                                for (var _iterator8 = (0, _getIterator3.default)(texts), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                                for (var _iterator8 = (0, _getIterator3.default)(information), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
                                     var t = _step8.value;
 
                                     var matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
@@ -1428,14 +1427,13 @@ exports.default = {
                             ;
                             var output = function output() {
                                 return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
-                                    var detail = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0];
-                                    var texts = (0, _utility.findTag)(detail);
+                                    var information = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divPageBottom')[0], 'div', 'container')[0], 'div', 'information')[0]);
                                     var _iteratorNormalCompletion10 = true;
                                     var _didIteratorError10 = false;
                                     var _iteratorError10 = undefined;
 
                                     try {
-                                        for (var _iterator10 = (0, _getIterator3.default)(texts), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                                        for (var _iterator10 = (0, _getIterator3.default)(information), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
                                             var t = _step10.value;
 
                                             var matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
@@ -2098,7 +2096,7 @@ exports.default = {
             case 'moe':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'aspnetForm')[0], 'div')[2], 'div', 'ctl00_Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'ctl00_div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'ctl00_holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
+                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
                     var _iteratorNormalCompletion16 = true;
                     var _didIteratorError16 = false;
                     var _iteratorError16 = undefined;
