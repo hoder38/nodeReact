@@ -1657,47 +1657,48 @@ export const completeMimeTag = add => {
             }
             if (items.length === 0) {
                 console.log('end');
-            }
-            items[index].tags.forEach(i => {
-                const tran_tag = getTag(i, TRANS_LIST, TRANS_LIST_CH);
-                if (tran_tag) {
-                    getTag(tran_tag, GENRE_LIST_CH, GENRE_LIST);
-                }
-                if (!getTag(i, GENRE_LIST, GENRE_LIST_CH)) {
-                    getTag(i, GENRE_LIST_CH, GENRE_LIST);
-                }
-                if (!getTag(i, GAME_LIST, GAME_LIST_CH)) {
-                    getTag(i, GAME_LIST_CH, GAME_LIST);
-                }
-                if (!getTag(i, MEDIA_LIST, MEDIA_LIST_CH)) {
-                    getTag(i, MEDIA_LIST_CH, MEDIA_LIST);
-                }
-            });
-            if (complete_tag.length > 0) {
-                console.log(items[index].name);
-                console.log(complete_tag);
-                const recur_add = tIndex => tool.addTag(items[index]._id, complete_tag[tIndex].tag, {
-                    _id: complete_tag[tIndex].owner,
-                    perm: 1,
-                }).then(() => addNext(tIndex)).catch(err => {
-                    handleError(err, 'Complete tag');
-                    return addNext(tIndex);
+            } else {
+                items[index].tags.forEach(i => {
+                    const tran_tag = getTag(i, TRANS_LIST, TRANS_LIST_CH);
+                    if (tran_tag) {
+                        getTag(tran_tag, GENRE_LIST_CH, GENRE_LIST);
+                    }
+                    if (!getTag(i, GENRE_LIST, GENRE_LIST_CH)) {
+                        getTag(i, GENRE_LIST_CH, GENRE_LIST);
+                    }
+                    if (!getTag(i, GAME_LIST, GAME_LIST_CH)) {
+                        getTag(i, GAME_LIST_CH, GAME_LIST);
+                    }
+                    if (!getTag(i, MEDIA_LIST, MEDIA_LIST_CH)) {
+                        getTag(i, MEDIA_LIST_CH, MEDIA_LIST);
+                    }
                 });
-                if (add) {
-                    return recur_add(0);
-                } else {
-                    return completeNext();
-                }
-                function addNext(tIndex) {
-                    tIndex++;
-                    if (tIndex < complete_tag.length) {
-                        return recur_add(tIndex);
+                if (complete_tag.length > 0) {
+                    console.log(items[index].name);
+                    console.log(complete_tag);
+                    const recur_add = tIndex => tool.addTag(items[index]._id, complete_tag[tIndex].tag, {
+                        _id: complete_tag[tIndex].owner,
+                        perm: 1,
+                    }).then(() => addNext(tIndex)).catch(err => {
+                        handleError(err, 'Complete tag');
+                        return addNext(tIndex);
+                    });
+                    if (add) {
+                        return recur_add(0);
                     } else {
                         return completeNext();
                     }
+                    function addNext(tIndex) {
+                        tIndex++;
+                        if (tIndex < complete_tag.length) {
+                            return recur_add(tIndex);
+                        } else {
+                            return completeNext();
+                        }
+                    }
+                } else {
+                    return completeNext();
                 }
-            } else {
-                return completeNext();
             }
         };
         return recur_item(0);

@@ -2051,60 +2051,61 @@ var completeMimeTag = exports.completeMimeTag = function completeMimeTag(add) {
                 };
                 if (items.length === 0) {
                     console.log('end');
-                }
-                items[index].tags.forEach(function (i) {
-                    var tran_tag = getTag(i, _constants.TRANS_LIST, _constants.TRANS_LIST_CH);
-                    if (tran_tag) {
-                        getTag(tran_tag, _constants.GENRE_LIST_CH, _constants.GENRE_LIST);
-                    }
-                    if (!getTag(i, _constants.GENRE_LIST, _constants.GENRE_LIST_CH)) {
-                        getTag(i, _constants.GENRE_LIST_CH, _constants.GENRE_LIST);
-                    }
-                    if (!getTag(i, _constants.GAME_LIST, _constants.GAME_LIST_CH)) {
-                        getTag(i, _constants.GAME_LIST_CH, _constants.GAME_LIST);
-                    }
-                    if (!getTag(i, _constants.MEDIA_LIST, _constants.MEDIA_LIST_CH)) {
-                        getTag(i, _constants.MEDIA_LIST_CH, _constants.MEDIA_LIST);
-                    }
-                });
-                if (complete_tag.length > 0) {
-                    var _ret7 = function () {
-                        var addNext = function addNext(tIndex) {
-                            tIndex++;
-                            if (tIndex < complete_tag.length) {
-                                return recur_add(tIndex);
-                            } else {
-                                return completeNext();
-                            }
-                        };
-
-                        console.log(items[index].name);
-                        console.log(complete_tag);
-                        var recur_add = function recur_add(tIndex) {
-                            return tool.addTag(items[index]._id, complete_tag[tIndex].tag, {
-                                _id: complete_tag[tIndex].owner,
-                                perm: 1
-                            }).then(function () {
-                                return addNext(tIndex);
-                            }).catch(function (err) {
-                                (0, _utility.handleError)(err, 'Complete tag');
-                                return addNext(tIndex);
-                            });
-                        };
-                        if (add) {
-                            return {
-                                v: recur_add(0)
-                            };
-                        } else {
-                            return {
-                                v: completeNext()
-                            };
-                        }
-                    }();
-
-                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                 } else {
-                    return completeNext();
+                    items[index].tags.forEach(function (i) {
+                        var tran_tag = getTag(i, _constants.TRANS_LIST, _constants.TRANS_LIST_CH);
+                        if (tran_tag) {
+                            getTag(tran_tag, _constants.GENRE_LIST_CH, _constants.GENRE_LIST);
+                        }
+                        if (!getTag(i, _constants.GENRE_LIST, _constants.GENRE_LIST_CH)) {
+                            getTag(i, _constants.GENRE_LIST_CH, _constants.GENRE_LIST);
+                        }
+                        if (!getTag(i, _constants.GAME_LIST, _constants.GAME_LIST_CH)) {
+                            getTag(i, _constants.GAME_LIST_CH, _constants.GAME_LIST);
+                        }
+                        if (!getTag(i, _constants.MEDIA_LIST, _constants.MEDIA_LIST_CH)) {
+                            getTag(i, _constants.MEDIA_LIST_CH, _constants.MEDIA_LIST);
+                        }
+                    });
+                    if (complete_tag.length > 0) {
+                        var _ret7 = function () {
+                            var addNext = function addNext(tIndex) {
+                                tIndex++;
+                                if (tIndex < complete_tag.length) {
+                                    return recur_add(tIndex);
+                                } else {
+                                    return completeNext();
+                                }
+                            };
+
+                            console.log(items[index].name);
+                            console.log(complete_tag);
+                            var recur_add = function recur_add(tIndex) {
+                                return tool.addTag(items[index]._id, complete_tag[tIndex].tag, {
+                                    _id: complete_tag[tIndex].owner,
+                                    perm: 1
+                                }).then(function () {
+                                    return addNext(tIndex);
+                                }).catch(function (err) {
+                                    (0, _utility.handleError)(err, 'Complete tag');
+                                    return addNext(tIndex);
+                                });
+                            };
+                            if (add) {
+                                return {
+                                    v: recur_add(0)
+                                };
+                            } else {
+                                return {
+                                    v: completeNext()
+                                };
+                            }
+                        }();
+
+                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                    } else {
+                        return completeNext();
+                    }
                 }
             };
             return recur_item(0);
