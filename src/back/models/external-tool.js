@@ -1052,7 +1052,7 @@ export default {
                 if (isNaN(date.getTime())) {
                     return handleReject(new HoError('date invalid'));
                 }
-                //date = new Date(new Date(date).setDate(date.getDate() - 1));
+                date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
@@ -1075,17 +1075,13 @@ export default {
                     }
                 };
                 const industrial = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                    const information = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divPageBottom')[0], 'div', 'container')[0], 'div', 'information')[0]);
-                    for (let t of information) {
-                        const matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
-                        if (matchT && matchT[0] === docDate) {
-                            list.push({
-                                url: dUrl,
-                                name: toValidName('工業生產'),
-                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                            });
-                            break;
-                        }
+                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                    if (matchT && matchT[0] === docDate) {
+                        list.push({
+                            url: dUrl,
+                            name: toValidName('工業生產'),
+                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                        });
                     }
                 }) : Promise.resolve();
                 return industrial().then(() => Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
@@ -1106,17 +1102,13 @@ export default {
                         }
                     };
                     const output = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                        const information = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divPageBottom')[0], 'div', 'container')[0], 'div', 'information')[0]);
-                        for (let t of information) {
-                            const matchT = t.match(/\d\d\d\d-\d\d-\d\d/);
-                            if (matchT && matchT[0] === docDate) {
-                                list.push({
-                                    url: dUrl,
-                                    name: toValidName('外銷訂單統計'),
-                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                                });
-                                break;
-                            }
+                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                        if (matchT && matchT[0] === docDate) {
+                            list.push({
+                                url: dUrl,
+                                name: toValidName('外銷訂單統計'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
                         }
                     }) : Promise.resolve();
                     return output().then(() => list);
