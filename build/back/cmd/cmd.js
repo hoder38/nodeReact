@@ -1,5 +1,9 @@
 'use strict';
 
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
+
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
 var _stringify2 = _interopRequireDefault(_stringify);
@@ -134,6 +138,66 @@ var dbRestore = function dbRestore(collection) {
     return recur_restore(0);
 };
 
+var randomSend = function randomSend() {
+    var orig = _constants.RANDOM_EMAIL.map(function (v, i) {
+        return i;
+    });
+    console.log(orig);
+    var shuffle = function shuffle(arr) {
+        var currentIndex = arr.length;
+        while (currentIndex > 0) {
+            var randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            var temporaryValue = arr[currentIndex];
+            arr[currentIndex] = arr[randomIndex];
+            arr[randomIndex] = temporaryValue;
+        }
+        return arr;
+    };
+    var testArr = function testArr(arr) {
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] === i) {
+                return false;
+            }
+            if (arr[arr[i]] === i) {
+                return false;
+            }
+        }
+        return true;
+    };
+    var limit = 100;
+
+    var _loop = function _loop() {
+        var ran = shuffle(orig);
+        console.log(ran);
+        if (testArr(ran)) {
+            var _ret2 = function () {
+                var recur_send = function recur_send(index) {
+                    return index >= ran.length ? _promise2.default.resolve() : (0, _apiToolGoogle.sendPresentName)(_constants.RANDOM_EMAIL[ran[index]].name, _constants.RANDOM_EMAIL[index].mail).then(function () {
+                        return recur_send(index + 1);
+                    });
+                };
+                return {
+                    v: {
+                        v: recur_send(0)
+                    }
+                };
+            }();
+
+            if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+        }
+        limit--;
+    };
+
+    while (limit > 0) {
+        var _ret = _loop();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+    }
+    console.log('out of limit');
+    return _promise2.default.resolve();
+};
+
 var rl = (0, _readline.createInterface)({
     input: process.stdin,
     output: process.stdout,
@@ -204,6 +268,13 @@ rl.on('line', function (line) {
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, 'CMD dbrestore');
             });
+        case 'randomsend':
+            console.log('randomsend');
+            return randomSend().then(function () {
+                return console.log('done');
+            }).catch(function (err) {
+                return (0, _utility.handleError)(err, 'Random send');
+            });
         default:
             console.log('help:');
             console.log('drive batchNumber [single username]');
@@ -213,5 +284,6 @@ rl.on('line', function (line) {
             console.log('complete [add]');
             console.log('dbdump collection');
             console.log('dbrestore collection');
+            console.log('randomsend');
     }
 });

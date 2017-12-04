@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.sendPresentName = undefined;
 
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
@@ -129,6 +130,8 @@ function api(name, data) {
                 return moveParent(data);
             case 'send mail':
                 return sendMail(data);
+            case 'send name':
+                return sendName(data);
             case 'upload':
                 if (api_ing >= (0, _config.API_LIMIT)(_ver.ENV_TYPE)) {
                     console.log('reach limit ' + api_ing + ' ' + api_pool.length);
@@ -442,7 +445,7 @@ var setToken = function setToken() {
 
 //need utf8 ansi
 function sendMail(data) {
-    if (!data['name'] || !data['filePath'] && !data['kindle']) {
+    if (!data['name'] || !data['filePath'] || !data['kindle']) {
         return (0, _utility.handleReject)(new _utility.HoError('mail parameter lost!!!'));
     }
     if (!(0, _mime.isKindle)(data['name'])) {
@@ -458,7 +461,6 @@ function sendMail(data) {
         version: 'v1',
         auth: oauth2Client
     });
-    var kindle = 'hoder3388@kindle.com';
     var temp = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/kindle' + new Date().getTime();
     return new _promise2.default(function (resolve, reject) {
         return (0, _fs.writeFile)(temp, ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['kindle'] + '\r\n', 'Subject: Kindle\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', 'book\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: */*\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: base64\r\n', 'Content-Disposition: attachment; filename="' + data['name'] + '"\r\n\r\n'].join(''), function (err) {
@@ -491,6 +493,32 @@ function sendMail(data) {
             return (0, _fs.unlink)(temp, function (err) {
                 return err ? reject(err) : resolve();
             });
+        });
+    });
+}
+
+function sendName(data) {
+    if (!data['name'] || !data['mail']) {
+        return (0, _utility.handleReject)(new _utility.HoError('mail parameter lost!!!'));
+    }
+    if (!(0, _utility.isValidString)(data['mail'], 'email')) {
+        return (0, _utility.handleReject)(new _utility.HoError('invalid email!!!'));
+    }
+    console.log(data['mail']);
+    console.log(data['name']);
+    var gmail = _googleapis2.default.gmail({
+        version: 'v1',
+        auth: oauth2Client
+    });
+    return new _promise2.default(function (resolve, reject) {
+        return gmail.users.messages.send({
+            userId: 'me',
+            media: {
+                mimeType: 'message/rfc822',
+                body: ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['mail'] + '\r\n', 'Subject: Christmas Presents Exchange\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', data['name'] + '\r\n\r\n', '--foo_bar_baz\r\n'].join('')
+            }
+        }, function (err) {
+            return err && err.code !== 'ECONNRESET' ? reject(err) : resolve();
         });
     });
 }
@@ -1523,3 +1551,7 @@ function autoDoc(userlist, index, type) {
         });
     });
 }
+
+var sendPresentName = exports.sendPresentName = function sendPresentName(name, mail) {
+    return api('send name', { name: name, mail: mail });
+};
