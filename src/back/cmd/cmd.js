@@ -1,8 +1,8 @@
-import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB } from '../constants'
+import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL } from '../constants'
 import { createInterface } from 'readline'
 import { writeFile as FsWriteFile, createReadStream as FsCreateReadStream, existsSync as FsExistsSync } from 'fs'
 import Mkdirp from 'mkdirp'
-import { userDrive, autoDoc } from '../models/api-tool-google'
+import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
@@ -71,6 +71,45 @@ const dbRestore = collection => {
     return recur_restore(0);
 }
 
+const randomSend = () => {
+    const orig = RANDOM_EMAIL.map((v, i) => i);
+    console.log(orig);
+    const shuffle = arr => {
+        let currentIndex = arr.length;
+        while (currentIndex > 0) {
+            const randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            const temporaryValue = arr[currentIndex];
+            arr[currentIndex] = arr[randomIndex];
+            arr[randomIndex] = temporaryValue;
+        }
+        return arr;
+    }
+    const testArr = arr => {
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] === i) {
+                return false;
+            }
+            if (arr[arr[i]] === i) {
+                return false;
+            }
+        }
+        return true;
+    }
+    let limit = 100;
+    while (limit > 0) {
+        const ran = shuffle(orig);
+        console.log(ran);
+        if (testArr(ran)) {
+            const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(RANDOM_EMAIL[ran[index]].name, RANDOM_EMAIL[index].mail).then(() => recur_send(index + 1));
+            return recur_send(0);
+        }
+        limit--;
+    }
+    console.log('out of limit');
+    return Promise.resolve();
+}
+
 const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -111,6 +150,9 @@ rl.on('line', line => {
         case 'dbrestore':
         console.log('dbrestore');
         return dbRestore(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD dbrestore'));
+        case 'randomsend':
+        console.log('randomsend');
+        return randomSend().then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         default:
         console.log('help:');
         console.log('drive batchNumber [single username]');
@@ -120,5 +162,6 @@ rl.on('line', line => {
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');
+        console.log('randomsend');
     }
 });

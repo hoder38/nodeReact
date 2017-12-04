@@ -11,7 +11,7 @@ import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unl
 import Mongo from '../models/mongo-tool'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import External from '../models/external-tool'
-import { handleError, handleReject, HoError, deleteFolderRecursive, SRT2VTT } from '../util/utility'
+import { handleError, handleReject, HoError, deleteFolderRecursive, SRT2VTT, isValidString } from '../util/utility'
 import { mediaMIME, isSub, isKindle } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -54,6 +54,8 @@ export default function api(name, data) {
             return moveParent(data);
             case 'send mail':
             return sendMail(data);
+            case 'send name':
+            return sendName(data);
             case 'upload':
             if (api_ing >= API_LIMIT(ENV_TYPE)) {
                 console.log(`reach limit ${api_ing} ${api_pool.length}`);
@@ -213,7 +215,7 @@ const setToken = () => {
 
 //need utf8 ansi
 function sendMail(data) {
-    if (!data['name'] || (!data['filePath'] && !data['kindle'])) {
+    if (!data['name'] || !data['filePath'] || !data['kindle']) {
         return handleReject(new HoError('mail parameter lost!!!'));
     }
     if (!isKindle(data['name'])) {
@@ -229,7 +231,6 @@ function sendMail(data) {
         version: 'v1',
         auth: oauth2Client,
     });
-    const kindle = 'hoder3388@kindle.com';
     const temp = `${NAS_TMP(ENV_TYPE)}/kindle${new Date().getTime()}`;
     return new Promise((resolve, reject) => FsWriteFile(temp, [
         'Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n',
@@ -258,6 +259,40 @@ function sendMail(data) {
             body: FsCreateReadStream(temp),
         },
     }, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()))).then(() => new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())));
+}
+
+function sendName(data) {
+    if (!data['name'] || !data['mail']) {
+        return handleReject(new HoError('mail parameter lost!!!'));
+    }
+    if (!isValidString(data['mail'], 'email')) {
+        return handleReject(new HoError('invalid email!!!'));
+    }
+    console.log(data['mail']);
+    console.log(data['name']);
+    const gmail = googleapis.gmail({
+        version: 'v1',
+        auth: oauth2Client,
+    });
+    return new Promise((resolve, reject) => gmail.users.messages.send({
+        userId: 'me',
+        media: {
+            mimeType: 'message/rfc822',
+            body: [
+                'Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n',
+                'MIME-Version: 1.0\r\n',
+                'From: me\r\n',
+                `To: ${data['mail']}\r\n`,
+                'Subject: Christmas Presents Exchange\r\n\r\n',
+                '--foo_bar_baz\r\n',
+                'Content-Type: text/plain; charset="UTF-8"\r\n',
+                'MIME-Version: 1.0\r\n',
+                'Content-Transfer-Encoding: 7bit\r\n\r\n',
+                `${data['name']}\r\n\r\n`,
+                '--foo_bar_baz\r\n',
+            ].join(''),
+        },
+    }, err => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve()));
 }
 
 function youtubeAPI(method, data) {
@@ -982,3 +1017,5 @@ export function autoDoc(userlist, index, type, date=null) {
         });
     });
 }
+
+export const sendPresentName = (name, mail) => api('send name', {name, mail});

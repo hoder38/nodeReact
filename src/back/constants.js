@@ -758,3 +758,18 @@ export const CHART_LIMIT = 4;
 export const RANK_LIMIT = 10;
 
 export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/youtube https://mail.google.com/ https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send';
+
+export const RANDOM_EMAIL = [
+    {
+        name: 'hoder3388',
+        mail: 'hoder3388@gmail.com',
+    },
+    {
+        name: 'jake3388',
+        mail: 'jake3388@yahoo.com.tw',
+    },
+    {
+        name: 'hoder',
+        mail: 'hoder@cht.com.tw',
+    },
+];
