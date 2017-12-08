@@ -81,6 +81,7 @@ google auth:
 記得到 https://console.developers.google.com/apis/dashboard?project=sanguine-mark-826&authuser=0&hl=zh-tw&duration=PT1H 開啟api
 sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/googledrive.js
 sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
+改權限記得刪權限後再要一次refresh token, https://myaccount.google.com/u/0/permissions
 記得update db token
 
 

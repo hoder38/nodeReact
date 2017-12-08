@@ -17,8 +17,7 @@ var oauth2Client = new _googleapis.auth.OAuth2(_ver.GOOGLE_ID, _ver.GOOGLE_SECRE
 
 var url = oauth2Client.generateAuthUrl({
     scope: _constants.GOOGLE_SCOPE,
-    access_type: 'offline',
-    prompt: 'consent'
+    access_type: 'offline'
 });
 
 console.log('Visit the url: ', url);

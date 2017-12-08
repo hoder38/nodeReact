@@ -13,7 +13,6 @@ const oauth2Client = new auth.OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
 const url = oauth2Client.generateAuthUrl({
     scope: GOOGLE_SCOPE,
     access_type: 'offline',
-    prompt: 'consent',
 });
 
 console.log('Visit the url: ', url);
