@@ -504,8 +504,9 @@ function sendName(data) {
     if (!(0, _utility.isValidString)(data['mail'], 'email')) {
         return (0, _utility.handleReject)(new _utility.HoError('invalid email!!!'));
     }
-    console.log(data['mail']);
-    console.log(data['name']);
+    data['name'] = data['append'] ? Buffer.from(data['name'], 'base64') + ' ' + data['append'] : Buffer.from(data['name'], 'base64');
+    var subject = data['append'] ? 'Christmas Presents Exchange ' + data['append'] : 'Christmas Presents Exchange';
+    //console.log(data['name']);
     var gmail = _googleapis2.default.gmail({
         version: 'v1',
         auth: oauth2Client
@@ -515,7 +516,7 @@ function sendName(data) {
             userId: 'me',
             media: {
                 mimeType: 'message/rfc822',
-                body: ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['mail'] + '\r\n', 'Subject: Christmas Presents Exchange\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', data['name'] + '\r\n\r\n', '--foo_bar_baz\r\n'].join('')
+                body: ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['mail'] + '\r\n', 'Subject: ' + subject + '\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', data['name'] + '\r\n\r\n', '--foo_bar_baz\r\n'].join('')
             }
         }, function (err) {
             return err && err.code !== 'ECONNRESET' ? reject(err) : resolve();
@@ -1553,5 +1554,6 @@ function autoDoc(userlist, index, type) {
 }
 
 var sendPresentName = exports.sendPresentName = function sendPresentName(name, mail) {
-    return api('send name', { name: name, mail: mail });
+    var append = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+    return api('send name', { name: name, mail: mail, append: append });
 };

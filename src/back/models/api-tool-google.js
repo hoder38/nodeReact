@@ -268,8 +268,9 @@ function sendName(data) {
     if (!isValidString(data['mail'], 'email')) {
         return handleReject(new HoError('invalid email!!!'));
     }
-    console.log(data['mail']);
-    console.log(data['name']);
+    data['name'] = data['append'] ? `${Buffer.from(data['name'], 'base64')} ${data['append']}` : Buffer.from(data['name'], 'base64');
+    const subject = data['append'] ? `Christmas Presents Exchange ${data['append']}` : 'Christmas Presents Exchange';
+    //console.log(data['name']);
     const gmail = googleapis.gmail({
         version: 'v1',
         auth: oauth2Client,
@@ -283,7 +284,7 @@ function sendName(data) {
                 'MIME-Version: 1.0\r\n',
                 'From: me\r\n',
                 `To: ${data['mail']}\r\n`,
-                'Subject: Christmas Presents Exchange\r\n\r\n',
+                `Subject: ${subject}\r\n\r\n`,
                 '--foo_bar_baz\r\n',
                 'Content-Type: text/plain; charset="UTF-8"\r\n',
                 'MIME-Version: 1.0\r\n',
@@ -1018,4 +1019,4 @@ export function autoDoc(userlist, index, type, date=null) {
     });
 }
 
-export const sendPresentName = (name, mail) => api('send name', {name, mail});
+export const sendPresentName = (name, mail, append=null) => api('send name', {name, mail, append});

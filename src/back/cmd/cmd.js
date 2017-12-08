@@ -8,6 +8,8 @@ import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { handleError, handleReject, isValidString, HoError } from '../util/utility'
 
+const sendList = RANDOM_EMAIL;
+
 function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     drive_batch = isNaN(drive_batch) ? DRIVE_LIMIT : Number(drive_batch);
     console.log(drive_batch);
@@ -71,43 +73,77 @@ const dbRestore = collection => {
     return recur_restore(0);
 }
 
-const randomSend = () => {
-    const orig = RANDOM_EMAIL.map((v, i) => i);
-    console.log(orig);
-    const shuffle = arr => {
-        let currentIndex = arr.length;
-        while (currentIndex > 0) {
-            const randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            const temporaryValue = arr[currentIndex];
-            arr[currentIndex] = arr[randomIndex];
-            arr[randomIndex] = temporaryValue;
+const randomSend = (action, joiner=null) => {
+    switch (action) {
+        case 'list':
+        console.log(sendList);
+        return Promise.resolve();
+        break;
+        case 'edit':
+        if (!joiner) {
+            return handleReject(new HoError('Joiner unknown!!!'));
         }
-        return arr;
-    }
-    const testArr = arr => {
-        for (let i = 0; i < arr.length; i++) {
-            if (arr[i] === i) {
-                return false;
-            }
-            if (arr[arr[i]] === i) {
-                return false;
+        const result = joiner.split(':');
+        for (let i in sendList) {
+            if (result[0] === sendList[i].name) {
+                sendList.splice(i, 1);
+                console.log(sendList);
+                return Promise.resolve();
             }
         }
-        return true;
-    }
-    let limit = 100;
-    while (limit > 0) {
-        const ran = shuffle(orig);
-        console.log(ran);
-        if (testArr(ran)) {
-            const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(RANDOM_EMAIL[ran[index]].name, RANDOM_EMAIL[index].mail).then(() => recur_send(index + 1));
-            return recur_send(0);
+        if (result.length < 2) {
+            return handleReject(new HoError('Joiner infomation valid!!!'));
         }
-        limit--;
+        sendList.push({
+            name: result[0],
+            mail: result[1],
+        });
+        console.log(sendList);
+        return Promise.resolve();
+        case 'send':
+        console.log(sendList);
+        if (sendList.length < 3) {
+            return handleReject(new HoError('Send list too short!!!'));
+        }
+        const orig = sendList.map((v, i) => i);
+        //console.log(orig);
+        const shuffle = arr => {
+            let currentIndex = arr.length;
+            while (currentIndex > 0) {
+                const randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                const temporaryValue = arr[currentIndex];
+                arr[currentIndex] = arr[randomIndex];
+                arr[randomIndex] = temporaryValue;
+            }
+            return arr;
+        }
+        const testArr = arr => {
+            for (let i = 0; i < arr.length; i++) {
+                if (arr[i] === i) {
+                    return false;
+                }
+                if (arr[arr[i]] === i) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        let limit = 100;
+        while (limit > 0) {
+            const ran = shuffle(orig);
+            //console.log(ran);
+            if (testArr(ran)) {
+                const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(new Buffer(sendList[ran[index]].name).toString('base64'), sendList[index].mail, joiner).then(() => recur_send(index + 1));
+                return recur_send(0);
+            }
+            limit--;
+        }
+        console.log('out of limit');
+        return Promise.resolve();
+        default:
+        return handleReject(new HoError('Action unknown!!!'));
     }
-    console.log('out of limit');
-    return Promise.resolve();
 }
 
 const rl = createInterface({
@@ -152,7 +188,7 @@ rl.on('line', line => {
         return dbRestore(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD dbrestore'));
         case 'randomsend':
         console.log('randomsend');
-        return randomSend().then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
+        return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         default:
         console.log('help:');
         console.log('drive batchNumber [single username]');
@@ -162,6 +198,6 @@ rl.on('line', line => {
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');
-        console.log('randomsend');
+        console.log('randomsend list|edit|send [name:email|append]');
     }
 });

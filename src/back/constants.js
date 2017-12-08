@@ -761,15 +761,35 @@ export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.g
 
 export const RANDOM_EMAIL = [
     {
-        name: 'hoder3388',
+        name: 'hoder',
         mail: 'hoder3388@gmail.com',
     },
     {
-        name: 'jake3388',
-        mail: 'jake3388@yahoo.com.tw',
+        name: 'sky',
+        mail: 'skycyndi@hotmail.com',
     },
     {
-        name: 'hoder',
-        mail: 'hoder@cht.com.tw',
+        name: 'existfor',
+        mail: 'existfor@gmail.com',
+    },
+    {
+        name: '宜真',
+        mail: 'angela800310@hotmail.com',
+    },
+    {
+        name: 'Susu',
+        mail: 'pink_susu1017@hotmail.com',
+    },
+    {
+        name: '韋葶',
+        mail: 'k0316gfly@gmail.com',
+    },
+    {
+        name: 'Cindy',
+        mail: 'cindywon520@gmail.com',
+    },
+    {
+        name: '季芸',
+        mail: 'f0955398009@gmail.com',
     },
 ];

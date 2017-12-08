@@ -42,6 +42,8 @@ var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var sendList = _constants.RANDOM_EMAIL;
+
 function cmdUpdateDrive() {
     var drive_batch = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _constants.DRIVE_LIMIT;
     var singleUser = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
@@ -138,64 +140,100 @@ var dbRestore = function dbRestore(collection) {
     return recur_restore(0);
 };
 
-var randomSend = function randomSend() {
-    var orig = _constants.RANDOM_EMAIL.map(function (v, i) {
-        return i;
-    });
-    console.log(orig);
-    var shuffle = function shuffle(arr) {
-        var currentIndex = arr.length;
-        while (currentIndex > 0) {
-            var randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            var temporaryValue = arr[currentIndex];
-            arr[currentIndex] = arr[randomIndex];
-            arr[randomIndex] = temporaryValue;
-        }
-        return arr;
-    };
-    var testArr = function testArr(arr) {
-        for (var i = 0; i < arr.length; i++) {
-            if (arr[i] === i) {
-                return false;
-            }
-            if (arr[arr[i]] === i) {
-                return false;
-            }
-        }
-        return true;
-    };
-    var limit = 100;
+var randomSend = function randomSend(action) {
+    var joiner = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
-    var _loop = function _loop() {
-        var ran = shuffle(orig);
-        console.log(ran);
-        if (testArr(ran)) {
-            var _ret2 = function () {
-                var recur_send = function recur_send(index) {
-                    return index >= ran.length ? _promise2.default.resolve() : (0, _apiToolGoogle.sendPresentName)(_constants.RANDOM_EMAIL[ran[index]].name, _constants.RANDOM_EMAIL[index].mail).then(function () {
-                        return recur_send(index + 1);
-                    });
-                };
-                return {
-                    v: {
-                        v: recur_send(0)
+    switch (action) {
+        case 'list':
+            console.log(sendList);
+            return _promise2.default.resolve();
+            break;
+        case 'edit':
+            if (!joiner) {
+                return (0, _utility.handleReject)(new _utility.HoError('Joiner unknown!!!'));
+            }
+            var result = joiner.split(':');
+            for (var i in sendList) {
+                if (result[0] === sendList[i].name) {
+                    sendList.splice(i, 1);
+                    console.log(sendList);
+                    return _promise2.default.resolve();
+                }
+            }
+            if (result.length < 2) {
+                return (0, _utility.handleReject)(new _utility.HoError('Joiner infomation valid!!!'));
+            }
+            sendList.push({
+                name: result[0],
+                mail: result[1]
+            });
+            console.log(sendList);
+            return _promise2.default.resolve();
+        case 'send':
+            console.log(sendList);
+            if (sendList.length < 3) {
+                return (0, _utility.handleReject)(new _utility.HoError('Send list too short!!!'));
+            }
+            var orig = sendList.map(function (v, i) {
+                return i;
+            });
+            //console.log(orig);
+            var shuffle = function shuffle(arr) {
+                var currentIndex = arr.length;
+                while (currentIndex > 0) {
+                    var randomIndex = Math.floor(Math.random() * currentIndex);
+                    currentIndex--;
+                    var temporaryValue = arr[currentIndex];
+                    arr[currentIndex] = arr[randomIndex];
+                    arr[randomIndex] = temporaryValue;
+                }
+                return arr;
+            };
+            var testArr = function testArr(arr) {
+                for (var _i = 0; _i < arr.length; _i++) {
+                    if (arr[_i] === _i) {
+                        return false;
                     }
-                };
-            }();
+                    if (arr[arr[_i]] === _i) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            var limit = 100;
 
-            if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
-        }
-        limit--;
-    };
+            var _loop = function _loop() {
+                var ran = shuffle(orig);
+                //console.log(ran);
+                if (testArr(ran)) {
+                    var _ret2 = function () {
+                        var recur_send = function recur_send(index) {
+                            return index >= ran.length ? _promise2.default.resolve() : (0, _apiToolGoogle.sendPresentName)(new Buffer(sendList[ran[index]].name).toString('base64'), sendList[index].mail, joiner).then(function () {
+                                return recur_send(index + 1);
+                            });
+                        };
+                        return {
+                            v: {
+                                v: recur_send(0)
+                            }
+                        };
+                    }();
 
-    while (limit > 0) {
-        var _ret = _loop();
+                    if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                }
+                limit--;
+            };
 
-        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+            while (limit > 0) {
+                var _ret = _loop();
+
+                if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+            }
+            console.log('out of limit');
+            return _promise2.default.resolve();
+        default:
+            return (0, _utility.handleReject)(new _utility.HoError('Action unknown!!!'));
     }
-    console.log('out of limit');
-    return _promise2.default.resolve();
 };
 
 var rl = (0, _readline.createInterface)({
@@ -270,7 +308,7 @@ rl.on('line', function (line) {
             });
         case 'randomsend':
             console.log('randomsend');
-            return randomSend().then(function () {
+            return randomSend(cmd[1], cmd[2]).then(function () {
                 return console.log('done');
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, 'Random send');
@@ -284,6 +322,6 @@ rl.on('line', function (line) {
             console.log('complete [add]');
             console.log('dbdump collection');
             console.log('dbrestore collection');
-            console.log('randomsend');
+            console.log('randomsend list|edit|send [name:email|append]');
     }
 });
