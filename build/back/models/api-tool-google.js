@@ -421,6 +421,7 @@ var checkOauth = function checkOauth() {
         }
         console.log('first');
         tokens = token[0];
+        console.log(tokens);
     }).then(function () {
         return setToken();
     }) : setToken();

@@ -200,6 +200,7 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
     }
     console.log('first');
     tokens = token[0];
+    console.log(tokens);
 }).then(() => setToken()) : setToken();
 
 const setToken = () => {
