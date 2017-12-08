@@ -3102,7 +3102,12 @@ export const getStockList = (type, stocktype=0) => {
 }
 
 const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
-    const form = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0];
+    const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
+    if (!center) {
+        console.log(raw_data);
+        return handleReject(new HoError('cannot find form'));
+    }
+    const form = findTag(center, 'form')[0];
     if (!form) {
         console.log(raw_data);
         return handleReject(new HoError('cannot find form'));
@@ -3147,7 +3152,10 @@ export const getSingleAnnual = (year, folder, index) => {
                 errhandle: err => handleReject(err),
             })).catch(err => {
                 handleError(err, 'get annual');
-                return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
+                cYear--;
+                if (cYear > year - 5) {
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
+                }
             }));
         } else {
             cYear--;

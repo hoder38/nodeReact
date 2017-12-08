@@ -3535,7 +3535,12 @@ var getStockList = exports.getStockList = function getStockList(type) {
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
     return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=' + index + '&year=' + (year - 1911) + '&seamon=&mtype=F&dtype=F04', { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
-        var form = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'form')[0];
+        var center = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
+        if (!center) {
+            console.log(raw_data);
+            return (0, _utility.handleReject)(new _utility.HoError('cannot find form'));
+        }
+        var form = (0, _utility.findTag)(center, 'form')[0];
         if (!form) {
             console.log(raw_data);
             return (0, _utility.handleReject)(new _utility.HoError('cannot find form'));
@@ -3622,11 +3627,14 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                             });
                         }).catch(function (err) {
                             (0, _utility.handleError)(err, 'get annual');
-                            return new _promise2.default(function (resolve, reject) {
-                                return setTimeout(function () {
-                                    return resolve(recur_annual(cYear, annual_folder));
-                                }, 5000);
-                            });
+                            cYear--;
+                            if (cYear > year - 5) {
+                                return new _promise2.default(function (resolve, reject) {
+                                    return setTimeout(function () {
+                                        return resolve(recur_annual(cYear, annual_folder));
+                                    }, 5000);
+                                });
+                            }
                         });
                     })
                 };
