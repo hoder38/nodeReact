@@ -3141,11 +3141,14 @@ export const getSingleAnnual = (year, folder, index) => {
                 rest: () => {
                     cYear--;
                     if (cYear > year - 5) {
-                        return recur_annual(cYear, annual_folder);
+                        return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
                     }
                 },
                 errhandle: err => handleReject(err),
-            })));
+            })).catch(err => {
+                handleError(err, 'get annual');
+                return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
+            }));
         } else {
             cYear--;
             if (cYear > year - 5) {

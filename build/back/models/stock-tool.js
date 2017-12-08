@@ -3609,12 +3609,23 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                                 rest: function rest() {
                                     cYear--;
                                     if (cYear > year - 5) {
-                                        return recur_annual(cYear, annual_folder);
+                                        return new _promise2.default(function (resolve, reject) {
+                                            return setTimeout(function () {
+                                                return resolve(recur_annual(cYear, annual_folder));
+                                            }, 5000);
+                                        });
                                     }
                                 },
                                 errhandle: function errhandle(err) {
                                     return (0, _utility.handleReject)(err);
                                 }
+                            });
+                        }).catch(function (err) {
+                            (0, _utility.handleError)(err, 'get annual');
+                            return new _promise2.default(function (resolve, reject) {
+                                return setTimeout(function () {
+                                    return resolve(recur_annual(cYear, annual_folder));
+                                }, 5000);
                             });
                         });
                     })
