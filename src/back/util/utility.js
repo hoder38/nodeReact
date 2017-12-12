@@ -136,6 +136,7 @@ export function handleError(err, type=null, ...args) {
                 showError(err, 'Delay')
                 console.log(type);
                 return type(err, ...args)
+                throw err
             } else if (typeof type === 'string') {
                 showError(err, type)
             } else {

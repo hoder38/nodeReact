@@ -231,7 +231,12 @@ router.get('/getInterval/:uid', function (req, res, next) {
         (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     if (stockIntervaling) {
-        (0, _utility.handleError)(new _utility.HoError('there is another inverval running'), next);
+        //handleError(new HoError('there is another inverval running'), next);
+        (0, _utility.handleError)(new _utility.HoError('there is another inverval running'), function () {
+            return (0, _utility.handleError)(new _utility.HoError('test'), function () {
+                return (0, _utility.handleError)(new _utility.HoError('test123'), next);
+            });
+        });
     }
     console.log(123);
     stockIntervaling = true;

@@ -214,6 +214,7 @@ function handleError(err) {
                 }
 
                 return type.apply(undefined, [err].concat(args));
+                throw err;
             } else if (typeof type === 'string') {
                 showError(err, type);
             } else {
