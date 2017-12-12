@@ -228,13 +228,13 @@ router.get('/getInterval/:uid', function (req, res, next) {
     console.log('stock get interval');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        return handleReject(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'), next);
     }
     if (stockIntervaling) {
         //handleError(new HoError('there is another inverval running'), next);
-        return handleReject(new _utility.HoError('there is another inverval running'), function () {
-            return handleReject(new _utility.HoError('test'), function () {
-                return handleReject(new _utility.HoError('test123'), next);
+        return (0, _utility.handleReject)(new _utility.HoError('there is another inverval running'), function () {
+            return (0, _utility.handleReject)(new _utility.HoError('test'), function () {
+                return (0, _utility.handleReject)(new _utility.HoError('test123'), next);
             });
         });
     }
@@ -251,7 +251,7 @@ router.get('/getInterval/:uid', function (req, res, next) {
     }).catch(function (err) {
         console.log(789);
         stockIntervaling = false;
-        return handleReject(err, next);
+        return (0, _utility.handleReject)(err, next);
     });
 });
 

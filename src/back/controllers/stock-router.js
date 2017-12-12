@@ -2,7 +2,7 @@ import { STOCKDB, STOCK_FILTER_LIMIT } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
 import StockTool from '../models/stock-tool.js'
-import { checkLogin, handleError, getStockItem, isValidString, HoError } from '../util/utility'
+import { checkLogin, handleError, getStockItem, isValidString, HoError, handleReject } from '../util/utility'
 import sendWs from '../util/sendWs'
 
 const router = Express.Router();
