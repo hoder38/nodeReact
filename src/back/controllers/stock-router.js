@@ -130,11 +130,11 @@ router.get('/getInterval/:uid', function(req, res,next) {
     console.log('stock get interval');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleReject(new HoError('uid is not vaild'), next);
     }
     if (stockIntervaling) {
         //handleError(new HoError('there is another inverval running'), next);
-        handleError(new HoError('there is another inverval running'), () => handleError(new HoError('test'), () => handleError(new HoError('test123'), next)));
+        return handleReject(new HoError('there is another inverval running'), () => handleReject(new HoError('test'), () => handleReject(new HoError('test123'), next)));
     }
     console.log(123);
     stockIntervaling = true;
@@ -145,7 +145,7 @@ router.get('/getInterval/:uid', function(req, res,next) {
     }).catch(err => {
         console.log(789);
         stockIntervaling = false;
-        return handleError(err, next)
+        return handleReject(err, next)
     });
 });
 

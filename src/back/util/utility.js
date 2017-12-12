@@ -151,12 +151,20 @@ export function handleError(err, type=null, ...args) {
 }
 
 //middle error
-export function handleReject(err, fun=null, ...args) {
-    showError(err, 'Reject');
-    if (fun) {
-        console.log(fun);
-        return fun(err, ...args);
+export function handleReject(err, type=null, ...args) {
+    if (type) {
+        if (typeof type === 'function') {
+            showError(err, 'Delay')
+            console.log(type);
+            return type(err, ...args);
+        } else if (typeof type === 'string') {
+            showError(err, type)
+        } else {
+            console.log(type);
+            showError(err, 'Unknown type')
+        }
     } else {
+        showError(err, 'Reject');
         return Promise.reject(err);
     }
 }

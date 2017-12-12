@@ -230,18 +230,26 @@ function handleError(err) {
 
 //middle error
 function handleReject(err) {
-    var fun = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+    var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
-    showError(err, 'Reject');
-    if (fun) {
-        console.log(fun);
+    if (type) {
+        if (typeof type === 'function') {
+            showError(err, 'Delay');
+            console.log(type);
 
-        for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-            args[_key2 - 2] = arguments[_key2];
+            for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
+                args[_key2 - 2] = arguments[_key2];
+            }
+
+            return type.apply(undefined, [err].concat(args));
+        } else if (typeof type === 'string') {
+            showError(err, type);
+        } else {
+            console.log(type);
+            showError(err, 'Unknown type');
         }
-
-        return fun.apply(undefined, [err].concat(args));
     } else {
+        showError(err, 'Reject');
         return _promise2.default.reject(err);
     }
 }
