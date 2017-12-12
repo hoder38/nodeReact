@@ -135,11 +135,14 @@ router.get('/getInterval/:uid', function(req, res,next) {
     if (stockIntervaling) {
         handleError(new HoError('there is another inverval running'), next);
     }
+    console.log(123);
     stockIntervaling = true;
     StockTool.getInterval(id, req.session).then(([result, index]) => {
+        console.log(456);
         stockIntervaling = false;
         res.json({interval: `${index}: ${result}`});
     }).catch(err => {
+        console.log(789);
         stockIntervaling = false;
         return handleError(err, next)
     });
