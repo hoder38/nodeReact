@@ -242,6 +242,7 @@ router.get('/getInterval/:uid', function (req, res, next) {
         stockIntervaling = false;
         res.json({ interval: index + ': ' + result });
     }).catch(function (err) {
+        stockIntervaling = false;
         return (0, _utility.handleError)(err, next);
     });
 });

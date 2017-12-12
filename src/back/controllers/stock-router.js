@@ -139,7 +139,10 @@ router.get('/getInterval/:uid', function(req, res,next) {
     StockTool.getInterval(id, req.session).then(([result, index]) => {
         stockIntervaling = false;
         res.json({interval: `${index}: ${result}`});
-    }).catch(err => handleError(err, next));
+    }).catch(err => {
+        stockIntervaling = false;
+        return handleError(err, next)
+    });
 });
 
 router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
