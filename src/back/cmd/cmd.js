@@ -6,7 +6,7 @@ import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, handleReject, isValidString, HoError } from '../util/utility'
+import { handleError, isValidString, HoError } from '../util/utility'
 
 const sendList = RANDOM_EMAIL;
 
@@ -17,7 +17,7 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     console.log(new Date());
     const username = isValidString(singleUser, 'name');
     if (!username) {
-        return handleReject(new HoError('user name not valid!!!'));
+        return handleError(new HoError('user name not valid!!!'));
     }
     const isSingle = () => Mongo('find', USERDB, Object.assign({auto: {$exists: true}}, singleUser ? {username} : {}));
     return isSingle().then(userlist => userDrive(userlist, 0, drive_batch));
@@ -25,7 +25,7 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
 
 const dbDump = collection => {
     if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
-        return handleReject(new HoError('Collection not find'));
+        return handleError(new HoError('Collection not find'));
     }
     const folderPath = `/mnt/mongodb/backup/${collection}`;
     const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
@@ -47,7 +47,7 @@ const dbDump = collection => {
 
 const dbRestore = collection => {
     if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
-        return handleReject(new HoError('Collection not find'));
+        return handleError(new HoError('Collection not find'));
     }
     const folderPath = `/mnt/mongodb/backup/${collection}`;
     const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store));
@@ -81,7 +81,7 @@ const randomSend = (action, joiner=null) => {
         break;
         case 'edit':
         if (!joiner) {
-            return handleReject(new HoError('Joiner unknown!!!'));
+            return handleError(new HoError('Joiner unknown!!!'));
         }
         const result = joiner.split(':');
         for (let i in sendList) {
@@ -92,7 +92,7 @@ const randomSend = (action, joiner=null) => {
             }
         }
         if (result.length < 2) {
-            return handleReject(new HoError('Joiner infomation valid!!!'));
+            return handleError(new HoError('Joiner infomation valid!!!'));
         }
         sendList.push({
             name: result[0],
@@ -103,7 +103,7 @@ const randomSend = (action, joiner=null) => {
         case 'send':
         console.log(sendList);
         if (sendList.length < 3) {
-            return handleReject(new HoError('Send list too short!!!'));
+            return handleError(new HoError('Send list too short!!!'));
         }
         const orig = sendList.map((v, i) => i);
         //console.log(orig);
@@ -142,7 +142,7 @@ const randomSend = (action, joiner=null) => {
         console.log('out of limit');
         return Promise.resolve();
         default:
-        return handleReject(new HoError('Action unknown!!!'));
+        return handleError(new HoError('Action unknown!!!'));
     }
 }
 

@@ -81,18 +81,18 @@ exports.default = {
 
         var name = (0, _utility.isValidString)(newName, 'name');
         if (!name) {
-            return (0, _utility.handleReject)(new _utility.HoError('name is not vaild!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('name is not vaild!!!'));
         }
         var id = (0, _utility.isValidString)(uid, 'uid');
         if (!id) {
-            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('uid is not vaild!!!'));
         }
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length === 0) {
-                return (0, _utility.handleReject)(new _utility.HoError('file not exist!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('file not exist!!!'));
             }
             if (!(0, _utility.checkAdmin)(1, user) && (!(0, _utility.isValidString)(items[0].owner, 'uid') || !user._id.equals(items[0].owner))) {
-                return (0, _utility.handleReject)(new _utility.HoError('file is not yours!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('file is not yours!!!'));
             }
             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: id }, { $set: { name: name } }).then(function (item2) {
                 return StorageTagTool.addTag(uid, name, user);
@@ -175,7 +175,7 @@ exports.default = {
                                     adultonly: items[0].adultonly
                                 };
                             }).catch(function (err) {
-                                return (0, _utility.handleReject)(err, errorMedia, items[0]._id, mediaType['fileIndex']);
+                                return (0, _utility.handleError)(err, errorMedia, items[0]._id, mediaType['fileIndex']);
                             });
                         });
                     });
@@ -334,7 +334,7 @@ exports.default = {
                             break;
                         default:
                             return {
-                                v: (0, _utility.handleReject)(new _utility.HoError('unknown media type!!!'))
+                                v: (0, _utility.handleError)(new _utility.HoError('unknown media type!!!'))
                             };
                     }
                 }
@@ -441,7 +441,7 @@ exports.default = {
                             };
                             recurFolder(0, tempPath, '');
                             if (zip_arr.length < 1) {
-                                return (0, _utility.handleReject)(new _utility.HoError('empty zip'));
+                                return (0, _utility.handleError)(new _utility.HoError('empty zip'));
                             }
                             zip_arr = (0, _utility.sortList)(zip_arr);
                             zip_arr.forEach(function (s, i) {
@@ -458,7 +458,7 @@ exports.default = {
                                 filePath: filePath + '_img/1',
                                 rest: function rest(metadata) {
                                     if (!metadata.thumbnailLink) {
-                                        return (0, _utility.handleReject)(new _utility.HoError('error type'));
+                                        return (0, _utility.handleError)(new _utility.HoError('error type'));
                                     }
                                     mediaType['thumbnail'] = metadata.thumbnailLink;
                                     return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: (0, _assign2.default)(typeof mediaType['fileIndex'] === 'number' ? (0, _defineProperty3.default)({}, 'present.' + mediaType['fileIndex'], zip_arr.length) : { present: zip_arr.length }, mediaType['realPath'] ? (0, _defineProperty3.default)({}, 'mediaType.' + mediaType['fileIndex'] + '.key', metadata.id) : { 'mediaType.key': metadata.id }) }).then(function (item) {
@@ -466,7 +466,7 @@ exports.default = {
                                     });
                                 },
                                 errhandle: function errhandle(err) {
-                                    return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                                    return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                                 }
                             });
                         });
@@ -506,7 +506,7 @@ exports.default = {
                     }).then(function (output) {
                         var tmplist = output.match(/[^\r\n]+/g);
                         if (!tmplist) {
-                            return (0, _utility.handleReject)(new _utility.HoError('is not zip'));
+                            return (0, _utility.handleError)(new _utility.HoError('is not zip'));
                         }
                         var playlist = [];
                         if (zip_type === 2) {
@@ -569,12 +569,12 @@ exports.default = {
                             }
                         }
                         if (playlist.length < 1) {
-                            return (0, _utility.handleReject)(new _utility.HoError('empty zip'));
+                            return (0, _utility.handleError)(new _utility.HoError('empty zip'));
                         }
                         playlist = (0, _utility.sortList)(playlist);
                         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: fileID }, { limit: 1 }).then(function (items) {
                             if (items.length < 1) {
-                                return (0, _utility.handleReject)(new _utility.HoError('cannot find zip'));
+                                return (0, _utility.handleError)(new _utility.HoError('cannot find zip'));
                             }
                             var tagSet = new _set2.default();
                             var _iteratorNormalCompletion3 = true;
@@ -692,7 +692,7 @@ exports.default = {
                             mediaType['thumbnail'] = metadata.exportLinks['application/pdf'];
                             if (mediaType['type'] === 'present') {
                                 if (!metadata.alternateLink) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('error type'));
+                                    return (0, _utility.handleError)(new _utility.HoError('error type'));
                                 }
                                 mediaType['alternate'] = metadata.alternateLink;
                             }
@@ -701,14 +701,14 @@ exports.default = {
                         } else if (metadata.thumbnailLink) {
                             mediaType['thumbnail'] = metadata.thumbnailLink;
                         } else {
-                            return (0, _utility.handleReject)(new _utility.HoError('error type'));
+                            return (0, _utility.handleError)(new _utility.HoError('error type'));
                         }
                         return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: mediaType['realPath'] ? (0, _defineProperty3.default)({}, 'mediaType.' + mediaType['fileIndex'] + '.key', metadata.id) : { 'mediaType.key': metadata.id } }).then(function (item) {
                             return _this2.handleMedia(mediaType, filePath, fileID, metadata.id, user);
                         });
                     },
                     errhandle: function errhandle(err) {
-                        return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                        return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                     }
                 }, mediaType['type'] === 'doc' || mediaType['type'] === 'rawdoc' || mediaType['type'] === 'sheet' || mediaType['type'] === 'present' ? { convert: true } : {}));
             });
@@ -720,7 +720,7 @@ exports.default = {
                 return mediaType['thumbnail'] ? _promise2.default.resolve(mediaType['thumbnail']) : (0, _apiToolGoogle2.default)('get', { fileId: key }).then(function (filedata) {
                     console.log(filedata);
                     if (!filedata['thumbnailLink']) {
-                        return (0, _utility.handleReject)(new _utility.HoError('error type'));
+                        return (0, _utility.handleError)(new _utility.HoError('error type'));
                     }
                     return filedata['thumbnailLink'];
                 });
@@ -739,14 +739,14 @@ exports.default = {
                         });
                     },
                     errhandle: function errhandle(err) {
-                        return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                        return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                     }
                 });
             });
         } else if (mediaType['type'] === 'video') {
             if (!mediaType.hasOwnProperty('time') && !mediaType.hasOwnProperty('hd')) {
                 console.log(mediaType);
-                return (0, _utility.handleReject)(new _utility.HoError('video can not be decoded!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('video can not be decoded!!!'));
             }
             return (0, _apiToolGoogle2.default)('download media', {
                 user: user,
@@ -762,7 +762,7 @@ exports.default = {
                     });
                 },
                 errhandle: function errhandle(err) {
-                    return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                    return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                 }
             });
         } else if (mediaType['type'] === 'doc' || mediaType['type'] === 'rawdoc' || mediaType['type'] === 'sheet') {
@@ -770,7 +770,7 @@ exports.default = {
                 return mediaType['thumbnail'] ? _promise2.default.resolve(mediaType['thumbnail']) : (0, _apiToolGoogle2.default)('get', { fileId: key }).then(function (filedata) {
                     console.log(filedata);
                     if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
-                        return (0, _utility.handleReject)(new _utility.HoError('error type'));
+                        return (0, _utility.handleError)(new _utility.HoError('error type'));
                     }
                     return filedata.exportLinks['application/pdf'];
                 });
@@ -786,7 +786,7 @@ exports.default = {
                         });
                     },
                     errhandle: function errhandle(err) {
-                        return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                        return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                     }
                 });
             });
@@ -795,7 +795,7 @@ exports.default = {
                 return mediaType['thumbnail'] ? _promise2.default.resolve([mediaType['thumbnail'], mediaType['alternate']]) : (0, _apiToolGoogle2.default)('get', { fileId: key }).then(function (filedata) {
                     console.log(filedata);
                     if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
-                        (0, _utility.handleReject)(new _utility.HoError('error type'));
+                        return (0, _utility.handleError)(new _utility.HoError('error type'));
                     }
                     return [filedata.exportLinks['application/pdf'], filedata.alternateLink];
                 });
@@ -816,7 +816,7 @@ exports.default = {
                         });
                     },
                     errhandle: function errhandle(err) {
-                        return (0, _utility.handleReject)(err, errorMedia, fileID, mediaType['fileIndex']);
+                        return (0, _utility.handleError)(err, errorMedia, fileID, mediaType['fileIndex']);
                     }
                 });
             });
@@ -889,7 +889,7 @@ exports.default = {
                     return is_handled ? handleDelete() : _this3.handleMediaUpload(mediaType, filePath, item[0]['_id'], user).then(function () {
                         return handleDelete();
                     }).catch(function (err) {
-                        return (0, _utility.handleReject)(err, errorMedia, item[0]['_id'], mediaType['fileIndex']);
+                        return (0, _utility.handleError)(err, errorMedia, item[0]['_id'], mediaType['fileIndex']);
                     });
                 });
             });
@@ -925,7 +925,7 @@ exports.default = {
             switch (mediaType['type']) {
                 case 'video':
                     if (!metadata.videoMediaMetadata) {
-                        return (0, _utility.handleReject)(new _utility.HoError('not transcode yet'));
+                        return (0, _utility.handleError)(new _utility.HoError('not transcode yet'));
                         /*if (!metadata.userPermission || metadata.userPermission.role === 'owner') {
                             handleError(new HoError('not transcode yet'));
                         }
@@ -945,7 +945,7 @@ exports.default = {
                                 return handleRest(data, name, 3, metadata.id, true);
                             },
                             errhandle: function errhandle(err) {
-                                return (0, _utility.handleReject)(err, errDrive, metadata.id, folderId);
+                                return (0, _utility.handleError)(err, errDrive, metadata.id, folderId);
                             }
                         }) : (0, _apiToolGoogle2.default)('download', {
                             user: user,
@@ -961,12 +961,12 @@ exports.default = {
                                         return handleRest(data, name, 3, metadata.id, true);
                                     },
                                     errhandle: function errhandle(err) {
-                                        return (0, _utility.handleReject)(err, errDrive, metadata.id, folderId);
+                                        return (0, _utility.handleError)(err, errDrive, metadata.id, folderId);
                                     }
                                 });
                             },
                             errhandle: function errhandle(err) {
-                                return (0, _utility.handleReject)(err, errDrive, metadata.id, folderId);
+                                return (0, _utility.handleError)(err, errDrive, metadata.id, folderId);
                             }
                         });
                     }).catch(function (err) {
@@ -986,7 +986,7 @@ exports.default = {
                                 return handleRest(data, name);
                             },
                             errhandle: function errhandle(err) {
-                                return (0, _utility.handleReject)(err, errDrive, metadata.id, folderId);
+                                return (0, _utility.handleError)(err, errDrive, metadata.id, folderId);
                             }
                         });
                     }).catch(function (err) {
@@ -1056,7 +1056,7 @@ exports.default = {
                                                         _id: timeoutItems[index].item.owner,
                                                         perm: 1
                                                     }).catch(function (err) {
-                                                        return (0, _utility.handleReject)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                        return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
                                                     });
                                                 });
                                             }
@@ -1066,7 +1066,7 @@ exports.default = {
                                                     _id: timeoutItems[index].item.owner,
                                                     perm: 1
                                                 }).catch(function (err) {
-                                                    return (0, _utility.handleReject)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                    return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
                                                 });
                                             });
                                         }
@@ -1077,7 +1077,7 @@ exports.default = {
                                                     _id: timeoutItems[index].item.owner,
                                                     perm: 1
                                                 }).catch(function (err) {
-                                                    return (0, _utility.handleReject)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                    return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
                                                 });
                                             });
                                         }
@@ -1087,7 +1087,7 @@ exports.default = {
                                                 _id: timeoutItems[index].item.owner,
                                                 perm: 1
                                             }).catch(function (err) {
-                                                return (0, _utility.handleReject)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
+                                                return (0, _utility.handleError)(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex']);
                                             });
                                         });
                                     }
@@ -1123,7 +1123,7 @@ var completeMedia = exports.completeMedia = function completeMedia(fileID, statu
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: fileID }, { limit: 1 });
     }).then(function (items) {
         if (items.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
         }
         console.log(items);
         (0, _sendWs2.default)({
@@ -1137,9 +1137,9 @@ var errorMedia = exports.errorMedia = function errorMedia(err, fileID, fileIndex
     var _ref13;
 
     return err.name === 'HoError' && err.message === 'timeout' ? (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (_ref13 = {}, (0, _defineProperty3.default)(_ref13, 'mediaType.' + fileIndex + '.timeout', true), (0, _defineProperty3.default)(_ref13, 'status', 9), _ref13) : { 'mediaType.timeout': true } }).then(function () {
-        return (0, _utility.handleReject)(err);
+        return (0, _utility.handleError)(err);
     }) : (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: fileID }, { $set: typeof fileIndex === 'number' ? (0, _defineProperty3.default)({}, 'mediaType.' + fileIndex + '.err', err) : { 'mediaType.err': err } }).then(function () {
-        return (0, _utility.handleReject)(err);
+        return (0, _utility.handleError)(err);
     });
 };
 
@@ -1165,6 +1165,6 @@ var errDrive = function errDrive(err, key, folderId) {
         rmFolderId: handling,
         addFolderId: folderId
     }).then(function () {
-        return (0, _utility.handleReject)(err);
+        return (0, _utility.handleError)(err);
     });
 };

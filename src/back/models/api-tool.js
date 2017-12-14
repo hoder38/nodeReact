@@ -6,7 +6,7 @@ import { stringify as QStringify } from 'querystring'
 import { createWriteStream as FsCreateWriteStream, statSync as FsStatSync, unlink as FsUnlink, existsSync as FsExistsSync, renameSync as FsRenameSync } from 'fs'
 import { basename as PathBasename } from 'path'
 import { parse as UrlParse } from 'url'
-import { handleError, handleReject, HoError, big5Encode } from '../util/utility'
+import { handleError, HoError, big5Encode } from '../util/utility'
 import sendWs from '../util/sendWs'
 
 let api_ing = 0;
@@ -38,7 +38,7 @@ export default function(name, ...args) {
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 500));
         default:
-        return handleReject(new HoError('unknown api'));
+        return handleError(new HoError('unknown api'));
     }
 }
 
@@ -58,7 +58,7 @@ function get(rest=null) {
                 case 'download':
                 return download(...fun.args).catch(err => handle_err(err, fun.args[0])).then(rest => get(rest));
                 default:
-                return handleReject(new HoError('unknown api')).catch(err => handleError(err, 'Api')).then(rest => get(rest));
+                return handleError(new HoError('unknown api')).catch(err => handleError(err, 'Api')).then(rest => get(rest));
             }
         }
     }
@@ -97,7 +97,7 @@ function expire(name, args) {
                         case 'download':
                         return download(...fun.args).catch(err => handle_err(err, args[0])).then(rest => get(rest));
                         default:
-                        return handleReject(new HoError('unknown api')).catch(err => handleError(err, 'Api')).then(rest => get(rest));
+                        return handleError(new HoError('unknown api')).catch(err => handleError(err, 'Api')).then(rest => get(rest));
                     }
                 }
             }
@@ -132,7 +132,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
     } : {})).then(res => {
         if (user) {
             if (!filePath) {
-                return handleReject(new HoError('file path empty!'), errHandle);
+                return handleError(new HoError('file path empty!'), errHandle);
             }
             return checkTmp().then(() => new Promise((resolve, reject) => {
                 const dest = FsCreateWriteStream(temp);
@@ -141,7 +141,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 dest.on('error', err => reject(err));
             }).then(() => {
                 if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== FsStatSync(filePath)['size'])) {
-                    return handleReject(new HoError('incomplete download'), errHandle);
+                    return handleError(new HoError('incomplete download'), errHandle);
                 }
                 FsRenameSync(temp, filePath);
                 if (rest) {
@@ -161,13 +161,13 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         }
     }).catch(err => {
         if (err.code === 'HPE_INVALID_CONSTANT') {
-            return handleReject(err);
+            return handleError(err);
         }
         console.log(index);
         handleError(err, 'Fetch');
         if (index > MAX_RETRY) {
             console.log(url);
-            return handleReject(new HoError('timeout'), errHandle);
+            return handleError(new HoError('timeout'), errHandle);
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
     });

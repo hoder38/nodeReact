@@ -5,7 +5,7 @@ import MediaHandleTool, { errorMedia, completeMedia } from '../models/mediaHandl
 import { googleBackup } from '../models/api-tool-google'
 import Mongo from '../models/mongo-tool'
 import TagTool from '../models/tag-tool'
-import { checkLogin, handleError, handleReject, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString } from '../util/utility'
+import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString } from '../util/utility'
 import sendWs from '../util/sendWs'
 import { supplyTag, isVideo } from '../util/mime'
 
@@ -35,11 +35,11 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
     console.log('del file');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length === 0) {
-            return handleReject(new HoError('file can not be fund!!!'));
+            return handleError(new HoError('file can not be fund!!!'));
         }
         const rest = () => Mongo('remove', STORAGEDB, {
             _id: items[0]._id,
@@ -55,7 +55,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
         const filePath = getFileLocation(items[0].owner, items[0]._id);
         if (req.params.recycle === '1' && checkAdmin(1, req.user)) {
             if (items[0].recycle !== 1) {
-                return handleReject(new HoError('recycle file first!!!'));
+                return handleError(new HoError('recycle file first!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
                 return rest();
@@ -118,7 +118,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
             }
         } else {
             if (!checkAdmin(1, req.user) && (!isValidString(items[0].owner, 'uid') || !req.user._id.equals(items[0].owner))) {
-                return handleReject(new HoError('file is not yours!!!'));
+                return handleError(new HoError('file is not yours!!!'));
             }
             return recur_backup(1).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {
                 recycle: 1,
@@ -175,26 +175,26 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
 router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, next) {
     console.log('handle media');
     if (!checkAdmin(1, req.user)) {
-        handleError(new HoError('permission denied'), next);
+        return handleError(new HoError('permission denied'), next);
     }
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         console.log(items);
         if (items.length < 1) {
-            return handleReject(new HoError('cannot find file!!!'));
+            return handleError(new HoError('cannot find file!!!'));
         }
         if (!items[0].mediaType) {
-            return handleReject(new HoError('this file is not media!!!'));
+            return handleError(new HoError('this file is not media!!!'));
         }
         switch(req.params.action) {
             case 'act':
             const filePath = getFileLocation(items[0].owner, items[0]._id);
             if (items[0].mediaType.type) {
                 const rest = () => items[0].mediaType.key ? (!items[0].mediaType.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(items[0].mediaType, filePath, items[0]._id, req.user, items[0].mediaType.key) : MediaHandleTool.handleMedia(items[0].mediaType, filePath, items[0]._id, items[0].mediaType.key, req.user) : MediaHandleTool.handleMediaUpload(items[0].mediaType, filePath, items[0]._id, req.user);
-                return rest().catch(err => handleReject(err, errorMedia, items[0]['_id'], items[0].mediaType['fileIndex'])).then(() => res.json({apiOK: true}));
+                return rest().catch(err => handleError(err, errorMedia, items[0]['_id'], items[0].mediaType['fileIndex'])).then(() => res.json({apiOK: true}));
             } else if (req.params.index) {
                 if (req.params.index === 'v') {
                     for (let i in items[0]['playList']) {
@@ -205,7 +205,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     }
                 }
                 if (!FsExistsSync(`${filePath}/${items[0].mediaType[req.params.index]['fileIndex']}_complete`)) {
-                    return handleReject(new HoError('need complete first'));
+                    return handleError(new HoError('need complete first'));
                 }
                 let fileIndex = false;
                 for (let i in items[0].mediaType) {
@@ -215,10 +215,10 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     }
                 }
                 if (!fileIndex) {
-                    return handleReject(new HoError('cannot find media'));
+                    return handleError(new HoError('cannot find media'));
                 }
                 const rest = () => items[0].mediaType[fileIndex].key ? (!items[0].mediaType[fileIndex].complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(items[0].mediaType[fileIndex], filePath, items[0]._id, req.user, items[0].mediaType[fileIndex].key) : MediaHandleTool.handleMedia(items[0].mediaType[fileIndex], filePath, items[0]._id, items[0].mediaType[fileIndex].key, req.user) : MediaHandleTool.handleMediaUpload(items[0].mediaType[fileIndex], filePath, items[0]._id, req.user);
-                return rest().catch(err => handleReject(err, errorMedia, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex'])).then(() => res.json({apiOK: true}));
+                return rest().catch(err => handleError(err, errorMedia, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex'])).then(() => res.json({apiOK: true}));
             } else {
                 let handleItems = [];
                 for (let i in items[0].mediaType) {
@@ -227,9 +227,9 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     }
                 }
                 if (handleItems.length < 1) {
-                    return handleReject(new HoError('need complete first'));
+                    return handleError(new HoError('need complete first'));
                 }
-                return Promise.all(handleItems.map(m => m.key ? (!m.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user, m.key) : MediaHandleTool.handleMedia(m, filePath, items[0]._id, m.key, req.user).catch(err => handleReject(err, errorMedia, items[0]['_id'], m['fileIndex'])) : MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user).catch(err => handleReject(err, errorMedia, items[0]['_id'], m['fileIndex'])))).then(() => res.json({apiOK: true}));
+                return Promise.all(handleItems.map(m => m.key ? (!m.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user, m.key) : MediaHandleTool.handleMedia(m, filePath, items[0]._id, m.key, req.user).catch(err => handleError(err, errorMedia, items[0]['_id'], m['fileIndex'])) : MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user).catch(err => handleError(err, errorMedia, items[0]['_id'], m['fileIndex'])))).then(() => res.json({apiOK: true}));
             }
             case 'del':
             if (items[0].mediaType.type) {
@@ -253,12 +253,12 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     });
                 }
                 if (handleItems.length < 1) {
-                    return handleReject(new HoError('need complete first'));
+                    return handleError(new HoError('need complete first'));
                 }
                 return Promise.all(handleItems.map(m => completeMedia(items[0]._id, 0, m['fileIndex']))).then(() => res.json({apiOK: true}));
             }
             default:
-            return handleReject(new HoError('unknown action'));
+            return handleError(new HoError('unknown action'));
         }
     }).catch(err => handleError(err, next));
 });

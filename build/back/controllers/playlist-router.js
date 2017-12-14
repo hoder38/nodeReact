@@ -101,7 +101,7 @@ router.put('/join', function (req, res, next) {
         }
     });
     if (uids.length < 2) {
-        (0, _utility.handleError)(new _utility.HoError('must large than one split'), next);
+        return (0, _utility.handleError)(new _utility.HoError('must large than one split'), next);
     }
     var join_items = [];
     _promise2.default.all(uids.map(function (u) {
@@ -114,7 +114,7 @@ router.put('/join', function (req, res, next) {
             }
         });
         if (join_items.length < 2) {
-            return (0, _utility.handleReject)(new _utility.HoError('must large than one split'));
+            return (0, _utility.handleError)(new _utility.HoError('must large than one split'));
         }
         return join_items;
     }).then(function (join_items) {
@@ -148,7 +148,7 @@ router.put('/join', function (req, res, next) {
         }
 
         if (!main_match) {
-            return (0, _utility.handleReject)(new _utility.HoError('need the first split'));
+            return (0, _utility.handleError)(new _utility.HoError('need the first split'));
         }
         var zip_type = main_match[3] ? 2 : main_match[4] ? 3 : 1;
         var pattern = zip_type === 2 ? new RegExp('\\.part(\\d+)\\.rar' + '$', 'i') : zip_type === 3 ? new RegExp('\\.7z\\.(\\d+)' + '$', 'i') : new RegExp('\\.zip\\.(\\d+)' + '$', 'i');
@@ -184,7 +184,7 @@ router.put('/join', function (req, res, next) {
         }
 
         if ((0, _keys2.default)(order_items).length < 2) {
-            return (0, _utility.handleReject)(new _utility.HoError('must large than one split'));
+            return (0, _utility.handleError)(new _utility.HoError('must large than one split'));
         }
         return [order_items, zip_type];
     }).then(function (_ref) {
@@ -238,7 +238,7 @@ router.put('/join', function (req, res, next) {
                                 name: order_items[1].name
                             });
                         }).catch(function (err) {
-                            return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, order_items[1]._id, mediaType['fileIndex']);
+                            return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, order_items[1]._id, mediaType['fileIndex']);
                         });
                     })
                 };
@@ -287,7 +287,7 @@ router.put('/join', function (req, res, next) {
                                 name: order_items[1].name
                             });
                         }).catch(function (err) {
-                            return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, order_items[1]._id, mediaType['fileIndex']);
+                            return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, order_items[1]._id, mediaType['fileIndex']);
                         });
                     })
                 };
@@ -305,21 +305,21 @@ router.post('/copy/:uid/:index(\\d+)', function (req, res, next) {
     var index = Number(req.params.index);
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('torrent can not be found!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('torrent can not be found!!!'));
         }
         if (items[0].status !== 9) {
-            return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
         }
         if (!items[0].playList[index]) {
-            return (0, _utility.handleReject)(new _utility.HoError('torrent index can not be found!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('torrent index can not be found!!!'));
         }
         var origPath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id) + '/' + index + '_complete';
         if (!(0, _fs.existsSync)(origPath)) {
-            return (0, _utility.handleReject)(new _utility.HoError('please download first!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('please download first!!!'));
         }
         var oOID = (0, _mongoTool.objectID)();
         var filePath = (0, _utility.getFileLocation)(req.user._id, oOID);
@@ -490,7 +490,7 @@ router.post('/copy/:uid/:index(\\d+)', function (req, res, next) {
                                     other: []
                                 });
                             }).catch(function (err) {
-                                return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, item[0]['_id'], mediaType['fileIndex']);
+                                return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, item[0]['_id'], mediaType['fileIndex']);
                             });
                         });
                     });
@@ -506,11 +506,11 @@ router.get('/all/download/:uid', function (req, res, next) {
     console.log('torrent all downlad');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length === 0) {
-            return (0, _utility.handleReject)(new _utility.HoError('playlist can not be fund!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('playlist can not be fund!!!'));
         }
         var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
         var queueItems = [];
@@ -565,11 +565,11 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function (req, res, next) {
     var bufferSize = Number(req.params.size);
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('torrent can not be fund!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('torrent can not be fund!!!'));
         }
         if (req.params.index === 'v') {
             for (var i in items[0]['playList']) {
@@ -582,7 +582,7 @@ router.get('/check/:uid/:index(\\d+|v)/:size(\\d+)', function (req, res, next) {
         var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
         var bufferPath = filePath + '/' + index;
         if ((0, _fs.existsSync)(bufferPath + '_error')) {
-            return (0, _utility.handleReject)(new _utility.HoError('torrent video error!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('torrent video error!!!'));
         }
         var realPath = filePath + '/real/' + items[0]['playList'][index];
         var comPath = bufferPath + '_complete';

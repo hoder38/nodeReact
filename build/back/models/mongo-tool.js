@@ -74,16 +74,22 @@ _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD
     autoReconnect: true,
     poolSize: 10
 }, function (err, db) {
-    (0, _utility.handleError)(err);
+    if (err) {
+        return (0, _utility.handleError)(err, 'DB connect');
+    }
     if (!db) {
-        (0, _utility.handleError)(new _utility.HoError('No db connected'));
+        return (0, _utility.handleError)(new _utility.HoError('No db connected'), 'DB connect');
     }
     mongo = db;
     console.log('database connected');
     db.collection('user', function (err, collection) {
-        (0, _utility.handleError)(err);
+        if (err) {
+            return (0, _utility.handleError)(err, 'DB connect');
+        }
         collection.count(function (err, count) {
-            (0, _utility.handleError)(err);
+            if (err) {
+                return (0, _utility.handleError)(err, 'DB connect');
+            }
             if (count === 0) {
                 collection.insert({
                     username: 'hoder',
@@ -91,7 +97,9 @@ _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD
                     perm: 1,
                     password: (0, _crypto.createHash)('md5').update('test123').digest('hex')
                 }, function (err, user) {
-                    (0, _utility.handleError)(err);
+                    if (err) {
+                        return (0, _utility.handleError)(err, 'DB connect');
+                    }
                     console.log(user);
                 });
             }

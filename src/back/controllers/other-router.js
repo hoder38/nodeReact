@@ -4,7 +4,7 @@ import { EXTENT_FILE_IP, EXTENT_FILE_PORT } from '../config'
 import Express from 'express'
 import { request as HttpsRequest } from 'https'
 import Mongo from '../models/mongo-tool'
-import { handleError, handleReject, HoError, checkLogin } from '../util/utility'
+import { handleError, HoError, checkLogin } from '../util/utility'
 
 const router = Express.Router();
 
@@ -23,10 +23,10 @@ router.get('/s', function(req, res, next) {
         limit: 1,
     }).then(items => {
         if (items.length < 1) {
-            return handleReject(new HoError('cannot find url'));
+            return handleError(new HoError('cannot find url'));
         }
         if (!items[0].url) {
-            return handleReject(new HoError('dont have url'));
+            return handleError(new HoError('dont have url'));
         }
         const url = decodeURIComponent(items[0].url);
         res.header('Content-Type', 'text/plain');

@@ -159,7 +159,7 @@ router.put('/delTag/:tag', function (req, res, next) {
 router.post('/newRow', function (req, res, next) {
     console.log('new fitness');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     _fitnessTool2.default.newRow(req.body).then(function (result) {
         (0, _sendWs2.default)({
@@ -175,7 +175,7 @@ router.post('/newRow', function (req, res, next) {
 router.put('/editRow/:uid', function (req, res, next) {
     console.log('edit fitness');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     _fitnessTool2.default.editRow(req.params.uid, req.body, req.session).then(function () {
         (0, _sendWs2.default)({
@@ -191,7 +191,7 @@ router.put('/editRow/:uid', function (req, res, next) {
 router.delete('/delRow/:uid', function (req, res, next) {
     console.log('del fitness');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     _fitnessTool2.default.delRow(req.params.uid).then(function () {
         (0, _sendWs2.default)({

@@ -54,7 +54,7 @@ function cmdUpdateDrive() {
     console.log(new Date());
     var username = (0, _utility.isValidString)(singleUser, 'name');
     if (!username) {
-        return (0, _utility.handleReject)(new _utility.HoError('user name not valid!!!'));
+        return (0, _utility.handleError)(new _utility.HoError('user name not valid!!!'));
     }
     var isSingle = function isSingle() {
         return (0, _mongoTool2.default)('find', _constants.USERDB, (0, _assign2.default)({ auto: { $exists: true } }, singleUser ? { username: username } : {}));
@@ -66,7 +66,7 @@ function cmdUpdateDrive() {
 
 var dbDump = function dbDump(collection) {
     if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
-        return (0, _utility.handleReject)(new _utility.HoError('Collection not find'));
+        return (0, _utility.handleError)(new _utility.HoError('Collection not find'));
     }
     var folderPath = '/mnt/mongodb/backup/' + collection;
     var mkfolder = function mkfolder() {
@@ -104,7 +104,7 @@ var dbDump = function dbDump(collection) {
 
 var dbRestore = function dbRestore(collection) {
     if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
-        return (0, _utility.handleReject)(new _utility.HoError('Collection not find'));
+        return (0, _utility.handleError)(new _utility.HoError('Collection not find'));
     }
     var folderPath = '/mnt/mongodb/backup/' + collection;
     var recur_insert = function recur_insert(index, store) {
@@ -150,7 +150,7 @@ var randomSend = function randomSend(action) {
             break;
         case 'edit':
             if (!joiner) {
-                return (0, _utility.handleReject)(new _utility.HoError('Joiner unknown!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('Joiner unknown!!!'));
             }
             var result = joiner.split(':');
             for (var i in sendList) {
@@ -161,7 +161,7 @@ var randomSend = function randomSend(action) {
                 }
             }
             if (result.length < 2) {
-                return (0, _utility.handleReject)(new _utility.HoError('Joiner infomation valid!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('Joiner infomation valid!!!'));
             }
             sendList.push({
                 name: result[0],
@@ -172,7 +172,7 @@ var randomSend = function randomSend(action) {
         case 'send':
             console.log(sendList);
             if (sendList.length < 3) {
-                return (0, _utility.handleReject)(new _utility.HoError('Send list too short!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('Send list too short!!!'));
             }
             var orig = sendList.map(function (v, i) {
                 return i;
@@ -232,7 +232,7 @@ var randomSend = function randomSend(action) {
             console.log('out of limit');
             return _promise2.default.resolve();
         default:
-            return (0, _utility.handleReject)(new _utility.HoError('Action unknown!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('Action unknown!!!'));
     }
 };
 

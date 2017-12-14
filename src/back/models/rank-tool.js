@@ -1,7 +1,7 @@
 import { RANKDB, RANK_LIMIT, USERDB, FITNESSDB, FITNESS_POINT } from '../constants'
 import Mongo, { objectID } from '../models/mongo-tool'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { isValidString, handleError, handleReject, HoError, completeZero } from '../util/utility'
+import { isValidString, handleError, HoError, completeZero } from '../util/utility'
 
 const RankTagTool = TagTool(RANKDB);
 
@@ -9,11 +9,11 @@ export default {
     getChart: function(uid, user, session) {
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid not vaild!!!'));
+            return handleError(new HoError('uid not vaild!!!'));
         }
         return Mongo('find', RANKDB, {_id: id}).then(items => {
             if (items.length < 1) {
-                return handleReject(new HoError('rank cannot find!!!'));
+                return handleError(new HoError('rank cannot find!!!'));
             }
             const getName = () => (items[0].type === FITNESSDB && items[0].itemId.equals(objectID(FITNESS_POINT))) ? Promise.resolve('point') : Mongo('find', items[0].type, {_id: items[0].itemId}).then(items1 => (items1.length < 1) ? 'unknown' : items1[0].name);
             const findData = () => items[0].history ? Promise.resolve(items[0].history) : Mongo('find', `${items[0].type}Count`, {
@@ -28,7 +28,7 @@ export default {
             }).then(items1 => items1.reverse());
             return getName().then(itemName => findData().then(itemData => {
                 if (itemData.length < 1) {
-                    return handleReject(new HoError('no data!!!'));
+                    return handleError(new HoError('no data!!!'));
                 }
                 let data = [];
                 let labels = [];
@@ -55,7 +55,7 @@ export default {
                     owner: user._id,
                 }).then(items1 => {
                     if (items1.length < 1) {
-                        return handleReject(new HoError('rank cannot find user!!!'));
+                        return handleError(new HoError('rank cannot find user!!!'));
                     }
                     labels.push(user.username);
                     data.push(items1[0].count);
@@ -73,21 +73,21 @@ export default {
     },
     newRow: function(data) {
         if (!data['name'] || !data['item']) {
-            return handleReject(new HoError('parameter lost!!!'));
+            return handleError(new HoError('parameter lost!!!'));
         }
         const name = isValidString(data['name'], 'name');
         if (!name) {
-            return handleReject(new HoError('name not vaild!!!'));
+            return handleError(new HoError('name not vaild!!!'));
         }
         const id = isValidString(data['item'], 'uid');
         if (!id) {
-            return handleReject(new HoError('item not vaild!!!'));
+            return handleError(new HoError('item not vaild!!!'));
         }
         const date = new Date();
         const start = Number(`${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`);
         const getItem = () => id.equals(objectID(FITNESS_POINT)) ? Promise.resolve('point') : Mongo('find', FITNESSDB, {_id: id}).then(items1 => {
             if (items1.length < 1) {
-                return handleReject(new HoError('fitness row does not exist!!!'));
+                return handleError(new HoError('fitness row does not exist!!!'));
             }
             return items1[0].name;
         });
@@ -97,7 +97,7 @@ export default {
             start,
         }).then(items => {
             if (items.length > 0) {
-                return handleReject(new HoError('double rank!!!'));
+                return handleError(new HoError('double rank!!!'));
             }
             let setTag = new Set();
             setTag.add(normalize(name)).add(date.getFullYear().toString()).add(FITNESSDB).add('sport').add('運動').add(normalize(itemName));
@@ -146,11 +146,11 @@ export default {
     delRow: function(uid) {
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid not vaild!!!'));
+            return handleError(new HoError('uid not vaild!!!'));
         }
         return Mongo('find', RANKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                return handleReject(new HoError('rank row does not exist!!!'));
+                return handleError(new HoError('rank row does not exist!!!'));
             }
             return Mongo('remove', RANKDB, {
                 _id: items[0]._id,

@@ -89,12 +89,12 @@ router.post('/' + _constants.STORAGEDB + '/add', function (req, res, next) {
     console.log('storage add bookmark');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     StorageTagTool.addBookmark(name, req.user, req.session).then(function (result) {
         var parentList = StorageTagTool.searchTags(req.session).getArray();
         if (parentList.cur.length <= 0) {
-            return (0, _utility.handleReject)(new _utility.HoError('empty parent list!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('empty parent list!!!'));
         }
         return newBookmarkItem(name, req.user, req.session, parentList.cur, parentList.exactly).then(function (_ref) {
             var _ref2 = (0, _slicedToArray3.default)(_ref, 4),
@@ -278,14 +278,14 @@ router.get('/' + _constants.STORAGEDB + '/set/:id/:sortName(name|mtime|count)/:s
     console.log('set storage bookmark');
     var id = (0, _utility.isValidString)(req.params.id, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('bookmark is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('bookmark is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
         _id: id,
         status: 8
     }, { limit: 1 }).then(function (items) {
         if (items.length < 1 || !items[0].btag || !items[0].bexactly) {
-            return (0, _utility.handleReject)(new _utility.HoError('can not find object!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('can not find object!!!'));
         }
         return StorageTagTool.setLatest(items[0]._id, req.session).then(function () {
             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $inc: { count: 1 } });
@@ -306,19 +306,19 @@ router.get('/' + _constants.STORAGEDB + '/set/:id/:sortName(name|mtime|count)/:s
 router.post('/' + _constants.STORAGEDB + '/subscript/:id', function (req, res, next) {
     console.log('subscipt storage bookmark');
     if (req.body.path.length <= 0 || req.body.exactly.length <= 0) {
-        (0, _utility.handleError)(new _utility.HoError('empty parent list!!!'), next);
+        return (0, _utility.handleError)(new _utility.HoError('empty parent list!!!'), next);
     }
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     var id = req.params.id.match(/^(you|ypl|kub|yif|mad|bbl|c99)_(.*)$/) ? (0, _utility.isValidString)(req.params.id, 'name') : (0, _utility.isValidString)(req.params.id, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     var bpath = req.body.path.map(function (p) {
         if (!(0, _utility.isValidString)(p, 'name')) {
-            (0, _utility.handleError)(new _utility.HoError('path name is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('path name is not vaild'), next);
         }
     });
     var bexactly = req.body.exactly.map(function (e) {
@@ -376,7 +376,7 @@ router.post('/' + _constants.PASSWORDDB + '/add', function (req, res, next) {
     console.log('password add bookmark');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     PasswordTagTool.addBookmark(name, req.user, req.session).then(function (result) {
         return res.json(result);
@@ -422,7 +422,7 @@ router.post('/' + _constants.STOCKDB + '/add', function (req, res, next) {
     console.log('stock add bookmark');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     StockTagTool.addBookmark(name, req.user, req.session).then(function (result) {
         return res.json(result);
@@ -468,7 +468,7 @@ router.post('/' + _constants.FITNESSDB + '/add', function (req, res, next) {
     console.log('fitness add bookmark');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     FitnessTagTool.addBookmark(name, req.user, req.session).then(function (result) {
         return res.json(result);
@@ -514,7 +514,7 @@ router.post('/' + _constants.RANKDB + '/add', function (req, res, next) {
     console.log('rank add bookmark');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     RankTagTool.addBookmark(name, req.user, req.session).then(function (result) {
         return res.json(result);

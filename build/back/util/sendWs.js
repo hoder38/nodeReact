@@ -19,6 +19,8 @@ var _ver = require('../../../ver');
 
 var _config = require('../config');
 
+var _utility = require('./utility');
+
 var _net = require('net');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -37,7 +39,7 @@ function mainInit(server) {
             try {
                 console.log(JSON.parse(message));
             } catch (e) {
-                handleError(e, 'Web socket');
+                (0, _utility.handleError)(e, 'Web socket');
             }
         });
         ws.on('close', function (reasonCode, description) {

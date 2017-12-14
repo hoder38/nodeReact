@@ -6,7 +6,7 @@ import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { normalize, isDefaultTag } from '../models/tag-tool'
-import { isValidString, handleError, handleReject, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName, addPost } from '../util/utility'
+import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName, addPost } from '../util/utility'
 import { extTag, extType, isZip, isImage, changeExt } from '../util/mime'
 import Transcoder from '../util/stream-transcoder.js'
 import sendWs from '../util/sendWs'
@@ -17,18 +17,18 @@ export default {
     editFile: function (uid, newName, user) {
         const name = isValidString(newName, 'name');
         if (!name) {
-            return handleReject(new HoError('name is not vaild!!!'));
+            return handleError(new HoError('name is not vaild!!!'));
         }
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid is not vaild!!!'));
+            return handleError(new HoError('uid is not vaild!!!'));
         }
         return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length === 0) {
-                return handleReject(new HoError('file not exist!!!'));
+                return handleError(new HoError('file not exist!!!'));
             }
             if (!checkAdmin(1, user) && (!isValidString(items[0].owner, 'uid') || !user._id.equals(items[0].owner))) {
-                return handleReject(new HoError('file is not yours!!!'));
+                return handleError(new HoError('file is not yours!!!'));
             }
             return Mongo('update', STORAGEDB, {_id: id}, {$set: {name: name}}).then(item2 =>StorageTagTool.addTag(uid, name, user)).then(result => {
                 if (!items[0].tags.includes(result.tag)) {
@@ -98,7 +98,7 @@ export default {
                                 option: mediaTag.opt,
                                 other: others_tag,
                                 adultonly: items[0].adultonly,
-                            })).catch(err => handleReject(err, errorMedia, items[0]._id, mediaType['fileIndex']));
+                            })).catch(err => handleError(err, errorMedia, items[0]._id, mediaType['fileIndex']));
                         });
                     });
                 });
@@ -220,7 +220,7 @@ export default {
                     }
                     break;
                     default:
-                    return handleReject(new HoError('unknown media type!!!'));
+                    return handleError(new HoError('unknown media type!!!'));
                 }
             }
             return Promise.resolve([mediaType, mediaTag, DBdata]);
@@ -289,7 +289,7 @@ export default {
                     }
                     recurFolder(0, tempPath, '');
                     if (zip_arr.length < 1) {
-                        return handleReject(new HoError('empty zip'));
+                        return handleError(new HoError('empty zip'));
                     }
                     zip_arr = sortList(zip_arr);
                     zip_arr.forEach((s, i) => FsRenameSync(`${tempPath}/${s}`, `${filePath}_img/${Number(i)+1}`));
@@ -304,12 +304,12 @@ export default {
                         filePath: `${filePath}_img/1`,
                         rest: metadata => {
                             if (!metadata.thumbnailLink) {
-                                return handleReject(new HoError('error type'));
+                                return handleError(new HoError('error type'));
                             }
                             mediaType['thumbnail'] = metadata.thumbnailLink;
                             return Mongo('update', STORAGEDB, {_id: fileID}, {$set: Object.assign((typeof mediaType['fileIndex'] === 'number') ? {[`present.${mediaType['fileIndex']}`]: zip_arr.length} : {present: zip_arr.length}, mediaType['realPath'] ? {[`mediaType.${mediaType['fileIndex']}.key`]: metadata.id} : {'mediaType.key': metadata.id})}).then(item => this.handleMedia(mediaType, filePath, fileID, metadata.id, user));
                         },
-                        errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                        errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
                     });
                 });
             });
@@ -338,7 +338,7 @@ export default {
             return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => {
                 const tmplist = output.match(/[^\r\n]+/g);
                 if (!tmplist) {
-                    return handleReject(new HoError('is not zip'));
+                    return handleError(new HoError('is not zip'));
                 }
                 let playlist = [];
                 if (zip_type === 2) {
@@ -380,12 +380,12 @@ export default {
                     }
                 }
                 if (playlist.length < 1) {
-                    return handleReject(new HoError('empty zip'));
+                    return handleError(new HoError('empty zip'));
                 }
                 playlist = sortList(playlist);
                 return Mongo('find', STORAGEDB, {_id: fileID}, {limit: 1}).then(items => {
                     if (items.length < 1) {
-                        return handleReject(new HoError('cannot find zip'));
+                        return handleError(new HoError('cannot find zip'));
                     }
                     let tagSet = new Set();
                     for (let i of playlist) {
@@ -443,7 +443,7 @@ export default {
                         mediaType['thumbnail'] = metadata.exportLinks['application/pdf'];
                         if (mediaType['type'] === 'present') {
                             if (!metadata.alternateLink) {
-                                return handleReject(new HoError('error type'));
+                                return handleError(new HoError('error type'));
                             }
                             mediaType['alternate'] = metadata.alternateLink;
                         }
@@ -452,11 +452,11 @@ export default {
                     } else if (metadata.thumbnailLink) {
                         mediaType['thumbnail'] = metadata.thumbnailLink;
                     } else {
-                        return handleReject(new HoError('error type'));
+                        return handleError(new HoError('error type'));
                     }
                     return Mongo('update', STORAGEDB, {_id: fileID}, {$set: mediaType['realPath'] ? {[`mediaType.${mediaType['fileIndex']}.key`]: metadata.id} : {'mediaType.key': metadata.id}}).then(item => this.handleMedia(mediaType, filePath, fileID, metadata.id, user));
                 },
-                errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
             }, (mediaType['type'] === 'doc' || mediaType['type'] === 'rawdoc' || mediaType['type'] === 'sheet' || mediaType['type'] === 'present') ? {convert: true} : {})));
         }
     },
@@ -465,7 +465,7 @@ export default {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve(mediaType['thumbnail']) : GoogleApi('get', {fileId: key}).then(filedata => {
                 console.log(filedata);
                 if (!filedata['thumbnailLink']) {
-                    return handleReject(new HoError('error type'));
+                    return handleError(new HoError('error type'));
                 }
                 return filedata['thumbnailLink'];
             });
@@ -477,12 +477,12 @@ export default {
                     const rest1 = () => GoogleApi('delete', {fileId: key});
                     return rest1().then(() => completeMedia(fileID, 2, mediaType['fileIndex']));
                 },
-                errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
             }));
         } else if (mediaType['type'] === 'video') {
             if (!mediaType.hasOwnProperty('time') && !mediaType.hasOwnProperty('hd')) {
                 console.log(mediaType);
-                return handleReject(new HoError('video can not be decoded!!!'));
+                return handleError(new HoError('video can not be decoded!!!'));
             }
             return GoogleApi('download media', {
                 user,
@@ -493,13 +493,13 @@ export default {
                     const setHd = () => height ? StorageTagTool.addTag(fileID, height, user) : Promise.resolve();
                     return setHd().then(() => completeMedia(fileID, 3, mediaType['fileIndex']));
                 },
-                errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
             });
         } else if (mediaType['type'] === 'doc' || mediaType['type'] === 'rawdoc' || mediaType['type'] === 'sheet') {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve(mediaType['thumbnail']) : GoogleApi('get', {fileId: key}).then(filedata => {
                 console.log(filedata);
                 if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
-                    return handleReject(new HoError('error type'));
+                    return handleError(new HoError('error type'));
                 }
                 return filedata.exportLinks['application/pdf'];
             });
@@ -508,13 +508,13 @@ export default {
                 exportlink: thumbnail,
                 filePath: mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath,
                 rest: number => GoogleApi('delete', {fileId: key}).then(() => completeMedia(fileID, 5, mediaType['fileIndex'], number)),
-                errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
             }));
         } else if (mediaType['type'] === 'present') {
             const checkThumb = () => mediaType['thumbnail'] ? Promise.resolve([mediaType['thumbnail'], mediaType['alternate']]) : GoogleApi('get', {fileId: key}).then(filedata => {
                 console.log(filedata);
                 if (!filedata.exportLinks || !filedata.exportLinks['application/pdf']) {
-                    handleReject(new HoError('error type'));
+                    return handleError(new HoError('error type'));
                 }
                 return [filedata.exportLinks['application/pdf'], filedata.alternateLink];
             });
@@ -524,7 +524,7 @@ export default {
                 alternate,
                 filePath: mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath,
                 rest: number => GoogleApi('delete', {fileId: key}).then(() => completeMedia(fileID, 6, mediaType['fileIndex'], number)),
-                errhandle: err => handleReject(err, errorMedia, fileID, mediaType['fileIndex']),
+                errhandle: err => handleError(err, errorMedia, fileID, mediaType['fileIndex']),
             }));
         }
     },
@@ -570,7 +570,7 @@ export default {
                     type: 'file',
                     data: item[0]._id,
                 }, item[0].adultonly);
-                return is_handled ? handleDelete() : this.handleMediaUpload(mediaType, filePath, item[0]['_id'], user).then(() => handleDelete()).catch(err => handleReject(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                return is_handled ? handleDelete() : this.handleMediaUpload(mediaType, filePath, item[0]['_id'], user).then(() => handleDelete()).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
             });
         });
         const handleFile = () => {
@@ -604,7 +604,7 @@ export default {
             switch(mediaType['type']) {
                 case 'video':
                 if (!metadata.videoMediaMetadata) {
-                    return handleReject(new HoError('not transcode yet'));
+                    return handleError(new HoError('not transcode yet'));
                     /*if (!metadata.userPermission || metadata.userPermission.role === 'owner') {
                         handleError(new HoError('not transcode yet'));
                     }
@@ -620,7 +620,7 @@ export default {
                     filePath: `${filePath}_complete`,
                     hd: getHd(metadata.videoMediaMetadata.height),
                     rest: () => handleRest(data, name, 3, metadata.id, true),
-                    errhandle: err => handleReject(err, errDrive, metadata.id, folderId),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 }) : GoogleApi('download', {
                     user,
                     url: metadata.downloadUrl,
@@ -631,9 +631,9 @@ export default {
                         filePath: `${filePath}_complete`,
                         hd: getHd(metadata.videoMediaMetadata.height),
                         rest: () => handleRest(data, name, 3, metadata.id, true),
-                        errhandle: err => handleReject(err, errDrive, metadata.id, folderId),
+                        errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                     }),
-                    errhandle: err => handleReject(err, errDrive, metadata.id, folderId),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 })).catch(err => errDrive(err, metadata.id, folderId));
                 default:
                 return GoogleApi('move parent', {
@@ -645,7 +645,7 @@ export default {
                     url: metadata.downloadUrl,
                     filePath,
                     rest: () => handleRest(data, name),
-                    errhandle: err => handleReject(err, errDrive, metadata.id, folderId),
+                    errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 })).catch(err => errDrive(err, metadata.id, folderId));
             }
         }
@@ -699,26 +699,26 @@ export default {
                                         return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
                                             _id: timeoutItems[index].item.owner,
                                             perm: 1,
-                                        }).catch(err => handleReject(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                        }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                                     }
                                 } else {
                                     return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
                                         _id: timeoutItems[index].item.owner,
                                         perm: 1,
-                                    }).catch(err => handleReject(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                    }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                                 }
                             } else if (timeoutItems[index].mediaType['realPath']) {
                                 if (FsExistsSync(`${filePath}/${timeoutItems[index].mediaType['fileIndex']}_complete`)) {
                                     return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {[`mediaType.${timeoutItems[index].mediaType['fileIndex']}.timeout`]: false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
                                         _id: timeoutItems[index].item.owner,
                                         perm: 1,
-                                    }).catch(err => handleReject(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                    }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                                 }
                             } else {
                                 return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
                                     _id: timeoutItems[index].item.owner,
                                     perm: 1,
-                                }).catch(err => handleReject(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
                             }
                         }
                         return single_check().then(() => {
@@ -739,7 +739,7 @@ export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('upd
     $set: Object.assign({status: (typeof fileIndex === 'number') ? 9 : status}, (number && number > 1) ? (typeof fileIndex === 'number') ? {[`present.${fileIndex}`]: number} : {present: number} : {}, (status === 3) ? (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.complete`]: true} : {'mediaType.complete': true} : {}),
 }, (status === 3) ? {} : {$unset: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}`]: ''} : {mediaType: ''}})).then(() => Mongo('find', STORAGEDB, {_id: fileID}, {limit: 1})).then(items => {
     if (items.length < 1) {
-        return handleReject(new HoError('cannot find file!!!'));
+        return handleError(new HoError('cannot find file!!!'));
     }
     console.log(items);
     sendWs({
@@ -751,7 +751,7 @@ export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('upd
 export const errorMedia = (err, fileID, fileIndex) => (err.name === 'HoError' && err.message === 'timeout') ? Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {
     [`mediaType.${fileIndex}.timeout`]: true,
     status: 9,
-} : {'mediaType.timeout': true}}).then(() => handleReject(err)) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => handleReject(err));
+} : {'mediaType.timeout': true}}).then(() => handleError(err)) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => handleError(err));
 
 const getHd = height => height >= 2160 ? 2160 : height >= 1440 ? 1440 : height >= 1080 ? 1080 : height >= 720 ? 720 : height >= 480 ? 480 : height >= 360 ? 360 : height >= 240 ? 240 : 0;
 
@@ -771,4 +771,4 @@ const errDrive = (err, key, folderId) => GoogleApi('move parent', {
     fileId: key,
     rmFolderId: handling,
     addFolderId: folderId,
-}).then(() => handleReject(err));
+}).then(() => handleError(err));

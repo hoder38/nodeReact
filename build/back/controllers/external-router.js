@@ -111,21 +111,21 @@ router.get('/2drive/:uid', function (req, res, next) {
     console.log('external 2 drive');
     (0, _mongoTool2.default)('find', _constants.USERDB, { _id: req.user._id }, { limit: 1 }).then(function (userlist) {
         if (userlist.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('do not find user!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('do not find user!!!'));
         }
         if (!userlist[0].auto) {
-            return (0, _utility.handleReject)(new _utility.HoError('user dont have google drive!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('user dont have google drive!!!'));
         }
         var id = (0, _utility.isValidString)(req.params.uid, 'uid');
         if (!id) {
-            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'));
+            return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'));
         }
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
-                return (0, _utility.handleReject)(new _utility.HoError('file cannot downlad!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('file cannot downlad!!!'));
             }
             var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
             return (0, _apiToolGoogle2.default)('list folder', {
@@ -133,7 +133,7 @@ router.get('/2drive/:uid', function (req, res, next) {
                 name: 'downloaded'
             }).then(function (downloadedList) {
                 if (downloadedList.length < 1) {
-                    return (0, _utility.handleReject)(new _utility.HoError('do not have downloaded folder!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('do not have downloaded folder!!!'));
                 }
                 var downloaded = downloadedList[0].id;
                 StorageTagTool.setLatest(items[0]._id, req.session).then(function () {
@@ -164,7 +164,7 @@ router.get('/2drive/:uid', function (req, res, next) {
                                         folderArr[index].id = metadata.id;
                                     }).then(function () {
                                         return next(index);
-                                    }) : (0, _utility.handleReject)(new _utility.HoError('do not find parent!!!'));
+                                    }) : (0, _utility.handleError)(new _utility.HoError('do not find parent!!!'));
                                 } else {
                                     var fIndex = index - folderArr.length;
                                     var _parent = downloaded;
@@ -185,7 +185,7 @@ router.get('/2drive/:uid', function (req, res, next) {
                                         parent: _parent
                                     }).then(function () {
                                         return next(index);
-                                    }) : (0, _utility.handleReject)(new _utility.HoError('do not find parent!!!'));
+                                    }) : (0, _utility.handleError)(new _utility.HoError('do not find parent!!!'));
                                 }
                             };
 
@@ -301,21 +301,21 @@ router.get('/2kindle/:uid', function (req, res, next) {
     console.log('external 2 kindle');
     (0, _mongoTool2.default)('find', _constants.USERDB, { _id: req.user._id }, { limit: 1 }).then(function (userlist) {
         if (userlist.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('do not find user!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('do not find user!!!'));
         }
         if (!userlist[0].kindle) {
-            return (0, _utility.handleReject)(new _utility.HoError('user dont have kindle device!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('user dont have kindle device!!!'));
         }
         var id = (0, _utility.isValidString)(req.params.uid, 'uid');
         if (!id) {
-            return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'));
+            return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'));
         }
         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
-                return (0, _utility.handleReject)(new _utility.HoError('file cannot downlad!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('file cannot downlad!!!'));
             }
             return (0, _apiToolGoogle2.default)('send mail', {
                 user: req.user,
@@ -335,7 +335,7 @@ router.get('/getSingle/:uid', function (req, res, next) {
     console.log('external getSingle');
     var id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'), next);
+        return (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'), next);
     }
     var subIndex = 1;
     var url = null;
@@ -396,7 +396,7 @@ router.post('/upload/url', function (req, res, next) {
     console.log('externel upload url');
     var url = (0, _utility.isValidString)(req.body.url, 'url');
     if (!url) {
-        (0, _utility.handleError)(new _utility.HoError('url is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('url is not vaild'), next);
     }
     var addurl = url.match(/^url%3A(.*)/);
     if (addurl) {
@@ -406,7 +406,7 @@ router.post('/upload/url', function (req, res, next) {
         }
         var json_data = (0, _utility.getJson)(req.body.type);
         if (json_data === false) {
-            (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
+            return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
         }
         _mediaHandleTool2.default.handleTag('', {
             _id: (0, _mongoTool.objectID)(),
@@ -512,16 +512,16 @@ router.post('/upload/url', function (req, res, next) {
                             }).then(function (torrent) {
                                 var magnet = (0, _utility.torrent2Magnet)(torrent);
                                 if (!magnet) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('magnet create fail'));
+                                    return (0, _utility.handleError)(new _utility.HoError('magnet create fail'));
                                 }
                                 console.log(magnet);
                                 var encodeTorrent = (0, _utility.isValidString)(magnet, 'url');
                                 if (encodeTorrent === false) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('magnet is not vaild'));
+                                    return (0, _utility.handleError)(new _utility.HoError('magnet is not vaild'));
                                 }
                                 var shortTorrent = magnet.match(/^magnet:[^&]+/);
                                 if (!shortTorrent) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('magnet create fail'));
+                                    return (0, _utility.handleError)(new _utility.HoError('magnet create fail'));
                                 }
                                 return new _promise2.default(function (resolve, reject) {
                                     return (0, _fs.unlink)(filePath, function (err) {
@@ -540,7 +540,7 @@ router.post('/upload/url', function (req, res, next) {
                                         } }, { limit: 1 });
                                 }).then(function (items) {
                                     if (items.length > 0) {
-                                        return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                        return (0, _utility.handleError)(new _utility.HoError('already has one'));
                                     }
                                     return (0, _apiToolPlaylist2.default)('torrent info', magnet, filePath).then(function (info) {
                                         var setTag = new _set2.default(['torrent', 'playlist', '播放列表']);
@@ -560,7 +560,7 @@ router.post('/upload/url', function (req, res, next) {
                                             return file.path;
                                         });
                                         if (playList.length < 1) {
-                                            return (0, _utility.handleReject)(new _utility.HoError('empty content!!!'));
+                                            return (0, _utility.handleError)(new _utility.HoError('empty content!!!'));
                                         }
                                         playList = (0, _utility.sortList)(playList);
                                         return ['Playlist ' + info.name, setTag, optTag, {
@@ -582,7 +582,7 @@ router.post('/upload/url', function (req, res, next) {
                         });
                     },
                     errHandle: function errHandle(err) {
-                        return (0, _utility.handleReject)(err);
+                        return (0, _utility.handleError)(err);
                     }
                 });
             };
@@ -606,7 +606,7 @@ router.post('/upload/url', function (req, res, next) {
                 }
                 var json_data = (0, _utility.getJson)(req.body.type);
                 if (json_data === false) {
-                    return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'));
                 }
                 var data = {
                     _id: oOID,
@@ -752,7 +752,7 @@ router.post('/upload/url', function (req, res, next) {
                                             console.log(DBdata);
                                             return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: item[0]._id }, { $set: DBdata }).then(function (item2) {
                                                 return _mediaHandleTool2.default.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(function (err) {
-                                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, item[0]._id, mediaType['fileIndex']);
+                                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, item[0]._id, mediaType['fileIndex']);
                                                 });
                                             });
                                         });
@@ -766,7 +766,7 @@ router.post('/upload/url', function (req, res, next) {
                                 };
                                 var rest_handle = function rest_handle() {
                                     return db_obj && db_obj['mega'] && db_obj['playList'] ? recur_mhandle(0) : is_media ? _promise2.default.resolve() : _mediaHandleTool2.default.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(function (err) {
-                                        return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, item[0]._id, mediaType['fileIndex']);
+                                        return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, item[0]._id, mediaType['fileIndex']);
                                     });
                                 };
                                 return rest_handle().then(function () {
@@ -814,14 +814,14 @@ router.post('/upload/url', function (req, res, next) {
                         });
                     } else if (shortTorrent === 'magnet:stopapi') {
                         if (!(0, _utility.checkAdmin)(1, req.user)) {
-                            return (0, _utility.handleReject)(new _utility.HoError('permission denied!'));
+                            return (0, _utility.handleError)(new _utility.HoError('permission denied!'));
                         }
                         return (0, _apiTool2.default)('stop').then(function () {
                             return res.json({ stop: true });
                         });
                     } else if (shortTorrent === 'magnet:stopgoogle') {
                         if (!(0, _utility.checkAdmin)(1, req.user)) {
-                            return (0, _utility.handleReject)(new _utility.HoError('permission denied!'));
+                            return (0, _utility.handleError)(new _utility.HoError('permission denied!'));
                         }
                         return (0, _apiToolGoogle2.default)('stop').then(function () {
                             return res.json({ stop: true });
@@ -832,7 +832,7 @@ router.post('/upload/url', function (req, res, next) {
                                 $options: 'i'
                             } }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
-                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
                             return (0, _apiToolPlaylist2.default)('torrent info', decodeUrl, filePath).then(function (info) {
                                 var setTag = new _set2.default(['torrent', 'playlist', '播放列表']);
@@ -852,7 +852,7 @@ router.post('/upload/url', function (req, res, next) {
                                     return file.path;
                                 });
                                 if (playList.length < 1) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('empty content!!!'));
+                                    return (0, _utility.handleError)(new _utility.HoError('empty content!!!'));
                                 }
                                 playList = (0, _utility.sortList)(playList);
                                 return ['Playlist ' + info.name, setTag, optTag, {
@@ -873,7 +873,7 @@ router.post('/upload/url', function (req, res, next) {
                                 var validUrl = (0, _utility.isValidString)(decodeUrl, 'url');
                                 if (!validUrl) {
                                     return {
-                                        v: (0, _utility.handleReject)(new _utility.HoError('url is not vaild'))
+                                        v: (0, _utility.handleError)(new _utility.HoError('url is not vaild'))
                                     };
                                 }
                             } else {
@@ -896,7 +896,7 @@ router.post('/upload/url', function (req, res, next) {
 
                                                 console.log(i);
                                                 if (i.thumb && i.status === is_media) {
-                                                    return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                                    return (0, _utility.handleError)(new _utility.HoError('already has one'));
                                                 }
                                             }
                                         } catch (err) {
@@ -916,7 +916,7 @@ router.post('/upload/url', function (req, res, next) {
                                     }
                                     var getYoutubeInfo = function getYoutubeInfo(detaildata) {
                                         if (detaildata.length < 1) {
-                                            return (0, _utility.handleReject)(new _utility.HoError('can not find playlist'));
+                                            return (0, _utility.handleError)(new _utility.HoError('can not find playlist'));
                                         }
                                         var media_name = detaildata[0].snippet.title;
                                         var ctitle = detaildata[0].snippet.channelTitle;
@@ -959,7 +959,7 @@ router.post('/upload/url', function (req, res, next) {
                                     } else {
                                         youtube_id = decodeUrl.match(/v=([^&]+)/);
                                         if (!youtube_id) {
-                                            return (0, _utility.handleReject)(new _utility.HoError('can not find youtube id!!!'));
+                                            return (0, _utility.handleError)(new _utility.HoError('can not find youtube id!!!'));
                                         }
                                         return (0, _apiToolGoogle2.default)('y video', {
                                             id: youtube_id[1],
@@ -979,11 +979,11 @@ router.post('/upload/url', function (req, res, next) {
                             url: encodeURIComponent(decodeUrl)
                         }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
-                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
                             var yify_id = decodeUrl.match(/[^\/]+$/);
                             if (!yify_id) {
-                                return (0, _utility.handleReject)(new _utility.HoError('yify url invalid'));
+                                return (0, _utility.handleError)(new _utility.HoError('yify url invalid'));
                             }
                             is_media = 3;
                             return _externalTool2.default.saveSingle('yify', yify_id[0]).then(function (_ref3) {
@@ -1009,11 +1009,11 @@ router.post('/upload/url', function (req, res, next) {
                             url: encodeURIComponent(decodeUrl)
                         }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
-                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
                             var kubo_id = decodeUrl.match(/(\d+)\.html$/);
                             if (!kubo_id) {
-                                return (0, _utility.handleReject)(new _utility.HoError('kubo url invalid'));
+                                return (0, _utility.handleError)(new _utility.HoError('kubo url invalid'));
                             }
                             is_media = 3;
                             return _externalTool2.default.saveSingle('kubo', kubo_id[1]).then(function (_ref5) {
@@ -1039,11 +1039,11 @@ router.post('/upload/url', function (req, res, next) {
                             url: encodeURIComponent(decodeUrl)
                         }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
-                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
                             var cartoonmad_id = decodeUrl.match(/([^\/]+)\.html$/);
                             if (!cartoonmad_id) {
-                                return (0, _utility.handleReject)(new _utility.HoError('cartoonmad url invalid'));
+                                return (0, _utility.handleError)(new _utility.HoError('cartoonmad url invalid'));
                             }
                             is_media = 2;
                             return _externalTool2.default.saveSingle('cartoonmad', cartoonmad_id[1]).then(function (_ref7) {
@@ -1069,11 +1069,11 @@ router.post('/upload/url', function (req, res, next) {
                             url: encodeURIComponent(decodeUrl)
                         }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
-                                return (0, _utility.handleReject)(new _utility.HoError('already has one'));
+                                return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
                             var bili_id = decodeUrl.match(/([^\/]+)\/?$/);
                             if (!bili_id) {
-                                return (0, _utility.handleReject)(new _utility.HoError('bilibili url invalid'));
+                                return (0, _utility.handleError)(new _utility.HoError('bilibili url invalid'));
                             }
                             is_media = 3;
                             return _externalTool2.default.saveSingle('bilibili', bili_id[1]).then(function (_ref9) {
@@ -1109,7 +1109,7 @@ router.post('/upload/url', function (req, res, next) {
                             }
                         });
                     } else {
-                        return (0, _utility.handleReject)(new _utility.HoError('unknown type'));
+                        return (0, _utility.handleError)(new _utility.HoError('unknown type'));
                     }
                 }
             }).catch(function (err) {
@@ -1135,7 +1135,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
     console.log('subtitle search');
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     var episode_match = req.body.episode ? req.body.episode.match(/^(s(\d*))?(e)?(\d+)$/i) : false;
     var episode = 0;
@@ -1218,18 +1218,18 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
     var getId = function getId() {
         if (idMatch) {
             var vaildName = (0, _utility.isValidString)(req.params.uid, 'name');
-            return vaildName ? _promise2.default.resolve([vaildName, (0, _utility.getFileLocation)(type, id)]) : (0, _utility.handleReject)(new _utility.HoError('external is not vaild'));
+            return vaildName ? _promise2.default.resolve([vaildName, (0, _utility.getFileLocation)(type, id)]) : (0, _utility.handleError)(new _utility.HoError('external is not vaild'));
         } else {
             var validId = (0, _utility.isValidString)(req.params.uid, 'uid');
             return validId ? (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: validId }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
                 }
                 if (items[0].thumb) {
-                    return (0, _utility.handleReject)(new _utility.HoError('external file, please open video'));
+                    return (0, _utility.handleError)(new _utility.HoError('external file, please open video'));
                 }
                 var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
                 if (items[0].status === 9) {
@@ -1245,12 +1245,12 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
                         }
                     }
                     if (!(0, _mime.isVideo)(items[0]['playList'][fileIndex])) {
-                        return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
+                        return (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
                     }
                     filePath = filePath + '/' + fileIndex;
                 }
                 return [items[0]._id, filePath];
-            }) : (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'));
+            }) : (0, _utility.handleError)(new _utility.HoError('uid is not vaild'));
         }
     };
     getId().then(function (_ref23) {
@@ -1284,7 +1284,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
             var sub_en_url = subtitles.en ? subtitles.en.url : null;
             var sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
             if (!sub_url && !sub_en_url) {
-                return (0, _utility.handleReject)(new _utility.HoError('cannot find subtitle!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('cannot find subtitle!!!'));
             }
             return mkfolder().then(function () {
                 return getZh(sub_url);
@@ -1314,11 +1314,11 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
             var getSub = function getSub(name) {
                 return (0, _externalTool.subHdUrl)(name).then(function (subtitles2) {
                     if (!subtitles2) {
-                        return (0, _utility.handleReject)(new _utility.HoError('cannot find eng or cht subtitle!!!'));
+                        return (0, _utility.handleError)(new _utility.HoError('cannot find eng or cht subtitle!!!'));
                     }
                     var zip_ext = (0, _mime.isZip)(subtitles2);
                     if (!zip_ext) {
-                        return (0, _utility.handleReject)(new _utility.HoError('is not zip!!!'));
+                        return (0, _utility.handleError)(new _utility.HoError('is not zip!!!'));
                     }
                     var sub_location = filePath + '_sub';
                     var mkfolder2 = function mkfolder2() {
@@ -1334,7 +1334,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
                         var i = void 0;
                         for (var _i3 = 0; _i3 <= 10; _i3++) {
                             if (_i3 >= 10) {
-                                return (0, _utility.handleReject)(new _utility.HoError('too many sub!!!'));
+                                return (0, _utility.handleError)(new _utility.HoError('too many sub!!!'));
                             }
                             sub_temp_location = sub_location + '/' + _i3;
                             sub_zip_location = sub_location + '/' + _i3 + '.' + zip_ext;
@@ -1423,8 +1423,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
                     return episode_3 ? getSub('' + name + episode_3).catch(function (err) {
                         return getSub('' + name + episode_4);
                     }).catch(function (err) {
-                        return season === 1 ? getSub(name) : (0, _utility.handleReject)(err);
-                    }) : season === 1 ? getSub(name) : (0, _utility.handleReject)(err);
+                        return season === 1 ? getSub(name) : (0, _utility.handleError)(err);
+                    }) : season === 1 ? getSub(name) : (0, _utility.handleError)(err);
                 }) : getSub(name);
             });
         });
@@ -1432,13 +1432,13 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function (req, res, next) {
             var lang = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
 
             if (!choose_subtitle) {
-                return (0, _utility.handleReject)(new _utility.HoError('donot have sub!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('donot have sub!!!'));
             }
             var ext = false;
             if (is_file) {
                 ext = (0, _mime.isSub)(choose_subtitle);
                 if (!ext) {
-                    return (0, _utility.handleReject)(new _utility.HoError('is not sub!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('is not sub!!!'));
                 }
             } else {
                 ext = 'srt';
@@ -1473,11 +1473,11 @@ router.get('/getSubtitle/:uid', function (req, res, next) {
     console.log('external getSub');
     var idMatch = req.params.uid.match(/^you_(.*)/);
     if (!idMatch) {
-        (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'), next);
+        return (0, _utility.handleError)(new _utility.HoError('file is not youtube video!!!'), next);
     }
     var id = (0, _utility.isValidString)(req.params.uid, 'name');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('external is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('external is not vaild'), next);
     }
     (0, _apiToolGoogle.googleDownloadSubtitle)('http://www.youtube.com/watch?v=' + idMatch[1], (0, _utility.getFileLocation)('youtube', id)).then(function () {
         (0, _sendWs2.default)({
@@ -1493,7 +1493,7 @@ router.get('/getSubtitle/:uid', function (req, res, next) {
 router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res, next) {
     console.log('subtitle fix');
     if (!req.params.adjust.match(/^\-?\d+(\.\d+)?$/)) {
-        (0, _utility.handleError)(new _utility.HoError('adjust time is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('adjust time is not vaild'), next);
     }
     var getId = function getId() {
         var idMatch = req.params.uid.match(/^(you|dym)_/);
@@ -1501,7 +1501,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
             var ex_type = idMatch[1] === 'dym' ? 'dailymotion' : idMatch[1] === 'bil' ? 'bilibili' : 'youtube';
             var _id = (0, _utility.isValidString)(req.params.uid, 'name');
             if (!_id) {
-                return (0, _utility.handleReject)(new _utility.HoError('external is not vaild'));
+                return (0, _utility.handleError)(new _utility.HoError('external is not vaild'));
             }
             var filePath = (0, _utility.getFileLocation)(ex_type, _id);
             filePath = req.params.lang === 'en' ? filePath + '.en' : filePath;
@@ -1509,14 +1509,14 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
         } else {
             var _id2 = (0, _utility.isValidString)(req.params.uid, 'uid');
             if (!_id2) {
-                return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'));
+                return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'));
             }
             return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: _id2 }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
                 }
                 var fileIndex = 0;
                 if (items[0].status === 9) {
@@ -1531,7 +1531,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
                         }
                     }
                     if (!(0, _mime.isVideo)(items[0]['playList'][fileIndex])) {
-                        return (0, _utility.handleReject)(new _utility.HoError('file type error!!!'));
+                        return (0, _utility.handleError)(new _utility.HoError('file type error!!!'));
                     }
                 }
                 var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
@@ -1550,7 +1550,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function (req, res,
 
         var vtt = filePath + '.vtt';
         if (!(0, _fs.existsSync)(vtt)) {
-            return (0, _utility.handleReject)(new _utility.HoError('do not have subtitle!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('do not have subtitle!!!'));
         }
         return new _promise2.default(function (resolve, reject) {
             var adjust = Number(req.params.adjust) * 1000;

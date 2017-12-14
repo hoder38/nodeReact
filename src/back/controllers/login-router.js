@@ -4,7 +4,7 @@ import Passport from 'passport'
 import { Strategy } from 'passport-local'
 import { createHash } from 'crypto'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, handleReject, HoError, isValidString } from '../util/utility'
+import { handleError, HoError, isValidString } from '../util/utility'
 
 const router = Express.Router()
 
@@ -13,15 +13,15 @@ Passport.use(new Strategy(function(username, password, done){
     console.log('login');
     const validUsername = isValidString(username, 'name');
     if (!validUsername) {
-        handleError(new HoError('username is not vaild', {code: 401}), done);
+        return handleError(new HoError('username is not vaild', {code: 401}), done);
     }
     Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
         const validPassword = isValidString(password, 'passwd');
         if (!validPassword) {
-            return handleReject(new HoError('passwd is not vaild', {code: 401}));
+            return handleError(new HoError('passwd is not vaild', {code: 401}));
         }
         if (users.length < 1 || createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
-            return handleReject(new HoError('Incorrect username or password', {cdoe: 401}))
+            return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
         }
         done(null, users[0])
     }).catch(err => handleError(err, done))
@@ -63,7 +63,7 @@ export default function(url=null) {
         })
     })
     router.all('/api*', function(req, res, next) {
-        handleError(new HoError('Unkonwn api'))
+        return handleError(new HoError('Unkonwn api'), next)
     })
     return router
 }

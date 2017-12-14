@@ -99,7 +99,7 @@ app.use('/', LoginRouter());
 
 //view
 app.all('*', function(req, res, next) {
-    handleError(new HoError('page not found', {code: 404}));
+    return handleError(new HoError('page not found', {code: 404}), next);
 });
 
 //error handle

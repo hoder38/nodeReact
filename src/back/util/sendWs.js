@@ -1,6 +1,7 @@
 import Ws from 'ws'
 import { ENV_TYPE } from '../../../ver'
 import { FILE_IP, COM_PORT } from '../config'
+import { handleError } from './utility'
 import { connect as NetConnect } from 'net'
 
 let wsServer = null;

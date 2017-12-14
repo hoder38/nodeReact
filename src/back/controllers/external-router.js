@@ -16,7 +16,7 @@ import Api from '../models/api-tool'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import External, { bilibiliVideoUrl, youtubeVideoUrl, kuboVideoUrl, subHdUrl } from '../models/external-tool'
 import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime'
-import { checkLogin, handleError, handleReject, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility'
+import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility'
 import sendWs from '../util/sendWs'
 
 const router = Express.Router();
@@ -30,21 +30,21 @@ router.get('/2drive/:uid', function(req, res, next){
     console.log('external 2 drive');
     Mongo('find', USERDB, {_id: req.user._id}, {limit: 1}).then(userlist => {
         if (userlist.length < 1) {
-            return handleReject(new HoError('do not find user!!!'));
+            return handleError(new HoError('do not find user!!!'));
         }
         if (!userlist[0].auto) {
-            return handleReject(new HoError('user dont have google drive!!!'));
+            return handleError(new HoError('user dont have google drive!!!'));
         }
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid is not vaild'));
+            return handleError(new HoError('uid is not vaild'));
         }
         return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                return handleReject(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
-                return handleReject(new HoError('file cannot downlad!!!'));
+                return handleError(new HoError('file cannot downlad!!!'));
             }
             const filePath = getFileLocation(items[0].owner, items[0]._id);
             return GoogleApi('list folder', {
@@ -52,7 +52,7 @@ router.get('/2drive/:uid', function(req, res, next){
                 name: 'downloaded',
             }).then(downloadedList => {
                 if (downloadedList.length < 1) {
-                    return handleReject(new HoError('do not have downloaded folder!!!'));
+                    return handleError(new HoError('do not have downloaded folder!!!'));
                 }
                 const downloaded = downloadedList[0].id;
                 StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
@@ -106,7 +106,7 @@ router.get('/2drive/:uid', function(req, res, next){
                                 }).then(metadata => {
                                     console.log(metadata);
                                     folderArr[index].id = metadata.id;
-                                }).then(() => next(index)) : handleReject(new HoError('do not find parent!!!'));
+                                }).then(() => next(index)) : handleError(new HoError('do not find parent!!!'));
                             } else {
                                 const fIndex = index - folderArr.length;
                                 let parent = downloaded;
@@ -125,7 +125,7 @@ router.get('/2drive/:uid', function(req, res, next){
                                     name: fileArr[fIndex].name,
                                     filePath: fileArr[fIndex].filePath,
                                     parent: parent,
-                                }).then(() => next(index)) : handleReject(new HoError('do not find parent!!!'));
+                                }).then(() => next(index)) : handleError(new HoError('do not find parent!!!'));
                             }
                         }
                         if (folderArr.length + fileArr.length > 0) {
@@ -186,21 +186,21 @@ router.get('/2kindle/:uid', function(req, res, next){
     console.log('external 2 kindle');
     Mongo('find', USERDB, {_id: req.user._id}, {limit: 1}).then(userlist => {
         if (userlist.length < 1) {
-            return handleReject(new HoError('do not find user!!!'));
+            return handleError(new HoError('do not find user!!!'));
         }
         if (!userlist[0].kindle) {
-            return handleReject(new HoError('user dont have kindle device!!!'));
+            return handleError(new HoError('user dont have kindle device!!!'));
         }
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid is not vaild'));
+            return handleError(new HoError('uid is not vaild'));
         }
         return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
-                return handleReject(new HoError('cannot find file!!!'));
+                return handleError(new HoError('cannot find file!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
-                return handleReject(new HoError('file cannot downlad!!!'));
+                return handleError(new HoError('file cannot downlad!!!'));
             }
             return GoogleApi('send mail', {
                 user: req.user,
@@ -216,7 +216,7 @@ router.get('/getSingle/:uid', function(req, res, next) {
     console.log('external getSingle');
     const id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
     if (!id) {
-        handleError(new HoError('file is not youtube video!!!'), next);
+        return handleError(new HoError('file is not youtube video!!!'), next);
     }
     let subIndex = 1;
     let url = null;
@@ -271,7 +271,7 @@ router.post('/upload/url', function(req, res, next) {
     console.log('externel upload url');
     const url = isValidString(req.body.url, 'url');
     if (!url) {
-        handleError(new HoError('url is not vaild'), next);
+        return handleError(new HoError('url is not vaild'), next);
     }
     const addurl = url.match(/^url%3A(.*)/);
     if (addurl) {
@@ -281,7 +281,7 @@ router.post('/upload/url', function(req, res, next) {
         }
         const json_data = getJson(req.body.type);
         if (json_data === false) {
-            handleError(new HoError('json parse error!!!'), next);
+            return handleError(new HoError('json parse error!!!'), next);
         }
         MediaHandleTool.handleTag('', {
             _id: objectID(),
@@ -373,12 +373,12 @@ router.post('/upload/url', function(req, res, next) {
                     return PlaylistApi('mega stop', req.user).then(() => res.json({stop: true}));
                 } else if (shortTorrent === 'magnet:stopapi') {
                     if (!checkAdmin(1 ,req.user)) {
-                        return handleReject(new HoError('permission denied!'));
+                        return handleError(new HoError('permission denied!'));
                     }
                     return Api('stop').then(() => res.json({stop: true}));
                 } else if (shortTorrent === 'magnet:stopgoogle') {
                     if (!checkAdmin(1 ,req.user)) {
-                        return handleReject(new HoError('permission denied!'));
+                        return handleError(new HoError('permission denied!'));
                     }
                     return GoogleApi('stop').then(() => res.json({stop: true}));
                 } else {
@@ -387,7 +387,7 @@ router.post('/upload/url', function(req, res, next) {
                         $options: 'i',
                     }}, {limit: 1}).then(items => {
                         if (items.length > 0) {
-                            return handleReject(new HoError('already has one'));
+                            return handleError(new HoError('already has one'));
                         }
                         return PlaylistApi('torrent info', decodeUrl, filePath).then(info => {
                             let setTag = new Set(['torrent', 'playlist', '播放列表']);
@@ -403,7 +403,7 @@ router.post('/upload/url', function(req, res, next) {
                                 return file.path;
                             });
                             if (playList.length < 1) {
-                                return handleReject(new HoError('empty content!!!'));
+                                return handleError(new HoError('empty content!!!'));
                             }
                             playList = sortList(playList);
                             return [`Playlist ${info.name}`, setTag, optTag, {
@@ -422,7 +422,7 @@ router.post('/upload/url', function(req, res, next) {
                         decodeUrl = is_music[1];
                         const validUrl = isValidString(decodeUrl, 'url');
                         if (!validUrl) {
-                            return handleReject(new HoError('url is not vaild'));
+                            return handleError(new HoError('url is not vaild'));
                         }
                     } else {
                         is_media = 3;
@@ -436,13 +436,13 @@ router.post('/upload/url', function(req, res, next) {
                             for (let i of items) {
                                 console.log(i);
                                 if (i.thumb && i.status === is_media) {
-                                    return handleReject(new HoError('already has one'));
+                                    return handleError(new HoError('already has one'));
                                 }
                             }
                         }
                         const getYoutubeInfo = detaildata => {
                             if (detaildata.length < 1) {
-                                return handleReject(new HoError('can not find playlist'));
+                                return handleError(new HoError('can not find playlist'));
                             }
                             const media_name = detaildata[0].snippet.title;
                             const ctitle = detaildata[0].snippet.channelTitle;
@@ -477,7 +477,7 @@ router.post('/upload/url', function(req, res, next) {
                         } else {
                             youtube_id = decodeUrl.match(/v=([^&]+)/);
                             if (!youtube_id) {
-                                return handleReject(new HoError('can not find youtube id!!!'));
+                                return handleError(new HoError('can not find youtube id!!!'));
                             }
                             return GoogleApi('y video', {
                                 id: youtube_id[1],
@@ -491,11 +491,11 @@ router.post('/upload/url', function(req, res, next) {
                         url: encodeURIComponent(decodeUrl),
                     }, {limit: 1}).then(items => {
                         if (items.length > 0) {
-                            return handleReject(new HoError('already has one'));
+                            return handleError(new HoError('already has one'));
                         }
                         const yify_id = decodeUrl.match(/[^\/]+$/);
                         if (!yify_id) {
-                            return handleReject(new HoError('yify url invalid'));
+                            return handleError(new HoError('yify url invalid'));
                         }
                         is_media = 3;
                         return External.saveSingle('yify', yify_id[0]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
@@ -511,11 +511,11 @@ router.post('/upload/url', function(req, res, next) {
                         url: encodeURIComponent(decodeUrl),
                     }, {limit: 1}).then(items => {
                         if (items.length > 0) {
-                            return handleReject(new HoError('already has one'));
+                            return handleError(new HoError('already has one'));
                         }
                         const kubo_id = decodeUrl.match(/(\d+)\.html$/);
                         if (!kubo_id) {
-                            return handleReject(new HoError('kubo url invalid'));
+                            return handleError(new HoError('kubo url invalid'));
                         }
                         is_media = 3;
                         return External.saveSingle('kubo', kubo_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
@@ -531,11 +531,11 @@ router.post('/upload/url', function(req, res, next) {
                         url: encodeURIComponent(decodeUrl),
                     }, {limit: 1}).then(items => {
                         if (items.length > 0) {
-                            return handleReject(new HoError('already has one'));
+                            return handleError(new HoError('already has one'));
                         }
                         const cartoonmad_id = decodeUrl.match(/([^\/]+)\.html$/);
                         if (!cartoonmad_id) {
-                            return handleReject(new HoError('cartoonmad url invalid'));
+                            return handleError(new HoError('cartoonmad url invalid'));
                         }
                         is_media = 2;
                         return External.saveSingle('cartoonmad', cartoonmad_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
@@ -551,11 +551,11 @@ router.post('/upload/url', function(req, res, next) {
                         url: encodeURIComponent(decodeUrl),
                     }, {limit: 1}).then(items => {
                         if (items.length > 0) {
-                            return handleReject(new HoError('already has one'));
+                            return handleError(new HoError('already has one'));
                         }
                         const bili_id = decodeUrl.match(/([^\/]+)\/?$/);
                         if (!bili_id) {
-                            return handleReject(new HoError('bilibili url invalid'));
+                            return handleError(new HoError('bilibili url invalid'));
                         }
                         is_media = 3;
                         return External.saveSingle('bilibili', bili_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
@@ -571,7 +571,7 @@ router.post('/upload/url', function(req, res, next) {
                         errhandle: err => pureDownload(err),
                     });
                 } else {
-                    return handleReject(new HoError('unknown type'));
+                    return handleError(new HoError('unknown type'));
                 }
             }
         }).catch(err => pureDownload(err)).then(result => Array.isArray(result) ? result : []).then(([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj)).catch(err => handleError(err, next));
@@ -585,23 +585,23 @@ router.post('/upload/url', function(req, res, next) {
                     const getFile = () => !isTorrent(filename) ? Promise.resolve([filename, new Set(), new Set()]) : new Promise((resolve, reject) => ReadTorrent(filePath, (err, torrent) => err ? reject(err) : resolve(torrent))).then(torrent => {
                         const magnet = torrent2Magnet(torrent);
                         if (!magnet) {
-                            return handleReject(new HoError('magnet create fail'));
+                            return handleError(new HoError('magnet create fail'));
                         }
                         console.log(magnet);
                         const encodeTorrent = isValidString(magnet, 'url');
                         if (encodeTorrent === false) {
-                            return handleReject(new HoError('magnet is not vaild'));
+                            return handleError(new HoError('magnet is not vaild'));
                         }
                         const shortTorrent = magnet.match(/^magnet:[^&]+/);
                         if (!shortTorrent) {
-                            return handleReject(new HoError('magnet create fail'));
+                            return handleError(new HoError('magnet create fail'));
                         }
                         return new Promise((resolve, reject) => FsUnlink(filePath, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Mkdirp(filePath, err => err ? reject(err) : resolve()))).then(() => Mongo('find', STORAGEDB, {magnet: {
                             $regex: shortTorrent[0].match(/[^:]+$/)[0],
                             $options: 'i',
                         }}, {limit: 1})).then(items => {
                             if (items.length > 0) {
-                                return handleReject(new HoError('already has one'));
+                                return handleError(new HoError('already has one'));
                             }
                             return PlaylistApi('torrent info', magnet, filePath).then(info => {
                                 let setTag = new Set(['torrent', 'playlist', '播放列表']);
@@ -617,7 +617,7 @@ router.post('/upload/url', function(req, res, next) {
                                     return file.path;
                                 });
                                 if (playList.length < 1) {
-                                    return handleReject(new HoError('empty content!!!'));
+                                    return handleError(new HoError('empty content!!!'));
                                 }
                                 playList = sortList(playList);
                                 return [`Playlist ${info.name}`, setTag, optTag, {
@@ -629,7 +629,7 @@ router.post('/upload/url', function(req, res, next) {
                     });
                     return getFile().then(([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj));
                 },
-                errHandle: err => handleReject(err),
+                errHandle: err => handleError(err),
             });
         }
         function streamClose(filename, setTag, optTag, db_obj={}) {
@@ -649,7 +649,7 @@ router.post('/upload/url', function(req, res, next) {
             }
             const json_data = getJson(req.body.type);
             if (json_data === false) {
-                return handleReject(new HoError('json parse error!!!'));
+                return handleError(new HoError('json parse error!!!'));
             }
             const data = {
                 _id: oOID,
@@ -755,7 +755,7 @@ router.post('/upload/url', function(req, res, next) {
                                         DBdata['status'] = 9;
                                         DBdata[`mediaType.${index}`] = mediaType;
                                         console.log(DBdata);
-                                        return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleReject(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
+                                        return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
                                     });
                                 }
                                 return singel_mhandle().then(() => {
@@ -765,7 +765,7 @@ router.post('/upload/url', function(req, res, next) {
                                     }
                                 });
                             }
-                            const rest_handle = () => (db_obj && db_obj['mega'] && db_obj['playList']) ? recur_mhandle(0) : is_media ? Promise.resolve() : MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleReject(err, errorMedia, item[0]._id, mediaType['fileIndex']));
+                            const rest_handle = () => (db_obj && db_obj['mega'] && db_obj['playList']) ? recur_mhandle(0) : is_media ? Promise.resolve() : MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex']));
                             return rest_handle().then(() => DBdata['untag'] ? res.json({
                                 id: item[0]._id,
                                 name: item[0].name,
@@ -785,7 +785,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     console.log('subtitle search');
     const name = isValidString(req.body.name, 'name');
     if (!name) {
-        handleError(new HoError('name is not vaild'), next);
+        return handleError(new HoError('name is not vaild'), next);
     }
     const episode_match = req.body.episode ? req.body.episode.match(/^(s(\d*))?(e)?(\d+)$/i) : false;
     let episode = 0;
@@ -868,18 +868,18 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     const getId = () => {
         if (idMatch) {
             const vaildName = isValidString(req.params.uid, 'name');
-            return vaildName ? Promise.resolve([vaildName, getFileLocation(type, id)]) : handleReject(new HoError('external is not vaild'));
+            return vaildName ? Promise.resolve([vaildName, getFileLocation(type, id)]) : handleError(new HoError('external is not vaild'));
         } else {
             const validId = isValidString(req.params.uid, 'uid');
             return validId ?  Mongo('find', STORAGEDB, {_id: validId}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    return handleReject(new HoError('cannot find file!!!'));
+                    return handleError(new HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    return handleReject(new HoError('file type error!!!'));
+                    return handleError(new HoError('file type error!!!'));
                 }
                 if (items[0].thumb) {
-                    return handleReject(new HoError('external file, please open video'));
+                    return handleError(new HoError('external file, please open video'));
                 }
                 let filePath = getFileLocation(items[0].owner, items[0]._id);
                 if (items[0].status === 9) {
@@ -895,12 +895,12 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                         }
                     }
                     if (!isVideo(items[0]['playList'][fileIndex])) {
-                        return handleReject(new HoError('file type error!!!'));
+                        return handleError(new HoError('file type error!!!'));
                     }
                     filePath = `${filePath}/${fileIndex}`;
                 }
                 return [items[0]._id, filePath];
-            }) : handleReject(new HoError('uid is not vaild'));
+            }) : handleError(new HoError('uid is not vaild'));
         }
     }
     getId().then(([id, filePath]) => {
@@ -920,7 +920,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             const sub_en_url = subtitles.en ? subtitles.en.url : null;
             const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
             if (!sub_url && !sub_en_url) {
-                return handleReject(new HoError('cannot find subtitle!!!'));
+                return handleError(new HoError('cannot find subtitle!!!'));
             }
             return mkfolder().then(() => getZh(sub_url)).then(() => getEn(sub_en_url)).then(() => {
                 sendWs({
@@ -941,11 +941,11 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             const restSub = () => sub_en_url ? mkfolder().then(() => getEn(sub_en_url)) : Promise.resolve();
             const getSub = name => subHdUrl(name).then(subtitles2 => {
                 if (!subtitles2) {
-                    return handleReject(new HoError('cannot find eng or cht subtitle!!!'));
+                    return handleError(new HoError('cannot find eng or cht subtitle!!!'));
                 }
                 const zip_ext = isZip(subtitles2);
                 if (!zip_ext) {
-                    return handleReject(new HoError('is not zip!!!'));
+                    return handleError(new HoError('is not zip!!!'));
                 }
                 const sub_location = `${filePath}_sub`;
                 const mkfolder2 = () => FsExistsSync(sub_location) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(sub_location, err => err ? reject(err) : resolve()));
@@ -955,7 +955,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                     let i
                     for (let i = 0; i <= 10; i++) {
                         if (i >= 10) {
-                            return handleReject(new HoError('too many sub!!!'));
+                            return handleError(new HoError('too many sub!!!'));
                         }
                         sub_temp_location = `${sub_location}/${i}`;
                         sub_zip_location = `${sub_location}/${i}.${zip_ext}`;
@@ -1020,17 +1020,17 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                     })));
                 });
             });
-            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleReject(err)) : (season === 1) ? getSub(name) : handleReject(err)) : getSub(name));
+            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleError(err)) : (season === 1) ? getSub(name) : handleError(err)) : getSub(name));
         });
         function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
             if (!choose_subtitle) {
-                return handleReject(new HoError('donot have sub!!!'));
+                return handleError(new HoError('donot have sub!!!'));
             }
             let ext = false;
             if (is_file) {
                 ext = isSub(choose_subtitle);
                 if (!ext) {
-                    return handleReject(new HoError('is not sub!!!'));
+                    return handleError(new HoError('is not sub!!!'));
                 }
             } else {
                 ext = 'srt';
@@ -1061,11 +1061,11 @@ router.get('/getSubtitle/:uid', function(req, res, next) {
     console.log('external getSub');
     const idMatch = req.params.uid.match(/^you_(.*)/);
     if (!idMatch) {
-        handleError(new HoError('file is not youtube video!!!'), next);
+        return handleError(new HoError('file is not youtube video!!!'), next);
     }
     const id = isValidString(req.params.uid, 'name');
     if (!id) {
-        handleError(new HoError('external is not vaild'), next);
+        return handleError(new HoError('external is not vaild'), next);
     }
     googleDownloadSubtitle(`http://www.youtube.com/watch?v=${idMatch[1]}`, getFileLocation('youtube', id)).then(() => {
         sendWs({
@@ -1079,7 +1079,7 @@ router.get('/getSubtitle/:uid', function(req, res, next) {
 router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, next) {
     console.log('subtitle fix');
     if (!req.params.adjust.match(/^\-?\d+(\.\d+)?$/)) {
-        handleError(new HoError('adjust time is not vaild'), next);
+        return handleError(new HoError('adjust time is not vaild'), next);
     }
     const getId = () => {
         const idMatch = req.params.uid.match(/^(you|dym)_/);
@@ -1087,7 +1087,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
             const ex_type = (idMatch[1] === 'dym') ? 'dailymotion' : (idMatch[1] === 'bil') ? 'bilibili' : 'youtube';
             const id = isValidString(req.params.uid, 'name');
             if (!id) {
-                return handleReject(new HoError('external is not vaild'));
+                return handleError(new HoError('external is not vaild'));
             }
             let filePath = getFileLocation(ex_type, id);
             filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
@@ -1095,14 +1095,14 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
         } else {
             const id = isValidString(req.params.uid, 'uid');
             if (!id) {
-                return handleReject(new HoError('uid is not vaild'));
+                return handleError(new HoError('uid is not vaild'));
             }
             return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
                 if (items.length < 1) {
-                    return handleReject(new HoError('cannot find file!!!'));
+                    return handleError(new HoError('cannot find file!!!'));
                 }
                 if (items[0].status !== 3 && items[0].status !== 9) {
-                    return handleReject(new HoError('file type error!!!'));
+                    return handleError(new HoError('file type error!!!'));
                 }
                 let fileIndex = 0;
                 if (items[0].status === 9) {
@@ -1117,7 +1117,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
                         }
                     }
                     if (!isVideo(items[0]['playList'][fileIndex])) {
-                        return handleReject(new HoError('file type error!!!'));
+                        return handleError(new HoError('file type error!!!'));
                     }
                 }
                 let filePath = getFileLocation(items[0].owner, items[0]._id);
@@ -1132,7 +1132,7 @@ router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, 
     getId().then(([id, filePath]) => {
         const vtt = `${filePath}.vtt`;
         if (!FsExistsSync(vtt)) {
-            return handleReject(new HoError('do not have subtitle!!!'));
+            return handleError(new HoError('do not have subtitle!!!'));
         }
         return new Promise((resolve, reject) => {
             const adjust = Number(req.params.adjust) * 1000;

@@ -10,16 +10,22 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
     autoReconnect: true,
     poolSize: 10,
 }, (err, db) => {
-    handleError(err);
+    if (err) {
+        return handleError(err, 'DB connect');
+    }
     if (!db) {
-        handleError(new HoError('No db connected'));
+        return handleError(new HoError('No db connected'), 'DB connect');
     }
     mongo = db;
     console.log('database connected');
     db.collection('user', (err, collection) => {
-        handleError(err);
+        if (err) {
+            return handleError(err, 'DB connect');
+        }
         collection.count((err, count) => {
-            handleError(err);
+            if (err) {
+                return handleError(err, 'DB connect');
+            }
             if (count === 0) {
                 collection.insert({
                     username: 'hoder',
@@ -27,7 +33,9 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                     perm: 1,
                     password: createHash('md5').update('test123').digest('hex'),
                 }, (err, user) => {
-                    handleError(err)
+                    if (err) {
+                        return handleError(err, 'DB connect');
+                    }
                     console.log(user);
                 });
             }

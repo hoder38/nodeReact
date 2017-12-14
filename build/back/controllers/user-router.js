@@ -8,6 +8,10 @@ var _getOwnPropertyNames = require('babel-runtime/core-js/object/get-own-propert
 
 var _getOwnPropertyNames2 = _interopRequireDefault(_getOwnPropertyNames);
 
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
+
 var _assign = require('babel-runtime/core-js/object/assign');
 
 var _assign2 = _interopRequireDefault(_assign);
@@ -43,7 +47,7 @@ router.use(function (req, res, next) {
 router.route('/act/:uid?').get(function (req, res, next) {
     console.log('user info');
     !(0, _utility.checkAdmin)(1, req.user) ? (0, _mongoTool2.default)('find', _constants.USERDB, { _id: req.user._id }, { limit: 1 }).then(function (users) {
-        return users.length < 1 ? (0, _utility.handleReject)(new _utility.HoError('Could not find user!')) : res.json({ user_info: [{
+        return users.length < 1 ? (0, _utility.handleError)(new _utility.HoError('Could not find user!')) : res.json({ user_info: [{
                 name: users[0].username,
                 id: users[0]._id,
                 newable: false,
@@ -90,25 +94,25 @@ router.route('/act/:uid?').get(function (req, res, next) {
     if (req.body.userPW) {
         userPW = (0, _utility.isValidString)(req.body.userPW, 'passwd');
         if (!userPW) {
-            (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
         }
     }
     if (!(0, _utility.userPWCheck)(req.user, userPW)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     var ret = {};
     var data = {};
     var needPerm = false;
     if (req.body.auto) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         if (!(0, _utility.isValidString)(req.body.auto, 'url')) {
-            (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
         }
         var autoId = req.body.auto.match(/id=([^\&]*)/i);
         if (!autoId || !autoId[1]) {
-            (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('auto is not valid'), next);
         }
         data['auto'] = autoId[1];
         ret['auto'] = 'https://drive.google.com/open?id=' + autoId[1] + '&authuser=0';
@@ -116,11 +120,11 @@ router.route('/act/:uid?').get(function (req, res, next) {
     }
     if (req.body.kindle) {
         if (!(0, _utility.isValidString)(req.body.kindle, 'email')) {
-            (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
         }
         var kindleId = req.body.kindle.match(/^([^@]+)@kindle\.com$/i);
         if (!kindleId || !kindleId[1]) {
-            (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('kindle is not valid'), next);
         }
 
         data['kindle'] = kindleId[1].toLowerCase();
@@ -128,47 +132,47 @@ router.route('/act/:uid?').get(function (req, res, next) {
     }
     if (req.body.desc === '' || req.body.desc) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         var desc = (0, _utility.isValidString)(req.body.desc, 'desc');
         if (!desc) {
-            (0, _utility.handleError)(new _utility.HoError('desc is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('desc is not valid'), next);
         }
         data['desc'] = ret['desc'] = desc;
         needPerm = true;
     }
     if (req.body.perm === '' || req.body.perm) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         if (req.user._id.equals((0, _utility.isValidString)(req.params.uid, 'uid'))) {
-            (0, _utility.handleError)(new _utility.HoError('owner can not edit self perm'), next);
+            return (0, _utility.handleError)(new _utility.HoError('owner can not edit self perm'), next);
         }
         var perm = (0, _utility.isValidString)(req.body.perm, 'perm');
         if (!perm) {
-            (0, _utility.handleError)(new _utility.HoError('perm is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('perm is not valid'), next);
         }
         data['perm'] = ret['perm'] = perm;
         needPerm = true;
     }
     if (req.body.unDay && req.body.unDay) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         var unDay = (0, _utility.isValidString)(req.body.unDay, 'int');
         if (!unDay) {
-            (0, _utility.handleError)(new _utility.HoError('unactive day is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('unactive day is not valid'), next);
         }
         data['unDay'] = ret['unDay'] = unDay;
         needPerm = true;
     }
     if (req.body.unHit && req.body.unHit) {
         if (!(0, _utility.checkAdmin)(1, req.user)) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         var unHit = (0, _utility.isValidString)(req.body.unHit, 'int');
         if (!unHit) {
-            (0, _utility.handleError)(new _utility.HoError('unactive hit is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('unactive hit is not valid'), next);
         }
         data['unHit'] = ret['unHit'] = unHit;
         needPerm = true;
@@ -176,14 +180,14 @@ router.route('/act/:uid?').get(function (req, res, next) {
     if (req.body.newPwd && req.body.conPwd) {
         var newPwd = (0, _utility.isValidString)(req.body.newPwd, 'passwd');
         if (!newPwd) {
-            (0, _utility.handleError)(new _utility.HoError('new passwd is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('new passwd is not valid'), next);
         }
         var conPwd = (0, _utility.isValidString)(req.body.conPwd, 'passwd');
         if (!conPwd) {
-            (0, _utility.handleError)(new _utility.HoError('con passwd is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('con passwd is not valid'), next);
         }
         if (newPwd !== conPwd) {
-            (0, _utility.handleError)(new _utility.HoError('confirm password must equal!!!'), next);
+            return (0, _utility.handleError)(new _utility.HoError('confirm password must equal!!!'), next);
         }
         data['password'] = (0, _crypto.createHash)('md5').update(newPwd).digest('hex');
     }
@@ -191,19 +195,21 @@ router.route('/act/:uid?').get(function (req, res, next) {
     if ((0, _utility.checkAdmin)(1, req.user)) {
         id = (0, _utility.isValidString)(req.params.uid, 'uid');
         if (!id) {
-            (0, _utility.handleError)(new _utility.HoError('uid is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('uid is not valid'), next);
         }
     } else {
         if (needPerm) {
-            (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+            return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
         }
         id = req.user._id;
     }
     if (req.body.name) {
-        (function () {
+        var _ret = function () {
             var name = (0, _utility.isValidString)(req.body.name, 'name');
             if (name === false || (0, _tagTool.isDefaultTag)((0, _tagTool.normalize)(name))) {
-                (0, _utility.handleError)(new _utility.HoError('name is not valid'), next);
+                return {
+                    v: (0, _utility.handleError)(new _utility.HoError('name is not valid'), next)
+                };
             }
             (0, _mongoTool2.default)('find', _constants.USERDB, { username: name }, {
                 username: 1,
@@ -211,7 +217,7 @@ router.route('/act/:uid?').get(function (req, res, next) {
             }, { limit: 1 }).then(function (users) {
                 if (users.length > 0) {
                     console.log(users);
-                    return (0, _utility.handleReject)(new _utility.HoError('already has one!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('already has one!!!'));
                 }
                 data['username'] = ret['name'] = name;
                 if (req.user._id.equals(id)) {
@@ -224,10 +230,12 @@ router.route('/act/:uid?').get(function (req, res, next) {
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, next);
             });
-        })();
+        }();
+
+        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
     } else {
         if ((0, _getOwnPropertyNames2.default)(data).length === 0) {
-            (0, _utility.handleError)(new _utility.HoError('nnothing to change!!!'), next);
+            return (0, _utility.handleError)(new _utility.HoError('nnothing to change!!!'), next);
         }
         console.log(data);
         console.log(id);
@@ -240,21 +248,21 @@ router.route('/act/:uid?').get(function (req, res, next) {
 }).post(function (req, res, next) {
     console.log('add user');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+        return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
     }
     var userPW = '';
     if (req.body.userPW) {
         userPW = (0, _utility.isValidString)(req.body.userPW, 'passwd');
         if (!userPW) {
-            (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
         }
     }
     if (!(0, _utility.userPWCheck)(req.user, userPW)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     var name = (0, _utility.isValidString)(req.body.name, 'name');
     if (name === false || (0, _tagTool.isDefaultTag)((0, _tagTool.normalize)(name))) {
-        (0, _utility.handleError)(new _utility.HoError('name is not valid'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not valid'), next);
     }
     (0, _mongoTool2.default)('find', _constants.USERDB, { username: name }, {
         username: 1,
@@ -262,26 +270,26 @@ router.route('/act/:uid?').get(function (req, res, next) {
     }, { limit: 1 }).then(function (users) {
         if (users.length > 0) {
             console.log(users);
-            return (0, _utility.handleReject)(new _utility.HoError('already has one!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('already has one!!!'));
         }
         var newPwd = (0, _utility.isValidString)(req.body.newPwd, 'passwd');
         if (!newPwd) {
-            return (0, _utility.handleReject)(new _utility.HoError('new passwd is not valid'));
+            return (0, _utility.handleError)(new _utility.HoError('new passwd is not valid'));
         }
         var conPwd = (0, _utility.isValidString)(req.body.conPwd, 'passwd');
         if (!conPwd) {
-            return (0, _utility.handleReject)(new _utility.HoError('con passwd is not valid'));
+            return (0, _utility.handleError)(new _utility.HoError('con passwd is not valid'));
         }
         if (newPwd !== conPwd) {
-            return (0, _utility.handleReject)(new _utility.HoError('password must equal!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('password must equal!!!'));
         }
         var desc = (0, _utility.isValidString)(req.body.desc, 'desc');
         if (!desc) {
-            return (0, _utility.handleReject)(new _utility.HoError('desc is not valid'));
+            return (0, _utility.handleError)(new _utility.HoError('desc is not valid'));
         }
         var perm = (0, _utility.isValidString)(req.body.perm, 'perm');
         if (!perm) {
-            return (0, _utility.handleReject)(new _utility.HoError('perm is not valid'));
+            return (0, _utility.handleError)(new _utility.HoError('perm is not valid'));
         }
         return (0, _mongoTool2.default)('insert', _constants.USERDB, {
             username: name,
@@ -312,28 +320,28 @@ router.route('/act/:uid?').get(function (req, res, next) {
 router.put('/del/:uid', function (req, res, next) {
     console.log('deluser');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
+        return (0, _utility.handleError)(new _utility.HoError('unknown type in edituser', { code: 403 }), next);
     }
     var userPW = '';
     if (req.body.userPW) {
         userPW = (0, _utility.isValidString)(req.body.userPW, 'passwd');
         if (!userPW) {
-            (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
+            return (0, _utility.handleError)(new _utility.HoError('passwd is not valid'), next);
         }
     }
     if (!(0, _utility.userPWCheck)(req.user, userPW)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not valid'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not valid'), next);
     }
     (0, _mongoTool2.default)('find', _constants.USERDB, { _id: id }, { limit: 1 }).then(function (users) {
         if (users.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('user does not exist!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('user does not exist!!!'));
         }
         if ((0, _utility.checkAdmin)(1, users[0])) {
-            return (0, _utility.handleReject)(new _utility.HoError('owner cannot be deleted!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('owner cannot be deleted!!!'));
         }
         return (0, _mongoTool2.default)('remove', _constants.USERDB, {
             _id: id,

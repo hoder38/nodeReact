@@ -136,7 +136,7 @@ app.use('/', (0, _loginRouter2.default)());
 
 //view
 app.all('*', function (req, res, next) {
-    (0, _utility.handleError)(new _utility.HoError('page not found', { code: 404 }));
+    return (0, _utility.handleError)(new _utility.HoError('page not found', { code: 404 }), next);
 });
 
 //error handle

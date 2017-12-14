@@ -2,7 +2,7 @@ import { PASSWORD_PRIVATE_KEY, PASSWORD_SALT } from '../../../ver'
 import { ALGORITHM, PASSWORDDB } from '../constants'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { isValidString, handleError, handleReject, HoError, userPWCheck } from '../util/utility'
+import { isValidString, handleError, HoError, userPWCheck } from '../util/utility'
 import { createCipher, createDecipher } from 'crypto'
 import PasswordGenerator from 'password-generator'
 
@@ -11,39 +11,39 @@ const PasswordTagTool = TagTool(PASSWORDDB);
 export default {
     newRow: function(data, user) {
         if (!data['username'] || !data['password'] || !data['conpassword'] || !data['name']) {
-            return handleReject(new HoError('parameter lost!!!'));
+            return handleError(new HoError('parameter lost!!!'));
         }
         const name = isValidString(data['name'], 'name');
         if (!name) {
-            return handleReject(new HoError('name is not vaild!!!'));
+            return handleError(new HoError('name is not vaild!!!'));
         }
         const username = isValidString(data['username'], 'name');
         if (!username) {
-            return handleReject(new HoError('username is not vaild!!!'));
+            return handleError(new HoError('username is not vaild!!!'));
         }
         const password = isValidString(data['password'], 'altpwd');
         if (!password) {
-            return handleReject(new HoError('password is not vaild!!!'));
+            return handleError(new HoError('password is not vaild!!!'));
         }
         const conpassword = isValidString(data['conpassword'], 'altpwd');
         if (!conpassword) {
-            return handleReject(new HoError('password is not vaild!!!'));
+            return handleError(new HoError('password is not vaild!!!'));
         }
         if (password !== conpassword) {
-            return handleReject(new HoError('password not equal!!!'));
+            return handleError(new HoError('password not equal!!!'));
         }
         let url = '';
         if (data['url']) {
             url = isValidString(data['url'], 'url');
             if (!url) {
-                return handleReject(new HoError('url not vaild!!!'));
+                return handleError(new HoError('url not vaild!!!'));
             }
         }
         let email = '';
         if (data['email']) {
             email = isValidString(data['email'], 'email');
             if (!email) {
-                return handleReject(new HoError('email not vaild!!!'));
+                return handleError(new HoError('email not vaild!!!'));
             }
         }
         const crypted_password = encrypt(password);
@@ -53,11 +53,11 @@ export default {
             if (data['userPW']) {
                 userPW = isValidString(data['userPW'], 'passwd');
                 if (!userPW) {
-                    return handleReject(new HoError('passwd not vaild!!!'));
+                    return handleError(new HoError('passwd not vaild!!!'));
                 }
             }
             if (!userPWCheck(user, userPW)) {
-                return handleReject(new HoError('permission denied'))
+                return handleError(new HoError('permission denied'))
             }
         }
         let setTag = new Set();
@@ -97,57 +97,57 @@ export default {
         if (data['password']) {
             password = isValidString(data['password'], 'altpwd');
             if (!password) {
-                return handleReject(new HoError('password not vaild!!!'));
+                return handleError(new HoError('password not vaild!!!'));
             }
         }
         let conpassword = '';
         if (data['password']) {
             conpassword = isValidString(data['conpassword'], 'altpwd');
             if (!conpassword) {
-                return handleReject(new HoError('password not vaild!!!'));
+                return handleError(new HoError('password not vaild!!!'));
             }
         }
         if (password !== conpassword) {
-            return handleReject(new HoError('password not equal!!!'));
+            return handleError(new HoError('password not equal!!!'));
         }
         let name = '';
         if (data['name']) {
             name = isValidString(data['name'], 'name');
             if (!name) {
-                return handleReject(new HoError('name not vaild!!!'));
+                return handleError(new HoError('name not vaild!!!'));
             }
         }
         let username = '';
         if (data['username']) {
             username = isValidString(data['username'], 'name');
             if (!username) {
-                return handleReject(new HoError('username not vaild!!!'));
+                return handleError(new HoError('username not vaild!!!'));
             }
         }
         let url = '';
         if (data['url']) {
             url = isValidString(data['url'], 'url');
             if (!url) {
-                return handleReject(new HoError('url not vaild!!!'));
+                return handleError(new HoError('url not vaild!!!'));
             }
         }
         let email = '';
         if (data['email']) {
             email = isValidString(data['email'], 'email');
             if (!email) {
-                return handleReject(new HoError('email not vaild!!!'));
+                return handleError(new HoError('email not vaild!!!'));
             }
         }
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid not vaild!!!'));
+            return handleError(new HoError('uid not vaild!!!'));
         }
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
         }, {limit: 1}).then(pws => {
             if (pws.length < 1) {
-                return handleReject(new HoError('password row does not exist!!!'));
+                return handleError(new HoError('password row does not exist!!!'));
             }
             let update_data = Object.assign(data.hasOwnProperty('important') ? {important: data['important'] ? 1: 0} :{});
             if (pws[0].important !== 0 || (data.hasOwnProperty('important') && pws[0].important !== update_data['important'])) {
@@ -155,11 +155,11 @@ export default {
                 if (data['userPW']) {
                     userPW = isValidString(data['userPW'], 'passwd');
                     if (!userPW) {
-                        return handleReject(new HoError('passwd not vaild!!!'));
+                        return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
                 if (!userPWCheck(user, userPW)) {
-                    return handleReject(new HoError('permission denied'))
+                    return handleError(new HoError('permission denied'))
                 }
             }
             let setTag = new Set(pws[0].tags);
@@ -201,25 +201,25 @@ export default {
     delRow: function(uid, userPW, user) {
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid not vaild!!!'));
+            return handleError(new HoError('uid not vaild!!!'));
         }
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
         }, {limit: 1}).then(pws => {
             if (pws.length < 1) {
-                return handleReject(new HoError('password row does not exist!!!'));
+                return handleError(new HoError('password row does not exist!!!'));
             }
             if (pws[0].important !== 0) {
                 let validUserPW = '';
                 if (userPW) {
                     validUserPW = isValidString(userPW, 'passwd');
                     if (!validUserPW) {
-                        return handleReject(new HoError('passwd not vaild!!!'));
+                        return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
                 if (!userPWCheck(user, validUserPW)) {
-                    return handleReject(new HoError('permission denied'))
+                    return handleError(new HoError('permission denied'))
                 }
             }
             return Mongo('remove', PASSWORDDB, {
@@ -232,7 +232,7 @@ export default {
     getPassword: function(uid, userPW, user, session, type=null) {
         const id = isValidString(uid, 'uid');
         if (!id) {
-            return handleReject(new HoError('uid not vaild!!!'));
+            return handleError(new HoError('uid not vaild!!!'));
         }
         return Mongo('find', PASSWORDDB, {
             _id: id,
@@ -242,18 +242,18 @@ export default {
             important: 1,
         }, (type === 'pre') ? {prePassword: 1} : {password: 1}), {limit: 1}).then(items => {
             if (items.length < 1) {
-                return handleReject(new HoError('can not find password object!!!'));
+                return handleError(new HoError('can not find password object!!!'));
             }
             if (items[0].important !== 0) {
                 let validUserPW = '';
                 if (userPW) {
                     validUserPW = isValidString(userPW, 'passwd');
                     if (!validUserPW) {
-                        return handleReject(new HoError('passwd not vaild!!!'));
+                        return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
                 if (!userPWCheck(user, validUserPW)) {
-                    return handleReject(new HoError('permission denied'))
+                    return handleError(new HoError('permission denied'))
                 }
             }
             PasswordTagTool.setLatest(id, session).catch(err => handleError(err, 'Set latest'));

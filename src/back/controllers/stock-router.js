@@ -2,7 +2,7 @@ import { STOCKDB, STOCK_FILTER_LIMIT } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
 import StockTool from '../models/stock-tool.js'
-import { checkLogin, handleError, getStockItem, isValidString, HoError, handleReject } from '../util/utility'
+import { checkLogin, handleError, getStockItem, isValidString, HoError } from '../util/utility'
 import sendWs from '../util/sendWs'
 
 const router = Express.Router();
@@ -91,7 +91,7 @@ router.get('/querySimple/:uid', function(req, res,next) {
     console.log('stock query simple');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     StockTool.getSingleStock(id, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
 });
@@ -100,7 +100,7 @@ router.get('/getPER/:uid', function(req, res,next) {
     console.log('stock get per');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     StockTool.getStockPER(id).then(([result, index, start]) => StockTool.getStockYield(id).then(result_1 => {
         StockTagTool.setLatest(id, req.session).catch(err => handleError(err, 'Set latest'));
@@ -112,7 +112,7 @@ router.get('/getPredictPER/:uid', function(req, res,next) {
     console.log('stock get predict');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     StockTool.getPredictPER(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
@@ -121,31 +121,34 @@ router.get('/getPoint/:uid/:price?', function(req, res, next) {
     console.log('stock get point');
     const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
-        handleError(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
-    StockTool.getStockPoint(id, req.params.price ? !req.params.price.match(/\d+(\.\d+)?/) ? handleError(new HoError('price is not vaild'), next) : Number(req.params.price) : 0, req.session).then(point => res.json({point})).catch(err => handleError(err, next));
+    let price = 0;
+    if (req.params.price) {
+        if (!req.params.price.match(/\d+(\.\d+)?/)) {
+            return handleError(new HoError('price is not vaild'), next);
+        }
+        price = Number(req.params.price);
+    }
+    StockTool.getStockPoint(id, price, req.session).then(point => res.json({point})).catch(err => handleError(err, next));
 });
 
 router.get('/getInterval/:uid', function(req, res,next) {
     console.log('stock get interval');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        return handleReject(new HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
     if (stockIntervaling) {
-        //handleError(new HoError('there is another inverval running'), next);
-        return handleReject(new HoError('there is another inverval running'), () => handleReject(new HoError('test'), () => handleReject(new HoError('test123'), next)));
+        return handleError(new HoError('there is another inverval running'), next);
     }
-    console.log(123);
     stockIntervaling = true;
     StockTool.getInterval(id, req.session).then(([result, index]) => {
-        console.log(456);
         stockIntervaling = false;
         res.json({interval: `${index}: ${result}`});
     }).catch(err => {
-        console.log(789);
         stockIntervaling = false;
-        return handleReject(err, next)
+        return handleError(err, next)
     });
 });
 
@@ -153,13 +156,13 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     console.log('stock filter');
     const name = isValidString(req.params.tag, 'name');
     if (!name) {
-        handleError(new HoError('name is not vaild'), next);
+        return  handleError(new HoError('name is not vaild'), next);
     }
     let per = false;
     if (req.body.per) {
         per = req.body.per.match(/^([<>])(\d+)$/);
         if (!per) {
-            handleError(new HoError('per is not vaild'), next);
+            return handleError(new HoError('per is not vaild'), next);
         }
         per[2] = Number(per[2]);
     }
@@ -167,7 +170,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.yield) {
         yieldNumber = req.body.yield.match(/^([<>])(\d+)$/);
         if (!yieldNumber) {
-            handleError(new HoError('yield is not vaild'), next);
+            return handleError(new HoError('yield is not vaild'), next);
         }
         yieldNumber[2] = Number(yieldNumber[2]);
     }
@@ -175,7 +178,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.p) {
         pp = req.body.p.match(/^([<>])(\d+)$/);
         if (!pp) {
-            handleError(new HoError('p is not vaild'), next);
+            return handleError(new HoError('p is not vaild'), next);
         }
         pp[2] = Number(pp[2]);
     }
@@ -183,7 +186,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.s) {
         ss = req.body.s.match(/^([<>])(\-?\d+)$/);
         if (!ss) {
-            handleError(new HoError('s is not vaild'), next);
+            return handleError(new HoError('s is not vaild'), next);
         }
         ss[2] = Number(ss[2]);
     }
@@ -191,12 +194,12 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.m) {
         mm = req.body.m.match(/^([<>])(\d+\.?\d*)$/);
         if (!mm) {
-            handleError(new HoError('m is not vaild'), next);
+            return handleError(new HoError('m is not vaild'), next);
         }
         mm[2] = Number(mm[2]);
     }
     if (stockFiltering) {
-        handleError(new HoError('there is another filter running'), next);
+        return handleError(new HoError('there is another filter running'), next);
     }
     stockFiltering = true;
     let first = true;
@@ -311,7 +314,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
             type: req.user.username,
             data: `Filter fail: ${err.message}`,
         }, 0);
-        handleError(err, next);
+        return handleError(err, next);
     });
 });
 

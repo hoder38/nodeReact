@@ -88,11 +88,11 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
     console.log('del file');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length === 0) {
-            return (0, _utility.handleReject)(new _utility.HoError('file can not be fund!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('file can not be fund!!!'));
         }
         var rest = function rest() {
             return (0, _mongoTool2.default)('remove', _constants.STORAGEDB, {
@@ -110,7 +110,7 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
         var filePath = (0, _utility.getFileLocation)(items[0].owner, items[0]._id);
         if (req.params.recycle === '1' && (0, _utility.checkAdmin)(1, req.user)) {
             if (items[0].recycle !== 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('recycle file first!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('recycle file first!!!'));
             }
             if (items[0].status === 7 || items[0].status === 8 || items[0].thumb) {
                 return rest();
@@ -189,7 +189,7 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
             }
         } else {
             if (!(0, _utility.checkAdmin)(1, req.user) && (!(0, _utility.isValidString)(items[0].owner, 'uid') || !req.user._id.equals(items[0].owner))) {
-                return (0, _utility.handleReject)(new _utility.HoError('file is not yours!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('file is not yours!!!'));
             }
             return recur_backup(1).then(function () {
                 return (0, _mongoTool2.default)('update', _constants.STORAGEDB, { _id: items[0]._id }, { $set: {
@@ -265,19 +265,19 @@ router.delete('/del/:uid/:recycle', function (req, res, next) {
 router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, next) {
     console.log('handle media');
     if (!(0, _utility.checkAdmin)(1, req.user)) {
-        (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
+        return (0, _utility.handleError)(new _utility.HoError('permission denied'), next);
     }
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         console.log(items);
         if (items.length < 1) {
-            return (0, _utility.handleReject)(new _utility.HoError('cannot find file!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
         }
         if (!items[0].mediaType) {
-            return (0, _utility.handleReject)(new _utility.HoError('this file is not media!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('this file is not media!!!'));
         }
 
         var _ret2 = function () {
@@ -290,7 +290,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                         };
                         return {
                             v: rest().catch(function (err) {
-                                return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, items[0]['_id'], items[0].mediaType['fileIndex']);
+                                return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, items[0]['_id'], items[0].mediaType['fileIndex']);
                             }).then(function () {
                                 return res.json({ apiOK: true });
                             })
@@ -308,7 +308,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                             if (!(0, _fs.existsSync)(filePath + '/' + items[0].mediaType[req.params.index]['fileIndex'] + '_complete')) {
                                 return {
                                     v: {
-                                        v: (0, _utility.handleReject)(new _utility.HoError('need complete first'))
+                                        v: (0, _utility.handleError)(new _utility.HoError('need complete first'))
                                     }
                                 };
                             }
@@ -322,7 +322,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                             if (!fileIndex) {
                                 return {
                                     v: {
-                                        v: (0, _utility.handleReject)(new _utility.HoError('cannot find media'))
+                                        v: (0, _utility.handleError)(new _utility.HoError('cannot find media'))
                                     }
                                 };
                             }
@@ -332,7 +332,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                             return {
                                 v: {
                                     v: rest().catch(function (err) {
-                                        return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex']);
+                                        return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex']);
                                     }).then(function () {
                                         return res.json({ apiOK: true });
                                     })
@@ -350,15 +350,15 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                         }
                         if (handleItems.length < 1) {
                             return {
-                                v: (0, _utility.handleReject)(new _utility.HoError('need complete first'))
+                                v: (0, _utility.handleError)(new _utility.HoError('need complete first'))
                             };
                         }
                         return {
                             v: _promise2.default.all(handleItems.map(function (m) {
                                 return m.key ? !m.complete && new Date().getTime() / 1000 - items[0].utime > _constants.NOISE_TIME ? _mediaHandleTool2.default.handleMediaUpload(m, filePath, items[0]._id, req.user, m.key) : _mediaHandleTool2.default.handleMedia(m, filePath, items[0]._id, m.key, req.user).catch(function (err) {
-                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, items[0]['_id'], m['fileIndex']);
+                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, items[0]['_id'], m['fileIndex']);
                                 }) : _mediaHandleTool2.default.handleMediaUpload(m, filePath, items[0]._id, req.user).catch(function (err) {
-                                    return (0, _utility.handleReject)(err, _mediaHandleTool.errorMedia, items[0]['_id'], m['fileIndex']);
+                                    return (0, _utility.handleError)(err, _mediaHandleTool.errorMedia, items[0]['_id'], m['fileIndex']);
                                 });
                             })).then(function () {
                                 return res.json({ apiOK: true });
@@ -394,7 +394,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                         }
                         if (_handleItems.length < 1) {
                             return {
-                                v: (0, _utility.handleReject)(new _utility.HoError('need complete first'))
+                                v: (0, _utility.handleError)(new _utility.HoError('need complete first'))
                             };
                         }
                         return {
@@ -407,7 +407,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function (req, res, n
                     }
                 default:
                     return {
-                        v: (0, _utility.handleReject)(new _utility.HoError('unknown action'))
+                        v: (0, _utility.handleError)(new _utility.HoError('unknown action'))
                     };
             }
         }();

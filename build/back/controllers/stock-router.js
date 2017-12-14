@@ -162,7 +162,7 @@ router.get('/querySimple/:uid', function (req, res, next) {
     console.log('stock query simple');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     _stockTool2.default.getSingleStock(id, req.session).then(function (result) {
         return res.json(result);
@@ -175,7 +175,7 @@ router.get('/getPER/:uid', function (req, res, next) {
     console.log('stock get per');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     _stockTool2.default.getStockPER(id).then(function (_ref) {
         var _ref2 = (0, _slicedToArray3.default)(_ref, 3),
@@ -198,7 +198,7 @@ router.get('/getPredictPER/:uid', function (req, res, next) {
     console.log('stock get predict');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     _stockTool2.default.getPredictPER(id, req.session).then(function (_ref3) {
         var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
@@ -215,9 +215,16 @@ router.get('/getPoint/:uid/:price?', function (req, res, next) {
     console.log('stock get point');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
-        (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getStockPoint(id, req.params.price ? !req.params.price.match(/\d+(\.\d+)?/) ? (0, _utility.handleError)(new _utility.HoError('price is not vaild'), next) : Number(req.params.price) : 0, req.session).then(function (point) {
+    var price = 0;
+    if (req.params.price) {
+        if (!req.params.price.match(/\d+(\.\d+)?/)) {
+            return (0, _utility.handleError)(new _utility.HoError('price is not vaild'), next);
+        }
+        price = Number(req.params.price);
+    }
+    _stockTool2.default.getStockPoint(id, price, req.session).then(function (point) {
         return res.json({ point: point });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -228,30 +235,22 @@ router.get('/getInterval/:uid', function (req, res, next) {
     console.log('stock get interval');
     var id = (0, _utility.isValidString)(req.params.uid, 'uid');
     if (!id) {
-        return (0, _utility.handleReject)(new _utility.HoError('uid is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
     if (stockIntervaling) {
-        //handleError(new HoError('there is another inverval running'), next);
-        return (0, _utility.handleReject)(new _utility.HoError('there is another inverval running'), function () {
-            return (0, _utility.handleReject)(new _utility.HoError('test'), function () {
-                return (0, _utility.handleReject)(new _utility.HoError('test123'), next);
-            });
-        });
+        return (0, _utility.handleError)(new _utility.HoError('there is another inverval running'), next);
     }
-    console.log(123);
     stockIntervaling = true;
     _stockTool2.default.getInterval(id, req.session).then(function (_ref5) {
         var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
             result = _ref6[0],
             index = _ref6[1];
 
-        console.log(456);
         stockIntervaling = false;
         res.json({ interval: index + ': ' + result });
     }).catch(function (err) {
-        console.log(789);
         stockIntervaling = false;
-        return (0, _utility.handleReject)(err, next);
+        return (0, _utility.handleError)(err, next);
     });
 });
 
@@ -259,13 +258,13 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     console.log('stock filter');
     var name = (0, _utility.isValidString)(req.params.tag, 'name');
     if (!name) {
-        (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
+        return (0, _utility.handleError)(new _utility.HoError('name is not vaild'), next);
     }
     var per = false;
     if (req.body.per) {
         per = req.body.per.match(/^([<>])(\d+)$/);
         if (!per) {
-            (0, _utility.handleError)(new _utility.HoError('per is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('per is not vaild'), next);
         }
         per[2] = Number(per[2]);
     }
@@ -273,7 +272,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.yield) {
         yieldNumber = req.body.yield.match(/^([<>])(\d+)$/);
         if (!yieldNumber) {
-            (0, _utility.handleError)(new _utility.HoError('yield is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('yield is not vaild'), next);
         }
         yieldNumber[2] = Number(yieldNumber[2]);
     }
@@ -281,7 +280,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.p) {
         pp = req.body.p.match(/^([<>])(\d+)$/);
         if (!pp) {
-            (0, _utility.handleError)(new _utility.HoError('p is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('p is not vaild'), next);
         }
         pp[2] = Number(pp[2]);
     }
@@ -289,7 +288,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.s) {
         ss = req.body.s.match(/^([<>])(\-?\d+)$/);
         if (!ss) {
-            (0, _utility.handleError)(new _utility.HoError('s is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('s is not vaild'), next);
         }
         ss[2] = Number(ss[2]);
     }
@@ -297,12 +296,12 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
     if (req.body.m) {
         mm = req.body.m.match(/^([<>])(\d+\.?\d*)$/);
         if (!mm) {
-            (0, _utility.handleError)(new _utility.HoError('m is not vaild'), next);
+            return (0, _utility.handleError)(new _utility.HoError('m is not vaild'), next);
         }
         mm[2] = Number(mm[2]);
     }
     if (stockFiltering) {
-        (0, _utility.handleError)(new _utility.HoError('there is another filter running'), next);
+        return (0, _utility.handleError)(new _utility.HoError('there is another filter running'), next);
     }
     stockFiltering = true;
     var first = true;
@@ -424,7 +423,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
             type: req.user.username,
             data: 'Filter fail: ' + err.message
         }, 0);
-        (0, _utility.handleError)(err, next);
+        return (0, _utility.handleError)(err, next);
     });
 });
 

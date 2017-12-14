@@ -38,7 +38,6 @@ exports.toValidName = toValidName;
 exports.userPWCheck = userPWCheck;
 exports.HoError = HoError;
 exports.handleError = handleError;
-exports.handleReject = handleReject;
 exports.showLog = showLog;
 exports.checkLogin = checkLogin;
 exports.selectRandom = selectRandom;
@@ -199,37 +198,7 @@ function showError(err, type) {
     }
 }
 
-//final error
 function handleError(err) {
-    var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-    if (err) {
-        if (type) {
-            if (typeof type === 'function') {
-                showError(err, 'Delay');
-                console.log(type);
-
-                for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-                    args[_key - 2] = arguments[_key];
-                }
-
-                return type.apply(undefined, [err].concat(args));
-                throw err;
-            } else if (typeof type === 'string') {
-                showError(err, type);
-            } else {
-                console.log(type);
-                showError(err, 'Unknown type');
-            }
-        } else {
-            showError(err, 'Delay');
-            throw err;
-        }
-    }
-}
-
-//middle error
-function handleReject(err) {
     var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
     if (type) {
@@ -237,8 +206,8 @@ function handleReject(err) {
             showError(err, 'Delay');
             console.log(type);
 
-            for (var _len2 = arguments.length, args = Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-                args[_key2 - 2] = arguments[_key2];
+            for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+                args[_key - 2] = arguments[_key];
             }
 
             return type.apply(undefined, [err].concat(args));
@@ -276,13 +245,19 @@ function checkLogin(req, res, next) {
                     console.log("mobile or firefox");
                     next();
                 } else {
-                    handleError(new HoError('auth fail!!!', { code: 401 }));
+                    return handleError(new HoError('auth fail!!!', { code: 401 }), function (err) {
+                        throw err;
+                    });
                 }
             } else {
-                handleError(new HoError('auth fail!!!', { code: 401 }));
+                return handleError(new HoError('auth fail!!!', { code: 401 }), function (err) {
+                    throw err;
+                });
             }
         } else {
-            handleError(new HoError('auth fail!!!', { code: 401 }));
+            return handleError(new HoError('auth fail!!!', { code: 401 }), function (err) {
+                throw err;
+            });
         }
     } else {
         console.log(req.user._id);

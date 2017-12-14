@@ -170,7 +170,7 @@ var getStockPrice = function getStockPrice(type, index) {
         var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0], 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
         if (!price[0]) {
             console.log(raw_data);
-            return (0, _utility.handleReject)(new _utility.HoError('stock price get fail'));
+            return (0, _utility.handleError)(new _utility.HoError('stock price get fail'));
         }
         console.log(price[0]);
         return price[0];
@@ -1718,11 +1718,11 @@ var getTwseXml = function getTwseXml(stockCode, year, quarter, filePath) {
                     post.report_id = 'A';
                     return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath });
                 } else {
-                    return (0, _utility.handleReject)(err);
+                    return (0, _utility.handleError)(err);
                 }
             });
         } else {
-            return (0, _utility.handleReject)(err);
+            return (0, _utility.handleError)(err);
         }
     });
 };
@@ -1840,7 +1840,7 @@ var getBasicStockData = function getBasicStockData(type, index) {
                 return result;
             });
         default:
-            return (0, _utility.handleReject)(new _utility.HoError('stock type unknown!!!'));
+            return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
     }
 };
 
@@ -2422,7 +2422,7 @@ exports.default = {
         if (stage === 0) {
             return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: type }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
-                    return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
                 }
                 cash = items[0].cash;
                 asset = items[0].asset;
@@ -2483,15 +2483,15 @@ exports.default = {
                         return initXml(xml_path).then(function (xml) {
                             cash = getCashflow(xml, cash, is_start);
                             if (!cash) {
-                                return (0, _utility.handleReject)(new _utility.HoError('xml cash parse error!!!'));
+                                return (0, _utility.handleError)(new _utility.HoError('xml cash parse error!!!'));
                             }
                             asset = getAsset(xml, asset, is_start);
                             if (!asset) {
-                                return (0, _utility.handleReject)(new _utility.HoError('xml asset parse error!!!'));
+                                return (0, _utility.handleError)(new _utility.HoError('xml asset parse error!!!'));
                             }
                             sales = getSales(xml, sales, cash, is_start);
                             if (!sales) {
-                                return (0, _utility.handleReject)(new _utility.HoError('xml sales parse error!!!'));
+                                return (0, _utility.handleError)(new _utility.HoError('xml sales parse error!!!'));
                             }
                             wait = 0;
                             is_start = true;
@@ -2528,7 +2528,7 @@ exports.default = {
                         }
                     } else {
                         return getTwseXml(index, year, quarter, xml_path).catch(function (err) {
-                            return err.code !== 'HPE_INVALID_CONSTANT' ? (0, _utility.handleReject)(err) : _promise2.default.resolve(err);
+                            return err.code !== 'HPE_INVALID_CONSTANT' ? (0, _utility.handleError)(err) : _promise2.default.resolve(err);
                         }).then(function (err) {
                             var filesize = err ? 0 : (0, _fs.statSync)(xml_path)['size'];
                             console.log(filesize);
@@ -2759,7 +2759,7 @@ exports.default = {
     getStockPER: function getStockPER(id) {
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
             var yearEPS = getEPS(items[0].sales);
             return yearEPS.eps > 0 ? getStockPrice(items[0].type, items[0].index).then(function (price) {
@@ -2770,7 +2770,7 @@ exports.default = {
     getStockYield: function getStockYield(id) {
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
             switch (items[0].type) {
                 case 'twse':
@@ -2778,7 +2778,7 @@ exports.default = {
                         var dividends = 0;
                         var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                         if (!table) {
-                            return (0, _utility.handleReject)(new _utility.HoError('查詢過於頻繁,請稍後再試!!'));
+                            return (0, _utility.handleError)(new _utility.HoError('查詢過於頻繁,請稍後再試!!'));
                         }
                         (0, _utility.findTag)((0, _utility.findTag)(table, 'tr', 'odd')[0], 'td').forEach(function (d) {
                             var t = (0, _utility.findTag)(d)[0];
@@ -2795,7 +2795,7 @@ exports.default = {
                         });
                     });
                 default:
-                    return (0, _utility.handleReject)(new _utility.HoError('stock type unknown!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
             }
         });
     },
@@ -2808,7 +2808,7 @@ exports.default = {
         console.log(month_str);
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
             switch (items[0].type) {
                 case 'twse':
@@ -2927,7 +2927,7 @@ exports.default = {
                                         }
                                         var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
                                         if (!table) {
-                                            return (0, _utility.handleReject)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
+                                            return (0, _utility.handleError)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
                                         }
                                         (0, _utility.findTag)(table, 'tr').forEach(function (t) {
                                             var th = (0, _utility.findTag)(t, 'th')[0];
@@ -2968,7 +2968,7 @@ exports.default = {
                                                 return (0, _utility.handleError)(err, 'Redis');
                                             });
                                         }
-                                        return (0, _utility.handleReject)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
+                                        return (0, _utility.handleError)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
                                     }
                                     return rest_predict(index);
                                 });
@@ -2995,14 +2995,14 @@ exports.default = {
                         });
                     });
                 default:
-                    return (0, _utility.handleReject)(new _utility.HoError('stock type unknown!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
             }
         });
     },
     getStockPoint: function getStockPoint(id, price, session) {
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
             var getPrice = function getPrice() {
                 return price ? _promise2.default.resolve(price) : getStockPrice(items[0].type, items[0].index);
@@ -3040,7 +3040,7 @@ exports.default = {
         console.log(month_str);
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
             if (items.length < 1) {
-                return (0, _utility.handleReject)(new _utility.HoError('can not find stock!!!'));
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
             switch (items[0].type) {
                 case 'twse':
@@ -3262,7 +3262,7 @@ exports.default = {
                             return (0, _apiTool2.default)('url', 'http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
                                 var json_data = (0, _utility.getJson)(raw_data);
                                 if (json_data === false) {
-                                    return (0, _utility.handleReject)(new _utility.HoError('json parse error!!!'));
+                                    return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'));
                                 }
                                 var high = [];
                                 var low = [];
@@ -3487,7 +3487,7 @@ exports.default = {
                         });
                     });
                 default:
-                    return (0, _utility.handleReject)(new _utility.HoError('stock type unknown!!!'));
+                    return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
             }
         });
     }
@@ -3525,7 +3525,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
                 };
             default:
                 return {
-                    v: (0, _utility.handleReject)(new _utility.HoError('stock type unknown!!!'))
+                    v: (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'))
                 };
         }
     }();
@@ -3538,12 +3538,12 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
         var center = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
         if (!center) {
             console.log(raw_data);
-            return (0, _utility.handleReject)(new _utility.HoError('cannot find form'));
+            return (0, _utility.handleError)(new _utility.HoError('cannot find form'));
         }
         var form = (0, _utility.findTag)(center, 'form')[0];
         if (!form) {
             console.log(raw_data);
-            return (0, _utility.handleReject)(new _utility.HoError('cannot find form'));
+            return (0, _utility.handleError)(new _utility.HoError('cannot find form'));
         }
         var tds = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
         var filename = false;
@@ -3577,7 +3577,7 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
         }
 
         if (!filename) {
-            return (0, _utility.handleReject)(new _utility.HoError('cannot find annual location'));
+            return (0, _utility.handleError)(new _utility.HoError('cannot find annual location'));
         }
         console.log(filename);
         return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
@@ -3622,7 +3622,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                                     }
                                 },
                                 errhandle: function errhandle(err) {
-                                    return (0, _utility.handleReject)(err);
+                                    return (0, _utility.handleError)(err);
                                 }
                             });
                         }).catch(function (err) {

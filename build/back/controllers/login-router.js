@@ -31,7 +31,7 @@ exports.default = function () {
         });
     });
     router.all('/api*', function (req, res, next) {
-        (0, _utility.handleError)(new _utility.HoError('Unkonwn api'));
+        return (0, _utility.handleError)(new _utility.HoError('Unkonwn api'), next);
     });
     return router;
 };
@@ -65,15 +65,15 @@ _passport2.default.use(new _passportLocal.Strategy(function (username, password,
     console.log('login');
     var validUsername = (0, _utility.isValidString)(username, 'name');
     if (!validUsername) {
-        (0, _utility.handleError)(new _utility.HoError('username is not vaild', { code: 401 }), done);
+        return (0, _utility.handleError)(new _utility.HoError('username is not vaild', { code: 401 }), done);
     }
     (0, _mongoTool2.default)('find', _constants.USERDB, { username: validUsername }, { limit: 1 }).then(function (users) {
         var validPassword = (0, _utility.isValidString)(password, 'passwd');
         if (!validPassword) {
-            return (0, _utility.handleReject)(new _utility.HoError('passwd is not vaild', { code: 401 }));
+            return (0, _utility.handleError)(new _utility.HoError('passwd is not vaild', { code: 401 }));
         }
         if (users.length < 1 || (0, _crypto.createHash)('md5').update(validPassword).digest('hex') !== users[0].password) {
-            return (0, _utility.handleReject)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
+            return (0, _utility.handleError)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
         }
         done(null, users[0]);
     }).catch(function (err) {
