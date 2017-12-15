@@ -240,7 +240,7 @@ function download(user, url) {
         }) : _promise2.default.resolve();
     };
     var proc = function proc(index) {
-        return (0, _nodeFetch2.default)(url, (0, _assign2.default)({ headers: (0, _assign2.default)(referer ? { 'Referer': referer } : {}, user ? {} : { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36' }, cookie ? { Cookie: cookie } : {}, qspost ? {
+        return (0, _nodeFetch2.default)(url, (0, _assign2.default)({ headers: (0, _assign2.default)(referer ? { 'Referer': referer } : {}, user ? {} : { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36' }, cookie ? { Cookie: cookie } : {}, qspost ? {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': qspost.length
             } : {}, fake_ip ? {

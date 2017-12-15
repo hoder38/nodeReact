@@ -549,7 +549,11 @@ export default {
                                 break;
                             }
                         }
-                        findTag(span, 'a').forEach(s => tags.add(normalize(findTag(s)[0])));
+                        findTag(span, 'a').forEach(s => {
+                            if (findTag(s)[0]) {
+                                tags.add(normalize(findTag(s)[0]));
+                            }
+                        });
                         findTag(div, 'div', 'osl').forEach(o => findTag(o, 'a').forEach(s => tags.add(normalize(findTag(s)[0]))));
                         const matchDate = findTag(findTag(span, 'cite')[0])[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
                         if (matchDate) {
@@ -2185,25 +2189,8 @@ export default {
                     }
                 });
                 return flvUrl ? Api('url', flvUrl).then(raw_data => {
-                    let diy_vid = '';
-                    let Pid = '';
                     let ff_urls = '';
-                    const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0]
-                    findTag(findTag(html, 'head')[0], 'script').forEach(s => {
-                        const j = findTag(s)[0];
-                        if (j) {
-                            let jM = j.match(/^\s*var\s*diy_vid\s*=\s*['"](\d+)['"];?\s*$/);
-                            if (jM) {
-                                diy_vid = jM[1];
-                            } else {
-                                jM = j.match(/^\s*var\s*Pid\s*=\s*['"](\d+)['"];?\s*$/);
-                                if (jM) {
-                                    Pid = jM[1];
-                                }
-                            }
-                        }
-                    });
-                    const jM = findTag(findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
+                    const jM = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
                     if (jM) {
                         ff_urls = getJson(jM[1].replace(/\\\"/g, '"'));
                     }
@@ -2215,7 +2202,7 @@ export default {
                         if (f.playname === 'bj58') {
                             list = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kud_${Pid}_${diy_vid}_${p[2].match(/pid\-(\d+)\./)[1]}_${new Buffer(p[1]).toString('base64')}`,
+                                id: `kud_${p[2].match(/-id-(\d+)/)[1]}_${p[2].match(/-pid-(\d+)/)[1]}`,
                             }));
                         } else if (f.playname === 'bj') {
                             list1 = f.playurls.map(p => ({
@@ -2574,7 +2561,11 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             return getUrl(iframes[subIndex - 1].attribs.src).then(ret_obj => Object.assign(ret_obj, (iframes.length > 1) ? {sub : iframes.length} : {}));
         });
     } else if (id === 'kud') {
-        return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+        return Promise.resolve({
+            video: [],
+            url: [url],
+        });
+        /*return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
             let ret_obj = {video: []};
             const script = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
             if (!script) {
@@ -2594,7 +2585,8 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                 }
                 return ret_obj;
             } else {
-                return Api('url', `http://video.99kubo.com/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+                return handleError(new HoError('cannot find videoData'));
+                return Api('url', `http://www.99tw.net/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
                     for (let i of findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')) {
                         const videoData = findTag(i)[0];
                         if (videoData) {
@@ -2621,7 +2613,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                     }
                 });
             }
-        });
+        });*/
     } else if (id === 'kyu') {
         return Api('url', `http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
             referer: 'http://forum.99kubo.com/',

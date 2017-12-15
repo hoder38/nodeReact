@@ -905,17 +905,7 @@ const MediaWidget = React.createClass({
                     <track label="English" kind="captions" srcLang="en" src={(!isIframe && !isEmbed && !isUrl && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? this.state.subEn : ''}/>
                 </video>
             )
-            let urlRef = null;
-            media4 = isIframe ? <iframe style={{height: '420px', width: '640px'}} src={isIframe[1]} frameBorder='0px' allowFullScreen={true}></iframe> : isEmbed ? <embed style={{height: '420px', width: '640px'}} src={isEmbed[1]} allowFullScreen={true} type="application/x-shockwave-flash"></embed> : isUrl ? <input
-                type='text'
-                value={isUrl[1]}
-                readOnly={true}
-                ref={ref => urlRef = ref}
-                onClick={e => killEvent(e, () => {
-                    urlRef.focus()
-                    urlRef.selectionStart = 0;
-                    urlRef.selectionEnd = urlRef.value.length;
-                })} /> : null;
+            media4 = isIframe ? <iframe style={{height: '420px', width: '640px'}} src={isIframe[1]} frameBorder='0px' allowFullScreen={true}></iframe> : isEmbed ? <embed style={{height: '420px', width: '640px'}} src={isEmbed[1]} allowFullScreen={true} type="application/x-shockwave-flash"></embed> : isUrl ? <a href={isUrl[1]} target="_blank">{isUrl[1]}</a> : null;
         }
         const media3 = (this.props.mediaType === 4 || this.props.mediaType === 9) ? <audio style={Object.assign({width: '300px', height: '50px'}, this.props.mediaType === 9 && this._item.type !== 4 ? {display: 'none'} : {})} controls src={this.props.mediaType === 4 || (this.props.mediaType === 9 && this._item.type === 4) ? this.state.src : ''} ref={ref => this._audio = ref} /> : null
         return (
