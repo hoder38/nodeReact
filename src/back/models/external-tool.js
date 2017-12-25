@@ -424,7 +424,7 @@ export default {
                 });
             }
             case 'kubo':
-            return Api('url', url, {referer: 'http://www.99kubo.com/',}).then(raw_data => {
+            return Api('url', url, {referer: 'http://www.58b.tv/',}).then(raw_data => {
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                 const main = findTag(body, 'div', 'main')[0];
                 if (main) {
@@ -2174,7 +2174,7 @@ export default {
                     }
                     for (let l of findTag(ul, 'li')) {
                         const a = findTag(l, 'a')[0];
-                        let urlMatch = addPre(a.attribs.href, 'http://www.99kubo.com').match(/youtube\.php\?(.*)$/);
+                        let urlMatch = addPre(a.attribs.href, 'http://www.58b.tv').match(/youtube\.php\?(.*)$/);
                         if (urlMatch) {
                             listY.push({
                                 name: findTag(a)[0],
@@ -2182,7 +2182,7 @@ export default {
                             });
                         } else {
                             if (a.attribs.href.match(/vod\-play\-id\-/)) {
-                                flvUrl = addPre(a.attribs.href, 'http://www.99kubo.com');
+                                flvUrl = addPre(a.attribs.href, 'http://www.58b.tv');
                                 break;
                             }
                         }
@@ -2344,8 +2344,8 @@ export default {
                 });
             });
             case 'kubo':
-            url = `http://www.99kubo.com/vod-read-id-${id}.html`
-            return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+            url = `http://www.58b.tv/vod-read-id-${id}.html`
+            return Api('url', url, {referer: 'http://www.58b.tv/'}).then(raw_data => {
                 const vmain = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
                 const img = findTag(findTag(vmain, 'div', 'vpic')[0], 'img')[0];
                 const name = img.attribs.alt;
@@ -2548,7 +2548,7 @@ export const bilibiliVideoUrl = url => {
 export const kuboVideoUrl = (id, url, subIndex=1) => {
     console.log(url);
     if (id === 'kdy') {
-        return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+        return Api('url', url, {referer: 'http://www.58b.tv/'}).then(raw_data => {
             const iframes = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container')[0], 'div', 'youtube-player')[0], 'iframe');
             if (subIndex > iframes.length) {
                 subIndex = iframes.length;
@@ -2565,7 +2565,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             video: [],
             url: [url],
         });
-        /*return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+        /*return Api('url', url, {referer: 'http://www.58b.tv/'}).then(raw_data => {
             let ret_obj = {video: []};
             const script = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
             if (!script) {
@@ -2586,7 +2586,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
                 return ret_obj;
             } else {
                 return handleError(new HoError('cannot find videoData'));
-                return Api('url', `http://www.99tw.net/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+                return Api('url', `http://www.99tw.net/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.58b.tv/'}).then(raw_data => {
                     for (let i of findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')) {
                         const videoData = findTag(i)[0];
                         if (videoData) {
@@ -2615,8 +2615,8 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
             }
         });*/
     } else if (id === 'kyu') {
-        return Api('url', `http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
-            referer: 'http://forum.99kubo.com/',
+        return Api('url', `http://www.58b.tv/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
+            referer: 'http://www.58b.tv/',
             post: {url: new Buffer(url).toString('base64')},
         }).then(raw_data => {
             const json_data = getJson(raw_data);

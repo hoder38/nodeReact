@@ -238,10 +238,10 @@ router.get('/getSingle/:uid', function(req, res, next) {
         case 'kdy':
         idsub = id[2].match(/^(.*)_(\d+)$/);
         subIndex = Number(idsub[2]);
-        url = `http://www.99kubo.com/168player/youtube.php?${idsub[1]}`;
+        url = `http://www.58b.tv/168player/youtube.php?${idsub[1]}`;
         break;
         case 'kur':
-        url = `http://www.99kubo.com/${new Buffer(id[2], 'base64').toString()}`;
+        url = `http://www.58b.tv/${new Buffer(id[2], 'base64').toString()}`;
         break;
         case 'bil':
         idsub = id[2].match(/^([^_]+)_(\d+)$/);
@@ -505,7 +505,7 @@ router.post('/upload/url', function(req, res, next) {
                             url: url,
                         }]);
                     });
-                } else if (decodeUrl.match(/^(https|http):\/\/www\.99kubo\.com\//)) {
+                } else if (decodeUrl.match(/^(https|http):\/\/www\.58b\.tv\//)) {
                     return Mongo('find', STORAGEDB, {
                         owner: 'kubo',
                         url: encodeURIComponent(decodeUrl),

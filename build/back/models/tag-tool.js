@@ -653,7 +653,7 @@ function process(collection) {
             if (type) {
                 var order = sortName === 'mtime' ? 'vod_addtime' : 'vod_hits_month';
                 var sOrder = sortName === 'mtime' ? 1 : 2;
-                var url = searchWord ? 'http://www.99kubo.com/index.php?s=Vod-innersearch-q-' + encodeURIComponent(searchWord) + '-order-' + sOrder + '-page-' + page : 'http://www.99kubo.com/vod-search-id-' + type + '-cid--tag--area-' + country + '-tag--year-' + year + '-wd--actor--order-' + order + '%20desc-p-' + page + '.html';
+                var url = searchWord ? 'http://www.58b.tv/index.php?s=Vod-innersearch-q-' + encodeURIComponent(searchWord) + '-order-' + sOrder + '-page-' + page : 'http://www.58b.tv/vod-search-id-' + type + '-cid--tag--area-' + country + '-tag--year-' + year + '-wd--actor--order-' + order + '%20desc-p-' + page + '.html';
                 console.log(url);
                 return url;
             } else {

@@ -569,7 +569,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                 let playurl = null;
                 let playtype = null;
                 if (playlist === 3) {
-                    playurl = `http://www.99kubo.com/vod-read-id-${playlistId}.html`;
+                    playurl = `http://www.58b.tv/vod-read-id-${playlistId}.html`;
                     playtype = 'kubo';
                 } else if (playlist === 4) {
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;

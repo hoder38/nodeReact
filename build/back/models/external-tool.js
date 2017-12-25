@@ -528,7 +528,7 @@ exports.default = {
                     });
                 }
             case 'kubo':
-                return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.58b.tv/' }).then(function (raw_data) {
                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                     var main = (0, _utility.findTag)(body, 'div', 'main')[0];
                     if (main) {
@@ -3342,7 +3342,7 @@ exports.default = {
                                         var l = _step33.value;
 
                                         var a = (0, _utility.findTag)(l, 'a')[0];
-                                        var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.99kubo.com').match(/youtube\.php\?(.*)$/);
+                                        var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.58b.tv').match(/youtube\.php\?(.*)$/);
                                         if (urlMatch) {
                                             listY.push({
                                                 name: (0, _utility.findTag)(a)[0],
@@ -3350,7 +3350,7 @@ exports.default = {
                                             });
                                         } else {
                                             if (a.attribs.href.match(/vod\-play\-id\-/)) {
-                                                flvUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.99kubo.com');
+                                                flvUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.58b.tv');
                                                 break;
                                             }
                                         }
@@ -3565,8 +3565,8 @@ exports.default = {
                     });
                 });
             case 'kubo':
-                url = 'http://www.99kubo.com/vod-read-id-' + id + '.html';
-                return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+                url = 'http://www.58b.tv/vod-read-id-' + id + '.html';
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.58b.tv/' }).then(function (raw_data) {
                     var vmain = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
                     var img = (0, _utility.findTag)((0, _utility.findTag)(vmain, 'div', 'vpic')[0], 'img')[0];
                     var name = img.attribs.alt;
@@ -3769,7 +3769,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
 
     console.log(url);
     if (id === 'kdy') {
-        return (0, _apiTool2.default)('url', url, { referer: 'http://www.99kubo.com/' }).then(function (raw_data) {
+        return (0, _apiTool2.default)('url', url, { referer: 'http://www.58b.tv/' }).then(function (raw_data) {
             var iframes = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container')[0], 'div', 'youtube-player')[0], 'iframe');
             if (subIndex > iframes.length) {
                 subIndex = iframes.length;
@@ -3790,7 +3790,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             video: [],
             url: [url]
         });
-        /*return Api('url', url, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+        /*return Api('url', url, {referer: 'http://www.58b.tv/'}).then(raw_data => {
             let ret_obj = {video: []};
             const script = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')[0];
             if (!script) {
@@ -3811,7 +3811,7 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
                 return ret_obj;
             } else {
                 return handleError(new HoError('cannot find videoData'));
-                return Api('url', `http://www.99tw.net/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.99kubo.com/'}).then(raw_data => {
+                return Api('url', `http://www.99tw.net/redirect?id=${url.match(/\&kubovid\=(\d+)/)[1]}&pid=${subIndex}`, {referer: 'http://www.58b.tv/'}).then(raw_data => {
                     for (let i of findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'script')) {
                         const videoData = findTag(i)[0];
                         if (videoData) {
@@ -3840,8 +3840,8 @@ var kuboVideoUrl = exports.kuboVideoUrl = function kuboVideoUrl(id, url) {
             }
         });*/
     } else if (id === 'kyu') {
-        return (0, _apiTool2.default)('url', 'http://forum.99kubo.com/jx/show.php?playlist=1&fmt=1&rand=' + new Date().getTime(), {
-            referer: 'http://forum.99kubo.com/',
+        return (0, _apiTool2.default)('url', 'http://www.58b.tv/jx/show.php?playlist=1&fmt=1&rand=' + new Date().getTime(), {
+            referer: 'http://www.58b.tv/',
             post: { url: new Buffer(url).toString('base64') }
         }).then(function (raw_data) {
             var json_data = (0, _utility.getJson)(raw_data);
