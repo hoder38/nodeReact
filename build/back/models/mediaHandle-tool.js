@@ -122,6 +122,7 @@ exports.default = {
                     mediaTag.opt = mediaTag.opt.filter(function (i) {
                         return !items[0].tags.includes(i);
                     });
+                    console.log(DBdata);
                     var tagsAdd = mediaTag.def.length > 0 ? {
                         $set: DBdata,
                         $addToSet: (0, _defineProperty3.default)({
@@ -233,7 +234,7 @@ exports.default = {
                                 DBdata['status'] = 1;
                             }
                             mediaTag.def = mediaTag.def.concat(getTimeTag(DBdata['time'], mediaTag.opt));
-                            if (ret_mediaType) {
+                            if (ret_mediaType && first) {
                                 DBdata['mediaType'] = mediaType;
                             }
                         } else {
@@ -314,7 +315,7 @@ exports.default = {
                             if (first) {
                                 DBdata['status'] = 1;
                                 mediaTag = (0, _mime.extTag)(mediaType['type']);
-                                if (ret_mediaType) {
+                                if (ret_mediaType && first) {
                                     DBdata['mediaType'] = mediaType;
                                 }
                             } else {
@@ -325,7 +326,7 @@ exports.default = {
                             if (first || status === 2) {
                                 DBdata['status'] = 1;
                                 mediaTag = (0, _mime.extTag)(mediaType['type']);
-                                if (ret_mediaType) {
+                                if (ret_mediaType && first) {
                                     DBdata['mediaType'] = mediaType;
                                 }
                             } else {

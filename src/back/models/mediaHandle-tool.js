@@ -47,6 +47,7 @@ export default {
                 }, newName, items[0].name, items[0].status).then(([mediaType, mediaTag, DBdata]) => {
                     mediaTag.def = mediaTag.def.filter(i => !items[0].tags.includes(i));
                     mediaTag.opt = mediaTag.opt.filter(i => !items[0].tags.includes(i));
+                    console.log(DBdata);
                     const tagsAdd = (mediaTag.def.length > 0) ? {
                         $set: DBdata,
                         $addToSet: {
@@ -152,7 +153,7 @@ export default {
                             DBdata['status'] = 1;
                         }
                         mediaTag.def = mediaTag.def.concat(getTimeTag(DBdata['time'], mediaTag.opt));
-                        if (ret_mediaType) {
+                        if (ret_mediaType && first) {
                             DBdata['mediaType'] = mediaType;
                         }
                     } else {
@@ -201,7 +202,7 @@ export default {
                     if (first) {
                         DBdata['status'] = 1;
                         mediaTag = extTag(mediaType['type']);
-                        if (ret_mediaType) {
+                        if (ret_mediaType && first) {
                             DBdata['mediaType'] = mediaType;
                         }
                     } else {
@@ -212,7 +213,7 @@ export default {
                     if (first || status === 2) {
                         DBdata['status'] = 1;
                         mediaTag = extTag(mediaType['type']);
-                        if (ret_mediaType) {
+                        if (ret_mediaType && first) {
                             DBdata['mediaType'] = mediaType;
                         }
                     } else {
