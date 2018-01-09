@@ -124,10 +124,10 @@ const MediaWidget = React.createClass({
                             }
                         }
                         break
-                        case 90:
+                        case 188:
                         this._backward();
                         break;
-                        case 88:
+                        case 190:
                         this._forward();
                         break;
                     }
@@ -171,10 +171,10 @@ const MediaWidget = React.createClass({
                 }
                 this._audio.onkeydown = e => {
                     switch(e.keyCode) {
-                        case 90:
+                        case 188:
                         this._backward();
                         break;
-                        case 88:
+                        case 190:
                         this._forward();
                         break;
                     }
