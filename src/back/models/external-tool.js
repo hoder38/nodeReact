@@ -555,9 +555,12 @@ export default {
                             }
                         });
                         findTag(div, 'div', 'osl').forEach(o => findTag(o, 'a').forEach(s => tags.add(normalize(findTag(s)[0]))));
-                        const matchDate = findTag(findTag(span, 'cite')[0])[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
-                        if (matchDate) {
-                            date = `${matchDate[1]}-${matchDate[2]}-${matchDate[3]}`;
+                        const cite = findTag(span, 'cite')[0];
+                        if (cite) {
+                            const matchDate = findTag(cite)[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                            if (matchDate) {
+                                date = `${matchDate[1]}-${matchDate[2]}-${matchDate[3]}`;
+                            }
                         }
                         return {
                             id: a.attribs.href.match(/\d+/)[0],

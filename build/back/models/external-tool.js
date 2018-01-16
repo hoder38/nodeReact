@@ -695,9 +695,12 @@ exports.default = {
                                     return tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
                                 });
                             });
-                            var matchDate = (0, _utility.findTag)((0, _utility.findTag)(span, 'cite')[0])[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
-                            if (matchDate) {
-                                date = matchDate[1] + '-' + matchDate[2] + '-' + matchDate[3];
+                            var cite = (0, _utility.findTag)(span, 'cite')[0];
+                            if (cite) {
+                                var matchDate = (0, _utility.findTag)(cite)[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                                if (matchDate) {
+                                    date = matchDate[1] + '-' + matchDate[2] + '-' + matchDate[3];
+                                }
                             }
                             return {
                                 id: a.attribs.href.match(/\d+/)[0],
