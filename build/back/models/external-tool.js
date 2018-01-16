@@ -691,8 +691,18 @@ exports.default = {
                                 }
                             });
                             (0, _utility.findTag)(div, 'div', 'osl').forEach(function (o) {
-                                return (0, _utility.findTag)(o, 'a').forEach(function (s) {
-                                    return tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
+                                var ot = (0, _utility.findTag)(o)[0];
+                                if (ot) {
+                                    var matcho = ot.match(/别名:(.*)/);
+                                    if (matcho) {
+                                        tags.add((0, _tagTool.normalize)(matcho[1]));
+                                    }
+                                }
+                                (0, _utility.findTag)(o, 'a').forEach(function (s) {
+                                    var st = (0, _utility.findTag)(s)[0];
+                                    if (st) {
+                                        tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
+                                    }
                                 });
                             });
                             var cite = (0, _utility.findTag)(span, 'cite')[0];

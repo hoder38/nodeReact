@@ -554,7 +554,21 @@ export default {
                                 tags.add(normalize(findTag(s)[0]));
                             }
                         });
-                        findTag(div, 'div', 'osl').forEach(o => findTag(o, 'a').forEach(s => tags.add(normalize(findTag(s)[0]))));
+                        findTag(div, 'div', 'osl').forEach(o => {
+                            const ot = findTag(o)[0];
+                            if (ot) {
+                                const matcho = ot.match(/别名:(.*)/);
+                                if (matcho) {
+                                    tags.add(normalize(matcho[1]));
+                                }
+                            }
+                            findTag(o, 'a').forEach(s => {
+                                const st = findTag(s)[0];
+                                if (st) {
+                                    tags.add(normalize(findTag(s)[0]));
+                                }
+                            });
+                        });
                         const cite = findTag(span, 'cite')[0];
                         if (cite) {
                             const matchDate = findTag(cite)[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
