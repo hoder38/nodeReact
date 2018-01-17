@@ -1539,12 +1539,14 @@ export function isDefaultTag(tag) {
     if (ret.index !== -1) {
         return ret
     } else {
-        if (tag.match(/^y(ou|ch|pl)_([a-zA-z\d\-\_]+)/)) {
-            ret.index = 30
+        ret = tag.match(/^y(ou|ch|pl)_([a-zA-z\d\-\_]+)/);
+        if (ret) {
+            ret.index = 30;
             return ret
         }
-        if (tag.match(/^(profit|safety|manag|)>(-?\d+)$/)) {
-            ret.index = 31
+        ret = tag.match(/^(profit|safety|manag|)>(-?\d+)$/);
+        if (ret) {
+            ret.index = 31;
             return ret
         }
     }
