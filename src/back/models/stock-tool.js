@@ -2438,7 +2438,7 @@ export default {
                                         }
                                         break;
                                     }
-                                    if (cashStatus[earliestYear].length === 0) {
+                                    if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
                                         console.log('stock finance data not exist');
                                         return false;
                                     }
