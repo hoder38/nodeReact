@@ -69,10 +69,18 @@ var _utility = require('../util/utility');
 
 var _mime = require('../util/mime');
 
+var _sendWs = require('../util/sendWs');
+
+var _sendWs2 = _interopRequireDefault(_sendWs);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var StockTagTool = (0, _tagTool2.default)(_constants.STOCKDB);
 var Xmlparser = new _xml2js2.default.Parser();
+
+var stockFiltering = false;
+var stockIntervaling = false;
+var stockPredicting = false;
 
 var show = function show(first, second) {
     var b = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 2;
@@ -2564,7 +2572,7 @@ exports.default = {
                                                 }
                                                 break;
                                             }
-                                            if (cashStatus[earliestYear].length === 0) {
+                                            if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
                                                 console.log('stock finance data not exist');
                                                 return {
                                                     v: false
@@ -2776,31 +2784,60 @@ exports.default = {
             if (items.length < 1) {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
-            switch (items[0].type) {
-                case 'twse':
-                    return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=' + items[0].index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=' + items[0].index).then(function (raw_data) {
-                        var dividends = 0;
-                        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
-                        if (!table) {
-                            return (0, _utility.handleError)(new _utility.HoError('查詢過於頻繁,請稍後再試!!'));
-                        }
-                        (0, _utility.findTag)((0, _utility.findTag)(table, 'tr', 'odd')[0], 'td').forEach(function (d) {
-                            var t = (0, _utility.findTag)(d)[0];
-                            if (t) {
-                                var dMatch = t.match(/^\d+\.\d+/);
-                                if (dMatch) {
-                                    dividends += Number(dMatch[0]);
+
+            var _ret4 = function () {
+                switch (items[0].type) {
+                    case 'twse':
+                        var getTable = function getTable(index) {
+                            return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=' + items[0].index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=' + items[0].index).then(function (raw_data) {
+                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
+                                if (!table) {
+                                    return (0, _utility.handleError)(new _utility.HoError('heavy query'));
                                 }
-                            }
-                        });
-                        console.log(dividends);
-                        return getStockPrice(items[0].type, items[0].index).then(function (price) {
-                            return dividends > 0 ? Math.ceil(price / dividends * 1000) / 1000 : 0;
-                        });
-                    });
-                default:
-                    return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
-            }
+                                return table;
+                            }).catch(function (err) {
+                                if (err.name === 'HoError' && err.message === 'heavy query') {
+                                    console.log(index);
+                                    (0, _utility.handleError)(err, 'Stock yield');
+                                    if (index > _constants.MAX_RETRY) {
+                                        return (0, _utility.handleError)(new _utility.HoError('twse yield fail'));
+                                    }
+                                    return new _promise2.default(function (resolve, reject) {
+                                        return setTimeout(function () {
+                                            return resolve(getTable(index + 1));
+                                        }, 60000);
+                                    });
+                                } else {
+                                    return (0, _utility.handleError)(err);
+                                }
+                            });
+                        };
+                        return {
+                            v: getTable(0).then(function (table) {
+                                var dividends = 0;
+                                (0, _utility.findTag)((0, _utility.findTag)(table, 'tr', 'odd')[0], 'td').forEach(function (d) {
+                                    var t = (0, _utility.findTag)(d)[0];
+                                    if (t) {
+                                        var dMatch = t.match(/^\d+\.\d+/);
+                                        if (dMatch) {
+                                            dividends += Number(dMatch[0]);
+                                        }
+                                    }
+                                });
+                                console.log(dividends);
+                                return getStockPrice(items[0].type, items[0].index).then(function (price) {
+                                    return dividends > 0 ? Math.ceil(price / dividends * 1000) / 1000 : 0;
+                                });
+                            })
+                        };
+                    default:
+                        return {
+                            v: (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'))
+                        };
+                }
+            }();
+
+            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -2924,58 +2961,86 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
-                                    if (raw_data.length > 500) {
-                                        if (!start_month) {
-                                            start_month = '' + (year + 1911) + month_str;
-                                        }
-                                        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
-                                        if (!table) {
-                                            return (0, _utility.handleError)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
-                                        }
-                                        (0, _utility.findTag)(table, 'tr').forEach(function (t) {
-                                            var th = (0, _utility.findTag)(t, 'th')[0];
-                                            var td = (0, _utility.findTag)(t, 'td');
-                                            var text = th && td[0] ? (0, _utility.findTag)(th)[0] : td[0] ? (0, _utility.findTag)(td[0])[0] : '';
-                                            var number = th && td[0] ? (0, _utility.findTag)(td[0])[0] : td[0] ? (0, _utility.findTag)(td[1])[0] : '';
-                                            switch (text) {
-                                                case '本月':
-                                                    sales_num.push(Number(number.match(/[0-9,]+/)[0].replace(/,/g, '')));
-                                                    break;
-                                                case '去年同期':
-                                                    sales_pre.push(Number(number.match(/[0-9,]+/)[0].replace(/,/g, '')));
-                                                    break;
-                                                case '增減百分比':
-                                                    sales_per.push(Number(number.match(/-?[0-9\.]+/)[0]));
-                                                    break;
+                                var _ret5 = function () {
+                                    var getTable = function getTable(tIndex) {
+                                        return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
+                                            if (raw_data.length > 500) {
+                                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
+                                                if (!table) {
+                                                    return (0, _utility.handleError)(new _utility.HoError('heavy query'));
+                                                }
+                                                return table;
+                                            } else if (raw_data.length > 400) {
+                                                console.log(raw_data);
+                                                /*if (sales_data) {
+                                                    Redis('hmset', `sales: ${items[0].type}${items[0].index}`, {
+                                                        raw_list: JSON.stringify(sales_data),
+                                                        ret_obj,
+                                                        etime,
+                                                    }).catch(err => handleError(err, 'Redis'));
+                                                }*/
+                                                return (0, _utility.handleError)(new _utility.HoError('heavy query'));
+                                            } else {
+                                                return false;
+                                            }
+                                        }).catch(function (err) {
+                                            if (err.name === 'HoError' && err.message === 'heavy query') {
+                                                console.log(tIndex);
+                                                (0, _utility.handleError)(err, 'Stock predict');
+                                                if (tIndex > _constants.MAX_RETRY) {
+                                                    return (0, _utility.handleError)(new _utility.HoError('twse predict fail'));
+                                                }
+                                                return new _promise2.default(function (resolve, reject) {
+                                                    return setTimeout(function () {
+                                                        return resolve(getTable(tIndex + 1));
+                                                    }, 60000);
+                                                });
+                                            } else {
+                                                return (0, _utility.handleError)(err);
                                             }
                                         });
-                                        if (!sales_data) {
-                                            sales_data = {};
-                                        }
-                                        if (!sales_data[year]) {
-                                            sales_data[year] = {};
-                                        }
-                                        sales_data[year][month_str] = {
-                                            num: sales_num[sales_num.length - 1],
-                                            per: sales_per[sales_per.length - 1],
-                                            pre: sales_pre[sales_pre.length - 1]
-                                        };
-                                    } else if (raw_data.length > 400) {
-                                        console.log(raw_data);
-                                        if (sales_data) {
-                                            (0, _redisTool2.default)('hmset', 'sales: ' + items[0].type + items[0].index, {
-                                                raw_list: (0, _stringify2.default)(sales_data),
-                                                ret_obj: ret_obj,
-                                                etime: etime
-                                            }).catch(function (err) {
-                                                return (0, _utility.handleError)(err, 'Redis');
-                                            });
-                                        }
-                                        return (0, _utility.handleError)(new _utility.HoError('' + items[0].type + items[0].index + ' \u7A0D\u5F8C\u518D\u67E5\u8A62!!'));
-                                    }
-                                    return rest_predict(index);
-                                });
+                                    };
+                                    return {
+                                        v: getTable(0).then(function (table) {
+                                            if (table) {
+                                                if (!start_month) {
+                                                    start_month = '' + (year + 1911) + month_str;
+                                                }
+                                                (0, _utility.findTag)(table, 'tr').forEach(function (t) {
+                                                    var th = (0, _utility.findTag)(t, 'th')[0];
+                                                    var td = (0, _utility.findTag)(t, 'td');
+                                                    var text = th && td[0] ? (0, _utility.findTag)(th)[0] : td[0] ? (0, _utility.findTag)(td[0])[0] : '';
+                                                    var number = th && td[0] ? (0, _utility.findTag)(td[0])[0] : td[0] ? (0, _utility.findTag)(td[1])[0] : '';
+                                                    switch (text) {
+                                                        case '本月':
+                                                            sales_num.push(Number(number.match(/[0-9,]+/)[0].replace(/,/g, '')));
+                                                            break;
+                                                        case '去年同期':
+                                                            sales_pre.push(Number(number.match(/[0-9,]+/)[0].replace(/,/g, '')));
+                                                            break;
+                                                        case '增減百分比':
+                                                            sales_per.push(Number(number.match(/-?[0-9\.]+/)[0]));
+                                                            break;
+                                                    }
+                                                });
+                                                if (!sales_data) {
+                                                    sales_data = {};
+                                                }
+                                                if (!sales_data[year]) {
+                                                    sales_data[year] = {};
+                                                }
+                                                sales_data[year][month_str] = {
+                                                    num: sales_num[sales_num.length - 1],
+                                                    per: sales_per[sales_per.length - 1],
+                                                    pre: sales_pre[sales_pre.length - 1]
+                                                };
+                                            }
+                                            return rest_predict(index);
+                                        })
+                                    };
+                                }();
+
+                                if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -3001,6 +3066,23 @@ exports.default = {
                 default:
                     return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
             }
+        });
+    },
+    getPredictPERWarp: function getPredictPERWarp(id, session) {
+        if (stockPredicting) {
+            return (0, _utility.handleError)(new _utility.HoError('there is another predict running'));
+        }
+        stockPredicting = true;
+        return this.getPredictPER(id, session).then(function (_ref7) {
+            var _ref8 = (0, _slicedToArray3.default)(_ref7, 2),
+                result = _ref8[0],
+                index = _ref8[1];
+
+            stockPredicting = false;
+            return [result, index];
+        }).catch(function (err) {
+            stockPredicting = false;
+            return (0, _utility.handleError)(err);
         });
     },
     getStockPoint: function getStockPoint(id, price, session) {
@@ -3056,11 +3138,11 @@ exports.default = {
                             return item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
                         };
                         return getInit();
-                    }).then(function (_ref7) {
-                        var _ref8 = (0, _slicedToArray3.default)(_ref7, 3),
-                            raw_list = _ref8[0],
-                            ret_obj = _ref8[1],
-                            etime = _ref8[2];
+                    }).then(function (_ref9) {
+                        var _ref10 = (0, _slicedToArray3.default)(_ref9, 3),
+                            raw_list = _ref10[0],
+                            ret_obj = _ref10[1],
+                            etime = _ref10[2];
 
                         var interval_data = null;
                         var start_month = '';
@@ -3383,15 +3465,15 @@ exports.default = {
                                     return getTwseList();
                                 } else {
                                     var getType = function getType() {
-                                        return getTpexList().then(function (_ref9) {
-                                            var _ref10 = (0, _slicedToArray3.default)(_ref9, 2),
-                                                type = _ref10[0],
-                                                list = _ref10[1];
+                                        return getTpexList().then(function (_ref11) {
+                                            var _ref12 = (0, _slicedToArray3.default)(_ref11, 2),
+                                                type = _ref12[0],
+                                                list = _ref12[1];
 
-                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref11) {
-                                                var _ref12 = (0, _slicedToArray3.default)(_ref11, 2),
-                                                    type = _ref12[0],
-                                                    list = _ref12[1];
+                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref13) {
+                                                var _ref14 = (0, _slicedToArray3.default)(_ref13, 2),
+                                                    type = _ref14[0],
+                                                    list = _ref14[1];
 
                                                 return list.high.length > 0 ? [type, list] : [1, list];
                                             });
@@ -3421,11 +3503,11 @@ exports.default = {
                                 };
                                 return rest_interval(type, index);
                             } else {
-                                return getList().then(function (_ref13) {
-                                    var _ref14 = (0, _slicedToArray3.default)(_ref13, 3),
-                                        type = _ref14[0],
-                                        list = _ref14[1],
-                                        is_stop = _ref14[2];
+                                return getList().then(function (_ref15) {
+                                    var _ref16 = (0, _slicedToArray3.default)(_ref15, 3),
+                                        type = _ref16[0],
+                                        list = _ref16[1],
+                                        is_stop = _ref16[2];
 
                                     if (list.high.length > 0) {
                                         if (!start_month) {
@@ -3473,10 +3555,10 @@ exports.default = {
                         var exGet = function exGet() {
                             return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
                         };
-                        return exGet().then(function (_ref15) {
-                            var _ref16 = (0, _slicedToArray3.default)(_ref15, 2),
-                                raw_list = _ref16[0],
-                                ret_obj = _ref16[1];
+                        return exGet().then(function (_ref17) {
+                            var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
+                                raw_list = _ref18[0],
+                                ret_obj = _ref18[1];
 
                             if (raw_list) {
                                 (0, _redisTool2.default)('hmset', 'interval: ' + items[0].type + items[0].index, {
@@ -3494,6 +3576,237 @@ exports.default = {
                     return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
             }
         });
+    },
+    getIntervalWarp: function getIntervalWarp(id, session) {
+        if (stockIntervaling) {
+            return (0, _utility.handleError)(new _utility.HoError('there is another inverval running'));
+        }
+        stockIntervaling = true;
+        return this.getInterval(id, session).then(function (_ref19) {
+            var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
+                result = _ref20[0],
+                index = _ref20[1];
+
+            stockIntervaling = false;
+            return [result, index];
+        }).catch(function (err) {
+            stockIntervaling = false;
+            return (0, _utility.handleError)(err);
+        });
+    },
+    stockFilter: function stockFilter() {
+        var option = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        var _this = this;
+
+        var user = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { _id: '000000000000000000000000' };
+        var session = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        var web = option ? true : false;
+        if (!option) {
+            option = _constants.STOCK_FILTER;
+        }
+        var last = false;
+        var queried = 0;
+        var filterList = [];
+        var recur_query = function recur_query() {
+            return StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, _constants.STOCK_FILTER_LIMIT).then(function (result) {
+                console.log(queried);
+                if (result.items.length < _constants.STOCK_FILTER_LIMIT) {
+                    last = true;
+                }
+                queried += result.items.length;
+                if (result.items.length < 1) {
+                    return filterList;
+                }
+                var first_stage = [];
+                result.items.forEach(function (i) {
+                    var pok = option.pp ? option.pp[1] === '>' && i.profitIndex > option.pp[2] || option.pp[1] === '<' && i.profitIndex < option.pp[2] ? true : false : true;
+                    var sok = option.ss ? option.ss[1] === '>' && i.safetyIndex > option.ss[2] || option.ss[1] === '<' && i.safetyIndex < option.ss[2] ? true : false : true;
+                    var mok = option.mm ? option.mm[1] === '>' && i.managementIndex > option.mm[2] || option.mm[1] === '<' && i.managementIndex < option.mm[2] ? true : false : true;
+                    if (pok && sok && mok) {
+                        first_stage.push(i);
+                    }
+                });
+                if (first_stage.length < 1) {
+                    return filterList;
+                }
+                var recur_per = function recur_per(index) {
+                    var nextFilter = function nextFilter() {
+                        index++;
+                        if (index < first_stage.length) {
+                            return recur_per(index);
+                        }
+                        if (!last) {
+                            return recur_query();
+                        }
+                        return filterList;
+                    };
+                    var addFilter = function addFilter() {
+                        filterList.push(first_stage[index]);
+                        if (filterList.length >= _constants.STOCK_FILTER_LIMIT) {
+                            return filterList;
+                        }
+                        return nextFilter();
+                    };
+                    if (option.per) {
+                        return _this.getStockPER(first_stage[index]._id).then(function (_ref21) {
+                            var _ref22 = (0, _slicedToArray3.default)(_ref21, 1),
+                                stockPer = _ref22[0];
+
+                            if (option.per && stockPer > 0 && (option.per[1] === '>' && stockPer > option.per[2] * 2 / 3 || option.per[1] === '<' && stockPer < option.per[2] * 4 / 3)) {
+                                console.log(stockPer);
+                                console.log(first_stage[index].name);
+                                if (option.yieldNumber) {
+                                    return _this.getStockYield(first_stage[index]._id).then(function (stockYield) {
+                                        if (option.yieldNumber && stockYield > 0 && (option.yieldNumber[1] === '>' && stockYield > option.yieldNumber[2] * 2 / 3 || option.yieldNumber[1] === '<' && stockYield < option.yieldNumber[2] * 4 / 3)) {
+                                            console.log(stockYield);
+                                            return addFilter();
+                                        } else {
+                                            return nextFilter();
+                                        }
+                                    });
+                                } else {
+                                    return addFilter();
+                                }
+                            } else {
+                                return nextFilter();
+                            }
+                        }).catch(function (err) {
+                            if (web) {
+                                (0, _sendWs2.default)({
+                                    type: user.username,
+                                    data: 'Filter ' + option.name + ': ' + first_stage[index].index + ' Error'
+                                }, 0);
+                            }
+                            (0, _utility.handleError)(err, 'Stock filter');
+                            return nextFilter();
+                        });
+                    } else if (option.yieldNumber) {
+                        return _this.getStockYield(first_stage[index]._id).then(function (stockYield) {
+                            if (option.yieldNumber && stockYield > 0 && (option.yieldNumber[1] === '>' && stockYield > option.yieldNumber[2] * 2 / 3 || option.yieldNumber[1] === '<' && stockYield < option.yieldNumber[2] * 4 / 3)) {
+                                console.log(stockYield);
+                                console.log(first_stage[index].name);
+                                return addFilter();
+                            } else {
+                                return nextFilter();
+                            }
+                        }).catch(function (err) {
+                            if (web) {
+                                (0, _sendWs2.default)({
+                                    type: user.username,
+                                    data: 'Filter ' + option.name + ': ' + first_stage[index].index + ' Error'
+                                }, 0);
+                            }
+                            (0, _utility.handleError)(err, 'Stock filter');
+                            return nextFilter();
+                        });
+                    } else {
+                        return addFilter();
+                    }
+                };
+                return recur_per(0);
+            });
+        };
+        return recur_query().then(function (filterList) {
+            var filterList1 = [];
+            var stage2 = function stage2(pIndex) {
+                return pIndex < filterList.length ? _this.getPredictPERWarp(filterList[pIndex]._id, session).then(function (_ref23) {
+                    var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
+                        result = _ref24[0],
+                        index = _ref24[1];
+
+                    console.log(filterList[pIndex].name);
+                    console.log(result);
+                    var predictVal = result.match(/^-?\d+.?\d+/);
+                    if (predictVal && option.pre[1] === '>' && predictVal[0] > option.pre[2] || option.pre[1] === '<' && predictVal[0] < option.pre[2]) {
+                        filterList1.push(filterList[pIndex]);
+                    }
+                }).catch(function (err) {
+                    if (web) {
+                        (0, _sendWs2.default)({
+                            type: user.username,
+                            data: 'Filter ' + option.name + ': ' + filterList[pIndex].index + ' Error'
+                        }, 0);
+                    }
+                    (0, _utility.handleError)(err, 'Stock filter');
+                }).then(function () {
+                    return stage2(pIndex + 1);
+                }) : _promise2.default.resolve();
+            };
+            console.log('stage two');
+            return option.pre ? stage2(0).then(function () {
+                return filterList1;
+            }) : filterList;
+        }).then(function (filterList) {
+            var filterList1 = [];
+            var stage3 = function stage3(iIndex) {
+                return iIndex < filterList.length ? _this.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref25) {
+                    var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
+                        result = _ref26[0],
+                        index = _ref26[1];
+
+                    console.log(filterList[iIndex].name);
+                    console.log(result);
+                    var intervalVal = result.match(/\d+$/);
+                    if (intervalVal && option.interval[1] === '>' && intervalVal[0] > option.interval[2] || option.interval[1] === '<' && intervalVal[0] < option.interval[2]) {
+                        filterList1.push(filterList[iIndex]);
+                    }
+                }).catch(function (err) {
+                    if (web) {
+                        (0, _sendWs2.default)({
+                            type: user.username,
+                            data: 'Filter ' + option.name + ': ' + filterList[iIndex].index + ' Error'
+                        }, 0);
+                    }
+                    (0, _utility.handleError)(err, 'Stock filter');
+                }).then(function () {
+                    return stage3(iIndex + 1);
+                }) : _promise2.default.resolve();
+            };
+            console.log('stage three');
+            return option.interval ? stage3(0).then(function () {
+                return filterList1;
+            }) : filterList;
+        }).then(function (filterList) {
+            var addFilter = function addFilter(index) {
+                return index < filterList.length ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(function (add_result) {
+                    (0, _sendWs2.default)({
+                        type: 'stock',
+                        data: add_result.id
+                    }, 0, 1);
+                }).catch(function (err) {
+                    if (web) {
+                        (0, _sendWs2.default)({
+                            type: user.username,
+                            data: 'Filter ' + option.name + ': ' + filterList[iIndex].index + ' Error'
+                        }, 0);
+                    }
+                    (0, _utility.handleError)(err, 'Stock filter');
+                }).then(function () {
+                    return addFilter(index + 1);
+                }) : _promise2.default.resolve(filterList.length);
+            };
+            return addFilter(0);
+        });
+    },
+    stockFilterWarp: function stockFilterWarp() {
+        var option = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+        var user = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { _id: '000000000000000000000000' };
+        var session = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        if (stockFiltering) {
+            return (0, _utility.handleError)(new _utility.HoError('there is another filter running'));
+        }
+        stockFiltering = true;
+        return this.stockFilter(option, user, session).then(function (number) {
+            stockFiltering = false;
+            console.log('End: ' + number);
+            return number;
+        }).catch(function (err) {
+            stockFiltering = false;
+            return (0, _utility.handleError)(err);
+        });
     }
 };
 
@@ -3502,7 +3815,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret4 = function () {
+    var _ret6 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -3534,7 +3847,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -3597,7 +3910,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret5 = function () {
+            var _ret7 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -3644,7 +3957,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+            if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
         } else {
             cYear--;
             if (cYear > year - 5) {

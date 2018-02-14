@@ -793,3 +793,16 @@ export const RANDOM_EMAIL = [
         mail: 'f0955398009@gmail.com',
     },
 ];
+
+export const STOCK_FILTER = {
+    name: '檢驗',//changing to filter after fixed to reading DB
+    sortName: 'name',
+    sortType: 'desc',
+    per: [1, '<', 15],
+    yieldNumber: [1, '<', 50],
+    pp: [1, '>', 100],
+    ss: [1, '>', -500],
+    mm: [1, '>', 3],
+    pre: [1, '>', 10],
+    interval: [1, '>', 700],
+}

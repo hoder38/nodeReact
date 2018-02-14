@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE } from '../config'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER } from '../config'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockList, getSingleAnnual } from '../models/stock-tool.js'
@@ -158,6 +158,19 @@ export const updateStock = () => {
             }));
             return parseStockList().catch(err => handleError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), STOCK_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 20000)).then(() => loopUpdateStock());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
+    }
+}
+export const filterStock = () => {
+    //get db
+    if (STOCK_FILTER(ENV_TYPE)) {
+        const loopStockFilter = () => {
+            console.log('loopStockFilter');
+            console.log(new Date());
+            const sd = new Date();
+            const sdf = () => (sd.getDay() === 5 && sd.getHours() === 23) ? StockTool.stockFilterWarp() : Promise.resolve();
+            return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
     }
 }

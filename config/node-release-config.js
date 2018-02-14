@@ -30,6 +30,7 @@ exports.default = {
     UPDATE_STOCK: true,
     UPDATE_EXTERNAL: true,
     CHECK_MEDIA: true,
+    STOCK_FILTER: true,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,

@@ -44,8 +44,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var router = _express2.default.Router();
 var StockTagTool = (0, _tagTool2.default)(_constants.STOCKDB);
-var stockFiltering = false;
-var stockIntervaling = false;
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function (req, res, next) {
     console.log('stock');
@@ -200,7 +198,7 @@ router.get('/getPredictPER/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getPredictPER(id, req.session).then(function (_ref3) {
+    _stockTool2.default.getPredictPERWarp(id, req.session).then(function (_ref3) {
         var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
             result = _ref4[0],
             index = _ref4[1];
@@ -237,19 +235,13 @@ router.get('/getInterval/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    if (stockIntervaling) {
-        return (0, _utility.handleError)(new _utility.HoError('there is another inverval running'), next);
-    }
-    stockIntervaling = true;
-    _stockTool2.default.getInterval(id, req.session).then(function (_ref5) {
+    _stockTool2.default.getIntervalWarp(id, req.session).then(function (_ref5) {
         var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
             result = _ref6[0],
             index = _ref6[1];
 
-        stockIntervaling = false;
-        res.json({ interval: index + ': ' + result });
+        return res.json({ interval: index + ': ' + result });
     }).catch(function (err) {
-        stockIntervaling = false;
         return (0, _utility.handleError)(err, next);
     });
 });
@@ -300,130 +292,45 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         mm[2] = Number(mm[2]);
     }
-    if (stockFiltering) {
-        return (0, _utility.handleError)(new _utility.HoError('there is another filter running'), next);
+    var pre = false;
+    if (req.body.pre) {
+        pre = req.body.pre.match(/^([<>])(\d+)$/);
+        if (!pre) {
+            return (0, _utility.handleError)(new _utility.HoError('pre is not vaild'), next);
+        }
+        pre[2] = Number(pre[2]);
     }
-    stockFiltering = true;
-    var first = true;
-    var last = false;
-    var queried = 0;
-    var filterNum = 0;
-    var recur_query = function recur_query() {
-        return StockTagTool.tagQuery(queried, '', false, 0, req.params.sortName, req.params.sortType, req.user, req.session, _constants.STOCK_FILTER_LIMIT).then(function (result) {
-            console.log(queried);
-            if (first) {
-                res.json({ apiOK: true });
-            }
-            if (result.items.length < _constants.STOCK_FILTER_LIMIT) {
-                last = true;
-            }
-            queried += result.items.length;
-            first = false;
-            if (result.items.length < 1) {
-                stockFiltering = false;
-                return (0, _sendWs2.default)({
-                    type: req.user.username,
-                    data: 'Filter ' + name + ': ' + filterNum
-                }, 0);
-            }
-            var first_stage = [];
-            result.items.forEach(function (i) {
-                var is_name = i.tags.includes(name) ? true : false;
-                var pok = pp ? pp[1] === '>' && i.profitIndex > pp[2] || pp[1] === '<' && i.profitIndex < pp[2] ? true : false : true;
-                var sok = ss ? ss[1] === '>' && i.safetyIndex > ss[2] || ss[1] === '<' && i.safetyIndex < ss[2] ? true : false : true;
-                var mok = mm ? mm[1] === '>' && i.managementIndex > mm[2] || mm[1] === '<' && i.managementIndex < mm[2] ? true : false : true;
-                if (is_name) {
-                    filterNum++;
-                } else if (!is_name && pok && sok && mok) {
-                    first_stage.push(i);
-                }
-            });
-            if (first_stage.length < 1) {
-                stockFiltering = false;
-                return (0, _sendWs2.default)({ type: req.user.username,
-                    data: 'Filter ' + name + ': ' + filterNum
-                }, 0);
-            }
-            var recur_per = function recur_per(index) {
-                var nextFilter = function nextFilter() {
-                    index++;
-                    if (index < first_stage.length) {
-                        return recur_per(index);
-                    }
-                    if (!last) {
-                        return recur_query();
-                    }
-                    stockFiltering = false;
-                    return (0, _sendWs2.default)({
-                        type: req.user.username,
-                        data: 'Filter ' + name + ': ' + filterNum
-                    }, 0);
-                };
-                var addFilter = function addFilter() {
-                    return StockTagTool.addTag(first_stage[index]._id, name, req.user).then(function (add_result) {
-                        filterNum++;
-                        (0, _sendWs2.default)({
-                            type: 'stock',
-                            data: add_result.id
-                        }, 0, 1);
-                        if (filterNum >= _constants.STOCK_FILTER_LIMIT) {
-                            stockFiltering = false;
-                            return (0, _sendWs2.default)({
-                                type: req.user.username,
-                                data: 'Filter ' + name + ': ' + filterNum
-                            }, 0);
-                        }
-                        return nextFilter();
-                    });
-                };
-                if (per) {
-                    return _stockTool2.default.getStockPER(first_stage[index]._id).then(function (_ref7) {
-                        var _ref8 = (0, _slicedToArray3.default)(_ref7, 1),
-                            stockPer = _ref8[0];
-
-                        if (per && stockPer > 0 && (per[1] === '>' && stockPer > per[2] * 2 / 3 || per[1] === '<' && stockPer < per[2] * 4 / 3)) {
-                            console.log(stockPer);
-                            console.log(first_stage[index].name);
-                            if (yieldNumber) {
-                                return _stockTool2.default.getStockYield(first_stage[index]._id).then(function (stockYield) {
-                                    if (yieldNumber && stockYield > 0 && (yieldNumber[1] === '>' && stockYield > yieldNumber[2] * 2 / 3 || yieldNumber[1] === '<' && stockYield < yieldNumber[2] * 4 / 3)) {
-                                        console.log(stockYield);
-                                        return addFilter();
-                                    } else {
-                                        return nextFilter();
-                                    }
-                                });
-                            } else {
-                                return addFilter();
-                            }
-                        } else {
-                            return nextFilter();
-                        }
-                    });
-                } else if (yieldNumber) {
-                    return _stockTool2.default.getStockYield(first_stage[index]._id).then(function (stockYield) {
-                        if (yieldNumber && stockYield > 0 && (yieldNumber[1] === '>' && stockYield > yieldNumber[2] * 2 / 3 || yieldNumber[1] === '<' && stockYield < yieldNumber[2] * 4 / 3)) {
-                            console.log(stockYield);
-                            console.log(first_stage[index].name);
-                            return addFilter();
-                        } else {
-                            return nextFilter();
-                        }
-                    });
-                } else {
-                    return addFilter();
-                }
-            };
-            return recur_per(0);
-        });
-    };
-    return recur_query().catch(function (err) {
-        stockFiltering = false;
+    var interval = false;
+    if (req.body.interval) {
+        interval = req.body.interval.match(/^([<>])(\d+)$/);
+        if (!interval) {
+            return (0, _utility.handleError)(new _utility.HoError('interval is not vaild'), next);
+        }
+        interval[2] = Number(interval[2]);
+    }
+    res.json({ apiOK: true });
+    _stockTool2.default.stockFilterWarp({
+        name: name,
+        sortName: req.params.sortName,
+        sortType: req.params.sortType,
+        per: per,
+        yieldNumber: yieldNumber,
+        pp: pp,
+        ss: ss,
+        mm: mm,
+        pre: pre,
+        interval: interval
+    }, req.user, req.session).then(function (number) {
+        (0, _sendWs2.default)({
+            type: req.user.username,
+            data: 'Filter ' + name + ': ' + number
+        }, 0);
+    }).catch(function (err) {
+        (0, _utility.handleError)(err, 'Stock filter');
         (0, _sendWs2.default)({
             type: req.user.username,
             data: 'Filter fail: ' + err.message
         }, 0);
-        return (0, _utility.handleError)(err, next);
     });
 });
 

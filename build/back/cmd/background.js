@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
 
@@ -324,7 +324,7 @@ var updateStock = exports.updateStock = function updateStock() {
                 v: new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
                         return resolve();
-                    }, 20000);
+                    }, 300000);
                 }).then(function () {
                     return loopUpdateStock();
                 })
@@ -332,5 +332,42 @@ var updateStock = exports.updateStock = function updateStock() {
         }();
 
         if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+    }
+};
+var filterStock = exports.filterStock = function filterStock() {
+    //get db
+    if ((0, _config.STOCK_FILTER)(_ver.ENV_TYPE)) {
+        var _ret6 = function () {
+            var loopStockFilter = function loopStockFilter() {
+                console.log('loopStockFilter');
+                console.log(new Date());
+                var sd = new Date();
+                var sdf = function sdf() {
+                    return sd.getDay() === 5 && sd.getHours() === 23 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
+                };
+                return sdf().catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop stockFilter');
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.DOC_INTERVAL * 1000);
+                    });
+                }).then(function () {
+                    return loopStockFilter();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 360000);
+                }).then(function () {
+                    return loopStockFilter();
+                })
+            };
+        }();
+
+        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
     }
 };

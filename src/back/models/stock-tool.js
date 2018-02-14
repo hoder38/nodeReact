@@ -1,4 +1,4 @@
-import { STOCKDB, CACHE_EXPIRE } from '../constants'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -10,9 +10,14 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
 import { handleError, HoError, findTag, completeZero, getJson, bufferToString, addPre, isValidString } from '../util/utility'
 import { getExtname } from '../util/mime'
+import sendWs from '../util/sendWs'
 
 const StockTagTool = TagTool(STOCKDB);
 const Xmlparser = new Xml2js.Parser();
+
+let stockFiltering = false;
+let stockIntervaling = false;
+let stockPredicting = false;
 
 const show = (first, second, b=2, a=0) => Math.ceil(first / second * Math.pow(10, b)) / Math.pow(10, a);
 
@@ -2570,12 +2575,26 @@ export default {
             }
             switch(items[0].type) {
                 case 'twse':
-                return Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
-                    let dividends = 0;
+                const getTable = index => Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
                     const table = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                     if (!table) {
-                        return handleError(new HoError('查詢過於頻繁,請稍後再試!!'));
+                        return handleError(new HoError('heavy query'));
                     }
+                    return table;
+                }).catch(err => {
+                    if (err.name === 'HoError' && err.message === 'heavy query') {
+                        console.log(index);
+                        handleError(err, 'Stock yield');
+                        if (index > MAX_RETRY) {
+                            return handleError(new HoError('twse yield fail'));
+                        }
+                        return new Promise((resolve, reject) => setTimeout(() => resolve(getTable(index + 1)), 60000));
+                    } else {
+                        return handleError(err);
+                    }
+                });
+                return getTable(0).then(table => {
+                    let dividends = 0;
                     findTag(findTag(table, 'tr', 'odd')[0], 'td').forEach(d => {
                         const t = findTag(d)[0];
                         if (t) {
@@ -2705,14 +2724,42 @@ export default {
                             };
                             return rest_predict(index);
                         } else {
-                            return Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
+                            const getTable = tIndex => Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
                                 if (raw_data.length > 500) {
-                                    if (!start_month) {
-                                        start_month = `${year+1911}${month_str}`;
-                                    }
                                     const table = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
                                     if (!table) {
-                                        return handleError(new HoError(`${items[0].type}${items[0].index} 稍後再查詢!!`));
+                                        return handleError(new HoError('heavy query'));
+                                    }
+                                    return table;
+                                } else if (raw_data.length > 400) {
+                                    console.log(raw_data);
+                                    /*if (sales_data) {
+                                        Redis('hmset', `sales: ${items[0].type}${items[0].index}`, {
+                                            raw_list: JSON.stringify(sales_data),
+                                            ret_obj,
+                                            etime,
+                                        }).catch(err => handleError(err, 'Redis'));
+                                    }*/
+                                    return handleError(new HoError('heavy query'));
+                                } else {
+                                    return false;
+                                }
+                            }).catch(err => {
+                                if (err.name === 'HoError' && err.message === 'heavy query') {
+                                    console.log(tIndex);
+                                    handleError(err, 'Stock predict');
+                                    if (tIndex > MAX_RETRY) {
+                                        return handleError(new HoError('twse predict fail'));
+                                    }
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(getTable(tIndex + 1)), 60000));
+                                } else {
+                                    return handleError(err);
+                                }
+                            });
+                            return getTable(0).then(table => {
+                                if (table) {
+                                    if (!start_month) {
+                                        start_month = `${year+1911}${month_str}`;
                                     }
                                     findTag(table, 'tr').forEach(t => {
                                         const th = findTag(t, 'th')[0];
@@ -2742,16 +2789,6 @@ export default {
                                         per: sales_per[sales_per.length - 1],
                                         pre: sales_pre[sales_pre.length - 1],
                                     };
-                                } else if (raw_data.length > 400) {
-                                    console.log(raw_data);
-                                    if (sales_data) {
-                                        Redis('hmset', `sales: ${items[0].type}${items[0].index}`, {
-                                            raw_list: JSON.stringify(sales_data),
-                                            ret_obj,
-                                            etime,
-                                        }).catch(err => handleError(err, 'Redis'));
-                                    }
-                                    return handleError(new HoError(`${items[0].type}${items[0].index} 稍後再查詢!!`));
                                 }
                                 return rest_predict(index);
                             });
@@ -2772,6 +2809,19 @@ export default {
                 default:
                 return handleError(new HoError('stock type unknown!!!'));
             }
+        });
+    },
+    getPredictPERWarp: function(id, session) {
+        if (stockPredicting) {
+            return handleError(new HoError('there is another predict running'));
+        }
+        stockPredicting = true;
+        return this.getPredictPER(id, session).then(([result, index]) => {
+            stockPredicting = false;
+            return [result, index];
+        }).catch(err => {
+            stockPredicting = false;
+            return handleError(err);
         });
     },
     getStockPoint: function(id, price, session) {
@@ -3080,6 +3130,193 @@ export default {
                 default:
                 return handleError(new HoError('stock type unknown!!!'));
             }
+        });
+    },
+    getIntervalWarp: function(id, session) {
+        if (stockIntervaling) {
+            return handleError(new HoError('there is another inverval running'));
+        }
+        stockIntervaling = true;
+        return this.getInterval(id, session).then(([result, index]) => {
+            stockIntervaling = false;
+            return [result, index];
+        }).catch(err => {
+            stockIntervaling = false;
+            return handleError(err);
+        });
+    },
+    stockFilter: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
+        const web = option ? true : false;
+        if (!option) {
+            option = STOCK_FILTER;
+        }
+        let last = false;
+        let queried = 0;
+        let filterList = [];
+        const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
+            console.log(queried);
+            if (result.items.length < STOCK_FILTER_LIMIT) {
+                last = true;
+            }
+            queried += result.items.length;
+            if (result.items.length < 1) {
+                return filterList;
+            }
+            let first_stage = [];
+            result.items.forEach(i => {
+                const pok = option.pp ? ((option.pp[1] === '>' && i.profitIndex > option.pp[2]) || (option.pp[1] === '<' && i.profitIndex < option.pp[2])) ? true : false : true;
+                const sok = option.ss ? ((option.ss[1] === '>' && i.safetyIndex > option.ss[2]) || (option.ss[1] === '<' && i.safetyIndex < option.ss[2])) ? true : false : true;
+                const mok = option.mm ? ((option.mm[1] === '>' && i.managementIndex > option.mm[2]) || (option.mm[1] === '<' && i.managementIndex < option.mm[2])) ? true : false : true;
+                if (pok && sok && mok) {
+                    first_stage.push(i);
+                }
+            });
+            if (first_stage.length < 1) {
+                return filterList;
+            }
+            const recur_per = index => {
+                const nextFilter = () => {
+                    index++;
+                    if (index < first_stage.length) {
+                        return recur_per(index);
+                    }
+                    if (!last) {
+                        return recur_query();
+                    }
+                    return filterList;
+                }
+                const addFilter = () => {
+                    filterList.push(first_stage[index]);
+                    if (filterList.length >= STOCK_FILTER_LIMIT) {
+                        return filterList;
+                    }
+                    return nextFilter();
+                };
+                if (option.per) {
+                    return this.getStockPER(first_stage[index]._id).then(([stockPer]) => {
+                        if (option.per && stockPer > 0 && ((option.per[1] === '>' && stockPer > (option.per[2] * 2 / 3)) || (option.per[1] === '<' && stockPer < (option.per[2] * 4 /3)))) {
+                            console.log(stockPer);
+                            console.log(first_stage[index].name);
+                            if (option.yieldNumber) {
+                                return this.getStockYield(first_stage[index]._id).then(stockYield => {
+                                    if (option.yieldNumber && stockYield > 0 && ((option.yieldNumber[1] === '>' && stockYield > (option.yieldNumber[2] * 2 / 3)) || (option.yieldNumber[1] === '<' && stockYield < (option.yieldNumber[2] * 4 /3)))) {
+                                        console.log(stockYield);
+                                        return addFilter();
+                                    } else {
+                                        return nextFilter();
+                                    }
+                                });
+                            } else {
+                                return addFilter();
+                            }
+                        } else {
+                            return nextFilter();
+                        }
+                    }).catch(err => {
+                        if (web) {
+                            sendWs({
+                                type: user.username,
+                                data: `Filter ${option.name}: ${first_stage[index].index} Error`,
+                            }, 0);
+                        }
+                        handleError(err, 'Stock filter');
+                        return nextFilter();
+                    });
+                } else if (option.yieldNumber) {
+                    return this.getStockYield(first_stage[index]._id).then(stockYield => {
+                        if (option.yieldNumber && stockYield > 0 && ((option.yieldNumber[1] === '>' && stockYield > (option.yieldNumber[2] * 2 / 3)) || (option.yieldNumber[1] === '<' && stockYield < (option.yieldNumber[2] * 4 /3)))) {
+                            console.log(stockYield);
+                            console.log(first_stage[index].name);
+                            return addFilter();
+                        } else {
+                            return nextFilter();
+                        }
+                    }).catch(err => {
+                        if (web) {
+                            sendWs({
+                                type: user.username,
+                                data: `Filter ${option.name}: ${first_stage[index].index} Error`,
+                            }, 0);
+                        }
+                        handleError(err, 'Stock filter');
+                        return nextFilter();
+                    });
+                } else {
+                    return addFilter();
+                }
+            }
+            return recur_per(0);
+        });
+        return recur_query().then(filterList => {
+            let filterList1 = [];
+            const stage2 = pIndex => (pIndex < filterList.length) ? this.getPredictPERWarp(filterList[pIndex]._id, session).then(([result, index]) => {
+                console.log(filterList[pIndex].name);
+                console.log(result);
+                const predictVal = result.match(/^-?\d+.?\d+/);
+                if (predictVal && (option.pre[1] === '>' && predictVal[0] > option.pre[2]) || (option.pre[1] === '<' && predictVal[0] < option.pre[2])) {
+                    filterList1.push(filterList[pIndex]);
+                }
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[pIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => stage2(pIndex + 1)) : Promise.resolve();
+            console.log('stage two');
+            return option.pre ? stage2(0).then(() => filterList1) : filterList;
+        }).then(filterList => {
+            let filterList1 = [];
+            const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
+                console.log(filterList[iIndex].name);
+                console.log(result);
+                const intervalVal = result.match(/\d+$/);
+                if (intervalVal && (option.interval[1] === '>' && intervalVal[0] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[0] < option.interval[2])) {
+                    filterList1.push(filterList[iIndex]);
+                }
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => stage3(iIndex + 1)) : Promise.resolve();
+            console.log('stage three');
+            return option.interval ? stage3(0).then(() => filterList1) : filterList;
+        }).then(filterList => {
+            const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
+                sendWs({
+                    type: 'stock',
+                    data: add_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => addFilter(index+1)) : Promise.resolve(filterList.length);
+            return addFilter(0);
+        });
+    },
+    stockFilterWarp: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
+        if (stockFiltering) {
+            return handleError(new HoError('there is another filter running'));
+        }
+        stockFiltering = true;
+        return this.stockFilter(option, user, session).then(number => {
+            stockFiltering = false;
+            console.log(`End: ${number}`);
+            return number;
+        }).catch(err => {
+            stockFiltering = false;
+            return handleError(err);
         });
     },
 }

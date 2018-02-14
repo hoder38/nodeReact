@@ -41,7 +41,7 @@ const Categorylist = React.createClass({
         if (!isValidString(tag, 'name')) {
             return Promise.reject('Filter tag is not vaild!!!')
         }
-        const condition = cond.match(/^(per|yield|p|s|m)([<>]\-?\d+\.?\d*)\s*((per|yield|p|s|m)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m)([<>]\-?\d+\.?\d*))?$/)
+        const condition = cond.match(/^(per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*)\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?$/)
         if (!condition) {
             return Promise.reject('Filter condition is not vaild!!!')
         }
@@ -50,6 +50,8 @@ const Categorylist = React.createClass({
         let pp = ''
         let ss = ''
         let mm = ''
+        let pre = ''
+        let interval = ''
         function inData(index) {
             if (condition[index] === 'per') {
                 per = condition[index + 1]
@@ -61,6 +63,10 @@ const Categorylist = React.createClass({
                 ss = condition[index + 1]
             } else if (condition[index] === 'm') {
                 mm = condition[index + 1]
+            } else if (condition[index] === 'pre') {
+                pre = condition[index + 1]
+            } else if (condition[index] === 'interval') {
+                interval = condition[index + 1]
             }
         }
         inData(1)
@@ -68,6 +74,8 @@ const Categorylist = React.createClass({
         inData(7)
         inData(10)
         inData(13)
+        inData(16)
+        inData(19)
         let data = {}
         if (per) {
             data['per'] = per
@@ -84,8 +92,14 @@ const Categorylist = React.createClass({
         if (mm) {
             data['m'] = mm
         }
+        if (pre) {
+            data['pre'] = pre
+        }
+        if (interval) {
+            data['interval'] = interval
+        }
         if (Object.keys(data).length > 0) {
-            return api(`/api/stock/filter/${tag}/${this.props.sortName}/${this.props.sortType}`, data, 'PUT')
+            return api(`/api/stock/filter/${tag}/${this.props.sortName}/${this.props.sortType}`, data, 'PUT');
         } else {
             return Promise.reject('Must set one condition!!!')
         }

@@ -30,7 +30,7 @@ import { handleError, HoError, showLog } from '../util/utility'
 import sendWs, { mainInit } from '../util/sendWs'
 
 //background
-import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock } from '../cmd/background'
+import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock } from '../cmd/background'
 
 //global
 const credentials = {
@@ -66,6 +66,7 @@ checkMedia();
 updateExternal();
 autoDownload();
 updateStock();
+filterStock();
 
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))

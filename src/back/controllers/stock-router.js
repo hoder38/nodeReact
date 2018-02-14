@@ -1,4 +1,4 @@
-import { STOCKDB, STOCK_FILTER_LIMIT } from '../constants'
+import { STOCKDB } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
 import StockTool from '../models/stock-tool.js'
@@ -7,8 +7,6 @@ import sendWs from '../util/sendWs'
 
 const router = Express.Router();
 const StockTagTool = TagTool(STOCKDB);
-let stockFiltering = false;
-let stockIntervaling = false;
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
     console.log('stock');
@@ -114,7 +112,7 @@ router.get('/getPredictPER/:uid', function(req, res,next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    StockTool.getPredictPER(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
+    StockTool.getPredictPERWarp(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
 router.get('/getPoint/:uid/:price?', function(req, res, next) {
@@ -139,17 +137,7 @@ router.get('/getInterval/:uid', function(req, res,next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    if (stockIntervaling) {
-        return handleError(new HoError('there is another inverval running'), next);
-    }
-    stockIntervaling = true;
-    StockTool.getInterval(id, req.session).then(([result, index]) => {
-        stockIntervaling = false;
-        res.json({interval: `${index}: ${result}`});
-    }).catch(err => {
-        stockIntervaling = false;
-        return handleError(err, next)
-    });
+    StockTool.getIntervalWarp(id, req.session).then(([result, index]) => res.json({interval: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
 router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
@@ -198,123 +186,45 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         mm[2] = Number(mm[2]);
     }
-    if (stockFiltering) {
-        return handleError(new HoError('there is another filter running'), next);
+    let pre = false;
+    if (req.body.pre) {
+        pre = req.body.pre.match(/^([<>])(\d+)$/);
+        if (!pre) {
+            return handleError(new HoError('pre is not vaild'), next);
+        }
+        pre[2] = Number(pre[2]);
     }
-    stockFiltering = true;
-    let first = true;
-    let last = false;
-    let queried = 0;
-    let filterNum = 0;
-    const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, req.params.sortName, req.params.sortType, req.user, req.session, STOCK_FILTER_LIMIT).then(result => {
-        console.log(queried);
-        if (first) {
-            res.json({apiOK: true});
+    let interval = false;
+    if (req.body.interval) {
+        interval = req.body.interval.match(/^([<>])(\d+)$/);
+        if (!interval) {
+            return handleError(new HoError('interval is not vaild'), next);
         }
-        if (result.items.length < STOCK_FILTER_LIMIT) {
-            last = true;
-        }
-        queried += result.items.length;
-        first = false;
-        if (result.items.length < 1) {
-            stockFiltering = false;
-            return sendWs({
-                type: req.user.username,
-                data: `Filter ${name}: ${filterNum}`,
-            }, 0);
-        }
-        let first_stage = [];
-        result.items.forEach(i => {
-            const is_name = i.tags.includes(name) ? true : false;
-            const pok = pp ? ((pp[1] === '>' && i.profitIndex > pp[2]) || (pp[1] === '<' && i.profitIndex < pp[2])) ? true : false : true;
-            const sok = ss ? ((ss[1] === '>' && i.safetyIndex > ss[2]) || (ss[1] === '<' && i.safetyIndex < ss[2])) ? true : false : true;
-            const mok = mm ? ((mm[1] === '>' && i.managementIndex > mm[2]) || (mm[1] === '<' && i.managementIndex < mm[2])) ? true : false : true;
-            if (is_name) {
-                filterNum++;
-            } else if (!is_name && pok && sok && mok) {
-                first_stage.push(i);
-            }
-        });
-        if (first_stage.length < 1) {
-            stockFiltering = false;
-            return sendWs({type: req.user.username,
-                data: `Filter ${name}: ${filterNum}`,
-            }, 0);
-        }
-        const recur_per = index => {
-            const nextFilter = () => {
-                index++;
-                if (index < first_stage.length) {
-                    return recur_per(index);
-                }
-                if (!last) {
-                    return recur_query();
-                }
-                stockFiltering = false;
-                return sendWs({
-                    type: req.user.username,
-                    data: `Filter ${name}: ${filterNum}`,
-                }, 0);
-            }
-            const addFilter = () => StockTagTool.addTag(first_stage[index]._id, name, req.user).then(add_result => {
-                filterNum++;
-                sendWs({
-                    type: 'stock',
-                    data: add_result.id,
-                }, 0, 1);
-                if (filterNum >= STOCK_FILTER_LIMIT) {
-                    stockFiltering = false;
-                    return sendWs({
-                        type: req.user.username,
-                        data: `Filter ${name}: ${filterNum}`,
-                    }, 0);
-                }
-                return nextFilter();
-            });
-            if (per) {
-                return StockTool.getStockPER(first_stage[index]._id).then(([stockPer]) => {
-                    if (per && stockPer > 0 && ((per[1] === '>' && stockPer > (per[2] * 2 / 3)) || (per[1] === '<' && stockPer < (per[2] * 4 /3)))) {
-                        console.log(stockPer);
-                        console.log(first_stage[index].name);
-                        if (yieldNumber) {
-                            return StockTool.getStockYield(first_stage[index]._id).then(stockYield => {
-                                if (yieldNumber && stockYield > 0 && ((yieldNumber[1] === '>' && stockYield > (yieldNumber[2] * 2 / 3)) || (yieldNumber[1] === '<' && stockYield < (yieldNumber[2] * 4 /3)))) {
-                                    console.log(stockYield);
-                                    return addFilter();
-                                } else {
-                                    return nextFilter();
-                                }
-                            });
-                        } else {
-                            return addFilter();
-                        }
-                    } else {
-                        return nextFilter();
-                    }
-                });
-            } else if (yieldNumber) {
-                return StockTool.getStockYield(first_stage[index]._id).then(stockYield => {
-                    if (yieldNumber && stockYield > 0 && ((yieldNumber[1] === '>' && stockYield > (yieldNumber[2] * 2 / 3)) || (yieldNumber[1] === '<' && stockYield < (yieldNumber[2] * 4 /3)))) {
-                        console.log(stockYield);
-                        console.log(first_stage[index].name);
-                        return addFilter();
-                    } else {
-                        return nextFilter();
-                    }
-                });
-            } else {
-                return addFilter();
-            }
-        }
-        return recur_per(0);
-    });
-    return recur_query().catch(err => {
-        stockFiltering = false;
+        interval[2] = Number(interval[2]);
+    }
+    res.json({apiOK: true});
+    StockTool.stockFilterWarp({
+        name,
+        sortName: req.params.sortName,
+        sortType: req.params.sortType,
+        per,
+        yieldNumber,
+        pp,
+        ss,
+        mm,
+        pre,
+        interval,
+    }, req.user, req.session).then(number => {
+        sendWs({
+            type: req.user.username,
+            data: `Filter ${name}: ${number}`,
+        }, 0);
+    }).catch(err => {
+        handleError(err, 'Stock filter');
         sendWs({
             type: req.user.username,
             data: `Filter fail: ${err.message}`,
         }, 0);
-        return handleError(err, next);
     });
 });
 

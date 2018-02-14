@@ -35,3 +35,4 @@ export const MEGA_LIMIT = env => env === RELEASE ? ReleaseConfig.MEGA_LIMIT : De
 export const STREAM_LIMIT = env => env === RELEASE ? ReleaseConfig.STREAM_LIMIT : DevConfig.STREAM_LIMIT
 export const STOCK_DATE = env => env === RELEASE ? ReleaseConfig.STOCK_DATE : DevConfig.STOCK_DATE
 export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : DevConfig.STOCK_MODE
+export const STOCK_FILTER = env => env === RELEASE ? ReleaseConfig.STOCK_FILTER : DevConfig.STOCK_FILTER
