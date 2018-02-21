@@ -2702,7 +2702,7 @@ export default {
                             predict_index = (predict_index > 0) ? Math.round(Math.sqrt(predict_index) * 10) / 10 : -Math.round(Math.sqrt(-predict_index) * 10) / 10;
                         }
                         console.log('done');
-                        return [sales_data, `${predict_index} ${start_month} ${sales_num.length}`];
+                        return Promise.resolve([sales_data, `${predict_index} ${start_month} ${sales_num.length}`]);
                     }
                     const recur_mp = index => {
                         if (raw_list && raw_list[year] && raw_list[year][month_str]) {

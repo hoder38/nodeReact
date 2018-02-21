@@ -2941,7 +2941,7 @@ exports.default = {
                                 predict_index = predict_index > 0 ? Math.round(Math.sqrt(predict_index) * 10) / 10 : -Math.round(Math.sqrt(-predict_index) * 10) / 10;
                             }
                             console.log('done');
-                            return [sales_data, predict_index + ' ' + start_month + ' ' + sales_num.length];
+                            return _promise2.default.resolve([sales_data, predict_index + ' ' + start_month + ' ' + sales_num.length]);
                         };
                         var recur_mp = function recur_mp(index) {
                             if (raw_list && raw_list[year] && raw_list[year][month_str]) {
