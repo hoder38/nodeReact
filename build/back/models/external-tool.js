@@ -3705,8 +3705,8 @@ exports.default = {
                             return setTag.add(opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[0])[0]));
                         });
                     } else {
-                        var main = (0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'b-page-body')[0], 'div', 'main-inner');
-                        var _info = (0, _utility.findTag)((0, _utility.findTag)(main[0], 'div', 'viewbox')[0], 'div', 'info')[0];
+                        var _main = (0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'b-page-body')[0], 'div', 'main-inner');
+                        var _info = (0, _utility.findTag)((0, _utility.findTag)(_main[0], 'div', 'viewbox')[0], 'div', 'info')[0];
                         (0, _utility.findTag)((0, _utility.findTag)(_info, 'div', 'tminfo')[0], 'span').forEach(function (s) {
                             if ((0, _utility.findTag)((0, _utility.findTag)(s, 'a')[0])[0].match(/动画$/)) {
                                 setTag.add('動畫').add('animation');
@@ -3714,7 +3714,7 @@ exports.default = {
                                 setTag.add('電影').add('movie');
                             }
                         });
-                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main[1], 'div', 'v_large')[0], 'div', 'v_info')[0], 'div', 's_tag')[0], 'ul')[0], 'li').forEach(function (l) {
+                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_main[1], 'div', 'v_large')[0], 'div', 'v_info')[0], 'div', 's_tag')[0], 'ul')[0], 'li').forEach(function (l) {
                             return setTag.add(opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)(l, 'a')[0])[0]));
                         });
                         name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_info, 'div', 'v-title')[0], 'h1')[0])[0];

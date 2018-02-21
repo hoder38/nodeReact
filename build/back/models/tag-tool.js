@@ -926,7 +926,7 @@ function process(collection) {
                             }
                         }
                     } else {
-                        if (!items[0][user._id.toString()].includes(tagType.tag.tags)) {
+                        if (!items[0][user._id.toString()] || !items[0][user._id.toString()].includes(tagType.tag.tags)) {
                             return {
                                 id: items[0]._id,
                                 adultonly: items[0].adultonly,
