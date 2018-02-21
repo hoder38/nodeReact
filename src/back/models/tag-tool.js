@@ -698,7 +698,7 @@ export default function process(collection) {
                         console.log(normalize(items[0].name));
                         return handleError(new HoError('can not delete file name!!!'));
                     }
-                    if (checkAdmin(1, user)) {
+                    //if (checkAdmin(1, user)) {
                         console.log('authority del tag');
                         if (!items[0].tags.includes(tagType.tag.tags)) {
                             return {
@@ -719,7 +719,7 @@ export default function process(collection) {
                             }
                         }
                     } else {
-                        if (!items[0][user._id.toString()].includes(tagType.tag.tags)) {
+                        if (!items[0][user._id.toString()] || !items[0][user._id.toString()].includes(tagType.tag.tags)) {
                             return {
                                 id: items[0]._id,
                                 adultonly: items[0].adultonly,

@@ -2841,10 +2841,13 @@ exports.default = {
         });
     },
     getPredictPER: function getPredictPER(id, session) {
+        var is_latest = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
         var date = new Date();
         var year = date.getFullYear() - 1911;
-        var month = date.getMonth() + 1;
+        var month = date.getMonth();
         var month_str = (0, _utility.completeZero)(month.toString(), 2);
+        var latest_date = '' + year + month_str;
         console.log(year);
         console.log(month_str);
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
@@ -3004,7 +3007,7 @@ exports.default = {
                                         v: getTable(0).then(function (table) {
                                             if (table) {
                                                 if (!start_month) {
-                                                    start_month = '' + (year + 1911) + month_str;
+                                                    start_month = '' + year + month_str;
                                                 }
                                                 (0, _utility.findTag)(table, 'tr').forEach(function (t) {
                                                     var th = (0, _utility.findTag)(t, 'th')[0];
@@ -3060,6 +3063,12 @@ exports.default = {
                                     return (0, _utility.handleError)(err, 'Redis');
                                 });
                             }
+                            if (is_latest) {
+                                var uDate = ret_obj.match(/(\d+) (\d+)$/);
+                                if (!uDate || uDate[1] !== latest_date) {
+                                    ret_obj = '-9999 ' + latest_date + ' ' + uDate[2];
+                                }
+                            }
                             return [ret_obj, items[0].index];
                         });
                     });
@@ -3069,11 +3078,13 @@ exports.default = {
         });
     },
     getPredictPERWarp: function getPredictPERWarp(id, session) {
+        var is_latest = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
         if (stockPredicting) {
             return (0, _utility.handleError)(new _utility.HoError('there is another predict running'));
         }
         stockPredicting = true;
-        return this.getPredictPER(id, session).then(function (_ref7) {
+        return this.getPredictPER(id, session, is_latest).then(function (_ref7) {
             var _ref8 = (0, _slicedToArray3.default)(_ref7, 2),
                 result = _ref8[0],
                 index = _ref8[1];
@@ -3609,6 +3620,29 @@ exports.default = {
         var last = false;
         var queried = 0;
         var filterList = [];
+        var clearName = function clearName() {
+            return StockTagTool.tagQuery(queried, option.name, false, 0, option.sortName, option.sortType, user, {}, _constants.STOCK_FILTER_LIMIT).then(function (result) {
+                var delFilter = function delFilter(index) {
+                    return index < result.items.length ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(function (del_result) {
+                        (0, _sendWs2.default)({
+                            type: 'stock',
+                            data: del_result.id
+                        }, 0, 1);
+                    }).catch(function (err) {
+                        if (web) {
+                            (0, _sendWs2.default)({
+                                type: user.username,
+                                data: 'Filter ' + option.name + ': ' + result.items[iIndex].index + ' Error'
+                            }, 0);
+                        }
+                        (0, _utility.handleError)(err, 'Stock filter');
+                    }).then(function () {
+                        return delFilter(index + 1);
+                    }) : _promise2.default.resolve(result.items.length);
+                };
+                return delFilter(0);
+            });
+        };
         var recur_query = function recur_query() {
             return StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, _constants.STOCK_FILTER_LIMIT).then(function (result) {
                 console.log(queried);
@@ -3708,10 +3742,12 @@ exports.default = {
                 return recur_per(0);
             });
         };
-        return recur_query().then(function (filterList) {
+        return clearName().then(function () {
+            return recur_query();
+        }).then(function (filterList) {
             var filterList1 = [];
             var stage2 = function stage2(pIndex) {
-                return pIndex < filterList.length ? _this.getPredictPERWarp(filterList[pIndex]._id, session).then(function (_ref23) {
+                return pIndex < filterList.length ? _this.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref23) {
                     var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
                         result = _ref24[0],
                         index = _ref24[1];

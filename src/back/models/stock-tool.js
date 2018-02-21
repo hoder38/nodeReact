@@ -2612,11 +2612,12 @@ export default {
             }
         });
     },
-    getPredictPER: function(id, session) {
+    getPredictPER: function(id, session, is_latest=false) {
         const date = new Date();
         let year = date.getFullYear() - 1911;
-        let month = date.getMonth() + 1;
+        let month = date.getMonth();
         let month_str = completeZero(month.toString(), 2);
+        let latest_date = `${year}${month_str}`;
         console.log(year);
         console.log(month_str);
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
@@ -2759,7 +2760,7 @@ export default {
                             return getTable(0).then(table => {
                                 if (table) {
                                     if (!start_month) {
-                                        start_month = `${year+1911}${month_str}`;
+                                        start_month = `${year}${month_str}`;
                                     }
                                     findTag(table, 'tr').forEach(t => {
                                         const th = findTag(t, 'th')[0];
@@ -2803,6 +2804,12 @@ export default {
                                 etime: Math.round(new Date().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
                         }
+                        if (is_latest) {
+                            const uDate = ret_obj.match(/(\d+) (\d+)$/);
+                            if (!uDate || uDate[1] !== latest_date) {
+                                ret_obj = `-9999 ${latest_date} ${uDate[2]}`;
+                            }
+                        }
                         return [ret_obj, items[0].index];
                     });
                 });
@@ -2811,12 +2818,12 @@ export default {
             }
         });
     },
-    getPredictPERWarp: function(id, session) {
+    getPredictPERWarp: function(id, session, is_latest=false) {
         if (stockPredicting) {
             return handleError(new HoError('there is another predict running'));
         }
         stockPredicting = true;
-        return this.getPredictPER(id, session).then(([result, index]) => {
+        return this.getPredictPER(id, session, is_latest).then(([result, index]) => {
             stockPredicting = false;
             return [result, index];
         }).catch(err => {
@@ -3153,6 +3160,23 @@ export default {
         let last = false;
         let queried = 0;
         let filterList = [];
+        const clearName = () => StockTagTool.tagQuery(queried, option.name, false, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
+            const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
+                sendWs({
+                    type: 'stock',
+                    data: del_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${result.items[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
+            return delFilter(0);
+        });
         const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
             console.log(queried);
             if (result.items.length < STOCK_FILTER_LIMIT) {
@@ -3247,9 +3271,9 @@ export default {
             }
             return recur_per(0);
         });
-        return recur_query().then(filterList => {
+        return clearName().then(() => recur_query()).then(filterList => {
             let filterList1 = [];
-            const stage2 = pIndex => (pIndex < filterList.length) ? this.getPredictPERWarp(filterList[pIndex]._id, session).then(([result, index]) => {
+            const stage2 = pIndex => (pIndex < filterList.length) ? this.getPredictPERWarp(filterList[pIndex]._id, session, true).then(([result, index]) => {
                 console.log(filterList[pIndex].name);
                 console.log(result);
                 const predictVal = result.match(/^-?\d+.?\d+/);
