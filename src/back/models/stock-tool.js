@@ -1127,7 +1127,7 @@ const getAsset = (xml, asset, no_cover) => {
                     total: getParameter(xml, 'tw-gaap-fh:Assets', ai),
                     longterm: getParameter(xml, 'tw-gaap-fh:HeldMaturityFinancialAssetsNet', ai) + getParameter(xml, 'tw-gaap-fh:EquityInvestmentsEquityMethodNet', ai) + getParameter(xml, 'tw-gaap-fh:OtherFinancialAssetsNet', ai) + getParameter(xml, 'tw-gaap-fh:InvestmentsRealEstateNet', ai),
                 };
-                parseResult.equityParent = getParameter(xml, 'tw-gaap-fh:StockholdersEquity', ai) - asset[y][q].equityChild;
+                parseResult.equityParent = getParameter(xml, 'tw-gaap-fh:StockholdersEquity', ai) - parseResult.equityChild;
                 parseResult.current_liabilities = parseResult.payable + getParameter(xml, 'tw-gaap-fh:CommercialPapersIssued', ai) + getParameter(xml, 'tw-gaap-fh:FinancialLiabilitiesMeasuredFairValueProfitLoss', ai) + getParameter(xml, 'tw-gaap-fh:SecuritiesSoldRepurchaseAgreements', ai) + getParameter(xml, 'tw-gaap-fh:DueCentralBankOtherBanks', ai);
                 parseResult.noncurrent_liabilities = getParameter(xml, 'tw-gaap-fh:Liabilities', ai) - parseResult.current_liabilities;
                 if (parseResult.total === 0) {
