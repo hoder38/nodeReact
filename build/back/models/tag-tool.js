@@ -485,9 +485,9 @@ function process(collection) {
                         query_term = denormalize(s);
                         s_country = -1;
                     }
-                } else if (!is_movie && (index.index === 15 || index.index === 22)) {
+                } else if (!is_movie && index.index === 15) {
                     search = 1;
-                } else if (is_movie && (index.index === 16 || index.index === 22)) {
+                } else if (is_movie && index.index === 16) {
                     search = 2;
                 }
             });
@@ -1297,7 +1297,7 @@ function process(collection) {
                 return (0, _utility.handleError)(new _utility.HoError('parent is not vaild!!!'));
             }
             return (0, _mongoTool2.default)('remove', collection + 'Dir', {
-                _id: _id,
+                _id: id,
                 $isolated: 1
             }).then(function (parent) {
                 return parent ? { id: id } : { apiOK: true };

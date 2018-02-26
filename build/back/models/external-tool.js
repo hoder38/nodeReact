@@ -435,12 +435,14 @@ exports.default = {
                     return raw_data['data']['movies'] ? raw_data['data']['movies'].map(function (m) {
                         var tags = new _set2.default(['movie', '電影']);
                         tags.add(m['year'].toString());
-                        m['genres'].forEach(function (g) {
-                            var genre_item = (0, _tagTool.normalize)(g);
-                            if (_constants.GENRE_LIST.includes(genre_item)) {
-                                tags.add(genre_item).add(_constants.GENRE_LIST_CH[_constants.GENRE_LIST.indexOf(genre_item)]);
-                            }
-                        });
+                        if (m['genres']) {
+                            m['genres'].forEach(function (g) {
+                                var genre_item = (0, _tagTool.normalize)(g);
+                                if (_constants.GENRE_LIST.includes(genre_item)) {
+                                    tags.add(genre_item).add(_constants.GENRE_LIST_CH[_constants.GENRE_LIST.indexOf(genre_item)]);
+                                }
+                            });
+                        }
                         return {
                             name: m['title'],
                             id: m['id'],
@@ -2194,7 +2196,7 @@ exports.default = {
                     title = title.match(/^(.*?) \((\d\d\d\d)\) - IMDb$/);
                     taglist.add(title[1]).add(title[2]);
                     var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'body')[0], 'div', 'wrapper')[0], 'div', 'root')[0], 'div', 'pagecontent')[0], 'div', 'content-2-wide')[0];
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'minPosterWithPlotSummaryHeight')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary minPlotHeightWithPoster')[0], 'div', 'credit_summary_item').forEach(function (d) {
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(function (d) {
                         return (0, _utility.findTag)(d, 'span').forEach(function (s) {
                             var cast = (0, _utility.findTag)(s, 'a');
                             if (cast.length > 0) {
@@ -3562,9 +3564,11 @@ exports.default = {
                         }
                         var setTag = new _set2.default(['yify', 'video', '影片', 'movie', '電影']);
                         setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
-                        json_data['data']['movie']['genres'].forEach(function (i) {
-                            return setTag.add(i);
-                        });
+                        if (json_data['data']['movie']['genres']) {
+                            json_data['data']['movie']['genres'].forEach(function (i) {
+                                return setTag.add(i);
+                            });
+                        }
                         if (json_data['data']['movie']['cast']) {
                             json_data['data']['movie']['cast'].forEach(function (i) {
                                 return setTag.add(i.name);

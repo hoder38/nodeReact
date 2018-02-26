@@ -335,12 +335,14 @@ export default {
                 return raw_data['data']['movies'] ? raw_data['data']['movies'].map(m => {
                     let tags = new Set(['movie', '電影']);
                     tags.add(m['year'].toString());
-                    m['genres'].forEach(g => {
-                        const genre_item = normalize(g);
-                        if (GENRE_LIST.includes(genre_item)) {
-                            tags.add(genre_item).add(GENRE_LIST_CH[GENRE_LIST.indexOf(genre_item)]);
-                        }
-                    });
+                    if (m['genres']) {
+                        m['genres'].forEach(g => {
+                            const genre_item = normalize(g);
+                            if (GENRE_LIST.includes(genre_item)) {
+                                tags.add(genre_item).add(GENRE_LIST_CH[GENRE_LIST.indexOf(genre_item)]);
+                            }
+                        });
+                    }
                     return {
                         name: m['title'],
                         id: m['id'],
@@ -1562,7 +1564,7 @@ export default {
                 title = title.match(/^(.*?) \((\d\d\d\d)\) - IMDb$/);
                 taglist.add(title[1]).add(title[2]);
                 const main = findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'wrapper')[0], 'div', 'root')[0], 'div', 'pagecontent')[0], 'div', 'content-2-wide')[0];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'minPosterWithPlotSummaryHeight')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary minPlotHeightWithPoster')[0], 'div', 'credit_summary_item').forEach(d => findTag(d, 'span').forEach(s => {
+                findTag(findTag(findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(d => findTag(d, 'span').forEach(s => {
                     const cast = findTag(s, 'a');
                     if (cast.length > 0) {
                         taglist.add(findTag(findTag(cast[0], 'span')[0])[0]);
@@ -2344,7 +2346,9 @@ export default {
                     }
                     let setTag = new Set(['yify', 'video', '影片', 'movie', '電影']);
                     setTag.add(json_data['data']['movie']['imdb_code']).add(json_data['data']['movie']['year'].toString());
-                    json_data['data']['movie']['genres'].forEach(i => setTag.add(i));
+                    if (json_data['data']['movie']['genres']) {
+                        json_data['data']['movie']['genres'].forEach(i => setTag.add(i));
+                    }
                     if (json_data['data']['movie']['cast']) {
                         json_data['data']['movie']['cast'].forEach(i => setTag.add(i.name));
                     }

@@ -323,9 +323,9 @@ export default function process(collection) {
                         query_term = denormalize(s);
                         s_country = -1;
                     }
-                } else if (!is_movie && (index.index === 15 || index.index === 22)) {
+                } else if (!is_movie && (index.index === 15)) {
                     search = 1;
-                } else if (is_movie && (index.index === 16 || index.index === 22)) {
+                } else if (is_movie && (index.index === 16)) {
                     search = 2;
                 }
             });
@@ -1056,7 +1056,7 @@ export default function process(collection) {
                 return handleError(new HoError('parent is not vaild!!!'));
             }
             return Mongo('remove', `${collection}Dir`, {
-                _id,
+                _id: id,
                 $isolated: 1,
             }).then(parent => parent ? {id} : {apiOK: true});
         },
