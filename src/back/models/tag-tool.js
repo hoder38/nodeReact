@@ -281,7 +281,7 @@ export default function process(collection) {
                     url = `${url}&page=${page}`;
                 }
                 if (query_term) {
-                    url = `${url}&query_term=${query_term}`;
+                    url = `${url}&query_term=${encodeURIComponent(query_term)}`;
                 }
                 if (genre) {
                     url = `${url}&genre=${genre}`;
