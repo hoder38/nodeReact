@@ -244,7 +244,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.rating,
-    }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+    /*}))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `bbl_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -265,7 +265,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         thumb: item.thumb,
         noDb: true,
         status: 3,
-        count: item.count,
+        count: item.count,*/
     }))]).then(() => {
         const query = StorageTagTool.getMadQuery(parentList.cur, req.params.sortName, index);
         return query.post ? External.getSingleList('cartoonmad', query.url, query.post) : External.getSingleList('cartoonmad', query);

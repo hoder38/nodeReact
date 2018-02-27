@@ -545,7 +545,7 @@ router.post('/upload/url', function(req, res, next) {
                             url: url,
                         }]);
                     });
-                } else if (decodeUrl.match(/^(https|http):\/\/www\.bilibili\.com\//) || decodeUrl.match(/^(https|http):\/\/bangumi\.bilibili\.com\//)) {
+                /*} else if (decodeUrl.match(/^(https|http):\/\/www\.bilibili\.com\//) || decodeUrl.match(/^(https|http):\/\/bangumi\.bilibili\.com\//)) {
                     return Mongo('find', STORAGEDB, {
                         owner: 'bilibili',
                         url: encodeURIComponent(decodeUrl),
@@ -564,7 +564,7 @@ router.post('/upload/url', function(req, res, next) {
                             thumb: thumb,
                             url: url,
                         }]);
-                    });
+                    });*/
                 } else if (decodeUrl.match(/^(https|http):\/\/mega\./)) {
                     return PlaylistApi('mega add', req.user, decodeUrl, filePath, {
                         rest: ([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj),

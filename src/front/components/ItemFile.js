@@ -77,9 +77,9 @@ const ItemFile = React.createClass({
                 case 'mad_':
                 url = `http://www.cartoonmad.com/comic/${extId}.html`
                 break
-                case 'bbl_':
+                /*case 'bbl_':
                 url = extId.match(/^av/) ? `http://www.bilibili.com/video/${extId}/` : `http://bangumi.bilibili.com/anime/${extId}/`
-                break
+                break*/
                 default:
                 this.props.addalert('not external video')
                 return false
