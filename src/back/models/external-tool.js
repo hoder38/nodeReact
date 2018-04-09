@@ -2221,7 +2221,7 @@ export default {
                         if (f.playname === 'bj58') {
                             list = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kud_${p[2].match(/-id-(\d+)/)[1]}_${p[2].match(/-pid-(\d+)/)[1]}`,
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
                             }));
                         } else if (f.playname === 'bj') {
                             list1 = f.playurls.map(p => ({

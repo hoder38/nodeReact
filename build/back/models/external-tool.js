@@ -3400,7 +3400,7 @@ exports.default = {
                                         list = f.playurls.map(function (p) {
                                             return {
                                                 name: p[0],
-                                                id: 'kud_' + p[2].match(/-id-(\d+)/)[1] + '_' + p[2].match(/-pid-(\d+)/)[1]
+                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
                                             };
                                         });
                                     } else if (f.playname === 'bj') {
