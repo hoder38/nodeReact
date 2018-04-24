@@ -858,7 +858,7 @@ const MediaWidget = React.createClass({
                         <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
                             <i className="glyphicon glyphicon-resize-small"></i>
                         </a>
-                        <div id="extend" style={{top: '-90px', visibility: 'visible', position: 'relative', height: '100vh', width: '98vw', overflow: 'auto',cursor: 'pointer', zIndex: -1}}>
+                        <div id="extend" style={{top: '-90px', visibility: 'visible', position: 'relative', height: '89vh', width: '98vw', overflow: 'auto',cursor: 'pointer', zIndex: -1}}>
                             <img style={{visibility: 'visible', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '0px', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} onLoad={() => {
                                 let extNode = document.getElementById('extend')
                                 extNode.scrollTop = 0
@@ -878,7 +878,7 @@ const MediaWidget = React.createClass({
                         <a href="#" style={{position: 'absolute', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', right: '0px', fontSize: '600%', lineHeight: '100px', float: 'right', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, this._handleExtend)}>
                             <i className="glyphicon glyphicon-resize-full"></i>
                         </a>
-                        <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '-90px', maxHeight: '100vh', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
+                        <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer', position: 'relative', top: '-90px', maxHeight: '89vh', zIndex: -1}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
                     </div>
                 ) : <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer'}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
             }

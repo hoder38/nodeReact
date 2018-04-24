@@ -656,7 +656,7 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'innerPage')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(r => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'innerPage')[0], 'div', 'container-fluid belowHeader')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(r => {
                     if (findTag(findTag(findTag(findTag(findTag(r, 'td', 'indicator_dates')[0], 'div')[0], 'p')[0], 'span')[0])[0] === docDate) {
                         const div = findTag(findTag(r, 'td', 'indicator_data')[0], 'div')[0];
                         list.push({
@@ -951,7 +951,10 @@ export default {
                 return list;
             });
             case 'ndc':
-            return Api('url', 'http://index.ndc.gov.tw/n/json/data/news', {post: {}}).then(raw_data => {
+            return Api('url', 'https://index.ndc.gov.tw/n/json/data/news', {
+                post: {},
+                referer: 'https://index.ndc.gov.tw/n/zh_tw/data/news',
+            }).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1098,7 +1101,7 @@ export default {
                     }
                 };
                 const industrial = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-td-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                     if (matchT && matchT[0] === docDate) {
                         list.push({
                             url: dUrl,
@@ -1125,7 +1128,7 @@ export default {
                         }
                     };
                     const output = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-td-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                         if (matchT && matchT[0] === docDate) {
                             list.push({
                                 url: dUrl,
@@ -1484,7 +1487,7 @@ export default {
             case 'moe':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-table-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
+                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-td-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
                 for (let f of files) {
                     const kind = findTag(f, 'div', 'td-filesKind')[0];
                     if (kind) {
