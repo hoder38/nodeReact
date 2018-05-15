@@ -9,6 +9,10 @@ var _promise = require('babel-runtime/core-js/promise');
 
 var _promise2 = _interopRequireDefault(_promise);
 
+var _assign = require('babel-runtime/core-js/object/assign');
+
+var _assign2 = _interopRequireDefault(_assign);
+
 exports.default = function (functionName, name) {
     for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
         args[_key - 2] = arguments[_key];
@@ -91,12 +95,7 @@ _mongodb.MongoClient.connect('mongodb://' + _ver.DB_USERNAME + ':' + _ver.DB_PWD
                 return (0, _utility.handleError)(err, 'DB connect');
             }
             if (count === 0) {
-                collection.insert({
-                    username: 'hoder',
-                    desc: 'owner',
-                    perm: 1,
-                    password: (0, _crypto.createHash)('md5').update('test123').digest('hex')
-                }, function (err, user) {
+                collection.insert((0, _assign2.default)({}, _ver.ROOT_USER, { password: (0, _crypto.createHash)('md5').update('test123').digest('hex') }), function (err, user) {
                     if (err) {
                         return (0, _utility.handleError)(err, 'DB connect');
                     }

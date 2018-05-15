@@ -1383,123 +1383,126 @@ var getStorageQuerySql = function getStorageQuerySql(user, tagList, exactly) {
     var nosql = {};
     var and = [];
     var is_first = true;
-    var is_adultonly = false;
+    //let is_adultonly = false;
+    var is_adultonly = true;
     var is_tags = false;
     var skip = 0;
-    if (tagList.length < 1) {
-        if (!(0, _utility.checkAdmin)(2, user)) {
+    nosql['adultonly'] = 0;
+    /*if (tagList.length < 1) {
+        if (!checkAdmin(2, user)) {
             nosql['adultonly'] = 0;
             is_adultonly = true;
         }
-        if (!(0, _utility.checkAdmin)(1, user)) {
+        if (!checkAdmin(1, user)) {
             nosql['recycle'] = 0;
         }
-    } else {
-        var _iteratorNormalCompletion7 = true;
-        var _didIteratorError7 = false;
-        var _iteratorError7 = undefined;
+    } else {*/
+    nosql['adultonly'] = 0;
+    var _iteratorNormalCompletion7 = true;
+    var _didIteratorError7 = false;
+    var _iteratorError7 = undefined;
 
-        try {
-            for (var _iterator7 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                var _step7$value = (0, _slicedToArray3.default)(_step7.value, 2),
-                    i = _step7$value[0],
-                    tag = _step7$value[1];
+    try {
+        for (var _iterator7 = (0, _getIterator3.default)((0, _entries2.default)(tagList)), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+            var _step7$value = (0, _slicedToArray3.default)(_step7.value, 2),
+                i = _step7$value[0],
+                tag = _step7$value[1];
 
-                var normal = normalize(tag);
-                var index = isDefaultTag(normal);
-                if (index.index === 30) {
-                    continue;
-                } else if (index.index === 31) {
-                    if (index[1] === '') {
-                        skip = Number(index.index[2]);
-                    }
-                    continue;
-                } else if (index.index === 0) {
-                    if ((0, _utility.checkAdmin)(2, user)) {
-                        nosql['adultonly'] = 1;
-                        is_adultonly = true;
-                    }
-                } else if (index.index === 17) {
-                    if ((0, _utility.checkAdmin)(2, user)) {
+            var normal = normalize(tag);
+            var index = isDefaultTag(normal);
+            if (index.index === 30) {
+                continue;
+            } else if (index.index === 31) {
+                if (index[1] === '') {
+                    skip = Number(index.index[2]);
+                }
+                continue;
+            } else if (index.index === 0) {
+                if ((0, _utility.checkAdmin)(2, user)) {
+                    nosql['adultonly'] = 1;
+                    //is_adultonly = true;
+                }
+                /*} else if (index.index === 17) {
+                    if (checkAdmin(2, user)) {
                         nosql['adultonly'] = 0;
                         is_adultonly = true;
-                    }
-                } else if (index.index === 1) {
-                    if ((0, _utility.checkAdmin)(1, user)) {
-                        var _ret3 = { nosql: {
-                                mediaType: { $exists: true },
-                                utime: { $lt: Math.round(new Date().getTime() / 1000) - _constants.HANDLE_TIME }
-                            } };
-                        console.log(_ret3.nosql);
-                        return _ret3;
-                    }
-                } else if (index.index === 2) {
-                    if ((0, _utility.checkAdmin)(1, user)) {
-                        var unDay = user.unDay ? user.unDay : _constants.UNACTIVE_DAY;
-                        var _ret4 = { nosql: {
-                                count: { $lt: user.unHit ? user.unHit : _constants.UNACTIVE_HIT },
-                                utime: { $lt: Math.round(new Date().getTime() / 1000) - unDay * 86400 }
-                            } };
-                        console.log(_ret4.nosql);
-                        return _ret4;
-                    }
-                } else if (index.index === 12) {
-                    if ((0, _utility.checkAdmin)(1, user)) {
-                        var _unDay = user.unDay ? user.unDay : _constants.UNACTIVE_DAY;
-                        var _ret5 = { nosql: {
-                                count: { $lt: user.unHit ? user.unHit : _constants.UNACTIVE_HIT },
-                                utime: { $lt: Math.round(new Date().getTime() / 1000) - _unDay * 86400 },
-                                tags: 'playlist'
-                            } };
-                        console.log(_ret5.nosql);
-                        return _ret5;
-                    }
-                } else if (index.index === 3) {
-                    if ((0, _utility.checkAdmin)(1, user)) {
-                        var _ret6 = { nosql: {
-                                recycle: { $ne: 0 },
-                                utime: { $lt: Math.round(new Date().getTime() / 1000) - _constants.HANDLE_TIME }
-                            } };
-                        console.log(_ret6.nosql);
-                        return _ret6;
-                    }
-                } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21 || index.index === 22) {} else if (index.index === 5) {
-                    is_first = false;
-                } else if (index.index === 7) {
-                    console.log('no local');
-                    return false;
+                    }*/
+            } else if (index.index === 1) {
+                if ((0, _utility.checkAdmin)(1, user)) {
+                    var _ret3 = { nosql: {
+                            mediaType: { $exists: true },
+                            utime: { $lt: Math.round(new Date().getTime() / 1000) - _constants.HANDLE_TIME }
+                        } };
+                    console.log(_ret3.nosql);
+                    return _ret3;
+                }
+            } else if (index.index === 2) {
+                if ((0, _utility.checkAdmin)(1, user)) {
+                    var unDay = user.unDay ? user.unDay : _constants.UNACTIVE_DAY;
+                    var _ret4 = { nosql: {
+                            count: { $lt: user.unHit ? user.unHit : _constants.UNACTIVE_HIT },
+                            utime: { $lt: Math.round(new Date().getTime() / 1000) - unDay * 86400 }
+                        } };
+                    console.log(_ret4.nosql);
+                    return _ret4;
+                }
+            } else if (index.index === 12) {
+                if ((0, _utility.checkAdmin)(1, user)) {
+                    var _unDay = user.unDay ? user.unDay : _constants.UNACTIVE_DAY;
+                    var _ret5 = { nosql: {
+                            count: { $lt: user.unHit ? user.unHit : _constants.UNACTIVE_HIT },
+                            utime: { $lt: Math.round(new Date().getTime() / 1000) - _unDay * 86400 },
+                            tags: 'playlist'
+                        } };
+                    console.log(_ret5.nosql);
+                    return _ret5;
+                }
+            } else if (index.index === 3) {
+                if ((0, _utility.checkAdmin)(1, user)) {
+                    var _ret6 = { nosql: {
+                            recycle: { $ne: 0 },
+                            utime: { $lt: Math.round(new Date().getTime() / 1000) - _constants.HANDLE_TIME }
+                        } };
+                    console.log(_ret6.nosql);
+                    return _ret6;
+                }
+            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21 || index.index === 22) {} else if (index.index === 5) {
+                is_first = false;
+            } else if (index.index === 7) {
+                console.log('no local');
+                return false;
+            } else {
+                if (exactly[i]) {
+                    and.push({ tags: normal });
+                    is_tags = true;
                 } else {
-                    if (exactly[i]) {
-                        and.push({ tags: normal });
-                        is_tags = true;
-                    } else {
-                        and.push({ tags: { $regex: escapeRegExp(normal) } });
-                    }
+                    and.push({ tags: { $regex: escapeRegExp(normal) } });
                 }
             }
-        } catch (err) {
-            _didIteratorError7 = true;
-            _iteratorError7 = err;
+        }
+    } catch (err) {
+        _didIteratorError7 = true;
+        _iteratorError7 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                _iterator7.return();
+            }
         } finally {
-            try {
-                if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                    _iterator7.return();
-                }
-            } finally {
-                if (_didIteratorError7) {
-                    throw _iteratorError7;
-                }
+            if (_didIteratorError7) {
+                throw _iteratorError7;
             }
-        }
-
-        if (!(0, _utility.checkAdmin)(1, user)) {
-            nosql['recycle'] = 0;
-        }
-        if (!(0, _utility.checkAdmin)(2, user)) {
-            nosql['adultonly'] = 0;
-            is_adultonly = true;
         }
     }
+
+    if (!(0, _utility.checkAdmin)(1, user)) {
+        nosql['recycle'] = 0;
+    }
+    /*if (!checkAdmin(2, user)) {
+        nosql['adultonly'] = 0;
+        is_adultonly = true;
+    }
+    }*/
     if (is_first) {
         nosql['first'] = 1;
     }

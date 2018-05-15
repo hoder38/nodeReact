@@ -27,6 +27,7 @@ export const RELATIVE_UNION = 2;
 export const RELATIVE_INTER = 3;
 export const BOOKMARK_LIMIT = 100;
 export const DRIVE_LIMIT = 100;
+export const BACKUP_LIMIT = 1000;
 export const TORRENT_CONNECT = 100;
 export const TORRENT_UPLOAD = 5;
 export const CACHE_EXPIRE = 86400;
@@ -39,6 +40,7 @@ export const DOC_INTERVAL = 3600;
 export const MEDIA_INTERVAl = 7200;
 export const EXTERNAL_INTERVAL = 604800;
 export const STOCK_INTERVAL = 172800;
+export const BACKUP_INTERVAL = 86400;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800
@@ -807,3 +809,14 @@ export const STOCK_FILTER = {
     pre: [1, '>', 10],
     interval: [1, '>', 700],
 }
+
+export const BACKUP_COLLECTION = [
+    USERDB,
+    STORAGEDB,
+    STOCKDB,
+    PASSWORDDB,
+    DOCDB,
+    `${STORAGEDB}User`,
+    `${STOCKDB}User`,
+    `${PASSWORDDB}User`,
+]

@@ -1,5 +1,10 @@
 'use strict';
 
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.dbDump = undefined;
+
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
 var _typeof3 = _interopRequireDefault(_typeof2);
@@ -17,6 +22,10 @@ var _assign = require('babel-runtime/core-js/object/assign');
 var _assign2 = _interopRequireDefault(_assign);
 
 var _constants = require('../constants');
+
+var _ver = require('../../../ver');
+
+var _config = require('../config');
 
 var _readline = require('readline');
 
@@ -64,11 +73,17 @@ function cmdUpdateDrive() {
     });
 }
 
-var dbDump = function dbDump(collection) {
-    if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
+var dbDump = exports.dbDump = function dbDump(collection) {
+    var backupDate = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+    if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.DOCDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User') {
         return (0, _utility.handleError)(new _utility.HoError('Collection not find'));
     }
-    var folderPath = '/mnt/mongodb/backup/' + collection;
+    if (!backupDate) {
+        backupDate = new Date();
+        backupDate = '' + backupDate.getFullYear() + (0, _utility.completeZero)(backupDate.getMonth() + 1, 2) + (0, _utility.completeZero)(backupDate.getDate(), 2);
+    }
+    var folderPath = (0, _config.BACKUP_PATH)(_ver.ENV_TYPE) + '/' + backupDate + '/' + collection;
     var mkfolder = function mkfolder() {
         return (0, _fs.existsSync)(folderPath) ? _promise2.default.resolve() : new _promise2.default(function (resolve, reject) {
             return (0, _mkdirp2.default)(folderPath, function (err) {
@@ -78,15 +93,15 @@ var dbDump = function dbDump(collection) {
     };
     var recur_dump = function recur_dump(index, offset) {
         return (0, _mongoTool2.default)('find', collection, {}, {
-            limit: _constants.DRIVE_LIMIT,
+            limit: _constants.BACKUP_LIMIT,
             skip: offset
         }).then(function (items) {
-            if (items.length < _constants.DRIVE_LIMIT) {
+            if (items.length < 1) {
                 return _promise2.default.resolve();
             }
             var write_data = '';
             items.forEach(function (item) {
-                write_data = '' + write_data + (0, _stringify2.default)(item) + "\r\n";
+                return write_data = '' + write_data + (0, _stringify2.default)(item) + "\r\n";
             });
             return new _promise2.default(function (resolve, reject) {
                 return (0, _fs.writeFile)(folderPath + '/' + index, write_data, 'utf8', function (err) {
@@ -103,13 +118,15 @@ var dbDump = function dbDump(collection) {
 };
 
 var dbRestore = function dbRestore(collection) {
-    if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User' && collection !== _constants.USERDB + 'User') {
+    if (collection !== _constants.USERDB && collection !== _constants.STORAGEDB && collection !== _constants.STOCKDB && collection !== _constants.PASSWORDDB && collection !== _constants.DOCDB && collection !== _constants.STORAGEDB + 'User' && collection !== _constants.STOCKDB + 'User' && collection !== _constants.PASSWORDDB + 'User') {
         return (0, _utility.handleError)(new _utility.HoError('Collection not find'));
     }
-    var folderPath = '/mnt/mongodb/backup/' + collection;
+    var folderPath = (0, _config.BACKUP_PATH)(_ver.ENV_TYPE) + '/' + collection;
     var recur_insert = function recur_insert(index, store) {
-        return index >= store.length ? _promise2.default.resolve() : (0, _mongoTool2.default)('insert', collection, store[index]).then(function () {
-            return recur_insert(index + 1, store);
+        return index >= store.length ? _promise2.default.resolve() : (0, _mongoTool2.default)('count', collection, { _id: store[index]._id }, { limit: 1 }).then(function (count) {
+            return count > 0 ? recur_insert(index + 1, store) : (0, _mongoTool2.default)('insert', collection, store[index]).then(function () {
+                return recur_insert(index + 1, store);
+            });
         });
     };
     var recur_restore = function recur_restore(index) {

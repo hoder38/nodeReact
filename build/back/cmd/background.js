@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
 
@@ -48,6 +48,8 @@ var _apiToolPlaylist2 = _interopRequireDefault(_apiToolPlaylist);
 var _apiToolGoogle = require('../models/api-tool-google');
 
 var _apiToolGoogle2 = _interopRequireDefault(_apiToolGoogle);
+
+var _cmd = require('./cmd');
 
 var _utility = require('../util/utility');
 
@@ -369,5 +371,53 @@ var filterStock = exports.filterStock = function filterStock() {
         }();
 
         if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+    }
+};
+
+//暫不刪除pi上的備份
+var dbBackup = exports.dbBackup = function dbBackup() {
+    if ((0, _config.DB_BACKUP)(_ver.ENV_TYPE)) {
+        var _ret7 = function () {
+            var allBackup = function allBackup() {
+                console.log('allBackup');
+                console.log(new Date());
+                var sd = new Date();
+                var backupDate = '' + sd.getFullYear() + (0, _utility.completeZero)(sd.getMonth() + 1, 2) + (0, _utility.completeZero)(sd.getDate(), 2);
+                var singleBackup = function singleBackup(index) {
+                    if (index >= _constants.BACKUP_COLLECTION.length) {
+                        return (0, _apiToolGoogle.googleBackupDb)(backupDate);
+                    }
+                    console.log(_constants.BACKUP_COLLECTION[index]);
+                    return (0, _cmd.dbDump)(_constants.BACKUP_COLLECTION[index], backupDate).then(function () {
+                        return singleBackup(index + 1);
+                    });
+                };
+                var sdf = function sdf() {
+                    return sd.getDate() === 2 ? singleBackup(0) : _promise2.default.resolve();
+                };
+                return sdf().catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Loop stockFilter');
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.BACKUP_INTERVAL * 1000);
+                    });
+                }).then(function () {
+                    return allBackup();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 20000);
+                }).then(function () {
+                    return allBackup();
+                })
+            };
+        }();
+
+        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
     }
 };

@@ -20,6 +20,7 @@ export const SESS_IP = env => env === RELEASE ? ReleaseConfig.SESS_IP : DevConfi
 export const SESS_PORT = env => env === RELEASE ? ReleaseConfig.SESS_PORT : DevConfig.SESS_PORT
 export const GOOGLE_MEDIA_FOLDER = env => env === RELEASE ? ReleaseConfig.GOOGLE_MEDIA_FOLDER : DevConfig.GOOGLE_MEDIA_FOLDER
 export const GOOGLE_BACKUP_FOLDER = env => env === RELEASE ? ReleaseConfig.GOOGLE_BACKUP_FOLDER : DevConfig.GOOGLE_BACKUP_FOLDER
+export const GOOGLE_DB_BACKUP_FOLDER = env => env === RELEASE ? ReleaseConfig.GOOGLE_DB_BACKUP_FOLDER : DevConfig.GOOGLE_DB_BACKUP_FOLDER
 export const NAS_TMP = env => env === RELEASE ? ReleaseConfig.NAS_TMP : DevConfig.NAS_TMP
 export const NAS_PREFIX = env => env === RELEASE ? ReleaseConfig.NAS_PREFIX : DevConfig.NAS_PREFIX
 export const HINT = env => env === RELEASE ? ReleaseConfig.HINT : DevConfig.HINT
@@ -36,3 +37,5 @@ export const STREAM_LIMIT = env => env === RELEASE ? ReleaseConfig.STREAM_LIMIT 
 export const STOCK_DATE = env => env === RELEASE ? ReleaseConfig.STOCK_DATE : DevConfig.STOCK_DATE
 export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : DevConfig.STOCK_MODE
 export const STOCK_FILTER = env => env === RELEASE ? ReleaseConfig.STOCK_FILTER : DevConfig.STOCK_FILTER
+export const DB_BACKUP = env => env === RELEASE ? ReleaseConfig.DB_BACKUP : DevConfig.DB_BACKUP
+export const BACKUP_PATH = env => env === RELEASE ? ReleaseConfig.BACKUP_PATH : DevConfig.BACKUP_PATH

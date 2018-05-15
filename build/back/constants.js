@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.STOCK_FILTER = exports.RANDOM_EMAIL = exports.GOOGLE_SCOPE = exports.RANK_LIMIT = exports.CHART_LIMIT = exports.FITNESS_POINT = exports.MIME_EXT = exports.KINDLE_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.KUBO_TYPE = exports.KUBO_COUNTRY = exports.BILI_TYPE = exports.TRANS_LIST_CH = exports.TRANS_LIST = exports.COMIC_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.RANK_PARENT = exports.FITNESS_PARENT = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.KINDLE_LIMIT = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_SIZE = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.DOCDB = exports.RANKDB = exports.FITNESSDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
+exports.BACKUP_COLLECTION = exports.STOCK_FILTER = exports.RANDOM_EMAIL = exports.GOOGLE_SCOPE = exports.RANK_LIMIT = exports.CHART_LIMIT = exports.FITNESS_POINT = exports.MIME_EXT = exports.KINDLE_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.KUBO_TYPE = exports.KUBO_COUNTRY = exports.BILI_TYPE = exports.TRANS_LIST_CH = exports.TRANS_LIST = exports.COMIC_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.RANK_PARENT = exports.FITNESS_PARENT = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.KINDLE_LIMIT = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.BACKUP_INTERVAL = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.BACKUP_LIMIT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_SIZE = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.DOCDB = exports.RANKDB = exports.FITNESSDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
 
 var _path = require('path');
 
@@ -35,6 +35,7 @@ var RELATIVE_UNION = exports.RELATIVE_UNION = 2;
 var RELATIVE_INTER = exports.RELATIVE_INTER = 3;
 var BOOKMARK_LIMIT = exports.BOOKMARK_LIMIT = 100;
 var DRIVE_LIMIT = exports.DRIVE_LIMIT = 100;
+var BACKUP_LIMIT = exports.BACKUP_LIMIT = 1000;
 var TORRENT_CONNECT = exports.TORRENT_CONNECT = 100;
 var TORRENT_UPLOAD = exports.TORRENT_UPLOAD = 5;
 var CACHE_EXPIRE = exports.CACHE_EXPIRE = 86400;
@@ -47,6 +48,7 @@ var DOC_INTERVAL = exports.DOC_INTERVAL = 3600;
 var MEDIA_INTERVAl = exports.MEDIA_INTERVAl = 7200;
 var EXTERNAL_INTERVAL = exports.EXTERNAL_INTERVAL = 604800;
 var STOCK_INTERVAL = exports.STOCK_INTERVAL = 172800;
+var BACKUP_INTERVAL = exports.BACKUP_INTERVAL = 86400;
 var STOCK_FILTER_LIMIT = exports.STOCK_FILTER_LIMIT = 100;
 var ALGORITHM = exports.ALGORITHM = 'aes-256-ctr';
 var KINDLE_LIMIT = exports.KINDLE_LIMIT = 52428800;
@@ -342,3 +344,5 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     pre: [1, '>', 10],
     interval: [1, '>', 700]
 };
+
+var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];

@@ -1,14 +1,15 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER } from '../config'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB } from '../constants'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP } from '../config'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockList, getSingleAnnual } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import PlaylistApi from '../models/api-tool-playlist'
-import GoogleApi, { userDrive, autoDoc } from '../models/api-tool-google'
-import { handleError } from '../util/utility'
+import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
+import { dbDump } from './cmd'
+import { handleError, completeZero } from '../util/utility'
 
 let stock_batch_list = [];
 let stock_batch_list_2 = [];
@@ -172,5 +173,27 @@ export const filterStock = () => {
             return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
+    }
+}
+
+//暫不刪除pi上的備份
+export const dbBackup = () => {
+    if (DB_BACKUP(ENV_TYPE)) {
+        const allBackup = () => {
+            console.log('allBackup');
+            console.log(new Date());
+            const sd = new Date();
+            const backupDate = `${sd.getFullYear()}${completeZero(sd.getMonth() + 1, 2)}${completeZero(sd.getDate(), 2)}`;
+            const singleBackup = index => {
+                if (index >= BACKUP_COLLECTION.length) {
+                    return googleBackupDb(backupDate);
+                }
+                console.log(BACKUP_COLLECTION[index]);
+                return dbDump(BACKUP_COLLECTION[index], backupDate).then(() => singleBackup(index + 1));
+            }
+            const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
+            return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 20000)).then(() => allBackup());
     }
 }

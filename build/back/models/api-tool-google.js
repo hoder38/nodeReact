@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.sendPresentName = undefined;
+exports.googleBackupDb = exports.sendPresentName = undefined;
 
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
@@ -1557,4 +1557,49 @@ function autoDoc(userlist, index, type) {
 var sendPresentName = exports.sendPresentName = function sendPresentName(name, mail) {
     var append = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
     return api('send name', { name: name, mail: mail, append: append });
+};
+
+var googleBackupDb = exports.googleBackupDb = function googleBackupDb(backupDate) {
+    return api('create', { name: backupDate, parent: (0, _config.GOOGLE_DB_BACKUP_FOLDER)(_ver.ENV_TYPE) }).then(function (metadata) {
+        var backup_collection = [];
+        (0, _fs.readdirSync)((0, _config.BACKUP_PATH)(_ver.ENV_TYPE) + '/' + backupDate).forEach(function (file, index) {
+            var list = [];
+            (0, _fs.readdirSync)((0, _config.BACKUP_PATH)(_ver.ENV_TYPE) + '/' + backupDate + '/' + file).forEach(function (file1, index1) {
+                return list.push(file1);
+            });
+            backup_collection.push({
+                name: file,
+                path: (0, _config.BACKUP_PATH)(_ver.ENV_TYPE) + '/' + backupDate + '/' + file,
+                list: list
+            });
+        });
+        var create_collection = function create_collection(index) {
+            if (index >= backup_collection.length) {
+                console.log(backup_collection);
+                return upload_db(0, 0);
+            }
+            return api('create', { name: backup_collection[index].name, parent: metadata.id }).then(function (metadata2) {
+                backup_collection[index].id = metadata2.id;
+                return create_collection(index + 1);
+            });
+        };
+        var upload_db = function upload_db(index, index2) {
+            if (index >= backup_collection.length) {
+                return _promise2.default.resolve();
+            }
+            if (index2 >= backup_collection[index].list.length) {
+                return upload_db(index + 1, 0);
+            }
+            return api('upload', {
+                user: _ver.ROOT_USER,
+                type: 'auto',
+                parent: backup_collection[index].id,
+                name: backup_collection[index].list[index2],
+                filePath: backup_collection[index].path + '/' + backup_collection[index].list[index2]
+            }).then(function () {
+                return upload_db(index, index2 + 1);
+            });
+        };
+        return create_collection(0);
+    });
 };

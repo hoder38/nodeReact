@@ -1117,10 +1117,12 @@ const getStorageQuerySql = function(user, tagList, exactly) {
     let nosql = {};
     let and = [];
     let is_first = true;
-    let is_adultonly = false;
+    //let is_adultonly = false;
+    let is_adultonly = true;
     let is_tags = false;
     let skip = 0;
-    if (tagList.length < 1) {
+    nosql['adultonly'] = 0;
+    /*if (tagList.length < 1) {
         if (!checkAdmin(2, user)) {
             nosql['adultonly'] = 0;
             is_adultonly = true;
@@ -1128,7 +1130,8 @@ const getStorageQuerySql = function(user, tagList, exactly) {
         if (!checkAdmin(1, user)) {
             nosql['recycle'] = 0;
         }
-    } else {
+    } else {*/
+        nosql['adultonly'] = 0;
         for (let [i, tag] of Object.entries(tagList)) {
             const normal = normalize(tag);
             const index = isDefaultTag(normal);
@@ -1142,13 +1145,13 @@ const getStorageQuerySql = function(user, tagList, exactly) {
             } else if (index.index === 0) {
                 if (checkAdmin(2, user)) {
                     nosql['adultonly'] = 1;
-                    is_adultonly = true;
+                    //is_adultonly = true;
                 }
-            } else if (index.index === 17) {
+            /*} else if (index.index === 17) {
                 if (checkAdmin(2, user)) {
                     nosql['adultonly'] = 0;
                     is_adultonly = true;
-                }
+                }*/
             } else if (index.index === 1) {
                 if (checkAdmin(1, user)) {
                     const ret = {nosql: {
@@ -1206,11 +1209,11 @@ const getStorageQuerySql = function(user, tagList, exactly) {
         if (!checkAdmin(1, user)) {
             nosql['recycle'] = 0;
         }
-        if (!checkAdmin(2, user)) {
+        /*if (!checkAdmin(2, user)) {
             nosql['adultonly'] = 0;
             is_adultonly = true;
         }
-    }
+    }*/
     if (is_first) {
         nosql['first'] = 1;
     }

@@ -2743,225 +2743,83 @@ exports.default = {
                                 if (!choose) {
                                     return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
                                 }
-                                return (0, _apiTool2.default)('url', !choose.url.match(/^(http|https):\/\//) ? '' + prefix + choose.url : choose.url).then(function (raw_data) {
-                                    var obj = [];
-                                    var vs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0];
-                                    var getV = function getV(v) {
-                                        var vType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-
+                                saveList(lovetvGetlist, raw_list, is_end, etime);
+                                return [(0, _assign2.default)({
+                                    id: 'ope_' + new Buffer(!choose.url.match(/^(http|https):\/\//) ? '' + prefix + choose.url : choose.url).toString('base64'),
+                                    title: choose.name,
+                                    index: index,
+                                    showId: index
+                                }), is_end, raw_list.length];
+                                /*return Api('url', !choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).then(raw_data => {
+                                    let obj = [];
+                                    const vs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0];
+                                    const getV = (v, vType='') => {
                                         if (v) {
-                                            var vIds = (0, _utility.findTag)((0, _utility.findTag)(v, 'div', 'video_ids' + vType)[0])[0].match(/[^,]+/g);
+                                            const vIds = findTag(findTag(v, 'div', `video_ids${vType}`)[0])[0].match(/[^,]+/g);
                                             if (vIds.length > 0) {
-                                                var t = Number((0, _utility.findTag)((0, _utility.findTag)(v, 'div', 'video_type' + vType)[0])[0]);
+                                                const t = Number(findTag(findTag(v, 'div', `video_type${vType}`)[0])[0]);
                                                 if (t === 17) {
-                                                    for (var _i2 = 1; _i2 <= vIds[1]; _i2++) {
-                                                        obj.push('bil_av' + vIds[0] + '_' + _i2);
+                                                    for (let i = 1; i <= vIds[1]; i++) {
+                                                        obj.push(`bil_av${vIds[0]}_${i}`);
                                                     }
                                                 } else if (t === 1) {
-                                                    var _iteratorNormalCompletion23 = true;
-                                                    var _didIteratorError23 = false;
-                                                    var _iteratorError23 = undefined;
-
-                                                    try {
-                                                        for (var _iterator23 = (0, _getIterator3.default)(vIds), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-                                                            var _i3 = _step23.value;
-
-                                                            obj.push('you_' + _i3);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError23 = true;
-                                                        _iteratorError23 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion23 && _iterator23.return) {
-                                                                _iterator23.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError23) {
-                                                                throw _iteratorError23;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`you_${i}`);
                                                     }
                                                 } else if (t === 10) {
-                                                    var _iteratorNormalCompletion24 = true;
-                                                    var _didIteratorError24 = false;
-                                                    var _iteratorError24 = undefined;
-
-                                                    try {
-                                                        for (var _iterator24 = (0, _getIterator3.default)(vIds), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                                            var _i4 = _step24.value;
-
-                                                            obj.push('yuk_' + _i4);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError24 = true;
-                                                        _iteratorError24 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion24 && _iterator24.return) {
-                                                                _iterator24.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError24) {
-                                                                throw _iteratorError24;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`yuk_${i}`);
                                                     }
                                                 } else if (t === 3) {
                                                     //open
-                                                    var _iteratorNormalCompletion25 = true;
-                                                    var _didIteratorError25 = false;
-                                                    var _iteratorError25 = undefined;
-
-                                                    try {
-                                                        for (var _iterator25 = (0, _getIterator3.default)(vIds), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                                                            var _i5 = _step25.value;
-
-                                                            obj.push('ope_' + _i5);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError25 = true;
-                                                        _iteratorError25 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion25 && _iterator25.return) {
-                                                                _iterator25.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError25) {
-                                                                throw _iteratorError25;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`ope_${i}`);
                                                     }
                                                 } else if (t === 12) {
                                                     //up2stream
-                                                    var _iteratorNormalCompletion26 = true;
-                                                    var _didIteratorError26 = false;
-                                                    var _iteratorError26 = undefined;
-
-                                                    try {
-                                                        for (var _iterator26 = (0, _getIterator3.default)(vIds), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-                                                            var _i6 = _step26.value;
-
-                                                            obj.push('up2_' + _i6);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError26 = true;
-                                                        _iteratorError26 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion26 && _iterator26.return) {
-                                                                _iterator26.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError26) {
-                                                                throw _iteratorError26;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`up2_${i}`);
                                                     }
                                                 } else if (t === 19) {
                                                     //愛奇藝
-                                                    var _iteratorNormalCompletion27 = true;
-                                                    var _didIteratorError27 = false;
-                                                    var _iteratorError27 = undefined;
-
-                                                    try {
-                                                        for (var _iterator27 = (0, _getIterator3.default)(vIds), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
-                                                            var _i7 = _step27.value;
-
-                                                            obj.push('iqi_' + _i7);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError27 = true;
-                                                        _iteratorError27 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion27 && _iterator27.return) {
-                                                                _iterator27.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError27) {
-                                                                throw _iteratorError27;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`iqi_${i}`);
                                                     }
                                                 } else if (t === 6) {
                                                     //line tv
-                                                    var _iteratorNormalCompletion28 = true;
-                                                    var _didIteratorError28 = false;
-                                                    var _iteratorError28 = undefined;
-
-                                                    try {
-                                                        for (var _iterator28 = (0, _getIterator3.default)(vIds), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-                                                            var _i8 = _step28.value;
-
-                                                            obj.push('lin_' + _i8);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError28 = true;
-                                                        _iteratorError28 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion28 && _iterator28.return) {
-                                                                _iterator28.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError28) {
-                                                                throw _iteratorError28;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`lin_${i}`);
                                                     }
                                                 } else {
-                                                    var _iteratorNormalCompletion29 = true;
-                                                    var _didIteratorError29 = false;
-                                                    var _iteratorError29 = undefined;
-
-                                                    try {
-                                                        for (var _iterator29 = (0, _getIterator3.default)(vIds), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-                                                            var _i9 = _step29.value;
-
-                                                            obj.push('dym_' + _i9);
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError29 = true;
-                                                        _iteratorError29 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion29 && _iterator29.return) {
-                                                                _iterator29.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError29) {
-                                                                throw _iteratorError29;
-                                                            }
-                                                        }
+                                                    for (let i of vIds) {
+                                                        obj.push(`dym_${i}`);
                                                     }
                                                 }
                                             }
                                         }
-                                    };
-                                    var div1 = (0, _utility.findTag)((0, _utility.findTag)(vs, 'p')[0], 'div', 'video_div')[0];
-                                    getV(div1 ? div1 : (0, _utility.findTag)(vs, 'div', 'video_div')[0]);
-                                    getV((0, _utility.findTag)(vs, 'div', 'video_div_s2')[0], '_s2');
-                                    getV((0, _utility.findTag)(vs, 'div', 'video_div_s3')[0], '_s3');
+                                    }
+                                    const div1 = findTag(findTag(vs, 'p')[0], 'div', 'video_div')[0];
+                                    getV(div1 ? div1 : findTag(vs, 'div', 'video_div')[0]);
+                                    getV(findTag(vs, 'div', 'video_div_s2')[0], '_s2');
+                                    getV(findTag(vs, 'div', 'video_div_s3')[0], '_s3');
                                     if (!obj) {
-                                        return (0, _utility.handleError)(new _utility.HoError('no source'));
+                                        return handleError(new HoError('no source'));
                                     }
                                     if (sub_index > obj.length) {
                                         sub_index = 1;
                                     }
                                     console.log(obj);
                                     saveList(lovetvGetlist, raw_list, is_end, etime);
-                                    return [(0, _assign2.default)({
-                                        id: obj[sub_index - 1],
+                                    return [Object.assign({
+                                        id: obj[sub_index-1],
                                         index: index,
-                                        showId: index
-                                    }, obj.length > 1 ? {
+                                        showId: index,
+                                    }, (obj.length > 1) ? {
                                         sub: obj.length,
                                         index: (index * 1000 + sub_index) / 1000,
-                                        showId: (index * 1000 + sub_index) / 1000
+                                        showId: (index * 1000 + sub_index) / 1000,
                                     } : {}), is_end, raw_list.length];
-                                });
+                                });*/
                             };
                             return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : lovetvGetlist().then(function (_ref5) {
                                 var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
@@ -2993,9 +2851,9 @@ exports.default = {
                                             size: size
                                         };
                                         var si = -1;
-                                        for (var _i10 in list) {
-                                            if (list[_i10][0]['season'] === season) {
-                                                si = _i10;
+                                        for (var _i2 in list) {
+                                            if (list[_i2][0]['season'] === season) {
+                                                si = _i2;
                                                 break;
                                             }
                                         }
@@ -3003,9 +2861,9 @@ exports.default = {
                                             list.push([data]);
                                         } else {
                                             var isInsert = false;
-                                            for (var _i11 in list[si]) {
-                                                if (list[si][_i11].size > size) {
-                                                    list[si].splice(_i11, 0, data);
+                                            for (var _i3 in list[si]) {
+                                                if (list[si][_i3].size > size) {
+                                                    list[si].splice(_i3, 0, data);
                                                     isInsert = true;
                                                     break;
                                                 }
@@ -3031,30 +2889,30 @@ exports.default = {
                                 var trLength = tr.length;
                                 console.log(trLength);
                                 var is_end = false;
-                                var _iteratorNormalCompletion30 = true;
-                                var _didIteratorError30 = false;
-                                var _iteratorError30 = undefined;
+                                var _iteratorNormalCompletion23 = true;
+                                var _didIteratorError23 = false;
+                                var _iteratorError23 = undefined;
 
                                 try {
-                                    for (var _iterator30 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
-                                        var _i12 = _step30.value;
+                                    for (var _iterator23 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
+                                        var _i4 = _step23.value;
 
-                                        if ((0, _utility.findTag)(_i12)[0] === 'Ended') {
+                                        if ((0, _utility.findTag)(_i4)[0] === 'Ended') {
                                             is_end = true;
                                             break;
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError30 = true;
-                                    _iteratorError30 = err;
+                                    _didIteratorError23 = true;
+                                    _iteratorError23 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion30 && _iterator30.return) {
-                                            _iterator30.return();
+                                        if (!_iteratorNormalCompletion23 && _iterator23.return) {
+                                            _iterator23.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError30) {
-                                            throw _iteratorError30;
+                                        if (_didIteratorError23) {
+                                            throw _iteratorError23;
                                         }
                                     }
                                 }
@@ -3144,29 +3002,29 @@ exports.default = {
                                 return (0, _utility.handleError)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion31 = true;
-                            var _didIteratorError31 = false;
-                            var _iteratorError31 = undefined;
+                            var _iteratorNormalCompletion24 = true;
+                            var _didIteratorError24 = false;
+                            var _iteratorError24 = undefined;
 
                             try {
-                                for (var _iterator31 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-                                    var _i13 = _step31.value;
+                                for (var _iterator24 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+                                    var _i5 = _step24.value;
 
-                                    if (_i13['quality'] === '1080p' || !magnet && _i13['quality'] === '720p') {
-                                        magnet = 'magnet:?xt=urn:btih:' + _i13['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
+                                    if (_i5['quality'] === '1080p' || !magnet && _i5['quality'] === '720p') {
+                                        magnet = 'magnet:?xt=urn:btih:' + _i5['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError31 = true;
-                                _iteratorError31 = err;
+                                _didIteratorError24 = true;
+                                _iteratorError24 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion31 && _iterator31.return) {
-                                        _iterator31.return();
+                                    if (!_iteratorNormalCompletion24 && _iterator24.return) {
+                                        _iterator24.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError31) {
-                                        throw _iteratorError31;
+                                    if (_didIteratorError24) {
+                                        throw _iteratorError24;
                                     }
                                 }
                             }
@@ -3289,20 +3147,20 @@ exports.default = {
                             var list = [];
                             var is_end = false;
                             var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
-                            var _iteratorNormalCompletion32 = true;
-                            var _didIteratorError32 = false;
-                            var _iteratorError32 = undefined;
+                            var _iteratorNormalCompletion25 = true;
+                            var _didIteratorError25 = false;
+                            var _iteratorError25 = undefined;
 
                             try {
-                                for (var _iterator32 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-                                    var p = _step32.value;
-                                    var _iteratorNormalCompletion34 = true;
-                                    var _didIteratorError34 = false;
-                                    var _iteratorError34 = undefined;
+                                for (var _iterator25 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+                                    var p = _step25.value;
+                                    var _iteratorNormalCompletion27 = true;
+                                    var _didIteratorError27 = false;
+                                    var _iteratorError27 = undefined;
 
                                     try {
-                                        for (var _iterator34 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
-                                            var pt = _step34.value;
+                                        for (var _iterator27 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
+                                            var pt = _step27.value;
 
                                             if (pt.match(/完結/)) {
                                                 is_end = true;
@@ -3310,16 +3168,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError34 = true;
-                                        _iteratorError34 = err;
+                                        _didIteratorError27 = true;
+                                        _iteratorError27 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion34 && _iterator34.return) {
-                                                _iterator34.return();
+                                            if (!_iteratorNormalCompletion27 && _iterator27.return) {
+                                                _iterator27.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError34) {
-                                                throw _iteratorError34;
+                                            if (_didIteratorError27) {
+                                                throw _iteratorError27;
                                             }
                                         }
                                     }
@@ -3329,16 +3187,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError32 = true;
-                                _iteratorError32 = err;
+                                _didIteratorError25 = true;
+                                _iteratorError25 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion32 && _iterator32.return) {
-                                        _iterator32.return();
+                                    if (!_iteratorNormalCompletion25 && _iterator25.return) {
+                                        _iterator25.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError32) {
-                                        throw _iteratorError32;
+                                    if (_didIteratorError25) {
+                                        throw _iteratorError25;
                                     }
                                 }
                             }
@@ -3351,13 +3209,13 @@ exports.default = {
                                 if (div) {
                                     ul = div;
                                 }
-                                var _iteratorNormalCompletion33 = true;
-                                var _didIteratorError33 = false;
-                                var _iteratorError33 = undefined;
+                                var _iteratorNormalCompletion26 = true;
+                                var _didIteratorError26 = false;
+                                var _iteratorError26 = undefined;
 
                                 try {
-                                    for (var _iterator33 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
-                                        var l = _step33.value;
+                                    for (var _iterator26 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
+                                        var l = _step26.value;
 
                                         var a = (0, _utility.findTag)(l, 'a')[0];
                                         var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.58b.tv').match(/youtube\.php\?(.*)$/);
@@ -3374,16 +3232,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError33 = true;
-                                    _iteratorError33 = err;
+                                    _didIteratorError26 = true;
+                                    _iteratorError26 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion33 && _iterator33.return) {
-                                            _iterator33.return();
+                                        if (!_iteratorNormalCompletion26 && _iterator26.return) {
+                                            _iterator26.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError33) {
-                                            throw _iteratorError33;
+                                        if (_didIteratorError26) {
+                                            throw _iteratorError26;
                                         }
                                     }
                                 }
@@ -3514,8 +3372,8 @@ exports.default = {
                                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                                     var sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
                                     var pre_obj = [];
-                                    for (var _i14 = 1; _i14 <= sub; _i14++) {
-                                        pre_obj.push(_i14 < 10 ? '00' + _i14 + '.jpg' : _i14 < 100 ? '0' + _i14 + '.jpg' : _i14 + '.jpg');
+                                    for (var _i6 = 1; _i6 <= sub; _i6++) {
+                                        pre_obj.push(_i6 < 10 ? '00' + _i6 + '.jpg' : _i6 < 100 ? '0' + _i6 + '.jpg' : _i6 + '.jpg');
                                     }
                                     saveList(madGetlist, raw_list, is_end, etime);
                                     return [{
@@ -3611,10 +3469,10 @@ exports.default = {
                                     });
                                     var _type = (0, _utility.findTag)((0, _utility.findTag)(p, 'a')[0])[0];
                                     tags.add(_type);
-                                    for (var _i15 in _constants.KUBO_TYPE) {
-                                        var index = _constants.KUBO_TYPE[_i15].indexOf(_type);
+                                    for (var _i7 in _constants.KUBO_TYPE) {
+                                        var index = _constants.KUBO_TYPE[_i7].indexOf(_type);
                                         if (index !== -1) {
-                                            if (_i15 === '0') {
+                                            if (_i7 === '0') {
                                                 tags.add('movie').add('電影');
                                                 switch (index) {
                                                     case 0:
@@ -3642,11 +3500,11 @@ exports.default = {
                                                         tags.add('animation').add('動畫');
                                                         break;
                                                 }
-                                            } else if (_i15 === '1') {
+                                            } else if (_i7 === '1') {
                                                 tags.add('tv show').add('電視劇');
-                                            } else if (_i15 === '2') {
+                                            } else if (_i7 === '2') {
                                                 tags.add('tv show').add('電視劇').add('綜藝節目');
-                                            } else if (_i15 === '3') {
+                                            } else if (_i7 === '3') {
                                                 tags.add('animation').add('動畫');
                                             }
                                             break;
@@ -3901,8 +3759,8 @@ var youtubeVideoUrl = exports.youtubeVideoUrl = function youtubeVideoUrl(id, url
     } else if (id === 'iqi') {
         var iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
         ret_obj['embed'] = ['//player.video.qiyi.com/' + iqiId[0] + '/0/0/v_' + iqiId[1] + '.swf-albumId=' + iqiId[2] + '-tvId=' + iqiId[3] + '-isPurchase=0-cnId=2'];
-    } else if (id === 'ope') {
-        ret_obj['iframe'] = [url];
+        //} else if (id === 'ope') {
+        //    ret_obj['iframe'] = [url];
     } else {
         return new _promise2.default(function (resolve, reject) {
             return (0, _youtubeDl.getInfo)(url, [], { maxBuffer: 10 * 1024 * 1024 }, function (err, info) {

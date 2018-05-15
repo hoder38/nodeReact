@@ -1,4 +1,6 @@
-import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL } from '../constants'
+import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT } from '../constants'
+import { ENV_TYPE } from '../../../ver'
+import { BACKUP_PATH } from '../config'
 import { createInterface } from 'readline'
 import { writeFile as FsWriteFile, createReadStream as FsCreateReadStream, existsSync as FsExistsSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -6,7 +8,7 @@ import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, isValidString, HoError } from '../util/utility'
+import { handleError, isValidString, HoError, completeZero } from '../util/utility'
 
 const sendList = RANDOM_EMAIL;
 
@@ -23,34 +25,36 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     return isSingle().then(userlist => userDrive(userlist, 0, drive_batch));
 }
 
-const dbDump = collection => {
-    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
+export const dbDump = (collection, backupDate=null) => {
+    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
         return handleError(new HoError('Collection not find'));
     }
-    const folderPath = `/mnt/mongodb/backup/${collection}`;
+    if (!backupDate) {
+        backupDate = new Date();
+        backupDate = `${backupDate.getFullYear()}${completeZero(backupDate.getMonth() + 1, 2)}${completeZero(backupDate.getDate(), 2)}`;
+    }
+    const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${collection}`;
     const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
     const recur_dump = (index, offset) => Mongo('find', collection, {}, {
-        limit: DRIVE_LIMIT,
+        limit: BACKUP_LIMIT,
         skip: offset,
     }).then(items => {
-        if (items.length < DRIVE_LIMIT) {
+        if (items.length < 1) {
             return Promise.resolve();
         }
         let write_data = '';
-        items.forEach(item => {
-            write_data = `${write_data}${JSON.stringify(item)}` + "\r\n";
-        });
+        items.forEach(item => write_data = `${write_data}${JSON.stringify(item)}` + "\r\n");
         return new Promise((resolve, reject) => FsWriteFile(`${folderPath}/${index}`, write_data, 'utf8', err => err ? reject(err) : resolve())).then(() => recur_dump(index + 1, offset + items.length));
     });
     return mkfolder().then(() => recur_dump(0, 0));
 }
 
 const dbRestore = collection => {
-    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${USERDB}User`) {
+    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
         return handleError(new HoError('Collection not find'));
     }
-    const folderPath = `/mnt/mongodb/backup/${collection}`;
-    const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store));
+    const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${collection}`;
+    const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('count', collection, {_id: store[index]._id}, {limit: 1}).then(count => (count > 0) ? recur_insert(index + 1, store) : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store)));
     const recur_restore = index => {
         const filePath = `${folderPath}/${index}`;
         return !FsExistsSync(filePath) ? Promise.resolve() : new Promise((resolve, reject) => {
@@ -60,7 +64,7 @@ const dbRestore = collection => {
                 terminal: false,
             });
             rl.on('line', line => {
-                const json = JSON.parse(line)
+                const json = JSON.parse(line);
                 for (let i in json) {
                     if (i === '_id' || i === 'userId' || i === 'owner') {
                         json[i] = objectID(json[i]);

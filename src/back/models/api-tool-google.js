@@ -1,6 +1,6 @@
 import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE, KINDLE_LIMIT } from '../constants'
-import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
-import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP } from '../config'
+import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver'
+import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config'
 import googleapis from 'googleapis'
 import Fetch from 'node-fetch'
 import Youtubedl from 'youtube-dl'
@@ -755,14 +755,14 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
     switch (recycle) {
         case 1:
         return api('upload', {
-            user: user,
+            user,
             type: 'backup',
             name: `${id}.${name}`,
             filePath: `${filePath}${append}`,
         });
         case 2:
         return FsExistsSync(`${filePath}.srt`) ? api('upload', {
-            user: user,
+            user,
             type: 'backup',
             name: `${id}.${name}.srt`,
             filePath: `${filePath}.srt`,
@@ -772,14 +772,14 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
             name: `${id}.${name}.ass`,
             filePath: `${filePath}.ass`,
         }) : FsExistsSync(`${filePath}.ssa`) ? api('upload', {
-            user: user,
+            user,
             type: 'backup',
             name: `${id}.${name}.ssa`,
             filePath: `${filePath}.ssa`,
         }) : Promise.resolve();
         case 3:
         return api('upload', {
-            user: user,
+            user,
             type: 'backup',
             name: `${id}.${name}.txt`,
             body: tags.toString(),
@@ -1021,3 +1021,42 @@ export function autoDoc(userlist, index, type, date=null) {
 }
 
 export const sendPresentName = (name, mail, append=null) => api('send name', {name, mail, append});
+
+export const googleBackupDb = backupDate => api('create', {name: backupDate, parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE)}).then(metadata => {
+    const backup_collection = [];
+    FsReaddirSync(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}`).forEach((file,index) => {
+        const list = [];
+        FsReaddirSync(`${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${file}`).forEach((file1,index1) => list.push(file1));
+        backup_collection.push({
+            name: file,
+            path: `${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${file}`,
+            list,
+        });
+    });
+    const create_collection = index => {
+        if (index >= backup_collection.length) {
+            console.log(backup_collection);
+            return upload_db(0, 0);
+        }
+        return api('create', {name: backup_collection[index].name, parent: metadata.id}).then(metadata2 => {
+            backup_collection[index].id = metadata2.id;
+            return create_collection(index+1);
+        });
+    }
+    const upload_db = (index, index2) => {
+        if (index >= backup_collection.length) {
+            return Promise.resolve();
+        }
+        if (index2 >= backup_collection[index].list.length) {
+            return upload_db(index + 1, 0);
+        }
+        return api('upload', {
+            user: ROOT_USER,
+            type: 'auto',
+            parent: backup_collection[index].id,
+            name: backup_collection[index].list[index2],
+            filePath: `${backup_collection[index].path}/${backup_collection[index].list[index2]}`,
+        }).then(() => upload_db(index, index2 + 1));
+    }
+    return create_collection(0);
+});

@@ -370,7 +370,8 @@ router.get('/getSingle/:uid', function (req, res, next) {
             url = 'http://v.youku.com/v_show/id_' + id[2] + '.html';
             break;
         case 'ope':
-            url = 'https://openload.co/embed/' + id[2] + '/';
+            //url = `https://openload.co/embed/${id[2]}/`;
+            url = new Buffer(id[2], 'base64').toString();
             break;
         case 'iqi':
             url = 'http://www.iqiyi.com/' + id[2] + '.html';
@@ -383,7 +384,7 @@ router.get('/getSingle/:uid', function (req, res, next) {
             break;
     }
     var getUrl = function getUrl() {
-        return id[1] === 'bil' ? (0, _externalTool.bilibiliVideoUrl)(url) : id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'kyu' || id[1] === 'kur' ? (0, _externalTool.kuboVideoUrl)(id[1], url, subIndex) : (0, _externalTool.youtubeVideoUrl)(id[1], url);
+        return id[1] === 'bil' ? (0, _externalTool.bilibiliVideoUrl)(url) : id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'kyu' || id[1] === 'kur' || id[1] === 'ope' ? (0, _externalTool.kuboVideoUrl)(id[1], url, subIndex) : (0, _externalTool.youtubeVideoUrl)(id[1], url);
     };
     getUrl().then(function (ret_obj) {
         return res.json(ret_obj);

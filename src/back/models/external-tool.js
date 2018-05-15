@@ -1877,7 +1877,14 @@ export default {
                     if (!choose) {
                         return handleError(new HoError('cannot find external index'));
                     }
-                    return Api('url', !choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).then(raw_data => {
+                    saveList(lovetvGetlist, raw_list, is_end, etime);
+                    return [Object.assign({
+                        id: `ope_${new Buffer(!choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).toString('base64')}`,
+                        title: choose.name,
+                        index: index,
+                        showId: index,
+                    }), is_end, raw_list.length];
+                    /*return Api('url', !choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).then(raw_data => {
                         let obj = [];
                         const vs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0];
                         const getV = (v, vType='') => {
@@ -1946,7 +1953,7 @@ export default {
                             index: (index * 1000 + sub_index) / 1000,
                             showId: (index * 1000 + sub_index) / 1000,
                         } : {}), is_end, raw_list.length];
-                    });
+                    });*/
                 }
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : lovetvGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
@@ -2680,8 +2687,8 @@ export const youtubeVideoUrl = (id, url) => {
     } else if (id === 'iqi') {
         const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
         ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/v_${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
-    } else if (id === 'ope') {
-        ret_obj['iframe'] = [url];
+    //} else if (id === 'ope') {
+    //    ret_obj['iframe'] = [url];
     } else {
         return new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
             ret_obj.title = info.title;

@@ -104,6 +104,7 @@ var server = (0, _https.createServer)(credentials, app);
 (0, _background.autoDownload)();
 (0, _background.updateStock)();
 (0, _background.filterStock)();
+(0, _background.dbBackup)();
 
 app.use((0, _bodyParser.urlencoded)({ extended: true }));
 app.use((0, _bodyParser.json)({ extended: true }));

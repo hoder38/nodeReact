@@ -1,4 +1,4 @@
-import { ENV_TYPE, DB_USERNAME, DB_PWD } from '../../../ver'
+import { ENV_TYPE, DB_USERNAME, DB_PWD, ROOT_USER } from '../../../ver'
 import { DB_IP, DB_PORT, DB_NAME } from '../config'
 import { MongoClient, ObjectId} from 'mongodb'
 import { createHash } from 'crypto'
@@ -27,12 +27,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                 return handleError(err, 'DB connect');
             }
             if (count === 0) {
-                collection.insert({
-                    username: 'hoder',
-                    desc: 'owner',
-                    perm: 1,
-                    password: createHash('md5').update('test123').digest('hex'),
-                }, (err, user) => {
+                collection.insert(Object.assign({}, ROOT_USER, {password: createHash('md5').update('test123').digest('hex')}), (err, user) => {
                     if (err) {
                         return handleError(err, 'DB connect');
                     }

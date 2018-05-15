@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.STOCK_FILTER = exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.APP_HTML = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
+exports.BACKUP_PATH = exports.DB_BACKUP = exports.STOCK_FILTER = exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_DB_BACKUP_FOLDER = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.APP_HTML = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
 
 var _constants = require('./constants');
 
@@ -71,6 +71,9 @@ var GOOGLE_MEDIA_FOLDER = exports.GOOGLE_MEDIA_FOLDER = function GOOGLE_MEDIA_FO
 var GOOGLE_BACKUP_FOLDER = exports.GOOGLE_BACKUP_FOLDER = function GOOGLE_BACKUP_FOLDER(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.GOOGLE_BACKUP_FOLDER : _nodeDevConfig2.default.GOOGLE_BACKUP_FOLDER;
 };
+var GOOGLE_DB_BACKUP_FOLDER = exports.GOOGLE_DB_BACKUP_FOLDER = function GOOGLE_DB_BACKUP_FOLDER(env) {
+  return env === _constants.RELEASE ? _nodeReleaseConfig2.default.GOOGLE_DB_BACKUP_FOLDER : _nodeDevConfig2.default.GOOGLE_DB_BACKUP_FOLDER;
+};
 var NAS_TMP = exports.NAS_TMP = function NAS_TMP(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.NAS_TMP : _nodeDevConfig2.default.NAS_TMP;
 };
@@ -118,4 +121,10 @@ var STOCK_MODE = exports.STOCK_MODE = function STOCK_MODE(env) {
 };
 var STOCK_FILTER = exports.STOCK_FILTER = function STOCK_FILTER(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.STOCK_FILTER : _nodeDevConfig2.default.STOCK_FILTER;
+};
+var DB_BACKUP = exports.DB_BACKUP = function DB_BACKUP(env) {
+  return env === _constants.RELEASE ? _nodeReleaseConfig2.default.DB_BACKUP : _nodeDevConfig2.default.DB_BACKUP;
+};
+var BACKUP_PATH = exports.BACKUP_PATH = function BACKUP_PATH(env) {
+  return env === _constants.RELEASE ? _nodeReleaseConfig2.default.BACKUP_PATH : _nodeDevConfig2.default.BACKUP_PATH;
 };

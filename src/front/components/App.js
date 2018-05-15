@@ -25,8 +25,8 @@ const App = React.createClass({
                 {title: "homepage", hash: ROOT_PAGE, css: "glyphicon glyphicon-home", key: 0},
                 {title: "Storage", hash: STORAGE_PAGE, css: "glyphicon glyphicon-hdd", key: 1},
                 {title: "Password", hash: PASSWORD_PAGE, css: "glyphicon glyphicon-lock", key: 2},
-                {title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
-                {title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
+                //{title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
+                //{title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
             ],
             zipPw: null,
         }
