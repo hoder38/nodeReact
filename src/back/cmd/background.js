@@ -194,6 +194,6 @@ export const dbBackup = () => {
             const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
             return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 20000)).then(() => allBackup());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => allBackup());
     }
 }
