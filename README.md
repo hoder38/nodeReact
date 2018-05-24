@@ -26,6 +26,8 @@ sudo apt-get install -y build-essential
 
 mongo: http://andyfelong.com/2016/01/mongodb-3-0-9-binaries-for-raspberry-pi-2-jessie/
 
+mongo index在nodeReact/mongoIndex
+
 wget http://download.redis.io/releases/redis-3.2.6.tar.gz
 tar xzf redis-3.2.6.tar.gz
 cd redis-3.2.6
@@ -55,6 +57,7 @@ cd /usr/sbin
 sudo ln -s /usr/local/nginx/sbin/nginx nginx
 conf在/usr/local/nginx/conf/nginx.conf
 log在/usr/local/nginx/log
+/etc/init.d/nginx在nodeReact/nginx
 
 /etc/logrotate.conf
 
