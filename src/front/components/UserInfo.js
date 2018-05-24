@@ -139,7 +139,7 @@ const UserInfo = React.createClass({
                         <div className="panel-footer">
                             <div className="row">
                                 <div className="col-md-3 col-lg-3">
-                                    <img className="img-circle" src="/user-photo-big.png" alt="User Pic" />
+                                    <img className="img-circle" src="/public/user-photo-big.png" alt="User Pic" />
                                 </div>
                                 <div className="col-md-9 col-lg-9">
                                     <span>

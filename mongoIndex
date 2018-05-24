@@ -1,0 +1,442 @@
+storage
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "untag" : 1,
+                        "owner" : 1,
+                        "utime" : -1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "untag_1_owner_1_utime_-1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "first" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "first_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "tags_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "adultonly" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "adultonly_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "adultonly" : 1,
+                        "first" : 1,
+                        "name" : 1
+ },
+                "ns" : "releasedb.storage",
+                "name" : "adultonly_1_first_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "adultonly" : 1,
+                        "tags" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "adultonly_1_tags_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "adultonly" : 1,
+                        "tags" : 1,
+                        "first" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "adultonly_1_tags_1_first_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "first" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storage",
+                "name" : "tags_1_first_1_name_1"
+        }
+]
+storageUser
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.storageUser",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.storageUser",
+                "name" : "userId_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "mtime" : 1
+                },
+                "ns" : "releasedb.storageUser",
+                "name" : "userId_1_mtime_1"
+        }
+]
+user
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.user",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "username" : 1
+                },
+                "ns" : "releasedb.user",
+                "name" : "username_1"
+        }
+]
+password
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1,
+                        "owner" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "_id_1_owner_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "owner" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "owner_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "owner" : 1,
+                        "tags" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "owner_1_tags_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "owner" : 1,
+                        "important" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "owner_1_important_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "owner" : 1,
+                        "tags" : 1,
+                        "important" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.password",
+                "name" : "owner_1_tags_1_important_1_name_1"
+        }
+]
+passwordUser
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.passwordUser",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.passwordUser",
+                "name" : "userId_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "mtime" : 1
+                },
+                "ns" : "releasedb.passwordUser",
+                "name" : "userId_1_mtime_1"
+        }
+]
+stock
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "type" : 1,
+                        "index" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "type_1_index_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "profitIndex" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "profitIndex_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "profitIndex" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "tags_1_profitIndex_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "important" : 1,
+                        "profitIndex" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "important_1_profitIndex_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "important" : 1,
+                        "profitIndex" : 1
+                },
+                "ns" : "releasedb.stock",
+                "name" : "tags_1_important_1_profitIndex_1"
+        }
+]
+stockUser
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.stockUser",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.stockUser",
+                "name" : "userId_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "mtime" : 1
+                },
+                "ns" : "releasedb.stockUser",
+                "name" : "userId_1_mtime_1"
+        }
+]
+fitness
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.fitness",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "name" : 1
+                },
+                "ns" : "releasedb.fitness",
+                "name" : "name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.fitness",
+                "name" : "tags_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "type" : 1
+                },
+                "ns" : "releasedb.fitness",
+                "name" : "type_1"
+        }
+]
+fitnessUser
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.fitnessUser",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.fitnessUser",
+                "name" : "userId_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "mtime" : 1
+                },
+                "ns" : "releasedb.fitnessUser",
+                "name" : "userId_1_mtime_1"
+        }
+]
+rank
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.rank",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "name" : 1
+                },
+                "ns" : "releasedb.rank",
+                "name" : "name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "tags" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.rank",
+                "name" : "tags_1_name_1"
+        }
+]
+rankUser
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.rankUser",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "name" : 1
+                },
+                "ns" : "releasedb.rankUser",
+                "name" : "userId_1_name_1"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "userId" : 1,
+                        "mtime" : 1
+                },
+                "ns" : "releasedb.rankUser",
+                "name" : "userId_1_mtime_1"
+        }
+]
+

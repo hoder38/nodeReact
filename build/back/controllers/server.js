@@ -124,7 +124,7 @@ app.use((0, _bodyParser.json)({ extended: true }));
 app.use((0, _expressSession2.default)((0, _sessionTool2.default)(_expressSession2.default).config));
 app.use(_passport2.default.initialize());
 app.use(_passport2.default.session());
-app.use(_express2.default.static(_constants.STATIC_PATH));
+//app.use(Express.static(STATIC_PATH))
 
 app.use(function (req, res, next) {
     (0, _utility.showLog)(req, next);
@@ -153,7 +153,7 @@ app.use('/api/parent', _parentRouter2.default);
 //other
 app.use('/', _otherRouter2.default);
 //login
-app.use('/', (0, _loginRouter2.default)('https://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE)));
+app.use('/', (0, _loginRouter2.default)('https://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE) + '/f'));
 
 //view
 app.get('*', function (req, res, next) {

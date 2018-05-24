@@ -162,7 +162,7 @@ export function checkLogin(req, res, next, type=0) {
     if(!req.isAuthenticated()) {
         if (type) {
             if (new MobileDetect(req.headers['user-agent']).mobile() || req.headers['user-agent'].match(/Firefox/i)|| req.headers['user-agent'].match(/armv7l/i)) {
-                if (/^\/video\//.test(req.path) || /^\/subtitle\//.test(req.path) || /^\/torrent\//.test(req.path)) {
+                if (/^\/f\/video\//.test(req.path) || /^\/f\/subtitle\//.test(req.path) || /^\/f\/torrent\//.test(req.path)) {
                     console.log("mobile or firefox");
                     next()
                 } else {

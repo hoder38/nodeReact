@@ -244,8 +244,8 @@ const MediaWidget = React.createClass({
             index: index,
             subIndex: subIndex ? subIndex : 1,
             src: `${this.props.mainUrl}/torrent/${index}/${this._item.id}/${(subIndex > 1) ? subIndex : 0}`,
-            subCh: `/subtitle/${this._item.id}/ch/${index}`,
-            subEn: `/subtitle/${this._item.id}/en/${index}`,
+            subCh: `${this.props.mainUrl}/subtitle/${this._item.id}/ch/${index}`,
+            subEn: `${this.props.mainUrl}/subtitle/${this._item.id}/en/${index}`,
             cue: '',
         }), () => {
             this.props.toggleShow(true)
@@ -349,8 +349,8 @@ const MediaWidget = React.createClass({
                 index: index,
                 subIndex: subIndex ? subIndex : 1,
                 loading: false,
-                subCh: `/subtitle/${mediaId}/ch/v`,
-                subEn: `/subtitle/${mediaId}/en/v`,
+                subCh: `${this.props.mainUrl}/subtitle/${mediaId}/ch/v`,
+                subEn: `${this.props.mainUrl}/subtitle/${mediaId}/en/v`,
                 cue: '',
             }), () => {
                 switch (!this._item.thumb || (this._playlist && this._playlist.obj.pre_url) ? 0 : this._playlist && this._playlist.obj.is_magnet ? this._playlist.obj.id ? 0 : 1 : 2) {
@@ -368,8 +368,8 @@ const MediaWidget = React.createClass({
                             this._removeCue()
                             this.setState(Object.assign({}, this.state, {
                                 src: `${this.props.mainUrl}/torrent/v/${mediaId}/0`,
-                                subCh: `/subtitle/${mediaId}/ch/v`,
-                                subEn: `/subtitle/${mediaId}/en/v`,
+                                subCh: `${this.props.mainUrl}/subtitle/${mediaId}/ch/v`,
+                                subEn: `${this.props.mainUrl}/subtitle/${mediaId}/en/v`,
                                 cue: '',
                             }))
                         }

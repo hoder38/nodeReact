@@ -30,7 +30,7 @@ router.route('/getuser').get(function (req, res, next) {
         console.log('get basic');
         res.json({
             id: req.user.username,
-            ws_url: 'wss://' + (0, _config.EXTENT_IP)(_ver.ENV_TYPE) + ':' + (0, _config.WS_PORT)(_ver.ENV_TYPE),
+            ws_url: 'wss://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.WS_PORT)(_ver.ENV_TYPE) + '/f',
             level: (0, _utility.checkAdmin)(1, req.user) ? 2 : (0, _utility.checkAdmin)(2, req.user) ? 1 : 0,
             isEdit: (0, _utility.checkAdmin)(1, req.user) ? true : false,
             nav: (0, _utility.checkAdmin)(1, req.user) ? [{
@@ -39,7 +39,7 @@ router.route('/getuser').get(function (req, res, next) {
                 css: "glyphicon glyphicon-signal",
                 key: 3
             }] : [],
-            main_url: 'https://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE)
+            main_url: 'https://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE) + '/f'
         });
     });
 });

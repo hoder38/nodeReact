@@ -198,7 +198,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
             filePath = fileIndex === false ? filePath : filePath + '/' + fileIndex;
             var subPath = req.params.lang === 'en' ? filePath + '.en' : filePath;
             res.writeHead(200, { 'Content-Type': 'text/vtt' });
-            (0, _fs.createReadStream)((0, _fs.existsSync)(subPath + '.vtt') ? subPath + '.vtt' : '/home/pi/app/public/123.vtt').pipe(res);
+            (0, _fs.createReadStream)((0, _fs.existsSync)(subPath + '.vtt') ? subPath + '.vtt' : _constants.STATIC_PATH + '/123.vtt').pipe(res);
         };
         var id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
         if (id) {

@@ -53,20 +53,20 @@ router.get('/s', function (req, res, next) {
     });
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res, next) {
-    (0, _utility.checkLogin)(req, res, function () {
+/*router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
+    checkLogin(req, res, () => {
         console.log('subtitle');
-        var subReq = (0, _https.request)({
-            host: (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE),
-            port: (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE),
-            path: '/subtitle/' + req.params.uid + '/' + req.params.lang + '/' + req.params.index,
+        const subReq = HttpsRequest({
+            host: EXTENT_FILE_IP(ENV_TYPE),
+            port: EXTENT_FILE_PORT(ENV_TYPE),
+            path: `/subtitle/${req.params.uid}/${req.params.lang}/${req.params.index}`,
             method: 'GET',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Referer': req.headers['referer'],
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:40.0) Gecko/20100101 Firefox/40.0'
+                'Referer' : req.headers['referer'],
+                'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; rv:40.0) Gecko/20100101 Firefox/40.0',
             }
-        }, function (sub) {
+        }, sub => {
             if (sub.statusCode === 200) {
                 res.writeHead(200, { 'Content-Type': 'text/vtt' });
                 sub.pipe(res);
@@ -74,6 +74,6 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
         });
         subReq.end();
     });
-});
+});*/
 
 exports.default = router;

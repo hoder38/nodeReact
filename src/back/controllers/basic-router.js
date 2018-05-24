@@ -13,7 +13,7 @@ router.route('/getuser').get(function(req, res, next) {
         console.log('get basic');
         res.json({
             id: req.user.username,
-            ws_url: `wss://${EXTENT_IP(ENV_TYPE)}:${WS_PORT(ENV_TYPE)}`,
+            ws_url: `wss://${EXTENT_FILE_IP(ENV_TYPE)}:${WS_PORT(ENV_TYPE)}/f`,
             level: checkAdmin(1, req.user) ? 2 : checkAdmin(2, req.user) ? 1 : 0,
             isEdit: checkAdmin(1, req.user) ? true : false,
             nav: checkAdmin(1, req.user) ? [{
@@ -22,7 +22,7 @@ router.route('/getuser').get(function(req, res, next) {
                 css: "glyphicon glyphicon-signal",
                 key: 3
             }] : [],
-            main_url: `https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}`,
+            main_url: `https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`,
         });
     });
 });

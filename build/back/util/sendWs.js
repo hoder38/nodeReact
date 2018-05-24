@@ -31,7 +31,8 @@ var client = null;
 function mainInit(server) {
     wsServer = new _ws2.default.Server({
         perMessageDeflate: false,
-        server: server
+        server: server,
+        path: '/f'
     });
     wsServer.on('connection', function (ws) {
         ws.on('message', function (message) {

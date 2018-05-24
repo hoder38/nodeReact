@@ -36,7 +36,7 @@ router.get('/s', function(req, res, next) {
     }).catch(err => handleError(err, next));
 });
 
-router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
+/*router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('subtitle');
         const subReq = HttpsRequest({
@@ -57,6 +57,6 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
         });
         subReq.end();
     });
-});
+});*/
 
 export default router

@@ -87,17 +87,17 @@ app.use(function(req, res, next) {
     showLog(req, next);
 });
 
-app.use('/api', BasicRouter);
+app.use('/f/api', BasicRouter);
 //torrent
-app.use('/api/torrent', PlaylistRouter);
+app.use('/f/api/torrent', PlaylistRouter);
 //external&subtitle&upload
-app.use('/api/external', ExternalRouter);
+app.use('/f/api/external', ExternalRouter);
 //file&media
-app.use('/api/file', FileRouter);
+app.use('/f/api/file', FileRouter);
 //other&stock
-app.use('/', OtherRouter);
+app.use('/f', OtherRouter);
 //login
-app.use('/', LoginRouter());
+app.use('/f', LoginRouter());
 
 //view
 app.all('*', function(req, res, next) {

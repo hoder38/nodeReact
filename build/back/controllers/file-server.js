@@ -124,17 +124,17 @@ app.use(function (req, res, next) {
     (0, _utility.showLog)(req, next);
 });
 
-app.use('/api', _fileBasicRouter2.default);
+app.use('/f/api', _fileBasicRouter2.default);
 //torrent
-app.use('/api/torrent', _playlistRouter2.default);
+app.use('/f/api/torrent', _playlistRouter2.default);
 //external&subtitle&upload
-app.use('/api/external', _externalRouter2.default);
+app.use('/f/api/external', _externalRouter2.default);
 //file&media
-app.use('/api/file', _fileRouter2.default);
+app.use('/f/api/file', _fileRouter2.default);
 //other&stock
-app.use('/', _fileOtherRouter2.default);
+app.use('/f', _fileOtherRouter2.default);
 //login
-app.use('/', (0, _loginRouter2.default)());
+app.use('/f', (0, _loginRouter2.default)());
 
 //view
 app.all('*', function (req, res, next) {

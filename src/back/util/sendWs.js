@@ -11,6 +11,7 @@ export function mainInit(server) {
     wsServer = new Ws.Server({
         perMessageDeflate: false,
         server: server,
+        path:'/f',
     });
     wsServer.on('connection', ws => {
         ws.on('message', message => {

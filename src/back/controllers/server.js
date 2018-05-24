@@ -72,7 +72,7 @@ app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))
 app.use(Passport.initialize())
 app.use(Passport.session())
-app.use(Express.static(STATIC_PATH))
+//app.use(Express.static(STATIC_PATH))
 
 app.use(function(req, res, next) {
     showLog(req, next);
@@ -101,7 +101,7 @@ app.use('/api/parent', ParentRouter);
 //other
 app.use('/', OtherRouter);
 //login
-app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}`));
+app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`));
 
 //view
 app.get('*', function(req, res, next) {
