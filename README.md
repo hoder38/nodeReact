@@ -64,6 +64,7 @@ $ openssl pkcs12 -in ./file.pfx -clcerts -nokeys -out public.crt
 
 # Extract the Private Key
 openssl pkcs12 -in ./file.pfx -nocerts -nodes -out private.rsa
+password是godaddy的
 
 
 /etc/logrotate.conf
