@@ -56,7 +56,7 @@ sudo make install
 cd /usr/sbin
 sudo ln -s /usr/local/nginx/sbin/nginx nginx
 conf在/usr/local/nginx/conf/nginx.conf
-log在/usr/local/nginx/log
+log在/usr/local/nginx/logs
 /etc/init.d/nginx在nodeReact/nginx
 nginx用的ssl key
 # Extract the Public Cert
