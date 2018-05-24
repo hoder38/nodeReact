@@ -58,6 +58,13 @@ sudo ln -s /usr/local/nginx/sbin/nginx nginx
 conf在/usr/local/nginx/conf/nginx.conf
 log在/usr/local/nginx/log
 /etc/init.d/nginx在nodeReact/nginx
+nginx用的ssl key
+# Extract the Public Cert
+$ openssl pkcs12 -in ./file.pfx -clcerts -nokeys -out public.crt
+
+# Extract the Private Key
+openssl pkcs12 -in ./file.pfx -nocerts -nodes -out private.rsa
+
 
 /etc/logrotate.conf
 
