@@ -111,24 +111,22 @@ const MediaWidget = React.createClass({
                 this._video.onkeydown = e => {
                     switch(e.keyCode) {
                         case 67:
-                        if (this._video && this._video.src && window.location.href !== this._video.src) {
-                            if (this._video.textTracks[0] && this._video.textTracks[1]) {
-                                if (this._video.textTracks[0].mode === 'showing') {
-                                    this._video.textTracks[0].mode = 'disabled'
-                                    this._video.textTracks[1].mode = 'showing'
-                                } else if (this._video.textTracks[1].mode === 'showing') {
-                                    this._video.textTracks[1].mode = 'disabled'
-                                } else {
-                                    this._video.textTracks[0].mode = 'showing'
-                                }
-                            }
-                        }
+                        case 55:
+                        this._changeSub();
                         break
                         case 188:
+                        case 52:
                         this._backward();
                         break;
                         case 190:
+                        case 53:
                         this._forward();
+                        break;
+                        case 49:
+                        this._backward(true);
+                        break;
+                        case 50:
+                        this._forward(true);
                         break;
                     }
                 }
@@ -172,10 +170,18 @@ const MediaWidget = React.createClass({
                 this._audio.onkeydown = e => {
                     switch(e.keyCode) {
                         case 188:
+                        case 52:
                         this._backward();
                         break;
                         case 190:
+                        case 53:
                         this._forward();
+                        break;
+                        case 49:
+                        this._backward(true);
+                        break;
+                        case 50:
+                        this._forward(true);
                         break;
                     }
                 }
@@ -231,6 +237,20 @@ const MediaWidget = React.createClass({
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)
             })
+        }
+    },
+    _changeSub: function() {
+        if (this._video && this._video.src && window.location.href !== this._video.src) {
+            if (this._video.textTracks[0] && this._video.textTracks[1]) {
+                if (this._video.textTracks[0].mode === 'showing') {
+                    this._video.textTracks[0].mode = 'disabled'
+                    this._video.textTracks[1].mode = 'showing'
+                } else if (this._video.textTracks[1].mode === 'showing') {
+                    this._video.textTracks[1].mode = 'disabled'
+                } else {
+                    this._video.textTracks[0].mode = 'showing'
+                }
+            }
         }
     },
     _playlistItem: function(index, list, subIndex=0) {
@@ -616,6 +636,9 @@ const MediaWidget = React.createClass({
             const id3 = this._playlist ? this._playlist.obj.id : this.props.mediaType === 9 ? `${this._item.id}/${this.state.index}` : this._item.id;
             this.props.opt.handleMedia(id3, this._item.name);
             break;
+            case '7':
+            this._changeSub();
+            break;
         }
     },
     _fixCue: function() {
@@ -677,15 +700,20 @@ const MediaWidget = React.createClass({
             }))
         }
     },
-    _backward: function() {
-        if (this._fix) {
+    _backward: function(big) {
+        if (big) {
+            const one = this._media.duration / 100;
+            this._media.currentTime -= this._media.currentTime >= one ? one : 0;
+        } else if (this._fix) {
             this._media.currentTime = this._media.currentTime >= 0.5 ? this._media.currentTime - 0.5 : 0
         } else {
             this._media.currentTime = this._media.currentTime >= 5 ? this._media.currentTime - 5 : 0
         }
     },
-    _forward: function() {
-        if (this._fix) {
+    _forward: function(big) {
+        if (big) {
+            this._media.currentTime += (this._media.duration / 100);
+        } else if (this._fix) {
             this._media.currentTime += 0.5
         } else {
             this._media.currentTime += 5
@@ -755,6 +783,7 @@ const MediaWidget = React.createClass({
             const upload = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="4">upload subtitle</option> : null
             const fix = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="5">fix subtitle</option> : null
             const handle = (this.props.level === 2 && (this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3))) ? <option value="6">handle media</option> : null
+            const change = this.props.mediaType === 3 || (this.props.mediaType === 9 && this._item.type === 3) ? <option value="7">change subtitle</option> : null
             const subOption = (this._item.noDb || this._item.cid || this.props.mediaType === 3 || this.props.mediaType === 9) ? (
                 <li>
                     <select onChange={this._handleOpt} value="0">
@@ -765,6 +794,7 @@ const MediaWidget = React.createClass({
                         {upload}
                         {fix}
                         {handle}
+                        {change}
                     </select>
                 </li>
             ) : null
