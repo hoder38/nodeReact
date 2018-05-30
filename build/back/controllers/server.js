@@ -156,14 +156,12 @@ app.use('/', _otherRouter2.default);
 app.use('/', (0, _loginRouter2.default)('https://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.EXTENT_FILE_PORT)(_ver.ENV_TYPE) + '/f'));
 
 //view
-app.get('*', function (req, res, next) {
+/*app.get('*', function(req, res, next) {
     console.log('view');
-    var stream = (0, _fs.createReadStream)(_constants.STATIC_PATH + '/' + (0, _config.APP_HTML)(_ver.ENV_TYPE));
-    stream.on('error', function (err) {
-        return (0, _utility.handleError)(err, next);
-    });
+    const stream = FsCreateReadStream(`${STATIC_PATH}/${APP_HTML(ENV_TYPE)}`);
+    stream.on('error', err => handleError(err, next));
     stream.pipe(res);
-});
+})*/
 
 //error handle
 app.use(function (err, req, res, next) {

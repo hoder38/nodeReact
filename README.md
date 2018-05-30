@@ -50,14 +50,13 @@ install nginx
 wget http://mirror.ossplanet.net/raspbian/raspbian/pool/main/n/nginx/nginx_1.10.3.orig.tar.gz
 tar -xzvf nginx_1.10.3.orig.tar.gz
 cd nginx-1.10.3
-./configure --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-threads
+./configure --prefix=/usr/local/nginx --with-http_stub_status_module --with-http_ssl_module --with-threads --with-http_auth_request_module
 make
 sudo make install
 cd /usr/sbin
 sudo ln -s /usr/local/nginx/sbin/nginx nginx
 conf在/usr/local/nginx/conf/nginx.conf
 log在/usr/local/nginx/logs
-/etc/init.d/nginx在nodeReact/nginx
 nginx用的ssl key
 # Extract the Public Cert
 $ openssl pkcs12 -in ./file.pfx -clcerts -nokeys -out public.crt

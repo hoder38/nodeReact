@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.BACKUP_PATH = exports.DB_BACKUP = exports.STOCK_FILTER = exports.STOCK_MODE = exports.STOCK_DATE = exports.STREAM_LIMIT = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_DB_BACKUP_FOLDER = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.APP_HTML = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
+exports.BACKUP_PATH = exports.DB_BACKUP = exports.STOCK_FILTER = exports.STOCK_MODE = exports.STOCK_DATE = exports.MEGA_LIMIT = exports.ZIP_LIMIT = exports.TORRENT_LIMIT = exports.API_LIMIT = exports.CHECK_MEDIA = exports.UPDATE_EXTERNAL = exports.UPDATE_STOCK = exports.AUTO_DOWNLOAD = exports.AUTO_UPLOAD = exports.HINT = exports.NAS_PREFIX = exports.NAS_TMP = exports.GOOGLE_DB_BACKUP_FOLDER = exports.GOOGLE_BACKUP_FOLDER = exports.GOOGLE_MEDIA_FOLDER = exports.SESS_PORT = exports.SESS_IP = exports.DB_PORT = exports.DB_IP = exports.DB_NAME = exports.WS_PORT = exports.COM_PORT = exports.EXTENT_FILE_PORT = exports.FILE_PORT = exports.EXTENT_PORT = exports.PORT = exports.FILE_IP = exports.IP = exports.APP_HTML = exports.EXTENT_FILE_IP = exports.EXTENT_IP = undefined;
 
 var _constants = require('./constants');
 
@@ -109,9 +109,6 @@ var ZIP_LIMIT = exports.ZIP_LIMIT = function ZIP_LIMIT(env) {
 };
 var MEGA_LIMIT = exports.MEGA_LIMIT = function MEGA_LIMIT(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.MEGA_LIMIT : _nodeDevConfig2.default.MEGA_LIMIT;
-};
-var STREAM_LIMIT = exports.STREAM_LIMIT = function STREAM_LIMIT(env) {
-  return env === _constants.RELEASE ? _nodeReleaseConfig2.default.STREAM_LIMIT : _nodeDevConfig2.default.STREAM_LIMIT;
 };
 var STOCK_DATE = exports.STOCK_DATE = function STOCK_DATE(env) {
   return env === _constants.RELEASE ? _nodeReleaseConfig2.default.STOCK_DATE : _nodeDevConfig2.default.STOCK_DATE;

@@ -91,21 +91,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var router = _express2.default.Router();
 var StorageTagTool = (0, _tagTool2.default)(_constants.STORAGEDB);
 
-//1小時refresh一次
-var stream_count = 0;
-var stream_fresh = 3600;
-var loop_fresh = function loop_fresh() {
-    return new _promise2.default(function (resolve, reject) {
-        stream_count = 0;
-        setTimeout(function () {
-            return resolve();
-        }, stream_fresh * 1000);
-    }).then(function () {
-        return loop_fresh();
-    });
-};
-loop_fresh();
-
 router.get('/preview/:uid', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('preview file');
@@ -135,8 +120,13 @@ router.get('/preview/:uid', function (req, res, next) {
                 console.log(previewPath);
                 return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
             }
-            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-            (0, _fs.createReadStream)(previewPath).pipe(res);
+            res.writeHead(200, {
+                'X-Forwarded-Path': previewPath,
+                'X-Forwarded-Type': 'image/jpeg'
+            });
+            res.end('ok');
+            /*res.writeHead(200, {'Content-Type': 'image/jpeg'});
+            FsCreateReadStream(previewPath).pipe(res);*/
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);
         });
@@ -175,13 +165,25 @@ router.get('/download/:uid', function (req, res, next) {
                 return (0, _utility.handleError)(err, 'Set latest');
             });
             if (ret_string) {
+                var randomName = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/' + Math.floor(Math.random() * 1000);
+                (0, _fs.writeFileSync)(randomName, ret_string, 'utf8');
                 res.writeHead(200, {
-                    'Content-Type': 'application/force-download',
-                    'Content-disposition': 'attachment; filename=' + items[0].name + '.txt'
+                    'X-Forwarded-Name': 'attachment;filename*=UTF-8\'\'' + encodeURIComponent(items[0].name) + '.txt',
+                    'X-Forwarded-Path': randomName
                 });
-                res.end(ret_string);
+                res.end('ok');
+                /*res.writeHead(200, {
+                    'Content-Type': 'application/force-download',
+                    'Content-disposition': `attachment; filename=${items[0].name}.txt`,
+                });
+                res.end(ret_string);*/
             } else {
-                res.download(filePath, items[0].name);
+                res.writeHead(200, {
+                    'X-Forwarded-Path': filePath,
+                    'X-Forwarded-Name': 'attachment;filename*=UTF-8\'\'' + encodeURIComponent(items[0].name)
+                });
+                res.end('ok');
+                //res.download(filePath, items[0].name);
             }
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);
@@ -197,8 +199,13 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
 
             filePath = fileIndex === false ? filePath : filePath + '/' + fileIndex;
             var subPath = req.params.lang === 'en' ? filePath + '.en' : filePath;
-            res.writeHead(200, { 'Content-Type': 'text/vtt' });
-            (0, _fs.createReadStream)((0, _fs.existsSync)(subPath + '.vtt') ? subPath + '.vtt' : _constants.STATIC_PATH + '/123.vtt').pipe(res);
+            res.writeHead(200, {
+                'X-Forwarded-Path': (0, _fs.existsSync)(subPath + '.vtt') ? subPath + '.vtt' : _constants.STATIC_PATH + '/123.vtt',
+                'X-Forwarded-Type': 'text/vtt'
+            });
+            res.end('ok');
+            /*res.writeHead(200, {'Content-Type': 'text/vtt'});
+            FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);*/
         };
         var id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
         if (id) {
@@ -287,11 +294,6 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function (req, res
 router.get('/video/:uid/file', function (req, res, next) {
     (0, _utility.checkLogin)(req, res, function () {
         console.log('video');
-        stream_count++;
-        if (stream_count > (0, _config.STREAM_LIMIT)(_ver.ENV_TYPE) && !(0, _utility.checkAdmin)(1, req.user)) {
-            console.log(stream_count);
-            return (0, _utility.handleError)(new _utility.HoError('stream request too many!!!'), next);
-        }
         var id = (0, _utility.isValidString)(req.params.uid, 'uid');
         if (!id) {
             return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
@@ -309,29 +311,34 @@ router.get('/video/:uid/file', function (req, res, next) {
                 }
                 finalPath = videoPath;
             }
-            var total = (0, _fs.statSync)(finalPath).size;
+            res.writeHead(200, {
+                'X-Forwarded-Path': finalPath,
+                'X-Forwarded-Type': 'video/mp4'
+            });
+            res.end('ok');
+            /*const total = FsStatSync(finalPath).size;
             if (req.headers['range']) {
-                var parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
-                var partialend = parts[1];
-                var start = parseInt(parts[0], 10);
-                var end = partialend ? parseInt(partialend, 10) : total - 1;
+                const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
+                const partialend = parts[1];
+                const start = parseInt(parts[0], 10);
+                const end = partialend ? parseInt(partialend, 10) : total - 1;
                 res.writeHead(206, {
-                    'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                    'Content-Range': `bytes ${start}-${end}/${total}`,
                     'Accept-Ranges': 'bytes',
                     'Content-Length': end - start + 1,
-                    'Content-Type': 'video/mp4'
+                    'Content-Type': 'video/mp4',
                 });
-                (0, _fs.createReadStream)(finalPath, {
+                FsCreateReadStream(finalPath, {
                     start: start,
-                    end: end
+                    end: end,
                 }).pipe(res);
             } else {
                 res.writeHead(200, {
                     'Content-Length': total,
-                    'Content-Type': 'video/mp4'
+                    'Content-Type': 'video/mp4',
                 });
-                (0, _fs.createReadStream)(finalPath).pipe(res);
-            }
+                FsCreateReadStream(finalPath).pipe(res);
+            }*/
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);
         });
@@ -362,39 +369,39 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             var comPath = bufferPath + '_complete';
             var type = (0, _mime.isImage)(items[0].playList[fileIndex]) ? 2 : (0, _mime.isVideo)(items[0].playList[fileIndex]) || (0, _mime.isMusic)(items[0].playList[fileIndex]) ? 1 : (0, _mime.isDoc)(items[0].playList[fileIndex]) || (0, _mime.isZipbook)(items[0].playList[fileIndex]) ? 4 : 3;
             if (type === 1) {
-                stream_count++;
-                if (stream_count > (0, _config.STREAM_LIMIT)(_ver.ENV_TYPE) && !(0, _utility.checkAdmin)(1, req.user)) {
-                    console.log(stream_count);
-                    return (0, _utility.handleError)(new _utility.HoError('stream request too many!!!'));
-                }
                 var outputPath = (0, _fs.existsSync)(comPath) ? comPath : (0, _fs.existsSync)(bufferPath) ? bufferPath : null;
                 if ((0, _fs.existsSync)(bufferPath + '_error') || !outputPath) {
                     return (0, _utility.handleError)(new _utility.HoError('video error!!!'));
                 }
                 console.log(outputPath);
-                var total = (0, _fs.statSync)(outputPath).size;
+                res.writeHead(200, {
+                    'X-Forwarded-Path': outputPath,
+                    'X-Forwarded-Type': 'video/mp4'
+                });
+                res.end('ok');
+                /*const total = FsStatSync(outputPath).size;
                 if (req.headers['range']) {
-                    var parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
-                    var partialend = parts[1];
-                    var start = parseInt(parts[0], 10);
-                    var end = partialend ? parseInt(partialend, 10) : total - 1;
+                    const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
+                    const partialend = parts[1];
+                    const start = parseInt(parts[0], 10);
+                    const end = partialend ? parseInt(partialend, 10) : total - 1;
                     res.writeHead(206, {
-                        'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                        'Content-Range': `bytes ${start}-${end}/${total}`,
                         'Accept-Ranges': 'bytes',
-                        'Content-Length': end - start + 1,
-                        'Content-Type': 'video/mp4'
+                        'Content-Length': (end - start) + 1,
+                        'Content-Type': 'video/mp4',
                     });
-                    (0, _fs.createReadStream)(outputPath, {
+                    FsCreateReadStream(outputPath, {
                         start: start,
-                        end: end
+                        end: end,
                     }).pipe(res);
                 } else {
                     res.writeHead(200, {
                         'Content-Length': total,
-                        'Content-Type': 'video/mp4'
+                        'Content-Type': 'video/mp4',
                     });
-                    (0, _fs.createReadStream)(outputPath).pipe(res);
-                }
+                    FsCreateReadStream(outputPath).pipe(res);
+                }*/
             } else if (type === 4) {
                 var torrentDoc = function torrentDoc() {
                     if (req.params.type === 'images' || req.params.type === 'resources') {
@@ -438,13 +445,27 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     if (!(0, _fs.existsSync)(docFilePath)) {
                         return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
                     }
-                    res.writeHead(200, { 'Content-Type': docMime });
-                    (0, _fs.createReadStream)(docFilePath).pipe(res);
+                    res.writeHead(200, {
+                        'X-Forwarded-Path': docFilePath,
+                        'X-Forwarded-Type': docMime
+                    });
+                    res.end('ok');
+                    /*res.writeHead(200, {'Content-Type': docMime});
+                    FsCreateReadStream(docFilePath).pipe(res);*/
                 });
             } else {
                 var data = fileIndex === 0 || fileIndex === items[0].playList.length - 1 ? ['hdel', items[0]._id.toString()] : ['hmset', (0, _defineProperty3.default)({}, items[0]._id.toString(), '0&' + fileIndex)];
                 return (0, _redisTool2.default)(data[0], 'record: ' + req.user._id, data[1]).then(function () {
-                    return (0, _fs.existsSync)(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : (0, _utility.handleError)(new _utility.HoError('need download first!!!'));
+                    if ((0, _fs.existsSync)(comPath)) {
+                        res.writeHead(200, {
+                            'X-Forwarded-Path': comPath,
+                            'X-Forwarded-Name': 'attachment;filename*=UTF-8\'\'' + encodeURIComponent(items[0].playList[fileIndex])
+                        });
+                        res.end('ok');
+                    } else {
+                        return (0, _utility.handleError)(new _utility.HoError('need download first!!!'));
+                    }
+                    //FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!'))
                 });
             }
         }).catch(function (err) {
@@ -499,8 +520,13 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                 if (!(0, _fs.existsSync)(docFilePath)) {
                     return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
                 }
-                res.writeHead(200, { 'Content-Type': docMime });
-                (0, _fs.createReadStream)(docFilePath).pipe(res);
+                res.writeHead(200, {
+                    'X-Forwarded-Path': docFilePath,
+                    'X-Forwarded-Type': docMime
+                });
+                res.end('ok');
+                //res.writeHead(200, {'Content-Type': docMime});
+                //FsCreateReadStream(docFilePath).pipe(res);
             });
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);

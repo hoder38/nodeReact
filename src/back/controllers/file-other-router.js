@@ -1,8 +1,8 @@
 import { STORAGEDB, STATIC_PATH } from '../constants'
 import { ENV_TYPE } from '../../../ver'
-import { STREAM_LIMIT } from '../config'
+import { NAS_TMP } from '../config'
 import Express from 'express'
-import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, statSync as FsStatSync, createWriteStream as FsCreateWriteStream, unlink as FsUnlink, renameSync as FsRenameSync } from 'fs'
+import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, statSync as FsStatSync, createWriteStream as FsCreateWriteStream, unlink as FsUnlink, renameSync as FsRenameSync, writeFileSync as FsWriteFileSync } from 'fs'
 import { dirname as PathDirname } from 'path'
 import Mkdirp from 'mkdirp'
 import Avconv from 'avconv'
@@ -18,15 +18,6 @@ import sendWs from '../util/sendWs'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
-
-//1小時refresh一次
-let stream_count = 0;
-const stream_fresh = 3600;
-const loop_fresh = () => new Promise((resolve, reject) => {
-    stream_count = 0;
-    setTimeout(() => resolve(), stream_fresh * 1000);
-}).then(() => loop_fresh());
-loop_fresh();
 
 router.get('/preview/:uid', function(req, res, next) {
     checkLogin(req, res, () => {
@@ -57,8 +48,13 @@ router.get('/preview/:uid', function(req, res, next) {
                 console.log(previewPath);
                 return handleError(new HoError('cannot find file!!!'));
             }
-            res.writeHead(200, {'Content-Type': 'image/jpeg'});
-            FsCreateReadStream(previewPath).pipe(res);
+            res.writeHead(200, {
+                'X-Forwarded-Path': previewPath,
+                'X-Forwarded-Type': 'image/jpeg',
+            });
+            res.end('ok');
+            /*res.writeHead(200, {'Content-Type': 'image/jpeg'});
+            FsCreateReadStream(previewPath).pipe(res);*/
         }).catch(err => handleError(err, next));
     });
 });
@@ -91,13 +87,25 @@ router.get('/download/:uid', function(req, res, next) {
             }
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
             if (ret_string) {
+                const randomName = `${NAS_TMP(ENV_TYPE)}/${Math.floor(Math.random() * 1000)}`;
+                FsWriteFileSync(randomName, ret_string, 'utf8');
                 res.writeHead(200, {
+                    'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(items[0].name)}.txt`,
+                    'X-Forwarded-Path': randomName,
+                });
+                res.end('ok');
+                /*res.writeHead(200, {
                     'Content-Type': 'application/force-download',
                     'Content-disposition': `attachment; filename=${items[0].name}.txt`,
                 });
-                res.end(ret_string);
+                res.end(ret_string);*/
             } else {
-                res.download(filePath, items[0].name);
+                res.writeHead(200, {
+                    'X-Forwarded-Path': filePath,
+                    'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(items[0].name)}`,
+                });
+                res.end('ok');
+                //res.download(filePath, items[0].name);
             }
         }).catch(err => handleError(err, next));
     });
@@ -109,8 +117,13 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
         const sendSub = (filePath, fileIndex=false) => {
             filePath = fileIndex === false ? filePath : `${filePath}/${fileIndex}`;
             const subPath = req.params.lang === 'en' ? `${filePath}.en` : filePath;
-            res.writeHead(200, {'Content-Type': 'text/vtt'});
-            FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);
+            res.writeHead(200, {
+                'X-Forwarded-Path': FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`,
+                'X-Forwarded-Type': 'text/vtt',
+            });
+            res.end('ok');
+            /*res.writeHead(200, {'Content-Type': 'text/vtt'});
+            FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);*/
         }
         const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
         if (id) {
@@ -197,11 +210,6 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
 router.get('/video/:uid/file', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('video');
-        stream_count++;
-        if (stream_count > STREAM_LIMIT(ENV_TYPE) && !checkAdmin(1, req.user)) {
-            console.log(stream_count);
-            return handleError(new HoError('stream request too many!!!'), next);
-        }
         const id = isValidString(req.params.uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid is not vaild'), next);
@@ -219,7 +227,13 @@ router.get('/video/:uid/file', function(req, res, next) {
                 }
                 finalPath = videoPath;
             }
-            const total = FsStatSync(finalPath).size;
+            res.writeHead(200, {
+                'X-Forwarded-Path': finalPath,
+                'X-Forwarded-Type': 'video/mp4',
+                //'X-Forwarded-Name': `attachment; filename=123456.txt`,
+            });
+            res.end('ok');
+            /*const total = FsStatSync(finalPath).size;
             if (req.headers['range']) {
                 const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
                 const partialend = parts[1];
@@ -241,7 +255,7 @@ router.get('/video/:uid/file', function(req, res, next) {
                     'Content-Type': 'video/mp4',
                 });
                 FsCreateReadStream(finalPath).pipe(res);
-            }
+            }*/
         }).catch(err => handleError(err, next));
     });
 });
@@ -270,17 +284,17 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
             const comPath = `${bufferPath}_complete`;
             const type = isImage(items[0].playList[fileIndex]) ? 2 : (isVideo(items[0].playList[fileIndex]) || isMusic(items[0].playList[fileIndex])) ? 1 : (isDoc(items[0].playList[fileIndex]) || isZipbook(items[0].playList[fileIndex])) ? 4 : 3;
             if (type === 1) {
-                stream_count++;
-                if (stream_count > STREAM_LIMIT(ENV_TYPE) && !checkAdmin(1, req.user)) {
-                    console.log(stream_count);
-                    return handleError(new HoError('stream request too many!!!'));
-                }
                 const outputPath = FsExistsSync(comPath) ? comPath : FsExistsSync(bufferPath) ? bufferPath : null;
                 if (FsExistsSync(`${bufferPath}_error`) || !outputPath) {
                     return handleError(new HoError('video error!!!'));
                 }
                 console.log(outputPath);
-                const total = FsStatSync(outputPath).size;
+                res.writeHead(200, {
+                    'X-Forwarded-Path': outputPath,
+                    'X-Forwarded-Type': 'video/mp4',
+                });
+                res.end('ok');
+                /*const total = FsStatSync(outputPath).size;
                 if (req.headers['range']) {
                     const parts = req.headers.range.replace(/bytes(=|: )/, '').split('-');
                     const partialend = parts[1];
@@ -302,7 +316,7 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                         'Content-Type': 'video/mp4',
                     });
                     FsCreateReadStream(outputPath).pipe(res);
-                }
+                }*/
             } else if (type === 4) {
                 const torrentDoc = () => {
                     if (req.params.type === 'images' || req.params.type === 'resources') {
@@ -340,8 +354,13 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     if (!FsExistsSync(docFilePath)) {
                         return handleError(new HoError('cannot find file!!!'));
                     }
-                    res.writeHead(200, {'Content-Type': docMime});
-                    FsCreateReadStream(docFilePath).pipe(res);
+                    res.writeHead(200, {
+                        'X-Forwarded-Path': docFilePath,
+                        'X-Forwarded-Type': docMime,
+                    });
+                    res.end('ok');
+                    /*res.writeHead(200, {'Content-Type': docMime});
+                    FsCreateReadStream(docFilePath).pipe(res);*/
                 });
             } else {
                 const data = (fileIndex === 0 || fileIndex === items[0].playList.length - 1) ? [
@@ -351,7 +370,18 @@ router.get('/torrent/:index(\\d+|v)/:uid/:type(images|resources|\\d+)/:number(im
                     'hmset',
                     {[items[0]._id.toString()]: `0&${fileIndex}`},
                 ];
-                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!')));
+                return Redis(data[0], `record: ${req.user._id}`, data[1]).then(() => {
+                    if (FsExistsSync(comPath)) {
+                        res.writeHead(200, {
+                            'X-Forwarded-Path': comPath,
+                            'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(items[0].playList[fileIndex])}`,
+                        });
+                        res.end('ok');
+                    } else {
+                        return handleError(new HoError('need download first!!!'));
+                    }
+                    //FsExistsSync(comPath) ? res.download(comPath, items[0].playList[fileIndex]) : handleError(new HoError('need download first!!!'))
+                });
             }
         }).catch(err => handleError(err, next));
     });
@@ -401,8 +431,13 @@ router.get('/image/:uid/:type(file|images|resources|\\d+)/:number(image\\d+.png|
                 if (!FsExistsSync(docFilePath)) {
                     return handleError(new HoError('cannot find file!!!'));
                 }
-                res.writeHead(200, {'Content-Type': docMime});
-                FsCreateReadStream(docFilePath).pipe(res);
+                res.writeHead(200, {
+                    'X-Forwarded-Path': docFilePath,
+                    'X-Forwarded-Type': docMime,
+                });
+                res.end('ok');
+                //res.writeHead(200, {'Content-Type': docMime});
+                //FsCreateReadStream(docFilePath).pipe(res);
             });
         }).catch(err => handleError(err, next));
     }, 1);

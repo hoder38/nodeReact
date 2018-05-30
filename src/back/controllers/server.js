@@ -104,12 +104,12 @@ app.use('/', OtherRouter);
 app.use('/', LoginRouter(`https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)}/f`));
 
 //view
-app.get('*', function(req, res, next) {
+/*app.get('*', function(req, res, next) {
     console.log('view');
     const stream = FsCreateReadStream(`${STATIC_PATH}/${APP_HTML(ENV_TYPE)}`);
     stream.on('error', err => handleError(err, next));
     stream.pipe(res);
-})
+})*/
 
 //error handle
 app.use(function(err, req, res, next) {
