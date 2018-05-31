@@ -13,6 +13,7 @@ export const PASSWORDDB = 'password'
 export const FITNESSDB = 'fitness'
 export const RANKDB = 'rank'
 export const DOCDB = 'docUpdate'
+export const VERIFYDB = 'verify'
 
 //basic set
 export const UNACTIVE_DAY = 5

@@ -48,6 +48,8 @@ export function isValidString(str, type) {
         return str.match(/^[^\\\/\|\*\?"<:]{1,500}$/)
         case 'passwd':
         return str.match(/^[0-9a-zA-Z!@#$%]{2,30}$/)
+        case 'verify':
+        return str.match(/^[0-9]{4}$/)
         case 'altpwd':
         return str.match(/^[0-9a-zA-Z\._!@#$%;\u4e00-\u9fa5]{2,30}$/)
         case 'desc':

@@ -17,7 +17,7 @@ const Login = React.createClass({
         this.setState(this._input.getValue())
     },
     _handleSubmit: function() {
-        if (isValidString(this.state.username, 'name') && isValidString(this.state.password, 'passwd')) {
+        if (isValidString(this.state.username, 'name') && (isValidString(this.state.password, 'passwd') || isValidString(this.state.password, 'verify'))) {
             doLogin(this.state.username, this.state.password)
             .then(() => {
                 this.setState(this._input.initValue())

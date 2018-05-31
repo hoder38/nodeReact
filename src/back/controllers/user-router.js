@@ -1,7 +1,7 @@
-import { USERDB, UNACTIVE_DAY, UNACTIVE_HIT } from '../constants'
+import { USERDB, UNACTIVE_DAY, UNACTIVE_HIT, VERIFYDB } from '../constants'
 import Express from 'express'
 import { createHash } from 'crypto'
-import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck } from '../util/utility'
+import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck, completeZero } from '../util/utility'
 import Mongo from '../models/mongo-tool'
 import { isDefaultTag, normalize } from '../models/tag-tool'
 
@@ -21,6 +21,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         kindle: users[0].kindle ? `${users[0].kindle}@kindle.com` : '',
         editAuto: false,
         editKindle: true,
+        verify: true,
     }]})).catch(err => handleError(err, next)) : Mongo('find', USERDB).then(users => res.json({user_info: [{
         name: '',
         perm: '',
@@ -42,6 +43,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
     }, user.perm === 1 ? {
         unDay: user.unDay ? user.unDay : UNACTIVE_DAY,
         unHit: user.unHit ? user.unHit : UNACTIVE_HIT,
+        verify: true,
     } : {
         delable: true,
     }))]})).catch(err => handleError(err, next))
@@ -287,6 +289,21 @@ router.put('/del/:uid', function(req, res, next) {
             $isolated: 1,
         });
     }).then(user => res.json({apiOK: true})).catch(err => handleError(err, next));
+});
+
+router.get('/verify', function(req, res, next) {
+    console.log('verify code');
+    Mongo('remove', VERIFYDB, {
+        utime: {$lt: Math.round(new Date().getTime() / 1000) - 185},
+        $isolated: 1,
+    }).then(item => Mongo('find', VERIFYDB, {uid: req.user._id}, {limit: 1}).then(item => (item.length > 0) ? res.json({verify: item[0].verify}) : Mongo('insert', VERIFYDB, {
+        verify: completeZero(Math.floor(Math.random() * 10000), 4),
+        uid: req.user._id,
+        utime: Math.round(new Date().getTime() / 1000),
+    }).then(item => {
+        console.log(item);
+        res.json({verify: item[0].verify});
+    }))).catch(err => handleError(err, next));
 });
 
 export default router

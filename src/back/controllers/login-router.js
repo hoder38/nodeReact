@@ -1,4 +1,4 @@
-import { USERDB } from '../constants'
+import { USERDB, VERIFYDB } from '../constants'
 import Express from 'express'
 import Passport from 'passport'
 import { Strategy } from 'passport-local'
@@ -15,15 +15,34 @@ Passport.use(new Strategy(function(username, password, done){
     if (!validUsername) {
         return handleError(new HoError('username is not vaild', {code: 401}), done);
     }
-    Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
-        const validPassword = isValidString(password, 'passwd');
-        if (!validPassword) {
+    const validPassword = isValidString(password, 'passwd');
+    let validVerify = false;
+    if (!validPassword) {
+        validVerify = isValidString(password, 'verify');
+        if (!validVerify) {
             return handleError(new HoError('passwd is not vaild', {code: 401}));
         }
-        if (users.length < 1 || createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
+    }
+    Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
+        if (users.length < 1) {
             return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
         }
-        done(null, users[0])
+        if (validPassword && createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
+            return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+        }
+        if (validVerify) {
+            return Mongo('remove', VERIFYDB, {
+                utime: {$lt: Math.round(new Date().getTime() / 1000) - 185},
+                $isolated: 1,
+            }).then(item => Mongo('find', VERIFYDB, {uid: users[0]._id}, {limit: 1}).then(info => {
+                if (info.length < 1 || validVerify !== info[0].verify) {
+                    return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+                }
+                done(null, users[0])
+            }));
+        } else {
+            done(null, users[0])
+        }
     }).catch(err => handleError(err, done))
 }))
 Passport.serializeUser(function(user, done) {
@@ -50,7 +69,7 @@ export default function(url=null) {
         }
         res.json(url ? {
             apiOK: true,
-            url: url,
+            url,
         } : {apiOK: true})
     })
     router.post('/api/login', Passport.authenticate('local'), function(req, res) {
@@ -59,7 +78,7 @@ export default function(url=null) {
             res.json(Object.assign({
                 loginOK: true,
                 id: req.user.username,
-            }, url? {url: url} : {}))
+            }, url? {url} : {}))
         })
     })
     router.all('/api*', function(req, res, next) {

@@ -54,7 +54,8 @@ router.route('/act/:uid?').get(function (req, res, next) {
                 auto: users[0].auto ? 'https://drive.google.com/open?id=' + users[0].auto + '&authuser=0' : '',
                 kindle: users[0].kindle ? users[0].kindle + '@kindle.com' : '',
                 editAuto: false,
-                editKindle: true
+                editKindle: true,
+                verify: true
             }] });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -80,7 +81,8 @@ router.route('/act/:uid?').get(function (req, res, next) {
                     auto: user.auto ? 'https://drive.google.com/open?id=' + user.auto + '&authuser=0' : ''
                 }, user.perm === 1 ? {
                     unDay: user.unDay ? user.unDay : _constants.UNACTIVE_DAY,
-                    unHit: user.unHit ? user.unHit : _constants.UNACTIVE_HIT
+                    unHit: user.unHit ? user.unHit : _constants.UNACTIVE_HIT,
+                    verify: true
                 } : {
                     delable: true
                 });
@@ -349,6 +351,27 @@ router.put('/del/:uid', function (req, res, next) {
         });
     }).then(function (user) {
         return res.json({ apiOK: true });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.get('/verify', function (req, res, next) {
+    console.log('verify code');
+    (0, _mongoTool2.default)('remove', _constants.VERIFYDB, {
+        utime: { $lt: Math.round(new Date().getTime() / 1000) - 185 },
+        $isolated: 1
+    }).then(function (item) {
+        return (0, _mongoTool2.default)('find', _constants.VERIFYDB, { uid: req.user._id }, { limit: 1 }).then(function (item) {
+            return item.length > 0 ? res.json({ verify: item[0].verify }) : (0, _mongoTool2.default)('insert', _constants.VERIFYDB, {
+                verify: (0, _utility.completeZero)(Math.floor(Math.random() * 10000), 4),
+                uid: req.user._id,
+                utime: Math.round(new Date().getTime() / 1000)
+            }).then(function (item) {
+                console.log(item);
+                res.json({ verify: item[0].verify });
+            });
+        });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });

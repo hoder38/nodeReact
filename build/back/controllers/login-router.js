@@ -67,15 +67,36 @@ _passport2.default.use(new _passportLocal.Strategy(function (username, password,
     if (!validUsername) {
         return (0, _utility.handleError)(new _utility.HoError('username is not vaild', { code: 401 }), done);
     }
-    (0, _mongoTool2.default)('find', _constants.USERDB, { username: validUsername }, { limit: 1 }).then(function (users) {
-        var validPassword = (0, _utility.isValidString)(password, 'passwd');
-        if (!validPassword) {
+    var validPassword = (0, _utility.isValidString)(password, 'passwd');
+    var validVerify = false;
+    if (!validPassword) {
+        validVerify = (0, _utility.isValidString)(password, 'verify');
+        if (!validVerify) {
             return (0, _utility.handleError)(new _utility.HoError('passwd is not vaild', { code: 401 }));
         }
-        if (users.length < 1 || (0, _crypto.createHash)('md5').update(validPassword).digest('hex') !== users[0].password) {
+    }
+    (0, _mongoTool2.default)('find', _constants.USERDB, { username: validUsername }, { limit: 1 }).then(function (users) {
+        if (users.length < 1) {
             return (0, _utility.handleError)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
         }
-        done(null, users[0]);
+        if (validPassword && (0, _crypto.createHash)('md5').update(validPassword).digest('hex') !== users[0].password) {
+            return (0, _utility.handleError)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
+        }
+        if (validVerify) {
+            return (0, _mongoTool2.default)('remove', _constants.VERIFYDB, {
+                utime: { $lt: Math.round(new Date().getTime() / 1000) - 185 },
+                $isolated: 1
+            }).then(function (item) {
+                return (0, _mongoTool2.default)('find', _constants.VERIFYDB, { uid: users[0]._id }, { limit: 1 }).then(function (info) {
+                    if (info.length < 1 || validVerify !== info[0].verify) {
+                        return (0, _utility.handleError)(new _utility.HoError('Incorrect username or password', { cdoe: 401 }));
+                    }
+                    done(null, users[0]);
+                });
+            });
+        } else {
+            done(null, users[0]);
+        }
     }).catch(function (err) {
         return (0, _utility.handleError)(err, done);
     });
