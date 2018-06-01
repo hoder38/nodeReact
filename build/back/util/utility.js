@@ -585,7 +585,7 @@ var completeZero = exports.completeZero = function completeZero(number, offset) 
             break;
         }
     }
-    return number;
+    return number.toString();
 };
 
 var findTag = exports.findTag = function findTag(node) {

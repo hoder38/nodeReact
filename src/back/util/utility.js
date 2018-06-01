@@ -428,7 +428,7 @@ export const completeZero = (number, offset) => {
             break;
         }
     }
-    return number;
+    return number.toString();
 }
 
 export const findTag = (node, tag=null, id=null) => {
