@@ -1095,7 +1095,8 @@ export default {
                 let dUrl = false;
                 for (let l of lis) {
                     const a = findTag(l, 'a')[0];
-                    if (a.attribs.title.match(/^\d\d\d年\d\d?月/)[0] === docDate1) {
+                    const aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
+                    if (aMatch && aMatch[0] === docDate1) {
                         dUrl = addPre(a.attribs.href, 'http://www.moea.gov.tw');
                         break;
                     }
