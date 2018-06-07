@@ -801,14 +801,14 @@ export default {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${MONTH_NAMES[date.getMonth()]} ${completeZero(date.getDate(), 2)}, ${date.getFullYear()}`;
+                const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const section = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'site-wrapper')[0], 'div', 'main-container container')[0], 'div', 'row')[0], 'section', 'col-sm-12')[0], 'div', 'region region-content')[0], 'section', 'block-system-main')[0];
-                const divs = findTag(section, 'div', 'field field-name-title field-type-ds field-label-hidden');
+                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content row')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
                 for (let i in divs) {
-                    const a = findTag(findTag(findTag(divs[i], 'div')[0], 'div')[0], 'a')[0];
-                    if (findTag(a)[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(findTag(findTag(findTag(section, 'div', 'field field-name-field-release-date field-type-datetime field-label-hidden')[i], 'div')[0], 'div')[0], 'span')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
+                    const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
+                    const a = findTag(div, 'a')[0];
+                    if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
                         list.push({
                             url: addPre(a.attribs.href, 'http://www.dol.gov'),
                             name: toValidName('Unemployment Insurance Weekly Claims Report'),

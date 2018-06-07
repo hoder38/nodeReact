@@ -937,14 +937,14 @@ exports.default = {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
-                    var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + (0, _utility.completeZero)(date.getDate(), 2) + ', ' + date.getFullYear();
+                    var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    var section = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'site-wrapper')[0], 'div', 'main-container container')[0], 'div', 'row')[0], 'section', 'col-sm-12')[0], 'div', 'region region-content')[0], 'section', 'block-system-main')[0];
-                    var divs = (0, _utility.findTag)(section, 'div', 'field field-name-title field-type-ds field-label-hidden');
+                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content row')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
                     for (var i in divs) {
-                        var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(divs[i], 'div')[0], 'div')[0], 'a')[0];
-                        if ((0, _utility.findTag)(a)[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div', 'field field-name-field-release-date field-type-datetime field-label-hidden')[i], 'div')[0], 'div')[0], 'span')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
+                        var div = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
+                        var a = (0, _utility.findTag)(div, 'a')[0];
+                        if (a && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)(div, 'p')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
                             list.push({
                                 url: (0, _utility.addPre)(a.attribs.href, 'http://www.dol.gov'),
                                 name: (0, _utility.toValidName)('Unemployment Insurance Weekly Claims Report'),
