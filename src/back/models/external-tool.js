@@ -808,7 +808,7 @@ export default {
                 for (let i in divs) {
                     const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                     const a = findTag(div, 'a')[0];
-                    if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
+                    if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                         list.push({
                             url: addPre(a.attribs.href, 'http://www.dol.gov'),
                             name: toValidName('Unemployment Insurance Weekly Claims Report'),

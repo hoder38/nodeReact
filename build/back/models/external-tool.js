@@ -944,7 +944,7 @@ exports.default = {
                     for (var i in divs) {
                         var div = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                         var a = (0, _utility.findTag)(div, 'a')[0];
-                        if (a && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)(div, 'p')[0])[0].match(/[a-zA-Z]+ \d\d, \d\d\d\d$/)[0] === docDate) {
+                        if (a && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                             list.push({
                                 url: (0, _utility.addPre)(a.attribs.href, 'http://www.dol.gov'),
                                 name: (0, _utility.toValidName)('Unemployment Insurance Weekly Claims Report'),
