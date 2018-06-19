@@ -1069,7 +1069,7 @@ const getAsset = (xml, asset, no_cover) => {
                     parseResult.equityParent = getParameter(xml, 'ifrs:Equity', ai);
                 }
             }
-        } else if (xmlDate = getXmlDate(xml, 'ifrs-full:EquityAttributableToOwnersOfParent', ai)) {
+        } else if (xmlDate = getXmlDate(xml, 'ifrs-full:Equity', ai)) {
             y = xmlDate.year;
             q = xmlDate.quarter - 1;
             if (!asset[y] || !asset[y][q] || !no_cover) {
