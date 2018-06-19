@@ -38,7 +38,7 @@ exports.default = {
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,
     ZIP_LIMIT: 1,
-    STOCK_DATE: [14, 15, 21, 22, 28, 29, 7, 8],
+    STOCK_DATE: [19, 20, 26, 27, 12, 13, 5, 6],
     STOCK_MODE: 1,
     //3: xml重抓 2: xml重parse 1: parse tag
 }

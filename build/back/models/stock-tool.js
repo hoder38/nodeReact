@@ -1149,6 +1149,29 @@ var getAsset = function getAsset(xml, asset, no_cover) {
                     parseResult.equityParent = getParameter(xml, 'ifrs:Equity', ai);
                 }
             }
+        } else if (xmlDate = getXmlDate(xml, 'ifrs-full:EquityAttributableToOwnersOfParent', ai)) {
+            y = xmlDate.year;
+            q = xmlDate.quarter - 1;
+            if (!asset[y] || !asset[y][q] || !no_cover) {
+                parseResult = {
+                    receivable: getParameter(xml, 'tifrs-bsci-ci:AccountsReceivableNet', ai) + getParameter(xml, 'ifrs-full:OtherCurrentReceivables', ai) + getParameter(xml, 'tifrs-bsci-ci:NotesReceivableNet', ai) + getParameter(xml, 'ifrs-full:CurrentPrepayments', ai) + getParameter(xml, 'tifrs-bsci-ci:ConstructionContractsReceivable', ai),
+                    payable: getParameter(xml, 'ifrs-full:TradeAndOtherCurrentPayablesToTradeSuppliers', ai) + getParameter(xml, 'tifrs-bsci-ci:AccountsPayableToRelatedParties', ai) + getParameter(xml, 'ifrs-full:OtherCurrentPayables', ai) + getParameter(xml, 'tifrs-bsci-ci:ShorttermNotesAndBillsPayable', ai) + getParameter(xml, 'tifrs-bsci-ci:NotesPayable', ai) + getParameter(xml, 'tifrs-bsci-ci:NotesPayableToRelatedParties', ai) + getParameter(xml, 'tifrs-bsci-ci:ConstructionContractsPayable', ai) + getParameter(xml, 'tifrs-bsci-ci:ReceiptsUnderCustody', ai),
+                    cash: getParameter(xml, 'ifrs-full:CashAndCashEquivalents', ai),
+                    inventories: getParameter(xml, 'ifrs-full:Inventories', ai),
+                    property: getParameter(xml, 'ifrs-full:PropertyPlantAndEquipment', ai),
+                    current_liabilities: getParameter(xml, 'ifrs-full:CurrentLiabilities', ai) + getParameter(xml, 'ifrs-full:OtherCurrentLiabilities', ai),
+                    noncurrent_liabilities: 0,
+                    equityParent: getParameter(xml, 'ifrs-full:EquityAttributableToOwnersOfParent', ai) + getParameter(xml, 'tifrs-bsci-ci:EquityAttributableToFomerOwnerOfBusinessCombinationUnderCommonControl', ai),
+                    equityChild: getParameter(xml, 'ifrs-full:NoncontrollingInterests', ai),
+                    share: getParameter(xml, 'ifrs-full:Equity', ai),
+                    total: getParameter(xml, 'ifrs-full:Assets', ai),
+                    longterm: getParameter(xml, 'ifrs-full:NoncurrentAssets', ai)
+                };
+                parseResult.noncurrent_liabilities = getParameter(xml, 'ifrs-full:Liabilities', ai) - parseResult.current_liabilities;
+                if (parseResult.equityParent === 0) {
+                    parseResult.equityParent = getParameter(xml, 'ifrs-full:Equity', ai);
+                }
+            }
         } else {
             return false;
         }
@@ -1531,6 +1554,27 @@ var getSales = function getSales(xml, sales, cash, no_cover) {
                     nonoperating: 0,
                     finance_cost: getParameter(xml, 'ifrs:InterestExpense', si),
                     cost: getParameter(xml, 'tifrs-bsci-ins:OperatingCosts', si),
+                    operating: 0
+                };
+                parseResult.gross_profit = parseResult.revenue - parseResult.cost;
+                parseResult.operating = parseResult.gross_profit - parseResult.expenses;
+                parseResult.nonoperating = parseResult.profit + parseResult.tax - parseResult.operating;
+            }
+        } else if (xmlDate = getXmlDate(xml, 'ifrs-full:Revenue', si)) {
+            y = xmlDate.year;
+            q = xmlDate.quarter - 1;
+            if (!sales[y] || !sales[y][q] || !no_cover) {
+                parseResult = {
+                    gross_profit: 0,
+                    profit: getParameter(xml, 'ifrs-full:ProfitLoss', si),
+                    comprehensive: getParameter(xml, 'ifrs-full:OtherComprehensiveIncome', si),
+                    revenue: getParameter(xml, 'ifrs-full:Revenue', si),
+                    expenses: getParameter(xml, 'ifrs-full:OperatingExpense', si),
+                    tax: getParameter(xml, 'ifrs-full:IncomeTaxExpenseContinuingOperations', si),
+                    eps: getParameter(xml, 'ifrs-full:BasicEarningsLossPerShare', si),
+                    nonoperating: 0,
+                    finance_cost: getParameter(xml, 'ifrs-full:FinanceCosts', si),
+                    cost: getParameter(xml, 'tifrs-bsci-ci:OperatingCosts', si),
                     operating: 0
                 };
                 parseResult.gross_profit = parseResult.revenue - parseResult.cost;
