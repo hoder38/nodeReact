@@ -50,8 +50,7 @@ export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'Jun
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const DOC_TYPE = {
-    //am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
-    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'dol', 'rea', 'sca', 'fed'],
+    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
     jp: ['sea'],
     tw: ['tri', 'ndc', 'sta', 'mof', 'moe', 'cbc'],
 }

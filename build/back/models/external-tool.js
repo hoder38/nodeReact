@@ -946,7 +946,7 @@ exports.default = {
                         var a = (0, _utility.findTag)(div, 'a')[0];
                         if (a && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                             list.push({
-                                url: (0, _utility.addPre)(a.attribs.href, 'http://www.dol.gov'),
+                                url: (0, _utility.addPre)(a.attribs.href.trim(), 'http://www.dol.gov'),
                                 name: (0, _utility.toValidName)('Unemployment Insurance Weekly Claims Report'),
                                 date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                             });
@@ -2045,6 +2045,36 @@ exports.default = {
                                 }();
 
                                 if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                            } else {
+                                var sp = (0, _utility.findTag)(p, 'span')[0];
+                                var pcsp = (0, _utility.findTag)(sp)[0];
+                                if (pcsp && pcsp.match(/本文及附表/)) {
+                                    var _ret8 = function () {
+                                        var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                                        driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
+                                        console.log(driveName);
+                                        return {
+                                            v: mkFolder((0, _path.dirname)(filePath)).then(function () {
+                                                return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                                    return (0, _apiToolGoogle2.default)('upload', {
+                                                        type: 'auto',
+                                                        name: driveName,
+                                                        filePath: filePath,
+                                                        parent: parent,
+                                                        rest: function rest() {
+                                                            return updateDocDate(type, obj.date);
+                                                        },
+                                                        errhandle: function errhandle(err) {
+                                                            return (0, _utility.handleError)(err);
+                                                        }
+                                                    });
+                                                });
+                                            })
+                                        };
+                                    }();
+
+                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                }
                             }
                         }
                     } catch (err) {
@@ -2080,7 +2110,7 @@ exports.default = {
                             if (kind) {
                                 var a = (0, _utility.findTag)(kind, 'a')[0];
                                 if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                                    var _ret8 = function () {
+                                    var _ret9 = function () {
                                         var url = a.attribs.href;
                                         url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
                                         driveName = obj.name + ' ' + obj.date + '.pdf';
@@ -2105,7 +2135,7 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                                 }
                             }
                         }
@@ -2141,7 +2171,7 @@ exports.default = {
                     }
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
-                            var _ret9 = function () {
+                            var _ret10 = function () {
                                 driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex]);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
@@ -2165,7 +2195,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                         } else {
                             return updateDocDate(type, obj.date);
                         }
@@ -2568,7 +2598,7 @@ exports.default = {
             });
         };
 
-        var _ret10 = function () {
+        var _ret11 = function () {
             switch (type) {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
@@ -2708,9 +2738,9 @@ exports.default = {
                                         };
 
                                         for (var _iterator22 = (0, _getIterator3.default)(list), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                            var _ret11 = _loop();
+                                            var _ret12 = _loop();
 
-                                            if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                                            if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                                         }
                                     } catch (err) {
                                         _didIteratorError22 = true;
@@ -3403,7 +3433,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+        if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
     },
     saveSingle: function saveSingle(type, id) {
         var url = null;

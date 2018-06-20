@@ -810,7 +810,7 @@ export default {
                     const a = findTag(div, 'a')[0];
                     if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                         list.push({
-                            url: addPre(a.attribs.href, 'http://www.dol.gov'),
+                            url: addPre(a.attribs.href.trim(), 'http://www.dol.gov'),
                             name: toValidName('Unemployment Insurance Weekly Claims Report'),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
@@ -1482,6 +1482,22 @@ export default {
                             rest: () => updateDocDate(type, obj.date),
                             errhandle: err => handleError(err),
                         })));
+                    } else {
+                        const sp = findTag(p, 'span')[0];
+                        const pcsp = findTag(sp)[0];
+                        if (pcsp && pcsp.match(/本文及附表/)) {
+                            const url = addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                            driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                            console.log(driveName);
+                            return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                                type: 'auto',
+                                name: driveName,
+                                filePath,
+                                parent,
+                                rest: () => updateDocDate(type, obj.date),
+                                errhandle: err => handleError(err),
+                            })));
+                        }
                     }
                 };
             });
