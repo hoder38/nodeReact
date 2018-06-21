@@ -1554,7 +1554,7 @@ const getSales = (xml, sales, cash, no_cover) => {
                 };
                 parseResult.gross_profit = parseResult.revenue - parseResult.cost;
                 parseResult.operating = parseResult.gross_profit - parseResult.expenses;
-                parseResult.nonoperating = parseResult.profit + parseResult.tax - sales[y][q].operating;
+                parseResult.nonoperating = parseResult.profit + parseResult.tax - parseResult.operating;
             }
         } else if (xmlDate = getXmlDate(xml, 'tw-gaap-basi:IncomeLossContinuingOperations', si)) {
             y = xmlDate.year;
