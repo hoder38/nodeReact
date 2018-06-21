@@ -3434,7 +3434,7 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com
         return handleError(new HoError('cannot find annual location'));
     }
     console.log(filename);
-    if (getExtname(filename).ext === 'zip') {
+    if (getExtname(filename).ext === '.zip') {
         return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}, {filePath}).then(() => filename);
     } else {
         return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
