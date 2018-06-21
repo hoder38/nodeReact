@@ -3434,10 +3434,13 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com
         return handleError(new HoError('cannot find annual location'));
     }
     console.log(filename);
-    return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
-        return Api('url', addPre(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), {
-            filePath}).then(() => filename);
-    });
+    if (getExtname(filename).ext === 'zip') {
+        return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}, {filePath}).then(() => filename);
+    } else {
+        return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
+            return Api('url', addPre(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), {filePath}).then(() => filename);
+        });
+    }
 });
 
 export const getSingleAnnual = (year, folder, index) => {

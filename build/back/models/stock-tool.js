@@ -3977,12 +3977,17 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
             return (0, _utility.handleError)(new _utility.HoError('cannot find annual location'));
         }
         console.log(filename);
-        return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
-            return (0, _apiTool2.default)('url', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), {
-                filePath: filePath }).then(function () {
+        if ((0, _mime.getExtname)(filename).ext === 'zip') {
+            return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }, { filePath: filePath }).then(function () {
                 return filename;
             });
-        });
+        } else {
+            return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
+                return (0, _apiTool2.default)('url', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), { filePath: filePath }).then(function () {
+                    return filename;
+                });
+            });
+        }
     });
 };
 
