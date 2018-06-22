@@ -2563,7 +2563,7 @@ exports.default = {
                             return recur_getTwseXml();
                         });
                     };
-                    if (stage < 3 && is_start && (0, _fs.existsSync)(xml_path)) {
+                    if (stage < 3 && is_start && (0, _fs.existsSync)(xml_path) && (0, _fs.statSync)(xml_path)['size'] >= 10000) {
                         console.log('exist');
                         if (stage < 2 && cash[year - 1] && cash[year - 1][quarter - 1] && asset[year - 1] && asset[year - 1][quarter - 1] && sales[year - 1] && sales[year - 1][quarter - 1]) {
                             console.log('done');

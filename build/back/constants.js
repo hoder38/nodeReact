@@ -295,7 +295,10 @@ var MIME_EXT = exports.MIME_EXT = {
     mp3: 'audio/mpeg',
     ogg: 'audio/ogg',
     wav: 'audio/wav',
-    m4a: 'audio/mp4'
+    m4a: 'audio/mp4',
+    zip: 'application/zip',
+    '7z': 'application/x-7z-compressed',
+    rar: 'application/x-rar-compressed'
 };
 
 var FITNESS_POINT = exports.FITNESS_POINT = '598174b08bd4ed7a80e4dc80';

@@ -752,6 +752,9 @@ export const MIME_EXT = {
     ogg: 'audio/ogg',
     wav: 'audio/wav',
     m4a: 'audio/mp4',
+    zip: 'application/zip',
+    '7z': 'application/x-7z-compressed',
+    rar: 'application/x-rar-compressed',
 }
 
 export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';

@@ -2437,7 +2437,7 @@ export default {
                     }
                     return recur_getTwseXml();
                 });
-                if (stage < 3 && is_start && FsExistsSync(xml_path)) {
+                if (stage < 3 && is_start && FsExistsSync(xml_path) && FsStatSync(xml_path)['size'] >= 10000) {
                     console.log('exist');
                     if (stage < 2 && cash[year-1] && cash[year-1][quarter-1] && asset[year-1] && asset[year-1][quarter-1] && sales[year-1] && sales[year-1][quarter-1]) {
                         console.log('done');
