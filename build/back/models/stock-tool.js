@@ -1560,7 +1560,14 @@ var getSales = function getSales(xml, sales, cash, no_cover) {
                 parseResult.operating = parseResult.gross_profit - parseResult.expenses;
                 parseResult.nonoperating = parseResult.profit + parseResult.tax - parseResult.operating;
             }
-        } else if (xmlDate = getXmlDate(xml, 'ifrs-full:Revenue', si)) {
+        } else {
+            xmlDate = getXmlDate(xml, 'ifrs-full:Revenue', si);
+            if (!xmlDate) {
+                xmlDate = getXmlDate(xml, 'ifrs-full:OperatingExpense', si);
+            }
+            if (!xmlDate) {
+                return false;
+            }
             y = xmlDate.year;
             q = xmlDate.quarter - 1;
             if (!sales[y] || !sales[y][q] || !no_cover) {
@@ -1581,8 +1588,6 @@ var getSales = function getSales(xml, sales, cash, no_cover) {
                 parseResult.operating = parseResult.gross_profit - parseResult.expenses;
                 parseResult.nonoperating = parseResult.profit + parseResult.tax - parseResult.operating;
             }
-        } else {
-            return false;
         }
         if (!quarterIsEmpty(parseResult)) {
             if (!sales[y]) {
