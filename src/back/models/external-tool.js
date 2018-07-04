@@ -647,7 +647,7 @@ export default {
                 return list;
             });
             case 'cen':
-            return Api('url', 'http://www.census.gov/economic-indicators/').then(raw_data => {
+            return Api('url', 'https://www.census.gov/economic-indicators/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));

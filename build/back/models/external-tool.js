@@ -783,7 +783,7 @@ exports.default = {
                     return list;
                 });
             case 'cen':
-                return (0, _apiTool2.default)('url', 'http://www.census.gov/economic-indicators/').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.census.gov/economic-indicators/').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
