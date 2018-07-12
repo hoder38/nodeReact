@@ -1486,7 +1486,8 @@ export default {
                         const sp = findTag(p, 'span')[0];
                         const pcsp = findTag(sp)[0];
                         if (pcsp && pcsp.match(/本文及附表/)) {
-                            const url = addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                            const a = findTag(findTag(sp, 'strong')[0], 'a')[0];
+                            const url = a ? addPre(a.attribs.href, 'http://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                             driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                             console.log(driveName);
                             return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
