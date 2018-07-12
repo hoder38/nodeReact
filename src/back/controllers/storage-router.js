@@ -6,6 +6,7 @@ import GoogleApi from '../models/api-tool-google'
 import External from '../models/external-tool'
 import Mongo from '../models/mongo-tool'
 import Redis from '../models/redis-tool'
+import Lottery from '../models/lottery-tool'
 import { getOptionTag, isImage, isMusic, isVideo, isDoc, isZipbook } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -19,6 +20,7 @@ router.use(function(req, res, next) {
 
 router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next){
     console.log('storage reset');
+    Lottery.select(0);
     StorageTagTool.resetQuery(req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items),
         parentList: result.parentList,
