@@ -2050,7 +2050,8 @@ exports.default = {
                                 var pcsp = (0, _utility.findTag)(sp)[0];
                                 if (pcsp && pcsp.match(/本文及附表/)) {
                                     var _ret8 = function () {
-                                        var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                                        var a = (0, _utility.findTag)((0, _utility.findTag)(sp, 'strong')[0], 'a')[0];
+                                        var url = a ? (0, _utility.addPre)(a.attribs.href, 'http://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                         console.log(driveName);
                                         return {
