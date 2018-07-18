@@ -656,7 +656,7 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'innerPage')[0], 'div', 'container-fluid belowHeader')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(r => {
+                findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(r => {
                     if (findTag(findTag(findTag(findTag(findTag(r, 'td', 'indicator_dates')[0], 'div')[0], 'p')[0], 'span')[0])[0] === docDate) {
                         const div = findTag(findTag(r, 'td', 'indicator_data')[0], 'div')[0];
                         list.push({
@@ -795,7 +795,7 @@ export default {
                 return list;
             });
             case 'dol':
-            return Api('url', 'http://www.dol.gov/newsroom/releases').then(raw_data => {
+            return Api('url', 'https://www.dol.gov/newsroom/releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -804,13 +804,13 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content row')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
+                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
                 for (let i in divs) {
                     const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                     const a = findTag(div, 'a')[0];
                     if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                         list.push({
-                            url: addPre(a.attribs.href.trim(), 'http://www.dol.gov'),
+                            url: addPre(a.attribs.href.trim(), 'https://www.dol.gov'),
                             name: toValidName('Unemployment Insurance Weekly Claims Report'),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
