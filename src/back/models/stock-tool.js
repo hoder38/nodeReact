@@ -8,7 +8,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
-import { handleError, HoError, findTag, completeZero, getJson, bufferToString, addPre, isValidString } from '../util/utility'
+import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString } from '../util/utility'
 import { getExtname } from '../util/mime'
 import sendWs from '../util/sendWs'
 

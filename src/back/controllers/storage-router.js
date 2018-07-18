@@ -20,7 +20,16 @@ router.use(function(req, res, next) {
 
 router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next){
     console.log('storage reset');
-    Lottery.select(0);
+    Lottery.input('/home/pi/Book1.csv', true).then(() => Lottery.inputReward('/home/pi/reward.csv', true)).then(() => {
+        Lottery.select(0);
+        Lottery.select(1);
+        Lottery.select(2);
+        Lottery.select(3);
+        Lottery.select(4);
+        Lottery.select(0);
+        Lottery.select(5);
+        Lottery.select(6);
+    }).then(() => Lottery.outputCsv(true));
     StorageTagTool.resetQuery(req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getStorageItem(req.user, result.items),
         parentList: result.parentList,

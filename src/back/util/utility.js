@@ -342,12 +342,12 @@ export const SRT2VTT = (filePath, ext) => new Promise((resolve, reject) => FsRea
     subfs.on('end', () => resolve());
 })).then(() => FsUnlinkSync(`${filePath}.sub`)));
 
-const bufferToString = buffer => {
+export const bufferToString = (buffer, big5=false) => {
     const charset = detectCharset(buffer).toString();
     try {
-        return buffer.toString(charset);
+        return buffer.toString(big5 ? 'big5' : charset);
     } catch (x) {
-        return IconvDecode(buffer, charset);
+        return IconvDecode(buffer, big5 ? 'big5' : charset);
     }
 }
 
