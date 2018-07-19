@@ -792,7 +792,7 @@ exports.default = {
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'innerPage')[0], 'div', 'container-fluid belowHeader')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(function (r) {
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(function (r) {
                         if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(r, 'td', 'indicator_dates')[0], 'div')[0], 'p')[0], 'span')[0])[0] === docDate) {
                             var div = (0, _utility.findTag)((0, _utility.findTag)(r, 'td', 'indicator_data')[0], 'div')[0];
                             list.push({
@@ -931,7 +931,7 @@ exports.default = {
                     return list;
                 });
             case 'dol':
-                return (0, _apiTool2.default)('url', 'http://www.dol.gov/newsroom/releases').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.dol.gov/newsroom/releases').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -940,13 +940,13 @@ exports.default = {
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content row')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
+                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
                     for (var i in divs) {
                         var div = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                         var a = (0, _utility.findTag)(div, 'a')[0];
                         if (a && (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && (0, _utility.findTag)((0, _utility.findTag)(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
                             list.push({
-                                url: (0, _utility.addPre)(a.attribs.href.trim(), 'http://www.dol.gov'),
+                                url: (0, _utility.addPre)(a.attribs.href.trim(), 'https://www.dol.gov'),
                                 name: (0, _utility.toValidName)('Unemployment Insurance Weekly Claims Report'),
                                 date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                             });
