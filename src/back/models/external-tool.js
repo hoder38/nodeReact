@@ -669,28 +669,31 @@ export default {
                 return list;
             });
             case 'bea':
-            return Api('url', 'http://www.bea.gov/').then(raw_data => {
+            return Api('url', 'http://www.bea.gov/news/current-releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+                const docDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()%100}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'div', 'content')[0], 'div', 'col-sm-4 home-right pull-right')[0], 'div', 'menuPod_wrapper')[0], 'div', 'menuPod_header')[0], 'div', 'latestStatistics_wrapper')[0], 'a').forEach(a => {
-                    let first = findTag(a, 'div', 'releaseHeader first')[0];
-                    if (!findTag(a, 'div', 'releaseHeader first')[0]) {
-                        first = findTag(a, 'div', 'releaseHeader')[0];
-                    }
-                    if (findTag(findTag(findTag(findTag(first, 'ul', 'latestStatistics_section')[0], 'li', 'date')[0], 'span')[0])[0] === docDate) {
-                        list.push({
-                            url: addPre(a.attribs.href, 'http://www.bea.gov'),
-                            name: toValidName(findTag(findTag(findTag(findTag(a, 'div', 'releaseContent')[0], 'ul', 'latestStatistics_section')[0], 'li')[0])[0]),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div');
+                for (let div of divs) {
+                    if (findTag(findTag(div, 'h3')[0])[0] === `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`) {
+                        findTag(findTag(div, 'ul')[0], 'li').forEach(l => {
+                            if (findTag(findTag(l, 'span', 'date-published')[0])[0] === `- ${docDate}`) {
+                                const a = findTag(findTag(l, 'span', 'release-name')[0], 'a')[0];
+                                list.push({
+                                    url: addPre(a.attribs.href, 'http://www.bea.gov'),
+                                    name: toValidName(findTag(a)[0]),
+                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                });
+                            }
                         });
+                        break;
                     }
-                });
+                }
                 return list;
             });
             case 'ism':
@@ -1219,21 +1222,23 @@ export default {
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
-                const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'cfinclude')[0], 'table')[0], 'tr')[0], 'td', 'sidebar')[0], 'div', 'sidebarRight')[0], 'ul')[0], 'li')[0], 'a')[0];
-                if (!findTag(a)[0].match(/^Full Release/)) {
-                    return handleError(new HoError('cannot find release'));
+                const hs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'div', 'test')[0], 'div', 'region region-content')[0], 'article')[0], 'div', 'row')[0], 'div', 'container')[0], 'div', 'tab-content')[0], 'div', 'menu1')[0], 'div', 'row')[0], 'div')[0], 'h3');
+                for (let h of hs) {
+                    const a = findTag(h, 'a')[0];
+                    if (findTag(a)[0].match(/^Full Release/)) {
+                        const url = addPre(a.attribs.href, 'http://www.bea.gov');
+                        driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                        console.log(driveName);
+                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                            type: 'auto',
+                            name: driveName,
+                            filePath,
+                            parent,
+                            rest: () => updateDocDate(type, obj.date),
+                            errhandle: err => handleError(err),
+                        })));
+                    }
                 }
-                const url = addPre(a.attribs.href, 'http://www.bea.gov');
-                driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
-                console.log(driveName);
-                return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                    type: 'auto',
-                    name: driveName,
-                    filePath,
-                    parent,
-                    rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => handleError(err),
-                })));
             });
             case 'ism':
             console.log(obj);
