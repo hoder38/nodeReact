@@ -102,12 +102,21 @@ const ItemInput = React.createClass({
                         {`${this.state.progress}% Complete`}
                     </div>
                 )
-                input2 = (
-                    <select className="form-control" onChange={this._handleSelect} value={this.state.lang} style={{position: 'relative'}}>
-                        <option value="ch" key={0}>中文</option>
-                        <option value="en" key={1}>English</option>
-                    </select>
-                )
+                if (this.props.value) {
+                    input2 = (
+                        <select className="form-control" onChange={this._handleSelect} value={this.state.lang} style={{position: 'relative'}}>
+                            <option value="ch" key={0}>windows</option>
+                            <option value="en" key={1}>Mac&mobile</option>
+                        </select>
+                    )
+                } else {
+                    input2 = (
+                        <select className="form-control" onChange={this._handleSelect} value={this.state.lang} style={{position: 'relative'}}>
+                            <option value="ch" key={0}>中文</option>
+                            <option value="en" key={1}>English</option>
+                        </select>
+                    )
+                }
                 submit = (
                     <div className={`btn btn-${this.props.color} btn-file`}>
                         <span className="glyphicon glyphicon-folder-open"></span>&nbsp;Choose
@@ -121,8 +130,21 @@ const ItemInput = React.createClass({
                     getinput={this._input.getInput('input2')}
                     placeholder={this.props.option} />
                 fromClass = 'input-group double-input'
+                submit = (
+                    <button className={`btn btn-${this.props.color}`} type="submit" disabled={this.state.loading}>
+                        <span className="glyphicon glyphicon-ok"></span>
+                    </button>
+                )
+                break
             }
             case 1:
+            if (this.props.option) {
+                fromClass = 'input-group double-input'
+                input2 = <UserInput
+                    val={this.state.input2}
+                    getinput={this._input.getInput('input2')}
+                    placeholder={this.props.option} />
+            }
             submit = (
                 <button className={`btn btn-${this.props.color}`} type="submit" disabled={this.state.loading}>
                     <span className="glyphicon glyphicon-ok"></span>

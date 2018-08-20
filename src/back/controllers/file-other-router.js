@@ -12,8 +12,9 @@ import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
+import Lottery from '../models/lottery-tool'
 import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility'
-import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub } from '../util/mime'
+import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub, isCSV } from '../util/mime'
 import sendWs from '../util/sendWs'
 
 const router = Express.Router();
@@ -736,4 +737,19 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
     });
 });
 
+router.post('/upload/lottery/:name/:type(0|1|2)', function(req, res, next) {
+    checkLogin(req, res, () => {
+        console.log('upload lottery');
+        console.log(req.files);
+        const ext = isCSV(req.files.file.name);
+        if (!ext) {
+            return handleError(new HoError('not valid csv!!!'), next);
+        }
+        const json_data = getJson(req.body.lang);
+        if (json_data === false) {
+            return handleError(new HoError('json parse error!!!'), next);
+        }
+        Lottery.input(req.files.file.path, (json_data === 'en') ? false: true).then(data => Lottery.newLottery(req.user._id, req.params.name, req.params.type, json_data, data.user, data.reward)).then(() => res.json({apiOK: true})).catch(err => handleError(err, next));
+    });
+});
 export default router

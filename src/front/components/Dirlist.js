@@ -69,12 +69,8 @@ const Dirlist = React.createClass({
                 </a>
             </li>
         ) : null
-        return (
-            <li className={this.state.collapse ? '' : 'active'}>
-                <a href="#" onClick={e => killEvent(e, this._openList)}>
-                    {this.props.name}&nbsp;<i className={this.state.collapse ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'}></i>
-                </a>
-                <ul className={this.state.collapse ? 'nav nav-pills collapse' : 'nav nav-pills collapse in'}>
+        const head = this.props.noSort ? null : (
+            <ul className={this.state.collapse ? 'nav nav-pills collapse' : 'nav nav-pills collapse in'}>
                     <li>
                         <a style={{padding: '10px 15px'}} href="#" onClick={e => killEvent(e, () => this._changeSort('name'))}>
                             name&nbsp;{nameSort}
@@ -86,7 +82,15 @@ const Dirlist = React.createClass({
                         </a>
                     </li>
                     {edit}
-                </ul>
+            </ul>
+
+        )
+        return (
+            <li className={this.state.collapse ? '' : 'active'}>
+                <a href="#" onClick={e => killEvent(e, this._openList)}>
+                    {this.props.name}&nbsp;<i className={this.state.collapse ? 'glyphicon glyphicon-chevron-down' : 'glyphicon glyphicon-chevron-up'}></i>
+                </a>
+                {head}
                 <ul className={this.state.collapse ? 'collapse' : 'collapse in'}>
                     {rows}
                     {more}

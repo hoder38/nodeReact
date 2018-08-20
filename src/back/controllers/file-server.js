@@ -122,7 +122,7 @@ const server0 = NetCreateServer(function(c) {
         try {
             const recvData = JSON.parse(data.toString());
             console.log(`websocket: ${recvData.send}`);
-            sendWs(recvData.data, recvData.adultonly, recvData.auth);
+            sendWs(recvData.data, recvData.adultonly, recvData.auth, recvData.send);
         } catch (e) {
             handleError(e, 'Client');
             console.log(data);

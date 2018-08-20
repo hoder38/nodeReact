@@ -235,6 +235,17 @@ export const isKindle = name => {
     return KINDLE_EXT.includes(extName) ? extName : extName.match(/^azw\d$/) ? extName : false;
 }
 
+export const isCSV = name => {
+    const result = name.match(EXT_FILENAME);
+    let extName = '';
+    if (result && result[1]) {
+        extName = result[1].toLowerCase();
+    } else {
+        return false;
+    }
+    return extName === 'csv' ? extName : false;
+}
+
 export const mediaMIME = name => {
     const result = name.match(EXT_FILENAME);
     const extName = (result && result[1]) ? result[1].toLowerCase() : '';

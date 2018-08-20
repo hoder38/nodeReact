@@ -3,7 +3,7 @@ import ReDirlist from '../containers/ReDirlist'
 import RePasswordInfo from '../containers/RePasswordInfo'
 import ReFitnessInfo from '../containers/ReFitnessInfo'
 import ReRankInfo from '../containers/ReRankInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
 
 const Categorylist = React.createClass({
@@ -161,6 +161,15 @@ const Categorylist = React.createClass({
                 }
             }
             break;
+            case LOTTERY:
+            open = this.props.stockopen ? (
+                <li>
+                    <a href="#" onClick={e => killEvent(e, this.props.setstock)}>
+                        END LOTTERY&nbsp;<i className="glyphicon glyphicon-cloud-download"></i>
+                    </a>
+                </li>
+            ) : null;
+            break
         }
         const chartOpen = this.props.stockopen ? <i className="glyphicon glyphicon-chevron-up"></i> : <i className="glyphicon glyphicon-chevron-down"></i>;
         const chart = this.props.stock ? (
@@ -170,7 +179,12 @@ const Categorylist = React.createClass({
                 </a>
             </li>
         ) : null
-        const ul = this.props.stockopen ? (
+        const ul = (this.props.itemType === LOTTERY) ? (
+            <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
+                {open}
+                <ReDirlist name="USER LIST" time="mtime" dir={this.props.itemlist} del={()=>{}} edit={false} collapse={false} dirItem={()=>{}} noSort={true} />
+            </ul>
+        ) : this.props.stockopen ? (
             <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
                 {chart}
             </ul>

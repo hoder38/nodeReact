@@ -1,9 +1,22 @@
 import { arrayObject, arrayId } from '../utility'
-import { SET_STOCK } from '../constants'
+import { SET_STOCK, SET_LOTTERY } from '../constants'
 
 const rest_item = item => {
-    let date = new Date(item.utime * 1000)
-    item.utime = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+    if (item.utime) {
+        let date = new Date(item.utime * 1000)
+        item.utime = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+    }
+    return item
+}
+
+const rest_item1 = item => {
+    if (item.utime > 10000) {
+        let date = new Date(item.utime * 1000)
+        const h = date.getHours();
+        const m = date.getMinutes();
+        const s = date.getSeconds();
+        item.utime = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`
+    }
     return item
 }
 
@@ -86,7 +99,7 @@ export default function complexDataHandle (push, pop, set) {
                 if (action.list === 'item') {
                     window.scrollTo(0, 0)
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
                         latest: action.latest === null ? '' : action.latest,
                         path: action.path === null ? state.path : action.path,
                         select: new Set(),
@@ -106,11 +119,11 @@ export default function complexDataHandle (push, pop, set) {
             } else {
                 if (action.pageToken === null) {
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             page: action.item.length ? state[action.list].page + action.item.length : state[action.list].page,
                             more: (Array.isArray(action.item) && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
                         }),
                     })
                 } else {
@@ -120,11 +133,11 @@ export default function complexDataHandle (push, pop, set) {
                         }
                     }
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             pageToken: action.pageToken,
                             more: (!state[action.list].more && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
                         }),
                     })
                 }

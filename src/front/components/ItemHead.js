@@ -1,7 +1,7 @@
 import React from 'react'
 import Tooltip from './Tooltip'
 import { getItemList, isValidString, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
 
 const ItemHead = React.createClass({
     _changeSort: function(name) {
@@ -59,6 +59,8 @@ const ItemHead = React.createClass({
         }
         let head1 = 'time'
         let click = () => this._changeSort('name')
+        let click2 = () => this._changeSort('count')
+        let click3 = () => this._changeSort('mtime')
         let sort = nameSort
         let head2 = 'count'
         let head3 = null
@@ -87,6 +89,11 @@ const ItemHead = React.createClass({
             head1 = 'start';
             head2 = 'type';
             break;
+            case LOTTERY:
+            click = () => {}
+            click2 = () => {}
+            click3 = () => {}
+            break;
         }
         return (
             <ul className="nav nav-pills" style={{backgroundColor: 'white', borderBottom: '2px solid #ddd'}}>
@@ -109,13 +116,13 @@ const ItemHead = React.createClass({
                     </a>
                 </li>
                 <li className="pull-right" style={{width: '15%', minWidth: '68px'}}>
-                    <a href="#" onClick={e => killEvent(e, () => this._changeSort('count'))} style={{padding: '10px 5px'}}>
+                    <a href="#" onClick={e => killEvent(e, click2)} style={{padding: '10px 5px'}}>
                         {head2}&nbsp;
                         {countSort}
                     </a>
                 </li>
                 <li className="pull-right" style={{width: '15%', minWidth: '68px'}}>
-                    <a href="#" onClick={e => killEvent(e, () => this._changeSort('mtime'))} style={{padding: '10px 5px'}}>
+                    <a href="#" onClick={e => killEvent(e, click3)} style={{padding: '10px 5px'}}>
                         {head1}&nbsp;
                         {timeSort}
                     </a>

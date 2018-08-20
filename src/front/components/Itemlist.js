@@ -4,10 +4,11 @@ import ReItemPassword from '../containers/ReItemPassword'
 import ReItemStock from '../containers/ReItemStock'
 import ReItemFitness from '../containers/ReItemFitness'
 import ReItemRank from '../containers/ReItemRank'
+import ReItemLottery from '../containers/ReItemLottery'
 import Tooltip from './Tooltip'
 import Dropdown from './Dropdown'
 import { isValidString, getItemList, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS, RANK } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
 
 const Itemlist = React.createClass({
     getInitialState: function() {
@@ -29,7 +30,7 @@ const Itemlist = React.createClass({
         }
     },
     _getlist: function(name=this.props.sortName, type=this.props.sortType, push=true) {
-        this.setState(Object.assign({}, this.state, {loading: true}), () => getItemList(this.props.itemType, name, type, this.props.set, this.props.page, this.props.pageToken, push).then(() => this.setState(Object.assign({}, this.state, {loading: false}))).catch(err => this.props.addalert(err)))
+        (this.props.itemType === LOTTERY) ? this.props.set(this.props.itemList, null, null, null, name, type) : this.setState(Object.assign({}, this.state, {loading: true}), () => getItemList(this.props.itemType, name, type, this.props.set, this.props.page, this.props.pageToken, push).then(() => this.setState(Object.assign({}, this.state, {loading: false}))).catch(err => this.props.addalert(err)))
     },
     _handleSelect: function() {
         let newList = new Set()
@@ -109,6 +110,9 @@ const Itemlist = React.createClass({
                 break
                 case RANK:
                 rows.push(<ReItemRank key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
+                break
+                case LOTTERY:
+                rows.push(<ReItemLottery key={item.id} item={item} owner={this.props.owner} />)
                 break
             }
             if (select) {

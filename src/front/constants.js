@@ -7,6 +7,7 @@ export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
 export const FITNESS_PAGE = '/Fitness'
 export const RANK_PAGE = '/Rank'
+export const LOTTERY_PAGE = '/Lottery'
 
 //item type
 export const STORAGE = 'storage'
@@ -14,6 +15,7 @@ export const PASSWORD = 'password'
 export const STOCK = 'stock'
 export const FITNESS = 'fitness'
 export const RANK = 'rank'
+export const LOTTERY = 'lottery'
 
 //action
 export const ALERT_PUSH = 'ALERT_PUSH'
@@ -76,6 +78,10 @@ export const RDIR_POP = 'RDIR_POP'
 export const RDIR_PUSH = 'RDIR_PUSH'
 export const RBOOKMARK_POP = 'RBOOKMARK_POP'
 export const RBOOKMARK_PUSH = 'RBOOKMARK_PUSH'
+//lottery
+export const LOTTERY_PUSH = 'LOTTERY_PUSH'
+export const LOTTERY_POP = 'LOTTERY_POP'
+export const SET_LOTTERY = 'SET_LOTTERY'
 
 //z-index
 export const RIGHT_SECTION_ZINDEX = 20
