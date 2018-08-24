@@ -263,15 +263,15 @@ function sendMail(data) {
 }
 
 function sendName(data) {
-    if (!data['name'] || !data['mail']) {
+    if (!data['text'] || !data['mail'] || !data['title']) {
         return handleError(new HoError('mail parameter lost!!!'));
     }
     if (!isValidString(data['mail'], 'email')) {
         return handleError(new HoError('invalid email!!!'));
     }
-    data['name'] = data['append'] ? `${Buffer.from(data['name'], 'base64')} ${data['append']}` : Buffer.from(data['name'], 'base64');
-    const subject = data['append'] ? `Christmas Presents Exchange ${data['append']}` : 'Christmas Presents Exchange';
-    //console.log(data['name']);
+    data['name'] = data['append'] ? `${Buffer.from(data['text'], 'base64')} ${data['append']}` : Buffer.from(data['text'], 'base64');
+    const subject = data['append'] ? `${data['title']} ${data['append']}` : data['title'];
+    //console.log(data['text']);
     const gmail = googleapis.gmail({
         version: 'v1',
         auth: oauth2Client,
@@ -285,12 +285,12 @@ function sendName(data) {
                 'MIME-Version: 1.0\r\n',
                 'From: me\r\n',
                 `To: ${data['mail']}\r\n`,
-                `Subject: ${subject}\r\n\r\n`,
+                `Subject: =?utf-8?B?${new Buffer(subject).toString('base64')}?=\r\n\r\n`,
                 '--foo_bar_baz\r\n',
                 'Content-Type: text/plain; charset="UTF-8"\r\n',
                 'MIME-Version: 1.0\r\n',
                 'Content-Transfer-Encoding: 7bit\r\n\r\n',
-                `${data['name']}\r\n\r\n`,
+                `${data['text']}\r\n\r\n`,
                 '--foo_bar_baz\r\n',
             ].join(''),
         },
@@ -1020,7 +1020,9 @@ export function autoDoc(userlist, index, type, date=null) {
     });
 }
 
-export const sendPresentName = (name, mail, append=null) => api('send name', {name, mail, append});
+export const sendPresentName = (text, mail, append=null) => api('send name', {title: 'Christmas Presents Exchange', text, mail, append});
+
+export const sendLotteryName = (title, text, mail) => api('send name', {title, text: text, mail});
 
 export const googleBackupDb = backupDate => api('create', {name: backupDate, parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE)}).then(metadata => {
     const backup_collection = [];

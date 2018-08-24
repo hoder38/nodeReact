@@ -3,7 +3,7 @@ import { SET_STOCK, SET_LOTTERY } from '../constants'
 
 const rest_item = item => {
     if (item.utime) {
-        let date = new Date(item.utime * 1000)
+        const date = new Date(item.utime * 1000)
         item.utime = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
     }
     return item
@@ -11,7 +11,7 @@ const rest_item = item => {
 
 const rest_item1 = item => {
     if (item.utime > 10000) {
-        let date = new Date(item.utime * 1000)
+        const date = new Date(item.utime * 1000)
         const h = date.getHours();
         const m = date.getMinutes();
         const s = date.getSeconds();

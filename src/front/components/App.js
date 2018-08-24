@@ -1,6 +1,6 @@
 import React from 'react'
 import { IndexLink, browserHistory } from 'react-router'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE, RANK_PAGE } from '../constants'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE } from '../constants'
 import { collapseToggle } from '../actions'
 import { api, doLogout, isValidString } from '../utility'
 import Navlist from './Navlist'
@@ -27,6 +27,7 @@ const App = React.createClass({
                 {title: "Password", hash: PASSWORD_PAGE, css: "glyphicon glyphicon-lock", key: 2},
                 //{title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
                 //{title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
+                {title: "Lottery", hash: LOTTERY_PAGE, css: "glyphicon glyphicon-yen", key: 6},
             ],
             zipPw: null,
         }
@@ -60,12 +61,12 @@ const App = React.createClass({
                             case 'stock':
                             api(`/api/stock/single/${wsmsg.data}`).then(result => result.empty ? this.props.stockdel(wsmsg.data) : this.props.stockset(result.item)).catch(err => this.props.addalert(err))
                             break
-                            case 'fitness':
+                            /*case 'fitness':
                             api(`/api/fitness/single/${wsmsg.data}`).then(result => result.empty ? this.props.fitnessdel(wsmsg.data) : this.props.fitnessset(result.item)).catch(err => this.props.addalert(err))
                             break
                             case 'rank':
                             api(`/api/rank/single/${wsmsg.data}`).then(result => result.empty ? this.props.rankdel(wsmsg.data) : this.props.rankset(result.item)).catch(err => this.props.addalert(err))
-                            break
+                            break*/
                             case 'sub':
                             this.props.sub.forEach(item => item())
                             break
@@ -125,7 +126,7 @@ const App = React.createClass({
             exactly: [],
             his: [],
         }, '', '', 'name', 'desc', '')
-        this.props.fitnessset([], {
+        /*this.props.fitnessset([], {
             cur: [],
             exactly: [],
             his: [],
@@ -134,7 +135,7 @@ const App = React.createClass({
             cur: [],
             exactly: [],
             his: [],
-        }, '', '', 'name', 'desc', '')
+        }, '', '', 'name', 'desc', '')*/
         this.props.dirsset([])
         this.props.resetmedia(2)
         this.props.resetmedia(3)
