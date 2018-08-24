@@ -78,6 +78,10 @@ var _tagTool = require('../models/tag-tool');
 
 var _tagTool2 = _interopRequireDefault(_tagTool);
 
+var _lotteryTool = require('../models/lottery-tool');
+
+var _lotteryTool2 = _interopRequireDefault(_lotteryTool);
+
 var _utility = require('../util/utility');
 
 var _mime = require('../util/mime');
@@ -130,6 +134,19 @@ router.get('/preview/:uid', function (req, res, next) {
         }).catch(function (err) {
             return (0, _utility.handleError)(err, next);
         });
+    });
+});
+
+router.get('/download/lottery', function (req, res, next) {
+    console.log('lottery output');
+    _lotteryTool2.default.downloadCsv(req.user).then(function (data) {
+        res.writeHead(200, {
+            'X-Forwarded-Path': data.path,
+            'X-Forwarded-Name': 'attachment;filename*=UTF-8\'\'' + encodeURIComponent(data.name + '.csv')
+        });
+        res.end('ok');
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
     });
 });
 
@@ -929,6 +946,37 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function (req, res, next) {
                 return (0, _utility.handleError)(err, next);
             });
         }
+    });
+});
+
+router.post('/upload/lottery/:name/:type(0|1|2)', function (req, res, next) {
+    (0, _utility.checkLogin)(req, res, function () {
+        console.log('upload lottery');
+        console.log(req.files);
+        var ext = (0, _mime.isCSV)(req.files.file.name);
+        if (!ext) {
+            return (0, _utility.handleError)(new _utility.HoError('not valid csv!!!'), next);
+        }
+        var json_data = (0, _utility.getJson)(req.body.lang);
+        if (json_data === false) {
+            return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'), next);
+        }
+        _lotteryTool2.default.input(req.files.file.path, json_data === 'en' ? false : true).then(function (data) {
+            return _lotteryTool2.default.newLottery(req.user._id, req.params.name, req.params.type, json_data, data.user, data.reward);
+        }).then(function () {
+            return res.json({ apiOK: true });
+        }).catch(function (err) {
+            return (0, _utility.handleError)(err, next);
+        });
+    });
+});
+
+router.get('/output/lottery', function (req, res, next) {
+    console.log('lottery output');
+    _lotteryTool2.default.outputCsv(req.user).then(function (data) {
+        return res.json({ apiOk: true });
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
     });
 });
 

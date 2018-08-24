@@ -62,14 +62,6 @@ var _stockRouter = require('./stock-router');
 
 var _stockRouter2 = _interopRequireDefault(_stockRouter);
 
-var _fitnessRouter = require('./fitness-router');
-
-var _fitnessRouter2 = _interopRequireDefault(_fitnessRouter);
-
-var _rankRouter = require('./rank-router');
-
-var _rankRouter2 = _interopRequireDefault(_rankRouter);
-
 var _bookmarkRouter = require('./bookmark-router');
 
 var _bookmarkRouter2 = _interopRequireDefault(_bookmarkRouter);
@@ -77,6 +69,10 @@ var _bookmarkRouter2 = _interopRequireDefault(_bookmarkRouter);
 var _parentRouter = require('./parent-router');
 
 var _parentRouter2 = _interopRequireDefault(_parentRouter);
+
+var _lotteryRouter = require('./lottery-router');
+
+var _lotteryRouter2 = _interopRequireDefault(_lotteryRouter);
 
 var _otherRouter = require('./other-router');
 
@@ -93,14 +89,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 //util
 
-
-//router
-
-
-//model
+//import FitnessRouter from './fitness-router'
+//import RankRouter from './rank-router'
 
 
-//constant
+//external
+
+
+//config
 var credentials = {
     pfx: (0, _fs.readFileSync)(_ver.PFX),
     passphrase: _ver.PFX_PWD,
@@ -109,10 +105,13 @@ var credentials = {
     honorCipherOrder: true
 };
 
-//external
+//router
 
 
-//config
+//model
+
+
+//constant
 
 credentials.agent = new _https.Agent(credentials);
 var app = (0, _express2.default)();
@@ -142,13 +141,15 @@ app.use('/api/password', _passwordRouter2.default);
 
 app.use('/api/stock', _stockRouter2.default);
 
-app.use('/api/fitness', _fitnessRouter2.default);
+//app.use('/api/fitness', FitnessRouter);
 
-app.use('/api/rank', _rankRouter2.default);
+//app.use('/api/rank', RankRouter);
 
 app.use('/api/bookmark', _bookmarkRouter2.default);
 
 app.use('/api/parent', _parentRouter2.default);
+
+app.use('/api/lottery', _lotteryRouter2.default);
 
 //other
 app.use('/', _otherRouter2.default);

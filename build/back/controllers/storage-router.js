@@ -572,7 +572,7 @@ router.put('/recover/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    return (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
+    (0, _mongoTool2.default)('find', _constants.STORAGEDB, { _id: id }, { limit: 1 }).then(function (items) {
         if (items.length === 0) {
             return (0, _utility.handleError)(new _utility.HoError('file can not be fund!!!'));
         }

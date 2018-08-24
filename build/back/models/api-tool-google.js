@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.googleBackupDb = exports.sendPresentName = undefined;
+exports.googleBackupDb = exports.sendLotteryName = exports.sendPresentName = undefined;
 
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
@@ -499,15 +499,15 @@ function sendMail(data) {
 }
 
 function sendName(data) {
-    if (!data['name'] || !data['mail']) {
+    if (!data['text'] || !data['mail'] || !data['title']) {
         return (0, _utility.handleError)(new _utility.HoError('mail parameter lost!!!'));
     }
     if (!(0, _utility.isValidString)(data['mail'], 'email')) {
         return (0, _utility.handleError)(new _utility.HoError('invalid email!!!'));
     }
-    data['name'] = data['append'] ? Buffer.from(data['name'], 'base64') + ' ' + data['append'] : Buffer.from(data['name'], 'base64');
-    var subject = data['append'] ? 'Christmas Presents Exchange ' + data['append'] : 'Christmas Presents Exchange';
-    //console.log(data['name']);
+    data['name'] = data['append'] ? Buffer.from(data['text'], 'base64') + ' ' + data['append'] : Buffer.from(data['text'], 'base64');
+    var subject = data['append'] ? data['title'] + ' ' + data['append'] : data['title'];
+    //console.log(data['text']);
     var gmail = _googleapis2.default.gmail({
         version: 'v1',
         auth: oauth2Client
@@ -517,7 +517,7 @@ function sendName(data) {
             userId: 'me',
             media: {
                 mimeType: 'message/rfc822',
-                body: ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['mail'] + '\r\n', 'Subject: ' + subject + '\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', data['name'] + '\r\n\r\n', '--foo_bar_baz\r\n'].join('')
+                body: ['Content-Type: multipart/mixed; boundary="foo_bar_baz"\r\n', 'MIME-Version: 1.0\r\n', 'From: me\r\n', 'To: ' + data['mail'] + '\r\n', 'Subject: =?utf-8?B?' + new Buffer(subject).toString('base64') + '?=\r\n\r\n', '--foo_bar_baz\r\n', 'Content-Type: text/plain; charset="UTF-8"\r\n', 'MIME-Version: 1.0\r\n', 'Content-Transfer-Encoding: 7bit\r\n\r\n', data['text'] + '\r\n\r\n', '--foo_bar_baz\r\n'].join('')
             }
         }, function (err) {
             return err && err.code !== 'ECONNRESET' ? reject(err) : resolve();
@@ -1554,9 +1554,13 @@ function autoDoc(userlist, index, type) {
     });
 }
 
-var sendPresentName = exports.sendPresentName = function sendPresentName(name, mail) {
+var sendPresentName = exports.sendPresentName = function sendPresentName(text, mail) {
     var append = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-    return api('send name', { name: name, mail: mail, append: append });
+    return api('send name', { title: 'Christmas Presents Exchange', text: text, mail: mail, append: append });
+};
+
+var sendLotteryName = exports.sendLotteryName = function sendLotteryName(title, text, mail) {
+    return api('send name', { title: title, text: text, mail: mail });
 };
 
 var googleBackupDb = exports.googleBackupDb = function googleBackupDb(backupDate) {

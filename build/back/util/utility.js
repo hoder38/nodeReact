@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.addPre = exports.findTag = exports.completeZero = exports.sortList = exports.torrent2Magnet = exports.getJson = exports.SRT2VTT = exports.deleteFolderRecursive = exports.getFileLocation = exports.getRankItem = exports.getFitnessItem = exports.getStockItem = exports.getPasswordItem = exports.getStorageItem = exports.big5Encode = exports.checkAdmin = undefined;
+exports.addPre = exports.findTag = exports.completeZero = exports.sortList = exports.torrent2Magnet = exports.getJson = exports.bufferToString = exports.SRT2VTT = exports.deleteFolderRecursive = exports.getFileLocation = exports.getRankItem = exports.getFitnessItem = exports.getStockItem = exports.getPasswordItem = exports.getStorageItem = exports.big5Encode = exports.checkAdmin = undefined;
 
 var _assign = require('babel-runtime/core-js/object/assign');
 
@@ -495,12 +495,14 @@ var SRT2VTT = exports.SRT2VTT = function SRT2VTT(filePath, ext) {
     });
 };
 
-var bufferToString = function bufferToString(buffer) {
+var bufferToString = exports.bufferToString = function bufferToString(buffer) {
+    var big5 = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
     var charset = (0, _nodeIcuCharsetDetector.detectCharset)(buffer).toString();
     try {
-        return buffer.toString(charset);
+        return buffer.toString(big5 ? 'big5' : charset);
     } catch (x) {
-        return (0, _iconvLite.decode)(buffer, charset);
+        return (0, _iconvLite.decode)(buffer, big5 ? 'big5' : charset);
     }
 };
 

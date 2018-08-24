@@ -12,6 +12,10 @@ var _map = require('babel-runtime/core-js/map');
 
 var _map2 = _interopRequireDefault(_map);
 
+var _assign = require('babel-runtime/core-js/object/assign');
+
+var _assign2 = _interopRequireDefault(_assign);
+
 var _promise = require('babel-runtime/core-js/promise');
 
 var _promise2 = _interopRequireDefault(_promise);
@@ -27,6 +31,8 @@ var _config = require('../config');
 var _constants = require('../constants');
 
 var _utility = require('../util/utility');
+
+var _apiToolGoogle = require('../models/api-tool-google');
 
 var _fs = require('fs');
 
@@ -114,7 +120,7 @@ exports.default = {
             if (!id) {
                 return (0, _utility.handleError)(new _utility.HoError('invalid uid'));
             }
-            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 1, _id: id }, { limit: 1 }).then(function (items) {
+            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { _id: id }, { limit: 1 }).then(function (items) {
                 if (items.length < 1) {
                     return (0, _utility.handleError)(new _utility.HoError('Prize is not exist!!!'));
                 }
@@ -150,13 +156,13 @@ exports.default = {
             }).then(function (item) {
                 console.log(item);
                 var recurUser = function recurUser(index) {
-                    return user.length <= index ? _promise2.default.resolve() : (0, _mongoTool2.default)('insert', _constants.LOTTERYDB, {
+                    return user.length <= index ? _promise2.default.resolve() : (0, _mongoTool2.default)('insert', _constants.LOTTERYDB, (0, _assign2.default)({
                         type: 2,
                         owner: index,
                         name: user[index][0],
                         count: user[index][1],
-                        option: user[index].splice(2)
-                    }).then(function (item) {
+                        option: user[index].splice(3)
+                    }, (0, _utility.isValidString)(user[index][2], 'email') ? { utime: user[index][2] } : {})).then(function (item) {
                         console.log(item);
                         return recurUser(index + 1);
                     });
@@ -216,10 +222,19 @@ exports.default = {
                         var isRepeat = false;
                         for (var i = 0; i < user.length; i++) {
                             if (user[i][0] === parse[0].trim()) {
-                                user[i][1] = parse[1] ? user[i][1] + +parse[1] : user[i][1] + 1;
+                                var count = parse[1];
+                                var mail = parse[2];
+                                if ((0, _utility.isValidString)(parse[1], 'email')) {
+                                    count = parse[2];
+                                    mail = parse[1];
+                                }
+                                user[i][1] = count ? user[i][1] + +count : user[i][1] + 1;
+                                if (!user[i][2]) {
+                                    user[i][2] = mail;
+                                }
                                 if (parse[26]) {
-                                    if (user[i][2]) {
-                                        user[i][2] += +parse[26];
+                                    if (user[i][3]) {
+                                        user[i][3] += +parse[26];
                                     } else {
                                         user[i].push(+parse[26]);
                                     }
@@ -229,7 +244,7 @@ exports.default = {
                                         if (!parse[j]) {
                                             break;
                                         }
-                                        if (user[i].length < 3) {
+                                        if (user[i].length < 4) {
                                             user[i].push(0);
                                         }
                                         user[i].push(+parse[j] - 1);
@@ -240,7 +255,13 @@ exports.default = {
                             }
                         }
                         if (!isRepeat) {
-                            var u = [parse[0].trim(), parse[1] ? +parse[1] : 1];
+                            var _count = parse[1];
+                            var _mail = parse[2];
+                            if ((0, _utility.isValidString)(parse[1], 'email')) {
+                                _count = parse[2];
+                                _mail = parse[1];
+                            }
+                            var u = [parse[0].trim(), _count ? +_count : 1, _mail];
                             if (parse[26]) {
                                 u.push(+parse[26]);
                             }
@@ -249,7 +270,7 @@ exports.default = {
                                     if (!parse[_j]) {
                                         break;
                                     }
-                                    if (u.length < 3) {
+                                    if (u.length < 4) {
                                         u.push(0);
                                     }
                                     u.push(+parse[_j] - 1);
@@ -282,9 +303,10 @@ exports.default = {
             if (!owner.equals(items[0].owner)) {
                 return (0, _utility.handleError)(new _utility.HoError('You are not the owner'));
             }
+            var lotteryName = items[0].name;
             var remove = items[0].option[0];
             var multiple = items[0].option[1];
-            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 1, _id: id }, { limit: 1 }).then(function (rewards) {
+            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { _id: id }, { limit: 1 }).then(function (rewards) {
                 if (rewards.length < 1) {
                     return (0, _utility.handleError)(new _utility.HoError('Prize is not exist!!!'));
                 }
@@ -310,7 +332,8 @@ exports.default = {
                                 rewardlist.set(item.option[i], {
                                     id: item._id,
                                     name: item.name,
-                                    count: item.count
+                                    count: item.count,
+                                    mail: item.utime
                                 });
                             }
                         }
@@ -322,7 +345,8 @@ exports.default = {
                                 userlist.push({
                                     id: item._id,
                                     name: item.name,
-                                    count: item.count
+                                    count: item.count,
+                                    mail: item.utime
                                 });
                             }
                         }
@@ -449,33 +473,90 @@ exports.default = {
                             return _promise2.default.resolve();
                         }
                     }).then(function () {
+                        var recurSend = function recurSend(index) {
+                            if (index >= prizedlist.length) {
+                                return _promise2.default.resolve();
+                            } else {
+                                if ((0, _utility.isValidString)(prizedlist[index].mail, 'email')) {
+                                    return (0, _apiToolGoogle.sendLotteryName)(lotteryName, '\u606D\u559C' + prizedlist[index].name + '\u7372\u5F97' + rewardName + '\uFF01\uFF01\uFF01', prizedlist[index].mail).then(function () {
+                                        return recurSend(index + 1);
+                                    });
+                                } else {
+                                    return recurSend(index + 1);
+                                }
+                            }
+                        };
                         console.log(namelist);
-                        return { namelist: namelist, id: id, rewardName: rewardName };
+                        return recurSend(0).then(function () {
+                            return { namelist: namelist, id: id, rewardName: rewardName };
+                        });
                     });
                 });
             });
         });
     },
-    outputCsv: function outputCsv() {
-        var big5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
-
-        //output to csv
-        var utfPath = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/lotteryoutput.csv';
-        var recur = function recur(index) {
-            return index >= output.length ? _promise2.default.resolve(output = []) : new _promise2.default(function (resolve, reject) {
-                return (0, _fs.appendFile)(utfPath, big5 ? (0, _iconvLite.encode)(output[index][0] + ',' + output[index][1] + '\n', 'big5') : output[index][0] + ',' + output[index][1] + '\n', big5 ? {} : 'utf8', function (err) {
-                    return err ? reject(err) : resolve();
+    downloadCsv: function downloadCsv(user) {
+        return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 0 }, { limit: 1 }).then(function (items) {
+            if (items.length < 1) {
+                return (0, _utility.handleError)(new _utility.HoError('lottery is not exist'));
+            }
+            if ((0, _utility.checkAdmin)(1, user) && !user._id.equals(items[0].owner)) {
+                return (0, _utility.handleError)(new _utility.HoError('You are not the owner'));
+            }
+            var utfPath = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/lotteryoutput.csv';
+            return (0, _mongoTool2.default)('remove', _constants.LOTTERYDB, { $isolated: 1 }).then(function () {
+                return {
+                    path: utfPath,
+                    name: items[0].name
+                };
+            });
+        });
+    },
+    outputCsv: function outputCsv(user) {
+        return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 0 }, { limit: 1 }).then(function (items) {
+            if (items.length < 1) {
+                return (0, _utility.handleError)(new _utility.HoError('lottery is not exist'));
+            }
+            if ((0, _utility.checkAdmin)(1, user) && !user._id.equals(items[0].owner)) {
+                return (0, _utility.handleError)(new _utility.HoError('You are not the owner'));
+            }
+            var big5 = items[0].count;
+            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 2 }, {
+                sort: [['owner', 'asc']]
+            }).then(function (items) {
+                return items.map(function (item) {
+                    return item.option.length > 0 ? [item.name, item.count, item.utime, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''].concat(item.option.map(function (o, i) {
+                        return i > 0 ? o + 1 : o;
+                    })) : [item.name, item.count, item.utime];
                 });
-            }).then(function () {
-                return recur(index + 1);
+            }).then(function (user) {
+                return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 1 }, {
+                    sort: [['owner', 'asc']]
+                }).then(function (items) {
+                    return items.map(function (item) {
+                        return [item.name, item.count].concat(item.option);
+                    });
+                }).then(function (reward) {
+                    var output = user.concat([['prize']]).concat(reward);
+                    var utfPath = (0, _config.NAS_TMP)(_ver.ENV_TYPE) + '/lotteryoutput.csv';
+                    var recur = function recur(index) {
+                        return index >= output.length ? _promise2.default.resolve() : new _promise2.default(function (resolve, reject) {
+                            return (0, _fs.appendFile)(utfPath, big5 ? (0, _iconvLite.encode)(output[index].join(',') + '\n', 'big5') : output[index].join(',') + '\n', big5 ? {} : 'utf8', function (err) {
+                                return err ? reject(err) : resolve();
+                            });
+                        }).then(function () {
+                            return recur(index + 1);
+                        });
+                    };
+                    return (0, _fs.existsSync)(utfPath) ? new _promise2.default(function (resolve, reject) {
+                        return (0, _fs.unlink)(utfPath, function (err) {
+                            return err ? reject(err) : resolve();
+                        });
+                    }).then(function () {
+                        return recur(0);
+                    }) : recur(0);
+                });
             });
-        };
-        return (0, _fs.existsSync)(utfPath) ? new _promise2.default(function (resolve, reject) {
-            return (0, _fs.unlink)(utfPath, function (err) {
-                return err ? reject(err) : resolve();
-            });
-        }).then(function () {
-            return recur(0);
-        }) : recur(0);
+        });
     }
 };

@@ -26,6 +26,7 @@ var _net = require('net');
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var wsServer = null;
+var winWs = null;
 var client = null;
 
 function mainInit(server) {
@@ -47,6 +48,24 @@ function mainInit(server) {
             return console.log('Peer disconnected with reason: ' + reasonCode + ' ' + description);
         });
     });
+    winWs = new _ws2.default.Server({
+        perMessageDeflate: false,
+        server: server,
+        path: '/f/win'
+    });
+    winWs.on('connection', function (ws) {
+        ws.on('message', function (message) {
+            console.log(message);
+            try {
+                console.log(JSON.parse(message));
+            } catch (e) {
+                (0, _utility.handleError)(e, 'Win socket');
+            }
+        });
+        ws.on('close', function (reasonCode, description) {
+            return console.log('Win Peer disconnected with reason: ' + reasonCode + ' ' + description);
+        });
+    });
 }
 
 function init() {
@@ -59,7 +78,9 @@ function init() {
 }
 
 exports.default = function (data, adultonly, auth) {
-    if (wsServer) {
+    var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'web';
+
+    if (wsServer && type === 'web') {
         (function () {
             data.level = auth && adultonly ? 2 : adultonly ? 1 : 0;
             var sendData = (0, _stringify2.default)(data);
@@ -68,9 +89,18 @@ exports.default = function (data, adultonly, auth) {
             });
         })();
     }
+    if (winWs && type === 'win') {
+        (function () {
+            data.level = auth && adultonly ? 2 : adultonly ? 1 : 0;
+            var sendData = (0, _stringify2.default)(data);
+            winWs.clients.forEach(function each(client) {
+                client.send(sendData);
+            });
+        })();
+    }
     if (client) {
         client.write((0, _stringify2.default)({
-            send: 'web',
+            send: type,
             data: data,
             adultonly: adultonly ? 1 : 0,
             auth: auth ? 1 : 0
