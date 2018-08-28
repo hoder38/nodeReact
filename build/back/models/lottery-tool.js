@@ -100,8 +100,7 @@ exports.default = {
                                     owner: isOwner,
                                     name: name,
                                     user: user,
-                                    reward: getRewardItem(items),
-                                    ws_url: 'wss://' + (0, _config.EXTENT_FILE_IP)(_ver.ENV_TYPE) + ':' + (0, _config.WS_PORT)(_ver.ENV_TYPE) + '/f/win'
+                                    reward: getRewardItem(items)
                                 };
                             });
                         })

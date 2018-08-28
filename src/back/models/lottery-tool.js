@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver'
-import { NAS_TMP, EXTENT_FILE_IP, WS_PORT } from '../config'
+import { NAS_TMP } from '../config'
 import { LOTTERYDB } from '../constants'
 import { handleError, HoError, bufferToString, isValidString, checkAdmin } from '../util/utility'
 import { sendLotteryName } from '../models/api-tool-google'
@@ -62,7 +62,6 @@ export default {
                         name,
                         user,
                         reward: getRewardItem(items),
-                        ws_url: `wss://${EXTENT_FILE_IP(ENV_TYPE)}:${WS_PORT(ENV_TYPE)}/f/win`,
                     }));
                 });
             }
