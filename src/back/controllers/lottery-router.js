@@ -27,7 +27,7 @@ router.get('/select/:uid', function(req, res, next) {
         sendWs({
             type: 'select',
             data,
-        }, false, false, 'win');
+        });
         res.json({apiOK: true});
     }).catch(err => {
         isSelecting = false;

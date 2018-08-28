@@ -23,7 +23,7 @@ const Lottery = React.createClass({
     componentWillMount: function() {
         api('/api/lottery/get').then(init => {
             if (init.name !== false) {
-                this._wsInit(init.ws_url);
+                document.getElementById('root').addEventListener('lottery', this._ws);
                 const user = new Map();
                 init.user.forEach(item => user.set(item.id, item));
                 this.setState(Object.assign({}, this.state, {
@@ -39,9 +39,7 @@ const Lottery = React.createClass({
         }).catch(err => this.props.addalert(err));
     },
     componentWillUnmount: function() {
-        if (this._ws) {
-            this._ws.close()
-        }
+        document.getElementById('root').removeEventListener('lottery', this._ws);
         this.props.lotteryset([], null, null, null, 'name', 'asc')
     },
     _newLottery: function() {
@@ -50,7 +48,7 @@ const Lottery = React.createClass({
                 if (init.name === false) {
                     this.props.addalert('csv parse fail!!!');
                 } else {
-                    this._wsInit(init.ws_url);
+                    document.getElementById('root').addEventListener('lottery', this._ws);
                     const user = new Map();
                     init.user.forEach(item => user.set(item.id, item));
                     this.setState(Object.assign({}, this.state, {
@@ -67,31 +65,20 @@ const Lottery = React.createClass({
             return Promise.resolve(this.props.addalert('csv upload success'));
         }, true)) : Promise.reject('Lottery name is not vaild!!!'), null, '0:不可重複得獎, 1:可重複得獎, 2:不刪已得獎');
     },
-    _wsInit: function(url) {
-        this._ws = new WebSocket(url)
-        this._ws.onopen = () => console.log(url + ": Socket has been opened!")
-        this._ws.onmessage = message => {
-            const wsmsg = JSON.parse(message.data)
-            switch (wsmsg.type) {
-                case 'select':
-                if (this._id) {
-                    this._update(this._id);
-                }
-                this._namelist = wsmsg.data.namelist;
-                this._id = wsmsg.data.id;
-                this.setState(Object.assign({}, this.state, {
-                    rewardName: wsmsg.data.rewardName,
-                    nameIndex: 0,
-                }), () => {
-                    if (this.state.nameIndex + 1 >= this._namelist.length) {
-                        this._update(this._id);
-                    }
-                });
-                break;
-                default:
-                console.log(wsmsg);
-            }
+    _ws: function(e) {
+        if (this._id) {
+            this._update(this._id);
         }
+        this._namelist = e.detail.namelist;
+        this._id = e.detail.id;
+        this.setState(Object.assign({}, this.state, {
+            rewardName: e.detail.rewardName,
+            nameIndex: 0,
+        }), () => {
+            if (this.state.nameIndex + 1 >= this._namelist.length) {
+                this._update(this._id);
+            }
+        });
     },
     _nextName: function(all=false) {
         if (this.state.nameIndex + 1 < this._namelist.length) {
@@ -144,11 +131,14 @@ const Lottery = React.createClass({
                 <Categorylist collapse={RIGHT} setstock={() => this.props.sendglbcf(() => {
                     api(`${this.props.mainUrl}/output/lottery`).then(() => {
                         this.props.lotteryset([], null, null, null, 'name', 'asc')
-                        this.setState(Object.assign({}, this.state, {name: false}), () => window.location.href = `${this.props.mainUrl}/download/lottery`)
+                        this.setState(Object.assign({}, this.state, {name: false}), () => {
+                            document.getElementById('root').removeEventListener('lottery', this._ws);
+                            window.location.href = `${this.props.mainUrl}/download/lottery`
+                        })
                     }).catch(err => this.props.addalert(err));
                 }, `Would you sure to end ${this.state.name}?`)} itemType={LOTTERY} dirs={[]} itemlist={this.state.user} stockopen={this.state.owner} />
                 <section id="top-section" style={{float: 'left', position: 'fixed', left: '0px', width: '100%', zIndex: TOP_SECTION_ZINDEX}}>
-                    <div className="input-group">
+                    <div className="input-group" id="lottery">
                         <span className="input-group-btn">
                             <button className="btn btn-info" type="button" onClick={e => killEvent(e, () => this._nextName(true))}>
                                 <i className="glyphicon glyphicon-remove"></i>

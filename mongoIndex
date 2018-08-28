@@ -439,4 +439,24 @@ rankUser
                 "name" : "userId_1_mtime_1"
         }
 ]
+lottery
+[
+        {
+                "v" : 1,
+                "key" : {
+                        "_id" : 1
+                },
+                "ns" : "releasedb.lottery",
+                "name" : "_id_"
+        },
+        {
+                "v" : 1,
+                "key" : {
+                        "type" : 1,
+                        "owner" : 1
+                },
+                "ns" : "releasedb.lottery",
+                "name" : "type_1_owner_1"
+        }
+]
 

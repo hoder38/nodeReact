@@ -161,7 +161,7 @@ var server0 = (0, _net.createServer)(function (c) {
         try {
             var recvData = JSON.parse(data.toString());
             console.log('websocket: ' + recvData.send);
-            (0, _sendWs2.default)(recvData.data, recvData.adultonly, recvData.auth, recvData.send);
+            (0, _sendWs2.default)(recvData.data, recvData.adultonly, recvData.auth);
         } catch (e) {
             (0, _utility.handleError)(e, 'Client');
             console.log(data);

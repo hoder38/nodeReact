@@ -86,6 +86,9 @@ const App = React.createClass({
                                 }})), `Would you want to input ${name} password ?`)
                             }
                             break
+                            case 'select':
+                            document.getElementById('root').dispatchEvent(new CustomEvent('lottery', {'detail': wsmsg.data}));
+                            break
                             default:
                             console.log(wsmsg);
                         }
