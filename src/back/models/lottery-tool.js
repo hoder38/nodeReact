@@ -8,16 +8,23 @@ import { createInterface } from 'readline'
 import { encode as IconvEncode } from 'iconv-lite'
 import Mongo from '../models/mongo-tool'
 
-const getRewardItem = items => items.map(item => ({
+const getRewardItem = (items, anonymous) => items.map(item => ({
     name: item.name,
     id: item._id,
     utime: item.utime,
     count: item.count,
-    tags: item.option,
+    tags: anonymous ? item.option.map(o => '********') : item.option,
 }));
 
-const getUserItem = items => {
+const getUserItem = (items, anonymous) => {
     const user = [];
+    if (anonymous) {
+        user.push({
+            id: -2,
+            name: 'UNDISCLOSED',
+        });
+        return user;
+    }
     let i = 0;
     items.forEach(item => {
         for (let j = 0; j < item.count; j++) {
@@ -44,6 +51,7 @@ export default {
                 return {name: false};
             } else {
                 const name = items[0].name;
+                const anonymous = items[0].option[2];
                 const isOwner = owner.equals(items[0].owner);
                 return Mongo('find', LOTTERYDB, {type: 2}, {
                     sort: [[
@@ -51,7 +59,7 @@ export default {
                         'asc',
                     ]]
                 }).then(items => {
-                    const user = getUserItem(items);
+                    const user = getUserItem(items, anonymous);
                     return Mongo('find', LOTTERYDB, {type: 1}, {
                         sort: [[
                             'owner',
@@ -61,32 +69,38 @@ export default {
                         owner: isOwner,
                         name,
                         user,
-                        reward: getRewardItem(items),
+                        reward: getRewardItem(items, anonymous),
                     }));
                 });
             }
         });
     },
     getData: function(uid=null) {
-        if (uid) {
-            const id = isValidString(uid, 'uid');
-            if (!id) {
-                return handleError(new HoError('invalid uid'));
+        return Mongo('find', LOTTERYDB, {type: 0}, {limit: 1}).then(items => {
+            if (items.length < 1) {
+                return handleError(new HoError('cannot find lottery!!!'));
             }
-            return Mongo('find', LOTTERYDB, {_id: id}, {limit: 1}).then(items => {
-                if (items.length < 1) {
-                    return handleError(new HoError('Prize is not exist!!!'));
+            const anonymous = items[0].option[2];
+            if (uid) {
+                const id = isValidString(uid, 'uid');
+                if (!id) {
+                    return handleError(new HoError('invalid uid'));
                 }
-                return getRewardItem(items);
-            });
-        } else {
-            return Mongo('find', LOTTERYDB, {type: 2}, {
-                sort: [[
-                    'owner',
-                    'asc',
-                ]]
-            }).then(items => getUserItem(items));
-        }
+                return Mongo('find', LOTTERYDB, {_id: id}, {limit: 1}).then(items => {
+                    if (items.length < 1) {
+                        return handleError(new HoError('Prize is not exist!!!'));
+                    }
+                    return getRewardItem(items, anonymous);
+                });
+            } else {
+                return Mongo('find', LOTTERYDB, {type: 2}, {
+                    sort: [[
+                        'owner',
+                        'asc',
+                    ]]
+                }).then(items => getUserItem(items, anonymous));
+            }
+        });
     },
     newLottery: function(owner, name, type, big5, user, reward) {
         console.log(owner);
@@ -95,8 +109,8 @@ export default {
         console.log(big5);
         console.log(user);
         console.log(reward);
-        //option remove:multiple
-        const option = type === '1' ? [true, true] : type === '2' ? [false, true] :[true, false];
+        //option remove:multiple:anonymous
+        const option = type === '1' ? [true, true, false] : type === '2' ? [false, true, false] : type === '3' ? [true, false, true] : type === '4' ? [true, true, true] : type === '5' ? [false, true, true] : [true, false, false];
         return Mongo('find', LOTTERYDB, {type: 0}, {limit: 1}).then(items => {
             if (items.length > 0) {
                 return handleError(new HoError('already has a lottery!!!'));
@@ -236,6 +250,7 @@ export default {
             const lotteryName = items[0].name;
             const remove = items[0].option[0];
             const multiple = items[0].option[1];
+            const anonymous = items[0].option[2];
             return Mongo('find', LOTTERYDB, {_id: id}, {limit: 1}).then(rewards => {
                 if (rewards.length < 1) {
                     return handleError(new HoError('Prize is not exist!!!'));
@@ -363,8 +378,12 @@ export default {
                                 }
                             }
                         }
-                        console.log(namelist);
-                        return recurSend(0).then(() => ({namelist, id, rewardName}));
+                        //console.log(namelist);
+                        return recurSend(0).then(() => ({
+                            namelist: anonymous ? namelist.map(n => '********'): namelist,
+                            id,
+                            rewardName,
+                        }));
                     });
                 });
             });

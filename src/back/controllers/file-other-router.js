@@ -748,7 +748,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
     });
 });
 
-router.post('/upload/lottery/:name/:type(0|1|2)', function(req, res, next) {
+router.post('/upload/lottery/:name/:type(0|1|2|3|4|5)', function(req, res, next) {
     checkLogin(req, res, () => {
         console.log('upload lottery');
         console.log(req.files);

@@ -46,20 +46,29 @@ var _mongoTool2 = _interopRequireDefault(_mongoTool);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var getRewardItem = function getRewardItem(items) {
+var getRewardItem = function getRewardItem(items, anonymous) {
     return items.map(function (item) {
         return {
             name: item.name,
             id: item._id,
             utime: item.utime,
             count: item.count,
-            tags: item.option
+            tags: anonymous ? item.option.map(function (o) {
+                return '********';
+            }) : item.option
         };
     });
 };
 
-var getUserItem = function getUserItem(items) {
+var getUserItem = function getUserItem(items, anonymous) {
     var user = [];
+    if (anonymous) {
+        user.push({
+            id: -2,
+            name: 'UNDISCLOSED'
+        });
+        return user;
+    }
     var i = 0;
     items.forEach(function (item) {
         for (var j = 0; j < item.count; j++) {
@@ -87,12 +96,13 @@ exports.default = {
             } else {
                 var _ret = function () {
                     var name = items[0].name;
+                    var anonymous = items[0].option[2];
                     var isOwner = owner.equals(items[0].owner);
                     return {
                         v: (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 2 }, {
                             sort: [['owner', 'asc']]
                         }).then(function (items) {
-                            var user = getUserItem(items);
+                            var user = getUserItem(items, anonymous);
                             return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 1 }, {
                                 sort: [['owner', 'asc']]
                             }).then(function (items) {
@@ -100,7 +110,7 @@ exports.default = {
                                     owner: isOwner,
                                     name: name,
                                     user: user,
-                                    reward: getRewardItem(items)
+                                    reward: getRewardItem(items, anonymous)
                                 };
                             });
                         })
@@ -114,24 +124,30 @@ exports.default = {
     getData: function getData() {
         var uid = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        if (uid) {
-            var id = (0, _utility.isValidString)(uid, 'uid');
-            if (!id) {
-                return (0, _utility.handleError)(new _utility.HoError('invalid uid'));
+        return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 0 }, { limit: 1 }).then(function (items) {
+            if (items.length < 1) {
+                return (0, _utility.handleError)(new _utility.HoError('cannot find lottery!!!'));
             }
-            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { _id: id }, { limit: 1 }).then(function (items) {
-                if (items.length < 1) {
-                    return (0, _utility.handleError)(new _utility.HoError('Prize is not exist!!!'));
+            var anonymous = items[0].option[2];
+            if (uid) {
+                var id = (0, _utility.isValidString)(uid, 'uid');
+                if (!id) {
+                    return (0, _utility.handleError)(new _utility.HoError('invalid uid'));
                 }
-                return getRewardItem(items);
-            });
-        } else {
-            return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 2 }, {
-                sort: [['owner', 'asc']]
-            }).then(function (items) {
-                return getUserItem(items);
-            });
-        }
+                return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { _id: id }, { limit: 1 }).then(function (items) {
+                    if (items.length < 1) {
+                        return (0, _utility.handleError)(new _utility.HoError('Prize is not exist!!!'));
+                    }
+                    return getRewardItem(items, anonymous);
+                });
+            } else {
+                return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 2 }, {
+                    sort: [['owner', 'asc']]
+                }).then(function (items) {
+                    return getUserItem(items, anonymous);
+                });
+            }
+        });
     },
     newLottery: function newLottery(owner, name, type, big5, user, reward) {
         console.log(owner);
@@ -140,8 +156,8 @@ exports.default = {
         console.log(big5);
         console.log(user);
         console.log(reward);
-        //option remove:multiple
-        var option = type === '1' ? [true, true] : type === '2' ? [false, true] : [true, false];
+        //option remove:multiple:anonymous
+        var option = type === '1' ? [true, true, false] : type === '2' ? [false, true, false] : type === '3' ? [true, false, true] : type === '4' ? [true, true, true] : type === '5' ? [false, true, true] : [true, false, false];
         return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { type: 0 }, { limit: 1 }).then(function (items) {
             if (items.length > 0) {
                 return (0, _utility.handleError)(new _utility.HoError('already has a lottery!!!'));
@@ -305,6 +321,7 @@ exports.default = {
             var lotteryName = items[0].name;
             var remove = items[0].option[0];
             var multiple = items[0].option[1];
+            var anonymous = items[0].option[2];
             return (0, _mongoTool2.default)('find', _constants.LOTTERYDB, { _id: id }, { limit: 1 }).then(function (rewards) {
                 if (rewards.length < 1) {
                     return (0, _utility.handleError)(new _utility.HoError('Prize is not exist!!!'));
@@ -485,9 +502,15 @@ exports.default = {
                                 }
                             }
                         };
-                        console.log(namelist);
+                        //console.log(namelist);
                         return recurSend(0).then(function () {
-                            return { namelist: namelist, id: id, rewardName: rewardName };
+                            return {
+                                namelist: anonymous ? namelist.map(function (n) {
+                                    return '********';
+                                }) : namelist,
+                                id: id,
+                                rewardName: rewardName
+                            };
                         });
                     });
                 });

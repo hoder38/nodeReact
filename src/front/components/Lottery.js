@@ -43,7 +43,7 @@ const Lottery = React.createClass({
         this.props.lotteryset([], null, null, null, 'name', 'asc')
     },
     _newLottery: function() {
-        this.props.globalinput(1, 'New Lottery...', 'danger', (name, exact, type) => isValidString(name, 'name') ? Promise.resolve(this.props.globalinput(2, `${this.props.mainUrl}/upload/lottery/${name}/${(type === '0' || type === '1' || type === '2') ? type : '0'}`, 'danger', () => {
+        this.props.globalinput(1, 'New Lottery...', 'danger', (name, exact, type) => isValidString(name, 'name') ? Promise.resolve(this.props.globalinput(2, `${this.props.mainUrl}/upload/lottery/${name}/${(type === '0' || type === '1' || type === '2' || type === '3' || type === '4' || type === '5') ? type : '0'}`, 'danger', () => {
             api('/api/lottery/get').then(init => {
                 if (init.name === false) {
                     this.props.addalert('csv parse fail!!!');
@@ -63,7 +63,7 @@ const Lottery = React.createClass({
                 }
             });
             return Promise.resolve(this.props.addalert('csv upload success'));
-        }, true)) : Promise.reject('Lottery name is not vaild!!!'), null, '0:不可重複得獎, 1:可重複得獎, 2:不刪已得獎');
+        }, true)) : Promise.reject('Lottery name is not vaild!!!'), null, '0:不可重複得獎, 1:可重複得獎, 2:不刪已得獎,3:不可重複得獎(匿名), 4:可重複得獎(匿名), 5:不刪已得獎(匿名)');
     },
     _ws: function(e) {
         if (this._id) {
@@ -123,6 +123,7 @@ const Lottery = React.createClass({
                 <br/>
                 請先填寫此次抽獎的名稱及類型，<br/>
                 再上傳包含抽獎名單跟獎項的CSV檔及是否是windows上傳
+                不能包含，&#34;
                 <br/>
                 <button className="btn btn-success" type="button" onClick={e => killEvent(e, this._newLottery)}>NEW LOTTERY</button>
             </div>

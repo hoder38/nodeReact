@@ -833,7 +833,7 @@ export default {
                 let list = [];
                 findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div').forEach(d => {
                     const content =  findTag(findTag(d, 'article')[0], 'div', 'card-view__content')[0];
-                    if (findTag(findTag(findTag(findTag(findTag(findTag(content, 'div', 'card-view__footer')[0], 'div', 'field field--publish-timestamp')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'span')[0])[0] === docDate) {
+                    if (findTag(findTag(findTag(findTag(content, 'div', 'card-view__footer')[0], 'div', 'node__date')[0], 'span')[0])[0] === docDate) {
                         const a = findTag(findTag(findTag(findTag(content, 'div', 'card-view__header')[0], 'div', 'field field--title')[0], 'h3', 'card-view__title')[0], 'a')[0];
                         list.push({
                             url: addPre(a.attribs.href, 'https://www.nar.realtor'),
