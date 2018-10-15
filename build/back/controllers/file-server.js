@@ -2,9 +2,9 @@
 
 var _fs = require('fs');
 
-var _ver = require('../../../../ver');
+var _ver = require('../../../ver');
 
-var _config = require('../../../back/config');
+var _config = require('../config');
 
 var _https = require('https');
 
@@ -28,41 +28,41 @@ var _connectMultiparty2 = _interopRequireDefault(_connectMultiparty);
 
 var _net = require('net');
 
-var _sessionTool = require('../../../back/models/session-tool');
+var _sessionTool = require('../models/session-tool');
 
 var _sessionTool2 = _interopRequireDefault(_sessionTool);
 
-var _loginRouter = require('../../../back/controllers/login-router');
+var _loginRouter = require('./login-router');
 
 var _loginRouter2 = _interopRequireDefault(_loginRouter);
 
-var _fileBasicRouter = require('../../../back/controllers/file-basic-router');
+var _fileBasicRouter = require('./file-basic-router');
 
 var _fileBasicRouter2 = _interopRequireDefault(_fileBasicRouter);
 
-var _fileOtherRouter = require('../../../back/controllers/file-other-router');
+var _fileOtherRouter = require('./file-other-router');
 
 var _fileOtherRouter2 = _interopRequireDefault(_fileOtherRouter);
 
-var _fileRouter = require('../../../back/controllers/file-router');
+var _fileRouter = require('./file-router');
 
 var _fileRouter2 = _interopRequireDefault(_fileRouter);
 
-var _externalRouter = require('../../../back/controllers/external-router');
+var _externalRouter = require('./external-router');
 
 var _externalRouter2 = _interopRequireDefault(_externalRouter);
 
-var _playlistRouter = require('../../../back/controllers/playlist-router');
+var _playlistRouter = require('./playlist-router');
 
 var _playlistRouter2 = _interopRequireDefault(_playlistRouter);
 
-var _utility = require('../../../back/util/utility');
+var _utility = require('../util/utility');
 
-var _sendWs = require('../../../back/util/sendWs');
+var _sendWs = require('../util/sendWs');
 
 var _sendWs2 = _interopRequireDefault(_sendWs);
 
-var _background = require('../../../back/cmd/background');
+var _background = require('../cmd/background');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 

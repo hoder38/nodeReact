@@ -7,11 +7,11 @@
             [
                 {
                     "rootPathPrefix": "~",
-                    "rootPathSuffix": "./back"
+                    "rootPathSuffix": "./src/back"
                 },
                 {
                     "rootPathPrefix": "@out",
-                    "rootPathSuffix": "../"
+                    "rootPathSuffix": "./"
                 }
             ]
         ]
