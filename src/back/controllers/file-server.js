@@ -1,5 +1,4 @@
 import { readFileSync as FsReadFileSync } from 'fs'
-import { join as PathJoin } from 'path'
 
 //config
 import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'

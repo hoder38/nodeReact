@@ -1,5 +1,4 @@
 import { readFileSync as FsReadFileSync, createReadStream as FsCreateReadStream } from 'fs'
-import { join as PathJoin } from 'path'
 
 //constant
 import { STATIC_PATH } from '../constants'

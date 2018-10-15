@@ -2,8 +2,6 @@
 
 var _fs = require('fs');
 
-var _path = require('path');
-
 var _ver = require('../../../ver');
 
 var _config = require('../config');
