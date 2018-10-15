@@ -1,19 +1,4 @@
 {
-    "presets": [ "es2015", "react" ],
-    "plugins": [
-        "transform-runtime",
-        [
-            "babel-plugin-relative-path-import",
-            [
-                {
-                    "rootPathPrefix": "~",
-                    "rootPathSuffix": "./src/back"
-                },
-                {
-                    "rootPathPrefix": "@out",
-                    "rootPathSuffix": "./"
-                }
-            ]
-        ]
-    ]
+  "presets": [ "es2015", "react" ],
+  "plugins": [ "transform-runtime" ]
 }
