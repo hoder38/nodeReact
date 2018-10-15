@@ -128,6 +128,10 @@ const MediaWidget = React.createClass({
                         case 50:
                         this._forward(true);
                         break;
+                        case 56:
+                        case 70:
+                        this._fullscreen();
+                        break;
                     }
                 }
             }
@@ -717,6 +721,29 @@ const MediaWidget = React.createClass({
             this._media.currentTime += 0.5
         } else {
             this._media.currentTime += 5
+        }
+    },
+    _fullscreen: function() {
+        if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {
+            if (this._media.requestFullscreen) {
+                this._media.requestFullscreen();
+            } else if (this._media.msRequestFullscreen) {
+                this._media.msRequestFullscreen();
+            } else if (this._media.mozRequestFullScreen) {
+                this._media.mozRequestFullScreen();
+            } else if (this._media.webkitRequestFullscreen) {
+                this._media.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            }
         }
     },
     _mediaCheck: function() {
