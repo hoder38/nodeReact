@@ -1,8 +1,8 @@
 import { readFileSync as FsReadFileSync } from 'fs'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
-import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT, COM_PORT } from '../config'
+import { ENV_TYPE, PFX, CA, PFX_PWD } from '@out/ver'
+import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT, COM_PORT } from '~/config'
 
 //external
 import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
@@ -14,22 +14,22 @@ import ConnectMultiparty from 'connect-multiparty'
 import { createServer as NetCreateServer } from 'net'
 
 //model
-import SessionStore from '../models/session-tool'
+import SessionStore from '~/models/session-tool'
 
 //router
-import LoginRouter from './login-router'
-import BasicRouter from './file-basic-router'
-import OtherRouter from './file-other-router'
-import FileRouter from './file-router'
-import ExternalRouter from './external-router'
-import PlaylistRouter from './playlist-router'
+import LoginRouter from '~/controllers/login-router'
+import BasicRouter from '~/controllers/file-basic-router'
+import OtherRouter from '~/controllers/file-other-router'
+import FileRouter from '~/controllers/file-router'
+import ExternalRouter from '~/controllers/external-router'
+import PlaylistRouter from '~/controllers/playlist-router'
 
 //util
-import { handleError, HoError, showLog } from '../util/utility'
-import sendWs, { mainInit } from '../util/sendWs'
+import { handleError, HoError, showLog } from '~/util/utility'
+import sendWs, { mainInit } from '~/util/sendWs'
 
 //background
-import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup } from '../cmd/background'
+import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup } from '~/cmd/background'
 
 //global
 const credentials = {
