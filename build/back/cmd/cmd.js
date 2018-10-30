@@ -51,6 +51,8 @@ var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+
 var sendList = _constants.RANDOM_EMAIL;
 
 function cmdUpdateDrive() {

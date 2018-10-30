@@ -1431,6 +1431,9 @@ export default {
                         for (let a of as) {
                             if (a.attribs.href.match(/\.pdf$/i)) {
                                 const url = addPre(a.attribs.href, 'http://www.stat.gov.tw');
+                                if (url.match(/87231699T64V6LTY/)) {
+                                    continue;
+                                }
                                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                                 console.log(driveName);
                                 return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -2066,7 +2069,7 @@ export default {
             }
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
-                    const choose = raw_list[index - 1];
+                    const choose = raw_list[index - 1].slice();
                     if (!choose) {
                         return handleError(new HoError('cannot find external index'));
                     }

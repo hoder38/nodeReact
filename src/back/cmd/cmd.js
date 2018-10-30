@@ -10,6 +10,8 @@ import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { handleError, isValidString, HoError, completeZero } from '../util/utility'
 
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+
 const sendList = RANDOM_EMAIL;
 
 function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {

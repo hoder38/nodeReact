@@ -1939,6 +1939,9 @@ exports.default = {
                                     if (a.attribs.href.match(/\.pdf$/i)) {
                                         var _ret6 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
+                                            if (url.match(/87231699T64V6LTY/)) {
+                                                return 'continue';
+                                            }
                                             driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                             console.log(driveName);
                                             return {
@@ -1961,7 +1964,13 @@ exports.default = {
                                             };
                                         }();
 
-                                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                        switch (_ret6) {
+                                            case 'continue':
+                                                continue;
+
+                                            default:
+                                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                        }
                                     }
                                 }
                             } catch (err) {
@@ -3027,7 +3036,7 @@ exports.default = {
                     return {
                         v: (0, _redisTool2.default)('hgetall', 'url: ' + encodeURIComponent(url)).then(function (item) {
                             var sendList = function sendList(raw_list, is_end, etime) {
-                                var choose = raw_list[index - 1];
+                                var choose = raw_list[index - 1].slice();
                                 if (!choose) {
                                     return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
                                 }
