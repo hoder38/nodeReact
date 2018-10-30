@@ -89,7 +89,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr13.vslovetv.com/2012/04/drama-list.html', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr14.vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
@@ -98,90 +98,111 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
         if (dramaIndex === 4) {
             year = '台灣';
         }
-        var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
-        var table = null;
-        var table2 = null;
-        if (dramaIndex === 4) {
-            var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget HTML')[0], 'div', 'widget-content')[0], 'table');
-            table = tables[1];
-            table2 = tables[2];
+        var top = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
+        if (dramaIndex === 2) {
+            (function () {
+                var krscript = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
+                var urlList = krscript.match(/http\:\/\/[^\']+/g);
+                krscript.match(/var OldLabel = \"[^\"]+/g).forEach(function (n, i) {
+                    var krst = n.match(/(\d\d\d\d)韓國電視劇\-(.*)$/);
+                    if (krst) {
+                        if (krst[2].match(/�/)) {
+                            return true;
+                        }
+                        list.push({
+                            name: krst[2],
+                            url: urlList[i],
+                            year: krst[1]
+                        });
+                    }
+                });
+            })();
         } else {
-            table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-            var tbody = (0, _utility.findTag)(table, 'tbody')[0];
-            if (tbody) {
-                table = tbody;
+            var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(top, 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
+            var table = null;
+            var table2 = null;
+            if (dramaIndex === 4) {
+                var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget HTML')[0], 'div', 'widget-content')[0], 'table');
+                table = tables[1];
+                table2 = tables[2];
+            } else {
+                table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'widget Blog')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer')[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+                var tbody = (0, _utility.findTag)(table, 'tbody')[0];
+                if (tbody) {
+                    table = tbody;
+                }
             }
-        }
-        var getList = function getList(table) {
-            return table.children.forEach(function (t) {
-                return (0, _utility.findTag)(t, 'td').forEach(function (d) {
-                    var h = (0, _utility.findTag)(d, 'h3')[0];
-                    if (h) {
-                        var a = (0, _utility.findTag)(h, 'a')[0];
-                        if (a) {
-                            var name = (0, _utility.findTag)(a)[0];
-                            if (name) {
-                                if (name.match(/�/)) {
+            var getList = function getList(table) {
+                return table.children.forEach(function (t) {
+                    return (0, _utility.findTag)(t, 'td').forEach(function (d) {
+                        var h = (0, _utility.findTag)(d, 'h3')[0];
+                        if (h) {
+                            var a = (0, _utility.findTag)(h, 'a')[0];
+                            if (a) {
+                                var name = (0, _utility.findTag)(a)[0];
+                                if (name) {
+                                    if (name.match(/�/)) {
+                                        return true;
+                                    }
+                                    var dramaType = dramaIndex === 4 ? null : (0, _utility.findTag)(h)[0];
+                                    if (year) {
+                                        var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw01.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : dramaIndex === 3 ? (0, _utility.addPre)(a.attribs.href, 'http://jp03.jplovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://www.lovetvshow.com');
+                                        list.push((0, _assign2.default)({
+                                            name: name,
+                                            url: url + '?max-results=300',
+                                            year: year
+                                        }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
+                                    }
                                     return true;
                                 }
-                                var dramaType = dramaIndex === 4 ? null : (0, _utility.findTag)(h)[0];
-                                if (year) {
-                                    var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw01.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : dramaIndex === 3 ? (0, _utility.addPre)(a.attribs.href, 'http://jp03.jplovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://www.lovetvshow.com');
-                                    list.push((0, _assign2.default)({
-                                        name: name,
-                                        url: url + '?max-results=300',
-                                        year: year
-                                    }, dramaType ? { type: dramaType.match(/^\(([^\)]+)/)[1] } : {}));
-                                }
-                                return true;
                             }
-                        }
-                        var getY = function getY(node) {
-                            if (dramaIndex === 4) {
-                                var y = (0, _utility.findTag)(node)[0].match(/^(大陸綜藝節目)?(韓國綜藝節目)?/);
-                                if (y) {
-                                    if (y[1]) {
-                                        year = '大陸';
-                                    } else if (y[2]) {
-                                        year = '韓國';
+                            var getY = function getY(node) {
+                                if (dramaIndex === 4) {
+                                    var y = (0, _utility.findTag)(node)[0].match(/^(大陸綜藝節目)?(韓國綜藝節目)?/);
+                                    if (y) {
+                                        if (y[1]) {
+                                            year = '大陸';
+                                        } else if (y[2]) {
+                                            year = '韓國';
+                                        }
+                                    }
+                                } else {
+                                    var _y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
+                                    if (_y) {
+                                        year = _y[0];
                                     }
                                 }
+                            };
+                            var s = (0, _utility.findTag)(h, 'span')[0];
+                            if (s) {
+                                getY(s);
                             } else {
-                                var _y = (0, _utility.findTag)(node)[0].match(/^(Pre-)?\d+/);
-                                if (_y) {
-                                    year = _y[0];
-                                }
-                            }
-                        };
-                        var s = (0, _utility.findTag)(h, 'span')[0];
-                        if (s) {
-                            getY(s);
-                        } else {
-                            var f = (0, _utility.findTag)(h, 'font')[0];
-                            if (f) {
-                                getY(f);
-                            } else {
-                                var strong = (0, _utility.findTag)(h, 'strong')[0];
-                                if (strong) {
-                                    var span = (0, _utility.findTag)(strong, 'span')[0];
-                                    if (span) {
-                                        getY(span);
-                                    } else {
-                                        var font = (0, _utility.findTag)(strong, 'font')[0];
-                                        if (font) {
-                                            getY(font);
+                                var f = (0, _utility.findTag)(h, 'font')[0];
+                                if (f) {
+                                    getY(f);
+                                } else {
+                                    var strong = (0, _utility.findTag)(h, 'strong')[0];
+                                    if (strong) {
+                                        var span = (0, _utility.findTag)(strong, 'span')[0];
+                                        if (span) {
+                                            getY(span);
+                                        } else {
+                                            var font = (0, _utility.findTag)(strong, 'font')[0];
+                                            if (font) {
+                                                getY(font);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
+                    });
                 });
-            });
-        };
-        getList(table);
-        if (table2) {
-            getList(table2);
+            };
+            getList(table);
+            if (table2) {
+                getList(table2);
+            }
         }
         console.log(list.length);
         return next(0, dramaIndex, list);
@@ -203,7 +224,7 @@ exports.default = {
             }) : _promise2.default.resolve();
         };
 
-        var _ret = function () {
+        var _ret2 = function () {
             switch (type) {
                 case 'lovetv':
                     var recur_loveSave = function recur_loveSave(index, dramaIndex, list) {
@@ -415,7 +436,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
     },
     getSingleList: function getSingleList(type, url) {
         var post = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
@@ -534,7 +555,7 @@ exports.default = {
                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                     var main = (0, _utility.findTag)(body, 'div', 'main')[0];
                     if (main) {
-                        var _ret2 = function () {
+                        var _ret3 = function () {
                             var type_id = url.match(/vod-search-id-(\d+)/);
                             if (!type_id) {
                                 return {
@@ -595,7 +616,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
                     } else {
                         return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[0], 'div', 'wrapper_wrapper')[0], 'div', 'container')[0], 'div', 'content_left')[0], 'div', 'ires')[0], 'ol')[0], 'li', 'g').map(function (g) {
                             var tr = (0, _utility.findTag)((0, _utility.findTag)(g, 'table')[0], 'tr')[0];
@@ -1583,7 +1604,7 @@ exports.default = {
 
                             var a = (0, _utility.findTag)(h, 'a')[0];
                             if ((0, _utility.findTag)(a)[0].match(/^Full Release/)) {
-                                var _ret3 = function () {
+                                var _ret4 = function () {
                                     var url = (0, _utility.addPre)(a.attribs.href, 'http://www.bea.gov');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
@@ -1607,7 +1628,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                             }
                         }
                     } catch (err) {
@@ -1689,7 +1710,7 @@ exports.default = {
                                 var a = (0, _utility.findTag)(s, 'a')[0];
                                 if (a) {
                                     if ((0, _utility.findTag)(a)[0].match(/pdf/i)) {
-                                        var _ret4 = function () {
+                                        var _ret5 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'http://www.oecd.org');
                                             driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                             console.log(driveName);
@@ -1713,7 +1734,7 @@ exports.default = {
                                             };
                                         }();
 
-                                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                                     }
                                 }
                             }
@@ -1813,7 +1834,7 @@ exports.default = {
                     if (share) {
                         var a = (0, _utility.findTag)(share, 'a')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[1])[0].match(/pdf/i)) {
-                            var _ret5 = function () {
+                            var _ret6 = function () {
                                 var url = (0, _utility.addPre)(a.attribs.href, 'https://www.federalreserve.gov');
                                 driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                 console.log(driveName);
@@ -1837,7 +1858,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                         }
                     }
                     driveName = obj.name + ' ' + obj.date + '.txt';
@@ -1937,7 +1958,7 @@ exports.default = {
                                     var a = _step12.value;
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
-                                        var _ret6 = function () {
+                                        var _ret7 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
                                             if (url.match(/87231699T64V6LTY/)) {
                                                 return 'continue';
@@ -1964,12 +1985,12 @@ exports.default = {
                                             };
                                         }();
 
-                                        switch (_ret6) {
+                                        switch (_ret7) {
                                             case 'continue':
                                                 continue;
 
                                             default:
-                                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                         }
                                     }
                                 }
@@ -2009,7 +2030,7 @@ exports.default = {
                                                 var _a = _step14.value;
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
-                                                    var _ret7 = function () {
+                                                    var _ret8 = function () {
                                                         var url = (0, _utility.addPre)(_a.attribs.href, 'http://www.stat.gov.tw');
                                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                                         console.log(driveName);
@@ -2033,7 +2054,7 @@ exports.default = {
                                                         };
                                                     }();
 
-                                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                                                 }
                                             }
                                         } catch (err) {
@@ -2083,7 +2104,7 @@ exports.default = {
 
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
-                                var _ret8 = function () {
+                                var _ret9 = function () {
                                     var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
@@ -2107,12 +2128,12 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                             } else {
                                 var sp = (0, _utility.findTag)(p, 'span')[0];
                                 var pcsp = (0, _utility.findTag)(sp)[0];
                                 if (pcsp && pcsp.match(/本文及附表/)) {
-                                    var _ret9 = function () {
+                                    var _ret10 = function () {
                                         var a = (0, _utility.findTag)((0, _utility.findTag)(sp, 'strong')[0], 'a')[0];
                                         var url = a ? (0, _utility.addPre)(a.attribs.href, 'http://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
@@ -2137,7 +2158,7 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                                 }
                             }
                         }
@@ -2174,7 +2195,7 @@ exports.default = {
                             if (kind) {
                                 var a = (0, _utility.findTag)(kind, 'a')[0];
                                 if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                                    var _ret10 = function () {
+                                    var _ret11 = function () {
                                         var url = a.attribs.href;
                                         url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
                                         driveName = obj.name + ' ' + obj.date + '.pdf';
@@ -2199,7 +2220,7 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                                 }
                             }
                         }
@@ -2235,7 +2256,7 @@ exports.default = {
                     }
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
-                            var _ret11 = function () {
+                            var _ret12 = function () {
                                 driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex]);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
@@ -2259,7 +2280,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                            if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                         } else {
                             return updateDocDate(type, obj.date);
                         }
@@ -2662,7 +2683,7 @@ exports.default = {
             });
         };
 
-        var _ret12 = function () {
+        var _ret13 = function () {
             switch (type) {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
@@ -2802,9 +2823,9 @@ exports.default = {
                                         };
 
                                         for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                            var _ret13 = _loop();
+                                            var _ret14 = _loop();
 
-                                            if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                                            if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
                                         }
                                     } catch (err) {
                                         _didIteratorError24 = true;
@@ -3497,7 +3518,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
     },
     saveSingle: function saveSingle(type, id) {
         var url = null;
