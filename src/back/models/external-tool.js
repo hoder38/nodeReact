@@ -48,7 +48,6 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                 });
             }
         });
-        return false;
     } else {
         const main = findTag(findTag(findTag(top, 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
         let table = null;
