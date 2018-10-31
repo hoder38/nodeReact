@@ -21,10 +21,6 @@ var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
 
 var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
 
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 var _defineProperty2 = require('babel-runtime/helpers/defineProperty');
 
 var _defineProperty3 = _interopRequireDefault(_defineProperty2);
@@ -40,6 +36,10 @@ var _promise2 = _interopRequireDefault(_promise);
 var _assign = require('babel-runtime/core-js/object/assign');
 
 var _assign2 = _interopRequireDefault(_assign);
+
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
 
 var _constants = require('../constants');
 
@@ -89,7 +89,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr14.vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr14.vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp1.vslovetv.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
@@ -99,24 +99,29 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
             year = '台灣';
         }
         var top = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
-        if (dramaIndex === 2) {
-            (function () {
+        if (dramaIndex === 2 || dramaIndex === 5) {
+            var _ret = function () {
                 var krscript = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
                 var urlList = krscript.match(/http\:\/\/[^\']+/g);
                 krscript.match(/var OldLabel = \"[^\"]+/g).forEach(function (n, i) {
-                    var krst = n.match(/(\d\d\d\d)韓國電視劇\-(.*)$/);
+                    var krst = n.match(/(Pre)?(\d\d\d\d)韓國電視劇\-(.*)$/);
                     if (krst) {
                         if (krst[2].match(/�/)) {
                             return true;
                         }
                         list.push({
-                            name: krst[2],
+                            name: krst[3],
                             url: urlList[i],
-                            year: krst[1]
+                            year: krst[2]
                         });
                     }
                 });
-            })();
+                return {
+                    v: false
+                };
+            }();
+
+            if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
         } else {
             var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(top, 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
             var table = null;

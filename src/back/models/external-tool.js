@@ -22,6 +22,7 @@ const dramaList = [
     'http://kr14.vslovetv.com/',
     'http://jp03.jplovetv.com/2012/08/drama-list.html',
     'http://www.lovetvshow.com/',
+    'http://krsp1.vslovetv.com/',
 ];
 
 const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
@@ -31,22 +32,23 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
         year = '台灣';
     }
     const top = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
-    if (dramaIndex === 2) {
+    if (dramaIndex === 2 || dramaIndex === 5) {
         const krscript = findTag(findTag(findTag(findTag(findTag(findTag(findTag(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
         const urlList = krscript.match(/http\:\/\/[^\']+/g);
         krscript.match(/var OldLabel = \"[^\"]+/g).forEach((n, i) => {
-            const krst = n.match(/(\d\d\d\d)韓國電視劇\-(.*)$/);
+            const krst = n.match(/(Pre)?(\d\d\d\d)韓國電視劇\-(.*)$/);
             if (krst) {
                 if (krst[2].match(/�/)) {
                     return true;
                 }
                 list.push({
-                    name: krst[2],
+                    name: krst[3],
                     url: urlList[i],
-                    year: krst[1],
+                    year: krst[2],
                 });
             }
         });
+        return false;
     } else {
         const main = findTag(findTag(findTag(top, 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0];
         let table = null;
