@@ -575,7 +575,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;
                     playtype = 'yify';
                 } else if (playlist === 5) {
-                    playurl = `http://www.cartoomad.com/comic/${playlistId}.html`;
+                    playurl = `https://www.cartoonmad.com/comic/${playlistId}.html`;
                     playtype = 'cartoonmad';
                 } else if (playlist === 6) {
                     playurl = playlistId.match(/^av/) ? `http://www.bilibili.com/video/${playlistId}/` : `http://www.bilibili.com/bangumi/i/${playlistId}/`;

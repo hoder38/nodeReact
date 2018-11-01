@@ -274,9 +274,9 @@ export default {
                             setTag.add(normalize(show_name[1].replace(/\-/g, ' ')));
                         }
                         findTag(info, 'a').forEach(a => {
-                            const imdb = a.attribs.href.match(/http:\/\/www\.imdb\.com\/title\/(tt\d+)\//);
+                            const imdb = a.attribs.href.match(/(https|http):\/\/www\.imdb\.com\/title\/(tt\d+)\//);
                             if (imdb) {
-                                setTag.add(normalize(imdb[1]));
+                                setTag.add(normalize(imdb[2]));
                             }
                         });
                         let setArr = [];
@@ -611,7 +611,7 @@ export default {
             });
             case 'cartoonmad':
             return Api('url', url, {
-                referer: 'http://www.cartoonmad.com/',
+                referer: 'https://www.cartoonmad.com/',
                 post: post,
                 not_utf8: true,
             }).then(raw_data => {
@@ -625,7 +625,7 @@ export default {
                                 return {
                                     id: a.attribs.href.match(/\d+/)[0],
                                     name: a.attribs.title,
-                                    thumb: findTag(a, 'img')[0].attribs.src,
+                                    thumb: addPre(findTag(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
                                     tags: ['漫畫', 'comic'],
                                 };
                             });
@@ -635,7 +635,7 @@ export default {
                                 return {
                                     id: a.attribs.href.match(/\d+/)[0],
                                     name: a.attribs.title,
-                                    thumb: findTag(a, 'img')[0].attribs.src,
+                                    thumb: addPre(findTag(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
                                     tags: ['漫畫', 'comic'],
                                 };
                             }));
@@ -1613,17 +1613,16 @@ export default {
                 title = title.match(/^(.*?) \((\d\d\d\d)\) - IMDb$/);
                 taglist.add(title[1]).add(title[2]);
                 const main = findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'wrapper')[0], 'div', 'root')[0], 'div', 'pagecontent')[0], 'div', 'content-2-wide')[0];
-                findTag(findTag(findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(d => findTag(d, 'span').forEach(s => {
-                    const cast = findTag(s, 'a');
-                    if (cast.length > 0) {
-                        taglist.add(findTag(findTag(cast[0], 'span')[0])[0]);
+                findTag(findTag(findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(d => findTag(d, 'a').forEach(a => {
+                    if (a.attribs.href.match(/^\/name\//)) {
+                        taglist.add(findTag(a)[0]);
                     }
                 }));
                 const main_bottom = findTag(main, 'div', 'main_bottom')[0];
                 findTag(findTag(findTag(main_bottom, 'div', 'titleCast')[0], 'table', 'cast_list')[0], 'tr').forEach(t => {
                     const cast = findTag(t, 'td');
                     if (cast.length > 1) {
-                        taglist.add(findTag(findTag(findTag(cast[1], 'a')[0], 'span')[0])[0]);
+                        taglist.add(findTag(findTag(cast[1], 'a')[0])[0]);
                     }
                 });
                 for (let t of findTag(findTag(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')) {
@@ -2334,7 +2333,7 @@ export default {
                 return handleError(new HoError('comic id invalid'));
             }
             const madGetlist = () => Api('url', url, {
-                referer: 'http://www.cartoonmad.com/',
+                referer: 'https://www.cartoonmad.com/',
                 not_utf8: true,
             }).then(raw_data => {
                 const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr')[3], 'td')[0], 'table')[0], 'tr')[1], 'td')[1], 'table');
@@ -2358,8 +2357,8 @@ export default {
                     if (!choose) {
                         return handleError(new HoError('cannot find external index'));
                     }
-                    return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `http://www.cartoomad.com${choose}` : `http://www.cartoomad.com/${choose}` : choose, {
-                        referer: 'http://www.cartoonmad.com/',
+                    return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
+                        referer: 'https://www.cartoonmad.com/',
                         not_utf8: true,
                     }).then(raw_data => {
                         const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
@@ -2373,7 +2372,7 @@ export default {
                             index: (index * 1000 + sub_index) / 1000,
                             showId: (index * 1000 + sub_index) / 1000,
                             title: findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'table')[0], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[1], 'center')[0], 'li')[0], 'a')[1])[0],
-                            pre_url: findTag(findTag(findTag(findTag(body, 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
+                            pre_url: findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'tr')[0], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
                             sub,
                             pre_obj,
                         }, is_end, raw_list.length];
@@ -2501,9 +2500,9 @@ export default {
                 ];
             });
             case 'cartoonmad':
-            url = `http://www.cartoonmad.com/comic/${id}.html`;
+            url = `https://www.cartoonmad.com/comic/${id}.html`;
             return Api('url', url, {
-                referer: 'http://www.cartoonmad.com/',
+                referer: 'https://www.cartoonmad.com/',
                 not_utf8: true,
             }).then(raw_data => {
                 const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr');

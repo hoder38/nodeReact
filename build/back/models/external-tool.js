@@ -361,9 +361,9 @@ exports.default = {
                                     setTag.add((0, _tagTool.normalize)(show_name[1].replace(/\-/g, ' ')));
                                 }
                                 (0, _utility.findTag)(info, 'a').forEach(function (a) {
-                                    var imdb = a.attribs.href.match(/http:\/\/www\.imdb\.com\/title\/(tt\d+)\//);
+                                    var imdb = a.attribs.href.match(/(https|http):\/\/www\.imdb\.com\/title\/(tt\d+)\//);
                                     if (imdb) {
-                                        setTag.add((0, _tagTool.normalize)(imdb[1]));
+                                        setTag.add((0, _tagTool.normalize)(imdb[2]));
                                     }
                                 });
                                 var setArr = [];
@@ -748,7 +748,7 @@ exports.default = {
                 });
             case 'cartoonmad':
                 return (0, _apiTool2.default)('url', url, {
-                    referer: 'http://www.cartoonmad.com/',
+                    referer: 'https://www.cartoonmad.com/',
                     post: post,
                     not_utf8: true
                 }).then(function (raw_data) {
@@ -762,7 +762,7 @@ exports.default = {
                                     return {
                                         id: a.attribs.href.match(/\d+/)[0],
                                         name: a.attribs.title,
-                                        thumb: (0, _utility.findTag)(a, 'img')[0].attribs.src,
+                                        thumb: (0, _utility.addPre)((0, _utility.findTag)(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
                                         tags: ['漫畫', 'comic']
                                     };
                                 });
@@ -772,7 +772,7 @@ exports.default = {
                                     return {
                                         id: a.attribs.href.match(/\d+/)[0],
                                         name: a.attribs.title,
-                                        thumb: (0, _utility.findTag)(a, 'img')[0].attribs.src,
+                                        thumb: (0, _utility.addPre)((0, _utility.findTag)(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
                                         tags: ['漫畫', 'comic']
                                     };
                                 }));
@@ -2316,10 +2316,9 @@ exports.default = {
                     taglist.add(title[1]).add(title[2]);
                     var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html, 'body')[0], 'div', 'wrapper')[0], 'div', 'root')[0], 'div', 'pagecontent')[0], 'div', 'content-2-wide')[0];
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0], 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(function (d) {
-                        return (0, _utility.findTag)(d, 'span').forEach(function (s) {
-                            var cast = (0, _utility.findTag)(s, 'a');
-                            if (cast.length > 0) {
-                                taglist.add((0, _utility.findTag)((0, _utility.findTag)(cast[0], 'span')[0])[0]);
+                        return (0, _utility.findTag)(d, 'a').forEach(function (a) {
+                            if (a.attribs.href.match(/^\/name\//)) {
+                                taglist.add((0, _utility.findTag)(a)[0]);
                             }
                         });
                     });
@@ -2327,7 +2326,7 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleCast')[0], 'table', 'cast_list')[0], 'tr').forEach(function (t) {
                         var cast = (0, _utility.findTag)(t, 'td');
                         if (cast.length > 1) {
-                            taglist.add((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(cast[1], 'a')[0], 'span')[0])[0]);
+                            taglist.add((0, _utility.findTag)((0, _utility.findTag)(cast[1], 'a')[0])[0]);
                         }
                     });
                     var _iteratorNormalCompletion17 = true;
@@ -3455,7 +3454,7 @@ exports.default = {
                     }
                     var madGetlist = function madGetlist() {
                         return (0, _apiTool2.default)('url', url, {
-                            referer: 'http://www.cartoonmad.com/',
+                            referer: 'https://www.cartoonmad.com/',
                             not_utf8: true
                         }).then(function (raw_data) {
                             var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr')[3], 'td')[0], 'table')[0], 'tr')[1], 'td')[1], 'table');
@@ -3481,8 +3480,8 @@ exports.default = {
                                 if (!choose) {
                                     return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
                                 }
-                                return (0, _apiTool2.default)('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? 'http://www.cartoomad.com' + choose : 'http://www.cartoomad.com/' + choose : choose, {
-                                    referer: 'http://www.cartoonmad.com/',
+                                return (0, _apiTool2.default)('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? 'https://www.cartoonmad.com' + choose : 'https://www.cartoonmad.com/' + choose : choose, {
+                                    referer: 'https://www.cartoonmad.com/',
                                     not_utf8: true
                                 }).then(function (raw_data) {
                                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
@@ -3496,7 +3495,7 @@ exports.default = {
                                         index: (index * 1000 + sub_index) / 1000,
                                         showId: (index * 1000 + sub_index) / 1000,
                                         title: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'table')[0], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[1], 'center')[0], 'li')[0], 'a')[1])[0],
-                                        pre_url: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
+                                        pre_url: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'tr')[0], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
                                         sub: sub,
                                         pre_obj: pre_obj
                                     }, is_end, raw_list.length];
@@ -3638,9 +3637,9 @@ exports.default = {
                     return [img.attribs.alt, newTag, new _set2.default(), 'kubo', img.attribs.src, url];
                 });
             case 'cartoonmad':
-                url = 'http://www.cartoonmad.com/comic/' + id + '.html';
+                url = 'https://www.cartoonmad.com/comic/' + id + '.html';
                 return (0, _apiTool2.default)('url', url, {
-                    referer: 'http://www.cartoonmad.com/',
+                    referer: 'https://www.cartoonmad.com/',
                     not_utf8: true
                 }).then(function (raw_data) {
                     var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr');

@@ -584,7 +584,7 @@ function process(collection) {
             if (search) {
                 if (query_term) {
                     var ret = {
-                        url: 'http://www.cartoonmad.com/search.html',
+                        url: 'https://www.cartoonmad.com/search.html',
                         post: {
                             keyword: query_term,
                             searchtype: 'all'
@@ -593,7 +593,7 @@ function process(collection) {
                     console.log(ret);
                     return ret;
                 } else {
-                    var url = 'http://www.cartoonmad.com/comic' + (comic_type !== -1 ? _constants.MAD_INDEX[comic_type] : '99');
+                    var url = 'https://www.cartoonmad.com/comic' + (comic_type !== -1 ? _constants.MAD_INDEX[comic_type] : '99');
                     if (page > 1 && page < 10) {
                         url = url + '.0' + page + '.html';
                     } else if (page >= 10) {

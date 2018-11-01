@@ -422,7 +422,7 @@ export default function process(collection) {
             if (search) {
                 if (query_term) {
                     const ret = {
-                        url: 'http://www.cartoonmad.com/search.html',
+                        url: 'https://www.cartoonmad.com/search.html',
                         post: {
                             keyword: query_term,
                             searchtype: 'all',
@@ -431,7 +431,7 @@ export default function process(collection) {
                     console.log(ret);
                     return ret;
                 } else {
-                    let url = `http://www.cartoonmad.com/comic${comic_type !== -1 ? MAD_INDEX[comic_type] : '99'}`;
+                    let url = `https://www.cartoonmad.com/comic${comic_type !== -1 ? MAD_INDEX[comic_type] : '99'}`;
                     if (page > 1 && page < 10) {
                         url =  `${url}.0${page}.html`;
                     } else if (page >= 10) {
