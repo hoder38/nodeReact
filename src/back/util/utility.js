@@ -14,7 +14,7 @@ let pwCheck = {}
 
 export function isValidString(str, type) {
     if (typeof str === 'string' || typeof str === 'number') {
-        typeof str === 'string' ? str = new Buffer(str, 'utf-8').toString() : str.toString()
+        str = typeof str === 'string' ? new Buffer(str, 'utf-8').toString() : str.toString()
         switch (type) {
             case 'name':
             const trim = str.trim()
