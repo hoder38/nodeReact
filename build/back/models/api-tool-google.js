@@ -1030,7 +1030,7 @@ function downloadMedia(data) {
                 if (info[_i].height >= data['hd']) {
                     if (info[_i].height > currentHeight) {
                         media_id = info[_i].id;
-                        currentHeight = info[_i].height;
+                        currentHeight = +info[_i].height;
                     }
                 }
             }
