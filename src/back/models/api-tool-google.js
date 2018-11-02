@@ -635,7 +635,7 @@ function downloadMedia(data) {
             if (info[i].height >= data['hd']) {
                 if (info[i].height > currentHeight) {
                     media_id = info[i].id;
-                    currentHeight = info[i].height;
+                    currentHeight = +info[i].height;
                 }
             }
         }
