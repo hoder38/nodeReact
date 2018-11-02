@@ -3657,7 +3657,7 @@ exports.default = {
                     setTag.forEach(function (i) {
                         return newTag.add(_constants.TRANS_LIST.includes(i) ? _constants.TRANS_LIST_CH[_constants.TRANS_LIST.indexOf(i)] : i);
                     });
-                    return [(0, _utility.findTag)(comicPath[comicPath.length - 1])[0], newTag, new _set2.default(), 'cartoonmad', (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src, url];
+                    return [(0, _utility.findTag)(comicPath[comicPath.length - 1])[0], newTag, new _set2.default(), 'cartoonmad', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src, 'https://www.cartoonmad.com'), url];
                 });
             case 'bilibili':
                 url = id.match(/^av/) ? 'http://www.bilibili.com/video/' + id + '/' : 'http://bangumi.bilibili.com/anime/' + id + '/';

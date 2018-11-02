@@ -2521,7 +2521,7 @@ export default {
                     newTag,
                     new Set(),
                     'cartoonmad',
-                    findTag(findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src,
+                    addPre(findTag(findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
                     url,
                 ];
             });

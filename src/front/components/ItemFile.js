@@ -177,7 +177,12 @@ const ItemFile = React.createClass({
             dropList.push({title: 'clear media', onclick: () => this._handleMedia(item.id, item.name, true), key: 13})
         }
         if (item.status === 0 || item.status === 2) {
-            dropList.push({title: 'send to kindle', onclick: () => this._send2kindle(item.id, item.name), key: 16})
+            if (!item.thumb) {
+                dropList.push({title: 'send to kindle', onclick: () => this._send2kindle(item.id, item.name), key: 16})
+            }
+            if (item.noDb) {
+                dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name), key: 17})
+            }
         }
         if (item.status === 0 || item.status === 1 || item.status === 9) {
             dropList.push({title: 'join zips', onclick: this._join, key: 14})
