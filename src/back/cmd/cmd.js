@@ -69,7 +69,8 @@ const dbRestore = collection => {
                 const json = JSON.parse(line);
                 for (let i in json) {
                     if (i === '_id' || i === 'userId' || i === 'owner') {
-                        if (json[i] !== 'lovetv' && json[i] !== 'eztv') {
+                        if (json[i].length > 20) {
+                            console.log(json[i]);
                             json[i] = objectID(json[i]);
                         }
                     }
