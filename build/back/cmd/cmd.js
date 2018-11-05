@@ -143,7 +143,9 @@ var dbRestore = function dbRestore(collection) {
                 var json = JSON.parse(line);
                 for (var i in json) {
                     if (i === '_id' || i === 'userId' || i === 'owner') {
-                        json[i] = (0, _mongoTool.objectID)(json[i]);
+                        if (json[i] !== 'lovetv' && json[i] !== 'eztv') {
+                            json[i] = (0, _mongoTool.objectID)(json[i]);
+                        }
                     }
                 }
                 store.push(json);
