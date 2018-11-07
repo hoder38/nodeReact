@@ -178,7 +178,7 @@ export default {
                                 let isVideo = false;
                                 for (let i of meta.input.streams) {
                                     if (i.size) {
-                                        DBdata['height'] = i.size.height;
+                                        DBdata['height'] = (i.size.width/16*9) > i.size.height ? (i.size.width/16*9) : i.size.height;
                                         break;
                                     }
                                 }
@@ -619,7 +619,7 @@ export default {
                     user,
                     key: metadata.id,
                     filePath: `${filePath}_complete`,
-                    hd: getHd(metadata.videoMediaMetadata.height),
+                    hd: getHd((metadata.videoMediaMetadata.width/16*9) > metadata.videoMediaMetadata.height ? (metadata.videoMediaMetadata.width/16*9) : metadata.videoMediaMetadata.height),
                     rest: () => handleRest(data, name, 3, metadata.id, true),
                     errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                 }) : GoogleApi('download', {
@@ -630,7 +630,7 @@ export default {
                         user,
                         key: metadata.id,
                         filePath: `${filePath}_complete`,
-                        hd: getHd(metadata.videoMediaMetadata.height),
+                        hd: getHd((metadata.videoMediaMetadata.width/16*9) > metadata.videoMediaMetadata.height ? (metadata.videoMediaMetadata.width/16*9) : metadata.videoMediaMetadata.height),
                         rest: () => handleRest(data, name, 3, metadata.id, true),
                         errhandle: err => handleError(err, errDrive, metadata.id, folderId),
                     }),
