@@ -986,7 +986,7 @@ exports.default = {
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
+                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content inner-content-page')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
                     for (var i in divs) {
                         var div = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                         var a = (0, _utility.findTag)(div, 'a')[0];
