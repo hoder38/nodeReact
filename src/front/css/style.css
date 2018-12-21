@@ -11,6 +11,15 @@ body {
     background-color: #222;
 }
 
+.stock-progress:after {
+    content:'\A';
+    position:absolute;
+    background:black;
+    top:0; bottom:0;
+    left:0;
+    width:40%;
+}
+
 @media(min-width:768px) {
     body {
         margin-top: 50px;
@@ -240,6 +249,10 @@ ul.alert-dropdown {
     left:0px;
 }
 
+#stock-total-section {
+    left:0px;
+}
+
 #widget-manage-section {
     right:0px;
 }
@@ -260,6 +273,10 @@ ul.alert-dropdown {
 
 @media(min-width:768px) {
     #file-manage-section {
+        right:0px;
+        left: auto;
+    }
+    #stock-total-section {
         right:0px;
         left: auto;
     }

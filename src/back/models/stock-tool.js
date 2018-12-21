@@ -1,4 +1,4 @@
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY } from '../constants'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -2880,7 +2880,7 @@ export default {
             return handleError(err);
         });
     },
-    getStockPoint: function(id, price, session) {
+    /*getStockPoint: function(id, price, session) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
                 return handleError(new HoError('can not find stock!!!'));
@@ -2907,7 +2907,7 @@ export default {
                 return [`${items[0].index}: ${Math.floor(price * 9.5) / 10}, ${Math.floor(price * 10.5) / 10}, ${Math.floor(price * 12) / 10}`, epsRange];
             });
         });
-    },
+    },*/
     getInterval: function(id, session) {
         const date = new Date();
         let year = date.getFullYear();
@@ -3390,6 +3390,312 @@ export default {
         }).catch(err => {
             stockFiltering = false;
             return handleError(err);
+        });
+    },
+    getStockTotal: function(user) {
+        return Mongo('find', TOTALDB, {owner: user._id}).then(items => {
+            if (items.length < 1) {
+                //new user
+                return Mongo('insert', TOTALDB, {
+                    owner: user._id,
+                    index: 0,
+                    name: '投資部位',
+                    type: 'total',
+                    cost: 0,
+                    count: 1,
+                    top: 0,
+                    bottom: 0,
+                }).then(item => ({
+                        remain: item[0].cost,
+                        total: 0,
+                        stock: [{
+                            name: item[0].name,
+                            type: item[0].type,
+                            cost: 0,
+                            price: 0,
+                            count: 1,
+                            plus: 0,
+                            minus: 0,
+                            current: 0,
+                        }],
+                }));
+            }
+            let remain = 0;
+            let totalName = '';
+            let totalType = '';
+            let cost = 0;
+            let totalPrice = 0;
+            let plus = 0;
+            let minus = 0;
+            const stock = [];
+            const getStock = v => {
+                if (v.name === '投資部位' && v.type === 'total') {
+                    remain = v.cost;
+                    totalName = v.name;
+                    totalType = v.type;
+                    return Promise.resolve();
+                } else {
+                    return getStockPrice('twse', v.index).then(price => {
+                        cost += v.cost;
+                        let current = Math.floor(price * v.count * 100) / 100;
+                        totalPrice += current;
+                        const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                        const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                        plus += p;
+                        minus += m;
+                        stock.push({
+                            name: v.name,
+                            type: v.type,
+                            cost: v.cost,
+                            price,
+                            count: v.count,
+                            plus: p,
+                            minus: m,
+                            current,
+                        });
+                    });
+                }
+            }
+            const recurGet = index => {
+                if (index >= items.length) {
+                    stock.unshift({
+                        name: totalName,
+                        type: totalType,
+                        cost,
+                        price: totalPrice,
+                        count: 1,
+                        plus: Math.floor(plus * 100) / 100,
+                        minus: Math.floor(minus * 100) / 100,
+                        current: totalPrice,
+                    })
+                    return {
+                        remain: remain,
+                        total: totalPrice + remain,
+                        stock,
+                    };
+                } else {
+                    return getStock(items[index]).then(() => recurGet(index + 1))
+                }
+            }
+            return recurGet(0);
+        });
+    },
+    updateStockTotal: function(user, info, real = false) {
+        //remain 800
+        //2330 (-)0.5
+        //2330 300 220
+        //2330 2 450 cost
+        return Mongo('find', TOTALDB, {owner: user._id}).then(items => {
+            if (items.length < 1) {
+                return handleError(new HoError('No user data!!!'));
+            }
+            let remain = 0;
+            let totalName = '';
+            let totalType = '';
+            let totalId = null;
+            for (let v of items) {
+                if (v.name === '投資部位' && v.type === 'total') {
+                    remain = v.cost;
+                    totalName = v.name;
+                    totalType = v.type;
+                    totalId = v._id;
+                }
+            }
+            const updateTotal = {};
+            const removeTotal = [];
+            const single = v => {
+                const cmd = v.match(/(\d+|remain)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/)
+                if (cmd) {
+                    if (cmd[1] === 'remain') {
+                        remain += +cmd[2];
+                        updateTotal[totalId] = {cost: remain};
+                    } else {
+                        let is_find = false;
+                        for (let i in items) {
+                            if (cmd[1] === items[i].index) {
+                                is_find = true;
+                                if (!cmd[3]) {
+                                    items[i].count += +cmd[2];
+                                    if (items[i].count > 0) {
+                                        return getStockPrice('twse', items[i].index).then(price => {
+                                            const new_cost = Math.floor(price * +cmd[2] * 100) / 100;
+                                            items[i].cost += new_cost;
+                                            remain -= new_cost;
+                                            updateTotal[totalId] = {cost: remain};
+                                            if (items[i]._id) {
+                                                if (updateTotal[items[i]._id]) {
+                                                    updateTotal[items[i]._id].count = items[i].count;
+                                                    updateTotal[items[i]._id].cost = items[i].cost;
+                                                } else {
+                                                    updateTotal[items[i]._id] = {count: items[i].count, cost: items[i].cost};
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        remain -= items[i].cost;
+                                        updateTotal[totalId] = {cost: remain};
+                                        if (items[i]._id) {
+                                            removeTotal.push(items[i]._id);
+                                        }
+                                        items.splice(i, 1);
+                                    }
+                                } else if (cmd[4]) {
+                                    items[i].count = +cmd[2];
+                                    if (items[i].count > 0) {
+                                        remain += (+cmd[3] - items[i].cost);
+                                        items[i].cost = +cmd[3];
+                                        updateTotal[totalId] = {cost: remain};
+                                        if (items[i]._id) {
+                                            if (updateTotal[items[i]._id]) {
+                                                updateTotal[items[i]._id].count = items[i].count;
+                                                updateTotal[items[i]._id].cost = items[i].cost;
+                                            } else {
+                                                updateTotal[items[i]._id] = {count: items[i].count, cost: items[i].cost};
+                                            }
+                                        }
+                                    } else {
+                                        remain -= items[i].cost;
+                                        updateTotal[totalId] = {cost: remain};
+                                        if (items[i]._id) {
+                                            removeTotal.push(items[i]._id);
+                                        }
+                                        items.splice(i, 1);
+                                    }
+                                } else {
+                                    if (+cmd[2] > +cmd[3]) {
+                                        items[i].top = +cmd[2];
+                                        items[i].bottom = +cmd[3];
+                                    } else {
+                                        items[i].top = +cmd[3];
+                                        items[i].bottom = +cmd[2];
+                                    }
+                                    if (items[i]._id) {
+                                        if (updateTotal[items[i]._id]) {
+                                            updateTotal[items[i]._id].top = items[i].top;
+                                            updateTotal[items[i]._id].bottom = items[i].bottom;
+                                        } else {
+                                            updateTotal[items[i]._id] = {top: items[i].top, bottom: items[i].bottom};
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        if (!is_find) {
+                            if (!cmd[3] && +cmd[2] > 0) {
+                                return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('twse', basic.stock_index).then(price => {
+                                    console.log(basic);
+                                    let cost = Math.floor(+cmd[2] * price * 100) / 100;
+                                    cost = (cost > 0) ? cost : 0;
+                                    items.push({
+                                        owner: user._id,
+                                        index: basic.stock_index,
+                                        name: `${basic.stock_name}${basic.stock_index}`,
+                                        type: basic.stock_class,
+                                        cost,
+                                        count: +cmd[2],
+                                        top: Math.floor(price * 1.2 * 100) / 100,
+                                        bottom: Math.floor(price * 0.95 * 100) / 100,
+                                    })
+                                    remain -= cost;
+                                    updateTotal[totalId] = {cost: remain};
+                                }));
+                            } else if (cmd[4] && +cmd[2] > 0) {
+                                return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
+                                    console.log(basic);
+                                    const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
+                                    items.push({
+                                        owner: user._id,
+                                        index: basic.stock_index,
+                                        name: `${basic.stock_name}${basic.stock_index}`,
+                                        type: basic.stock_class,
+                                        cost,
+                                        count: +cmd[2],
+                                        top: Math.floor(price * 1.2 * 100) / 100,
+                                        bottom: Math.floor(price * 0.95 * 100) / 100,
+                                    })
+                                    remain -= cost;
+                                    updateTotal[totalId] = {cost: remain};
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+            const updateReal = () => {
+                console.log(updateTotal);
+                console.log(removeTotal);
+                console.log(remain);
+                console.log(items);
+                const singleUpdate = v => {
+                    if (!v._id) {
+                        return Mongo('insert', TOTALDB, v);
+                    } else if (updateTotal[v._id]) {
+                        return Mongo('update', TOTALDB, {_id: v._id}, {$set : updateTotal[v._id]});
+                    } else {
+                        return Promise.resolve();
+                    }
+                }
+                const recurUpdate = index => (index >= items.length) ? recurRemove(0) : singleUpdate(items[index]).then(() => recurUpdate(index + 1));
+                const recurRemove = index => (index >= removeTotal.length) ? rest() : Mongo('remove', TOTALDB, {_id: removeTotal[index], $isolated: 1}).then(() => recurRemove(index + 1));
+                return real ? recurUpdate(0) : rest();
+            }
+            const rest = () => {
+                let cost = 0;
+                let totalPrice = 0;
+                let plus = 0;
+                let minus = 0;
+                const stock = [];
+                const getStock = v => {
+                    if (v.name === '投資部位' && v.type === 'total') {
+                        return Promise.resolve();
+                    } else {
+                        return getStockPrice('twse', v.index).then(price => {
+                            cost += v.cost;
+                            let current = Math.floor(price * v.count * 100) / 100;
+                            totalPrice += current;
+                            const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                            const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                            plus += p;
+                            minus += m;
+                            stock.push({
+                                name: v.name,
+                                type: v.type,
+                                cost: v.cost,
+                                price,
+                                count: v.count,
+                                plus: p,
+                                minus: m,
+                                current,
+                            });
+                        });
+                    }
+                }
+                const recurGet = index => {
+                    if (index >= items.length) {
+                        stock.unshift({
+                            name: totalName,
+                            type: totalType,
+                            cost,
+                            price: totalPrice,
+                            count: 1,
+                            plus: Math.floor(plus * 100) / 100,
+                            minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice,
+                        })
+                        return {
+                            remain: Math.floor(remain * 100) / 100,
+                            total: Math.floor((totalPrice + remain) * 100) / 100,
+                            stock,
+                        };
+                    } else {
+                        return getStock(items[index]).then(() => recurGet(index + 1))
+                    }
+                }
+                return recurGet(0);
+            }
+            const recur = index => (index >= info.length) ? updateReal() : Promise.resolve(single(info[index])).then(() => recur(index + 1));
+            return recur(0);
         });
     },
 }

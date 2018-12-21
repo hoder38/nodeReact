@@ -6,6 +6,7 @@ import ReStockItemHead from '../containers/ReStockItemHead'
 import ReStockItemPath from '../containers/ReStockItemPath'
 import ReStockItemlist from '../containers/ReStockItemlist'
 import ReStockInfo from '../containers/ReStockInfo'
+import ReStockTotal from '../containers/ReStockTotal'
 import { api } from '../utility'
 
 const Stock = React.createClass({
@@ -13,6 +14,7 @@ const Stock = React.createClass({
         return {
             item: null,
             open: false,
+            open2: false,
         }
     },
     componentWillMount: function() {
@@ -20,19 +22,23 @@ const Stock = React.createClass({
             this.props.addalert(err)
         })
     },
+    _toggle:function() {
+        this.setState(Object.assign({}, this.state, {open2: !this.state.open2}))
+    },
     render: function() {
-        const stock = this.state.item && this.state.open ? <ReStockInfo item={this.state.item} /> : <ReStockItemlist setstock={item => this.setState({item, open: true})} />
+        const stock = this.state.item && this.state.open ? <ReStockInfo item={this.state.item} /> : <ReStockItemlist setstock={item => this.setState({item, open: true, open2: this.state.open2})} />
         const path = this.state.item && this.state.open ? null : <ReStockItemPath />
         const head = this.state.item && this.state.open ? null : <ReStockItemHead />
         return (
             <div>
-                <ReStockCategorylist collapse={RIGHT} bookUrl="/api/bookmark/stock/getlist/" bookDelUrl="/api/bookmark/stock/del/" dirUrl="/api/parent/stock/taglist/" dirDelUrl="/api/parent/stock/del/" setstock={() => this.setState(Object.assign({}, this.state, {open: !this.state.open}))} stock={this.state.item} stockopen={this.state.open} />
+                <ReStockCategorylist collapse={RIGHT} bookUrl="/api/bookmark/stock/getlist/" bookDelUrl="/api/bookmark/stock/del/" dirUrl="/api/parent/stock/taglist/" dirDelUrl="/api/parent/stock/del/" setstock={() => this.setState(Object.assign({}, this.state, {open: !this.state.open}))} stock={this.state.item} stockopen={this.state.open} stockopen2={this._toggle} />
                 <section id="top-section" style={{float: 'left', position: 'fixed', left: '0px', width: '100%', zIndex: TOP_SECTION_ZINDEX}}>
                     <ReItemInput />
                     {path}
                     {head}
                 </section>
                 {stock}
+                <ReStockTotal open={this.state.open2} toggle={this._toggle}/>
             </div>
         )
     }

@@ -8,7 +8,7 @@ const ItemStock = React.createClass({
             {title: 'PER', onclick: () => this._per(this.props.item.id), key: 0},
             {title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
             {title: 'INTERVAL', onclick: () => this._interval(this.props.item.id), key: 2},
-            {title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
+            //{title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
         ]
     },
     _per: function(id) {
@@ -29,12 +29,12 @@ const ItemStock = React.createClass({
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.interval);
         }).catch(err => this.props.addalert(err))
     },
-    _point: function(id) {
+    /*_point: function(id) {
         this.props.globalinput(1, point => api(`/api/stock/getPoint/${id}/${point}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'info', 'Input Price', result.point[0], result.point[1]);
         }), 'info', 'Input Price')
-    },
+    },*/
     render: function() {
         const item = this.props.item
         return (

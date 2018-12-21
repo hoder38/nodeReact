@@ -209,25 +209,21 @@ router.get('/getPredictPER/:uid', function (req, res, next) {
     });
 });
 
-router.get('/getPoint/:uid/:price?', function (req, res, next) {
+/*router.get('/getPoint/:uid/:price?', function(req, res, next) {
     console.log('stock get point');
-    var id = (0, _utility.isValidString)(req.params.uid, 'uid', 'uid is not vaild');
+    const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
-        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
-    var price = 0;
+    let price = 0;
     if (req.params.price) {
         if (!req.params.price.match(/\d+(\.\d+)?/)) {
-            return (0, _utility.handleError)(new _utility.HoError('price is not vaild'), next);
+            return handleError(new HoError('price is not vaild'), next);
         }
         price = Number(req.params.price);
     }
-    _stockTool2.default.getStockPoint(id, price, req.session).then(function (point) {
-        return res.json({ point: point });
-    }).catch(function (err) {
-        return (0, _utility.handleError)(err, next);
-    });
-});
+    StockTool.getStockPoint(id, price, req.session).then(point => res.json({point})).catch(err => handleError(err, next));
+});*/
 
 router.get('/getInterval/:uid', function (req, res, next) {
     console.log('stock get interval');
@@ -331,6 +327,24 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
             type: req.user.username,
             data: 'Filter fail: ' + err.message
         }, 0);
+    });
+});
+
+router.get('/getTotal', function (req, res, next) {
+    console.log('stock get total');
+    _stockTool2.default.getStockTotal(req.user).then(function (result) {
+        return res.json(result);
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
+    });
+});
+
+router.put('/updateTotal/:real(1|0)?', function (req, res, next) {
+    console.log('stock update total');
+    _stockTool2.default.updateStockTotal(req.user, req.body.info, req.params.real === '1' ? true : false).then(function (result) {
+        return res.json(result);
+    }).catch(function (err) {
+        return (0, _utility.handleError)(err, next);
     });
 });
 

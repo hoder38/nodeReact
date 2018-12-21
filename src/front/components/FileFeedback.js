@@ -132,8 +132,7 @@ const FileFeedback = React.createClass({
             }
         })
         if (isValidString(this.props.name, 'name')) {
-            this.setState(Object.assign({}, this.state, {sending: true}))
-            api(`/api/storage/sendTag/${this.props.id}`, {
+            this.setState(Object.assign({}, this.state, {sending: true}), () => api(`/api/storage/sendTag/${this.props.id}`, {
                 tags: send_tag,
                 name: this.props.name,
             }, 'PUT').then(result => {
@@ -143,7 +142,7 @@ const FileFeedback = React.createClass({
             }).catch(err => {
                 this.props.addalert(err)
                 this.setState(Object.assign({}, this.state, {sending: false}))
-            })
+            }));
         } else {
             this.props.addalert('Feedback name is not valid!!!')
         }
@@ -186,7 +185,6 @@ const FileFeedback = React.createClass({
                 </div>
             )
         })
-        let other_rows = []
         this.props.other.forEach(tag => {
             rows.push(
                 <div className="input-group" key={key++}>
@@ -212,7 +210,6 @@ const FileFeedback = React.createClass({
                 </div>
                 <div className="panel-body" style={{overflowX: 'hidden', overflowY: 'auto', maxHeight: '70vh', padding: '0px'}}>
                     {rows}
-                    {other_rows}
                 </div>
                 <form onSubmit={e => killEvent(e, this._handleSubmit)}>
                     <div className="input-group">

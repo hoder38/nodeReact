@@ -115,7 +115,7 @@ router.get('/getPredictPER/:uid', function(req, res,next) {
     StockTool.getPredictPERWarp(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
-router.get('/getPoint/:uid/:price?', function(req, res, next) {
+/*router.get('/getPoint/:uid/:price?', function(req, res, next) {
     console.log('stock get point');
     const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
@@ -129,7 +129,7 @@ router.get('/getPoint/:uid/:price?', function(req, res, next) {
         price = Number(req.params.price);
     }
     StockTool.getStockPoint(id, price, req.session).then(point => res.json({point})).catch(err => handleError(err, next));
-});
+});*/
 
 router.get('/getInterval/:uid', function(req, res,next) {
     console.log('stock get interval');
@@ -226,6 +226,16 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
             data: `Filter fail: ${err.message}`,
         }, 0);
     });
+});
+
+router.get('/getTotal', function(req, res,next) {
+    console.log('stock get total');
+    StockTool.getStockTotal(req.user).then(result => res.json(result)).catch(err => handleError(err, next));
+});
+
+router.put('/updateTotal/:real(1|0)?', function(req, res,next) {
+    console.log('stock update total');
+    StockTool.updateStockTotal(req.user, req.body.info, (req.params.real === '1') ? true : false).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.use(function(req, res, next) {

@@ -15,6 +15,7 @@ export const RANKDB = 'rank'
 export const DOCDB = 'docUpdate'
 export const VERIFYDB = 'verify'
 export const LOTTERYDB = 'lottery'
+export const TOTALDB = 'total'
 
 //basic set
 export const UNACTIVE_DAY = 5

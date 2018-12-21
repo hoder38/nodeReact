@@ -111,6 +111,7 @@ const Categorylist = React.createClass({
         ))
         let edit = null;
         let open = null
+        let open2 = null
         switch(this.props.itemType) {
             case PASSWORD:
             if (this.state.edit) {
@@ -129,6 +130,13 @@ const Categorylist = React.createClass({
                 <li>
                     <a href="#" onClick={e => killEvent(e, () => this.props.globalinput(2, this._filter, 'danger', 'Filter Tag', null, 'per<10 yield<30'))}>
                         Filter&nbsp;<i className="glyphicon glyphicon-play"></i>
+                    </a>
+                </li>
+            )
+            open2 = (
+                <li>
+                    <a href="#" onClick={e => killEvent(e, this.props.stockopen2)}>
+                        Total&nbsp;<i className="glyphicon glyphicon-tasks"></i>
                     </a>
                 </li>
             )
@@ -182,6 +190,7 @@ const Categorylist = React.createClass({
         const ul = (this.props.itemType === LOTTERY) ? (
             <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
                 {open}
+                {open2}
                 <ReDirlist name="USER LIST" time="mtime" dir={this.props.itemlist} del={()=>{}} edit={false} collapse={false} dirItem={()=>{}} noSort={true} />
             </ul>
         ) : this.props.stockopen ? (
@@ -192,6 +201,7 @@ const Categorylist = React.createClass({
             <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
                 {chart}
                 {open}
+                {open2}
                 <ReDirlist name="Bookmark" time="mtime" dir={this.props.bookmark} set={this.props.bookmarkset} del={this.props.delbookmark} listUrl={this.props.bookUrl} delUrl={this.props.bookDelUrl} edit={true} collapse={false} dirItem={this._bookmarkItem} />
                 {rows}
             </ul>
