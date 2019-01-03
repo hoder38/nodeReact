@@ -791,7 +791,7 @@ exports.default = {
                     var docDate = (0, _utility.completeZero)(date.getMonth() + 1, 2) + '/' + (0, _utility.completeZero)(date.getDate(), 2) + '/' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'table', 'main-content-table')[0], 'tr')[0], 'td', 'main-content-td')[0], 'div', 'bodytext')[0], 'ul')[0], 'li').forEach(function (l) {
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'table', 'main-content-table')[0], 'tr')[0], 'td', 'main-content-td')[0], 'div', 'bodytext')[0], 'div', 'bls')[0], 'ul')[0], 'li').forEach(function (l) {
                         if ((0, _utility.findTag)(l)[0] === docDate) {
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             list.push({
@@ -3478,7 +3478,11 @@ exports.default = {
                             var sendList = function sendList(raw_list, is_end, etime) {
                                 var choose = raw_list[index - 1];
                                 if (!choose) {
-                                    return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    index = 1;
+                                    choose = raw_list[index - 1];
+                                    if (!choose) {
+                                        return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
+                                    }
                                 }
                                 return (0, _apiTool2.default)('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? 'https://www.cartoonmad.com' + choose : 'https://www.cartoonmad.com/' + choose : choose, {
                                     referer: 'https://www.cartoonmad.com/',

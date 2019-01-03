@@ -654,7 +654,7 @@ export default {
                 const docDate = `${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}/${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'table', 'main-content-table')[0], 'tr')[0], 'td', 'main-content-td')[0], 'div', 'bodytext')[0], 'ul')[0], 'li').forEach(l => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'table', 'main-content-table')[0], 'tr')[0], 'td', 'main-content-td')[0], 'div', 'bodytext')[0], 'div', 'bls')[0], 'ul')[0], 'li').forEach(l => {
                     if (findTag(l)[0] === docDate) {
                         const a = findTag(l, 'a')[0];
                         list.push({
@@ -2353,9 +2353,13 @@ export default {
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
-                    const choose = raw_list[index - 1];
+                    let choose = raw_list[index - 1];
                     if (!choose) {
-                        return handleError(new HoError('cannot find external index'));
+                        index = 1;
+                        choose = raw_list[index - 1];
+                        if (!choose) {
+                            return handleError(new HoError('cannot find external index'));
+                        }
                     }
                     return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
                         referer: 'https://www.cartoonmad.com/',

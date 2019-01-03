@@ -62,7 +62,7 @@ var MONTH_SHORTS = exports.MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'J
 var DOC_TYPE = exports.DOC_TYPE = {
     am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
     jp: ['sea'],
-    tw: ['tri', 'ndc', 'sta', 'mof', 'moe', 'cbc']
+    tw: ['ndc', 'sta', 'mof', 'moe', 'cbc']
 };
 
 //regex

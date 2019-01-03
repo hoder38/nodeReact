@@ -54,7 +54,7 @@ export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'A
 export const DOC_TYPE = {
     am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
     jp: ['sea'],
-    tw: ['tri', 'ndc', 'sta', 'mof', 'moe', 'cbc'],
+    tw: ['ndc', 'sta', 'mof', 'moe', 'cbc'],
 }
 
 //regex
