@@ -20,6 +20,20 @@ const StockTotal = React.createClass({
         api('/api/stock/getTotal').then(result => this.setState(Object.assign({}, this.state, {total: result}))).catch(err => {
             this.props.addalert(err)
         });
+        window.addEventListener("beforeunload", this._routerWillLeave)
+    },
+    componentWillUnmount: function() {
+        if (this._info.length > 0) {
+            this.props.sendglbcf(() => api('/api/stock/updateTotal/1', {info: this._info}, 'PUT').catch(err => this.props.addalert(err)), `Would you want to update Stock Total permanently?`)
+        }
+        window.removeEventListener("beforeunload", this._routerWillLeave)
+    },
+    _routerWillLeave: function(e) {
+        let confirmationMessage = 'You have unupdated changes. Are you sure you want to navigate away from this page?'
+        if (this._info.length > 0) {
+            e.returnValue = confirmationMessage
+            return confirmationMessage
+        }
     },
     _handleChange: function() {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
@@ -36,18 +50,31 @@ const StockTotal = React.createClass({
         }
     },
     _update: function(real = false) {
-        this.setState(Object.assign({}, this.state, {sending: true}), () => {
-            api(`/api/stock/updateTotal/${real ? '1' : '0'}`, {info: this._info}, 'PUT').then(result => {
-                console.log(result);
-                if (real) {
-                    this._info = [];
-                }
-                this.setState(Object.assign({}, this.state, this._input.initValue(), {sending: false, total: result}))
-            }).catch(err => {
-                this.props.addalert(err)
-                this.setState(Object.assign({}, this.state, {sending: false}))
+        if (real) {
+            this.props.sendglbcf(() => this.setState(Object.assign({}, this.state, {sending: true}), () => {
+                api('/api/stock/updateTotal/1', {info: this._info}, 'PUT').then(result => {
+                    if (real) {
+                        this._info = [];
+                    }
+                    this.setState(Object.assign({}, this.state, this._input.initValue(), {sending: false, total: result}))
+                }).catch(err => {
+                    this.props.addalert(err)
+                    this.setState(Object.assign({}, this.state, {sending: false}))
+                })
+            }), `Would you want to update Stock Total permanently?`)
+        } else {
+            this.setState(Object.assign({}, this.state, {sending: true}), () => {
+                api('/api/stock/updateTotal/0', {info: this._info}, 'PUT').then(result => {
+                    if (real) {
+                        this._info = [];
+                    }
+                    this.setState(Object.assign({}, this.state, this._input.initValue(), {sending: false, total: result}))
+                }).catch(err => {
+                    this.props.addalert(err)
+                    this.setState(Object.assign({}, this.state, {sending: false}))
+                })
             })
-        })
+        }
     },
     render: function() {
         if(!this.state.total || !this.props.open) {
