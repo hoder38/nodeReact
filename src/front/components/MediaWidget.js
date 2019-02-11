@@ -369,7 +369,7 @@ const MediaWidget = React.createClass({
             this._removeCue()
             const same = (index === this.state.index) ? true : false;
             this.setState(Object.assign({}, this.state, {
-                src: this._playlist && this._playlist.obj.is_magnet && this._playlist.obj.id ? `${this.props.mainUrl}/torrent/v/${mediaId}/0` : this._playlist && this._playlist.obj.pre_url ? `${this._playlist.obj.pre_url}${this._playlist.obj.pre_obj[Math.round(this._playlist.obj.index * 1000) % 1000 - 1]}` : this._item.thumb ? this._item.thumb : `${this.props.mainUrl}/${this._preType}/${mediaId}/file`,
+                src: this._playlist && this._playlist.obj.is_magnet && this._playlist.obj.id ? `${this.props.mainUrl}/torrent/v/${mediaId}/0` : this._playlist && this._playlist.obj.pre_url ? `url: ${this._playlist.obj.pre_url}` : this._item.thumb ? this._item.thumb : `${this.props.mainUrl}/${this._preType}/${mediaId}/file`,
                 index: index,
                 subIndex: subIndex ? subIndex : 1,
                 loading: false,
@@ -506,7 +506,7 @@ const MediaWidget = React.createClass({
             if (this.props.mediaType === 2 && Math.floor(newIndex) === Math.floor(this._playlist.obj.index)) {
                 this._playlist.obj.index = newIndex
                 this.setState(Object.assign({}, this.state, {
-                    src: `${this._playlist.obj.pre_url}${this._playlist.obj.pre_obj[Math.round(this._playlist.obj.index * 1000) % 1000 - 1]}`,
+                    src: `url: ${this._playlist.obj.pre_url}`,
                     subIndex: this._playlist.obj.index,
                 }), () => this._recordMedia(false, true))
             } else {
@@ -901,13 +901,16 @@ const MediaWidget = React.createClass({
             )
         }
         let media = null
+        let media2 = null
+        let media4 = null
         if (this.props.mediaType === 2 || (this.props.mediaType === 9 && this._item.type === 2)) {
             if (this._item.doc === 2) {
                 media = this.props.full ? <iframe src={this.state.src} style={{border: 0, visibility: 'visible', width: '98vw', height: '80vh'}}></iframe> : <iframe src={this.state.src} style={{border: 0, visibility: 'visible', width: '50vw', height: '60vh'}}></iframe>
             } else if (this._item.doc === 3) {
                 media = this.props.full ? <div style={{visibility: 'visible', width: '98vw', height: '80vh', overflow: 'scroll'}}><canvas id={(this.props.mediaType === 2) ? 'pdf1' : 'pdf2'}></canvas></div> : <div style={{visibility: 'visible', width: '50vw', height: '60vh', overflow: 'scroll'}}><canvas id={(this.props.mediaType === 2) ? 'pdf1' : 'pdf2'}></canvas></div>
             } else {
-                media = this.props.full ? this.state.extend? (
+                const isUrl = this.state.src.match(/^url: (.*)$/);
+                media = isUrl ? <a href={isUrl[1]} target="_blank">{isUrl[1]}</a> : this.props.full ? this.state.extend? (
                     <div>
                         <a href="#" style={{position: 'fixed', width: '100px', height: '100px', color: 'rgba(0, 0, 0, 0.3)', top: '0px', left: '0px', fontSize: '600%', lineHeight: '100px', textDecoration: 'none', visibility: 'visible'}} className="text-center" onClick={e => killEvent(e, () => this._nextMedia(true))}>
                             {this.state.subIndex}
@@ -940,8 +943,6 @@ const MediaWidget = React.createClass({
                 ) : <img style={{visibility: 'visible', maxWidth: '100%', width: 'auto', height: 'auto', cursor: 'pointer'}} src={this.state.src} alt={this._item.name} onClick={e => killEvent(e, this._nextMedia)} />
             }
         }
-        let media2 = null
-        let media4 = null
         if (this.props.mediaType === 3 || this.props.mediaType === 9) {
             const mediaCss = this.props.full ? {
                 maxWidth: '100%',

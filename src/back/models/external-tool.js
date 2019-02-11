@@ -2344,7 +2344,10 @@ export default {
                         findTag(r, 'td').forEach(d => {
                             const a = findTag(d, 'a');
                             if (a.length > 0) {
-                                list.push(a[0].attribs.href);
+                                list.push({
+                                    title: findTag(a[0])[0],
+                                    url: a[0].attribs.href,
+                                });
                             }
                         });
                     });
@@ -2361,7 +2364,14 @@ export default {
                             return handleError(new HoError('cannot find external index'));
                         }
                     }
-                    return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
+                    saveList(madGetlist, raw_list, is_end, etime);
+                    return [{
+                        index: (index * 1000 + sub_index) / 1000,
+                        showId: (index * 1000 + sub_index) / 1000,
+                        title: choose.title,
+                        pre_url: !choose.url.match(/^(https|http):\/\//) ? choose.url.match(/^\//) ? `https://www.cartoonmad.com${choose.url}` : `https://www.cartoonmad.com/${choose.url}` : choose.url,
+                    }, is_end, raw_list.length];
+                    /*return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
                         referer: 'https://www.cartoonmad.com/',
                         not_utf8: true,
                     }).then(raw_data => {
@@ -2380,7 +2390,7 @@ export default {
                             sub,
                             pre_obj,
                         }, is_end, raw_list.length];
-                    });
+                    });*/
                 }
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });

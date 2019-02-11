@@ -3465,7 +3465,10 @@ exports.default = {
                                     (0, _utility.findTag)(r, 'td').forEach(function (d) {
                                         var a = (0, _utility.findTag)(d, 'a');
                                         if (a.length > 0) {
-                                            list.push(a[0].attribs.href);
+                                            list.push({
+                                                title: (0, _utility.findTag)(a[0])[0],
+                                                url: a[0].attribs.href
+                                            });
                                         }
                                     });
                                 });
@@ -3484,26 +3487,33 @@ exports.default = {
                                         return (0, _utility.handleError)(new _utility.HoError('cannot find external index'));
                                     }
                                 }
-                                return (0, _apiTool2.default)('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? 'https://www.cartoonmad.com' + choose : 'https://www.cartoonmad.com/' + choose : choose, {
+                                saveList(madGetlist, raw_list, is_end, etime);
+                                return [{
+                                    index: (index * 1000 + sub_index) / 1000,
+                                    showId: (index * 1000 + sub_index) / 1000,
+                                    title: choose.title,
+                                    pre_url: !choose.url.match(/^(https|http):\/\//) ? choose.url.match(/^\//) ? 'https://www.cartoonmad.com' + choose.url : 'https://www.cartoonmad.com/' + choose.url : choose.url
+                                }, is_end, raw_list.length];
+                                /*return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
                                     referer: 'https://www.cartoonmad.com/',
-                                    not_utf8: true
-                                }).then(function (raw_data) {
-                                    var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
-                                    var sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
-                                    var pre_obj = [];
-                                    for (var _i6 = 1; _i6 <= sub; _i6++) {
-                                        pre_obj.push(_i6 < 10 ? '00' + _i6 + '.jpg' : _i6 < 100 ? '0' + _i6 + '.jpg' : _i6 + '.jpg');
+                                    not_utf8: true,
+                                }).then(raw_data => {
+                                    const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                                    const sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
+                                    let pre_obj = [];
+                                    for (let i = 1; i <= sub; i++) {
+                                        pre_obj.push((i < 10) ? `00${i}.jpg` : (i < 100) ? `0${i}.jpg` : `${i}.jpg`);
                                     }
                                     saveList(madGetlist, raw_list, is_end, etime);
                                     return [{
                                         index: (index * 1000 + sub_index) / 1000,
                                         showId: (index * 1000 + sub_index) / 1000,
-                                        title: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'table')[0], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[1], 'center')[0], 'li')[0], 'a')[1])[0],
-                                        pre_url: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'tr')[0], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
-                                        sub: sub,
-                                        pre_obj: pre_obj
+                                        title: findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'table')[0], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[1], 'center')[0], 'li')[0], 'a')[1])[0],
+                                        pre_url: findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'tr')[0], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
+                                        sub,
+                                        pre_obj,
                                     }, is_end, raw_list.length];
-                                });
+                                });*/
                             };
                             return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(function (_ref19) {
                                 var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
@@ -3588,10 +3598,10 @@ exports.default = {
                                     });
                                     var _type = (0, _utility.findTag)((0, _utility.findTag)(p, 'a')[0])[0];
                                     tags.add(_type);
-                                    for (var _i7 in _constants.KUBO_TYPE) {
-                                        var index = _constants.KUBO_TYPE[_i7].indexOf(_type);
+                                    for (var _i6 in _constants.KUBO_TYPE) {
+                                        var index = _constants.KUBO_TYPE[_i6].indexOf(_type);
                                         if (index !== -1) {
-                                            if (_i7 === '0') {
+                                            if (_i6 === '0') {
                                                 tags.add('movie').add('電影');
                                                 switch (index) {
                                                     case 0:
@@ -3619,11 +3629,11 @@ exports.default = {
                                                         tags.add('animation').add('動畫');
                                                         break;
                                                 }
-                                            } else if (_i7 === '1') {
+                                            } else if (_i6 === '1') {
                                                 tags.add('tv show').add('電視劇');
-                                            } else if (_i7 === '2') {
+                                            } else if (_i6 === '2') {
                                                 tags.add('tv show').add('電視劇').add('綜藝節目');
-                                            } else if (_i7 === '3') {
+                                            } else if (_i6 === '3') {
                                                 tags.add('animation').add('動畫');
                                             }
                                             break;
