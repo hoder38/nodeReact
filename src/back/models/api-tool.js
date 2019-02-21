@@ -113,7 +113,7 @@ function stopApi() {
     return Promise.resolve();
 }
 
-function download(user, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null, rest=null, errHandle=null } = {}) {
+function download(user, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null, rest=null, errHandle=null, is_dm5=false } = {}) {
     let qspost = null;
     if (post) {
         not_utf8 ? Object.entries(post).forEach(f => qspost = qspost ? `${qspost}&${f[0]}=${big5Encode(f[1])}` : `${f[0]}=${big5Encode(f[1])}`) : qspost = QStringify(post);
@@ -126,7 +126,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         } : {}, fake_ip ? {
             'X-Forwarded-For': fake_ip,
             'Client-IP': fake_ip,
-        } : {})}, post ? {
+        } : {}, is_dm5 ? {'Accept-Language': 'en-US,en;q=0.9'} : {})}, post ? {
         method: 'POST',
         body: qspost,
     } : {})).then(res => {

@@ -421,15 +421,9 @@ export default function process(collection) {
             });
             if (search) {
                 if (query_term) {
-                    const ret = {
-                        url: 'https://www.cartoonmad.com/search.html',
-                        post: {
-                            keyword: query_term,
-                            searchtype: 'all',
-                        },
-                    }
-                    console.log(ret);
-                    return ret;
+                    const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${encodeURIComponent(query_term)}`;
+                    console.log(url);
+                    return url;
                 } else {
                     let url = `https://www.cartoonmad.com/comic${comic_type !== -1 ? MAD_INDEX[comic_type] : '99'}`;
                     if (page > 1 && page < 10) {

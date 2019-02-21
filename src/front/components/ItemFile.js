@@ -75,7 +75,7 @@ const ItemFile = React.createClass({
                 url = `http://www.58b.tv/vod-read-id-${extId}.html`
                 break
                 case 'mad_':
-                url = `https://www.cartoonmad.com/comic/${extId}.html`
+                url = `http://www.dm5.com/${extId}/`
                 break
                 /*case 'bbl_':
                 url = extId.match(/^av/) ? `http://www.bilibili.com/video/${extId}/` : `http://bangumi.bilibili.com/anime/${extId}/`
