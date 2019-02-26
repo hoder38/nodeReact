@@ -189,7 +189,7 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
         } else if (random_tag[0] === '圖片' && (random_tag[1] === '漫畫' || random_tag[2] === '漫畫')) {
             const mtype = selectRandom([4, 1]);
             if (mtype === 1) {
-                random_tag = ['cartoonmad comic', 'no local', OPTION_TAG[selectRandom(count, [24, 25, 27, 28, 32, 34, 35, 37, 38, 39, 40])]];
+                random_tag = ['dm5 comic', 'no local', OPTION_TAG[selectRandom(count, [24, 25, 27, 28, 32, 34, 35, 37, 38, 39, 40])]];
             }
         } else if (random_tag[0] === '音頻') {
             const mtype = selectRandom([4, 1, 1]);
@@ -268,7 +268,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         count: item.count,*/
     }))]).then(() => {
         const query = StorageTagTool.getMadQuery(parentList.cur, req.params.sortName, index);
-        return query.post ? External.getSingleList('cartoonmad', query.url, query.post) : External.getSingleList('cartoonmad', query);
+        return query.post ? External.getSingleList('dm5', query.url, query.post) : External.getSingleList('dm5', query);
     }).then(list => itemList = [...itemList, ...list.map(item => ({
         name: item.name,
         id: `mad_${item.id}`,
@@ -576,7 +576,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
                     playtype = 'yify';
                 } else if (playlist === 5) {
                     playurl = `http://www.dm5.com/${playlistId}/`;
-                    playtype = 'cartoonmad';
+                    playtype = 'dm5';
                 } else if (playlist === 6) {
                     playurl = playlistId.match(/^av/) ? `http://www.bilibili.com/video/${playlistId}/` : `http://www.bilibili.com/bangumi/i/${playlistId}/`;
                     playtype = 'bilibili';

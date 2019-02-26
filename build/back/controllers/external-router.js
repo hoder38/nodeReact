@@ -1034,20 +1034,20 @@ router.post('/upload/url', function (req, res, next) {
                                 }];
                             });
                         });
-                    } else if (decodeUrl.match(/^(https|http):\/\/www\.cartoonmad\.com\/comic\//)) {
+                    } else if (decodeUrl.match(/^(https|http):\/\/www\.dm5\.com\//)) {
                         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
-                            owner: 'cartoonmad',
+                            owner: 'dm5',
                             url: encodeURIComponent(decodeUrl)
                         }, { limit: 1 }).then(function (items) {
                             if (items.length > 0) {
                                 return (0, _utility.handleError)(new _utility.HoError('already has one'));
                             }
-                            var cartoonmad_id = decodeUrl.match(/([^\/]+)\.html$/);
+                            var cartoonmad_id = decodeUrl.match(/^(https|http):\/\/www\.dm5\.com\/([^\/]+)/);
                             if (!cartoonmad_id) {
-                                return (0, _utility.handleError)(new _utility.HoError('cartoonmad url invalid'));
+                                return (0, _utility.handleError)(new _utility.HoError('dm5 url invalid'));
                             }
                             is_media = 2;
-                            return _externalTool2.default.saveSingle('cartoonmad', cartoonmad_id[1]).then(function (_ref7) {
+                            return _externalTool2.default.saveSingle('dm5', cartoonmad_id[2]).then(function (_ref7) {
                                 var _ref8 = (0, _slicedToArray3.default)(_ref7, 6),
                                     media_name = _ref8[0],
                                     setTag = _ref8[1],

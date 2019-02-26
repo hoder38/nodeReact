@@ -746,37 +746,32 @@ exports.default = {
                         });
                     }
                 });
-            case 'cartoonmad':
+            case 'dm5':
                 return (0, _apiTool2.default)('url', url, {
-                    referer: 'https://www.cartoonmad.com/',
+                    referer: 'http://www.dm5.com/',
                     post: post,
-                    not_utf8: true
+                    is_dm5: true
                 }).then(function (raw_data) {
                     var list = [];
-                    var tr = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr')[3], 'td')[0], 'table')[0], 'tr');
-                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tr[1], 'td')[1], 'table')[0], 'td')[0], 'table').length > 0) {
-                        tr.forEach(function (v, i) {
-                            if (i === 1) {
-                                list = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(v, 'td')[1], 'table')[0], 'td').map(function (vv) {
-                                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(vv, 'table')[0], 'tr')[0], 'td')[0], 'a')[0];
-                                    return {
-                                        id: a.attribs.href.match(/\d+/)[0],
-                                        name: a.attribs.title,
-                                        thumb: (0, _utility.addPre)((0, _utility.findTag)(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
-                                        tags: ['漫畫', 'comic']
-                                    };
-                                });
-                            } else if (i % 2 === 1) {
-                                list = list.concat((0, _utility.findTag)(v, 'td').map(function (vv) {
-                                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(vv, 'table')[0], 'tr')[0], 'td')[0], 'a')[0];
-                                    return {
-                                        id: a.attribs.href.match(/\d+/)[0],
-                                        name: a.attribs.title,
-                                        thumb: (0, _utility.addPre)((0, _utility.findTag)(a, 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
-                                        tags: ['漫畫', 'comic']
-                                    };
-                                }));
-                            }
+                    var data = _htmlparser2.default.parseDOM(raw_data);
+                    if ((0, _utility.findTag)(data, 'html').length > 0) {
+                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(data, 'html')[0], 'body')[0], 'section', 'box container pb40 overflow-Show')[0], 'div', 'box-body')[0], 'ul', 'mh-list col7')[0], 'li').forEach(function (l) {
+                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'div', 'mh-item')[0], 'div', 'mh-tip-wrap')[0], 'div', 'mh-item-tip')[0], 'a')[0];
+                            list.push({
+                                id: a.attribs.href.match(/\/([^\/]+)/)[1],
+                                name: opencc.convertSync(a.attribs.title),
+                                thumb: (0, _utility.findTag)((0, _utility.findTag)(l, 'div', 'mh-item')[0], 'p', 'mh-cover')[0].attribs.style.match(/url\(([^\)]+)/)[1],
+                                tags: ['漫畫', 'comic']
+                            });
+                        });
+                    } else {
+                        data.forEach(function (l) {
+                            list.push({
+                                id: l.attribs.onclick.match(/\'\/([^\/]+)/)[1],
+                                name: opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'a')[0], 'span')[0])[0]),
+                                thumb: 'dm5.png',
+                                tags: ['漫畫', 'comic']
+                            });
                         });
                     }
                     return list;
@@ -3446,30 +3441,31 @@ exports.default = {
                             });
                         })
                     };
-                case 'cartoonmad':
-                    if (!url.match(/\d+/)) {
-                        return {
-                            v: (0, _utility.handleError)(new _utility.HoError('comic id invalid'))
-                        };
-                    }
+                case 'dm5':
                     var madGetlist = function madGetlist() {
                         return (0, _apiTool2.default)('url', url, {
-                            referer: 'https://www.cartoonmad.com/',
-                            not_utf8: true
+                            referer: 'http://www.dm5.com/',
+                            cookie: 'SERVERID=node1; isAdult=1; frombot=1',
+                            is_dm5: true
                         }).then(function (raw_data) {
-                            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr')[3], 'td')[0], 'table')[0], 'tr')[1], 'td')[1], 'table');
-                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table[0], 'tr')[6], 'td')[0], 'img')[1].attribs.src.match(/\/image\/chap9\.gif$/) ? true : false;
                             var list = [];
-                            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table[2], 'tr')[0], 'td')[0], 'fieldset')[0], 'table').forEach(function (t) {
-                                (0, _utility.findTag)(t, 'tr').forEach(function (r) {
-                                    (0, _utility.findTag)(r, 'td').forEach(function (d) {
-                                        var a = (0, _utility.findTag)(d, 'a');
-                                        if (a.length > 0) {
-                                            list.push({
-                                                title: (0, _utility.findTag)(a[0])[0],
-                                                url: a[0].attribs.href
-                                            });
-                                        }
+                            var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
+                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结' ? true : false;
+                            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(function (u) {
+                                var li = (0, _utility.findTag)(u, 'li');
+                                var more = (0, _utility.findTag)(u, 'ul');
+                                if (more.length > 0) {
+                                    li = li.concat((0, _utility.findTag)(more[0], 'li'));
+                                }
+                                li.reverse().forEach(function (l) {
+                                    var a = (0, _utility.findTag)(l, 'a')[0];
+                                    var title = (0, _utility.findTag)(a)[0];
+                                    if (!title) {
+                                        title = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'info')[0], 'p', 'title ')[0])[0];
+                                    }
+                                    list.push({
+                                        title: opencc.convertSync(title),
+                                        url: (0, _utility.addPre)(a.attribs.href, 'http://www.dm5.com')
                                     });
                                 });
                             });
@@ -3492,28 +3488,8 @@ exports.default = {
                                     index: (index * 1000 + sub_index) / 1000,
                                     showId: (index * 1000 + sub_index) / 1000,
                                     title: choose.title,
-                                    pre_url: !choose.url.match(/^(https|http):\/\//) ? choose.url.match(/^\//) ? 'https://www.cartoonmad.com' + choose.url : 'https://www.cartoonmad.com/' + choose.url : choose.url
+                                    pre_url: choose.url
                                 }, is_end, raw_list.length];
-                                /*return Api('url', !choose.match(/^(https|http):\/\//) ? choose.match(/^\//) ? `https://www.cartoonmad.com${choose}` : `https://www.cartoonmad.com/${choose}` : choose, {
-                                    referer: 'https://www.cartoonmad.com/',
-                                    not_utf8: true,
-                                }).then(raw_data => {
-                                    const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
-                                    const sub = Number(choose.match(/(\d\d\d)\d\d\d\.html$/)[1]);
-                                    let pre_obj = [];
-                                    for (let i = 1; i <= sub; i++) {
-                                        pre_obj.push((i < 10) ? `00${i}.jpg` : (i < 100) ? `0${i}.jpg` : `${i}.jpg`);
-                                    }
-                                    saveList(madGetlist, raw_list, is_end, etime);
-                                    return [{
-                                        index: (index * 1000 + sub_index) / 1000,
-                                        showId: (index * 1000 + sub_index) / 1000,
-                                        title: findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'table')[0], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[1], 'center')[0], 'li')[0], 'a')[1])[0],
-                                        pre_url: findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'tr')[0], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'a')[0], 'img')[0].attribs.src.match(/^(.*?)[^\/]+$/)[1],
-                                        sub,
-                                        pre_obj,
-                                    }, is_end, raw_list.length];
-                                });*/
                             };
                             return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : madGetlist().then(function (_ref19) {
                                 var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
@@ -3566,7 +3542,7 @@ exports.default = {
                         }
                         var newTag = new _set2.default();
                         setTag.forEach(function (i) {
-                            return newTag.add(_constants.TRANS_LIST.includes(i) ? _constants.TRANS_LIST_CH[_constants.TRANS_LIST.indexOf(i)] : i);
+                            return newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i);
                         });
                         return [json_data['data']['movie']['title'], newTag, new _set2.default(), 'yify', json_data['data']['movie']['small_cover_image'], url];
                     });
@@ -3645,33 +3621,27 @@ exports.default = {
                     });
                     var newTag = new _set2.default();
                     tags.forEach(function (t) {
-                        var index = _constants.TRANS_LIST.indexOf(t);
-                        newTag.add(index !== -1 ? _constants.TRANS_LIST_CH[index] : t);
+                        var index = TRANS_LIST.indexOf(t);
+                        newTag.add(index !== -1 ? TRANS_LIST_CH[index] : t);
                     });
                     return [img.attribs.alt, newTag, new _set2.default(), 'kubo', img.attribs.src, url];
                 });
-            case 'cartoonmad':
-                url = 'https://www.cartoonmad.com/comic/' + id + '.html';
-                return (0, _apiTool2.default)('url', url, {
-                    referer: 'https://www.cartoonmad.com/',
-                    not_utf8: true
-                }).then(function (raw_data) {
-                    var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr');
-                    var comicPath = (0, _utility.findTag)((0, _utility.findTag)(info[2], 'td')[1], 'a');
-                    var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info[3], 'td')[0], 'table')[0], 'tr')[1], 'td')[1], 'table')[0];
-                    var setTag = new _set2.default(['cartoonmad', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
-                    var category = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[2], 'td')[0], 'a')[0])[0];
-                    setTag.add(category.match(/^(.*)系列$/)[1]);
-                    var author = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[4], 'td')[0])[0];
-                    setTag.add(author.match(/原創作者： (.*)/)[1]);
-                    var type = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[12], 'td')[0], 'a').map(function (a) {
-                        return setTag.add((0, _utility.findTag)(a)[0]);
+            case 'dm5':
+                url = 'http://www.dm5.com/' + id + '/';
+                return (0, _apiTool2.default)('url', url, { is_dm5: true }).then(function (raw_data) {
+                    var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                    var setTag = new _set2.default(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(function (a) {
+                        return setTag.add(opencc.convertSync((0, _utility.findTag)(a)[0]));
+                    });
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1], 'a').forEach(function (a) {
+                        return setTag.add(opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[0])[0]));
                     });
                     var newTag = new _set2.default();
                     setTag.forEach(function (i) {
-                        return newTag.add(_constants.TRANS_LIST.includes(i) ? _constants.TRANS_LIST_CH[_constants.TRANS_LIST.indexOf(i)] : i);
+                        return newTag.add(_constants.DM5_ORI_LIST.includes(i) ? _constants.DM5_CH_LIST[_constants.DM5_ORI_LIST.indexOf(i)] : i);
                     });
-                    return [(0, _utility.findTag)(comicPath[comicPath.length - 1])[0], newTag, new _set2.default(), 'cartoonmad', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src, 'https://www.cartoonmad.com'), url];
+                    return [opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'title')[0])[0]), newTag, new _set2.default(), 'dm5', (0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'cover')[0], 'img')[0].attribs.src, url];
                 });
             case 'bilibili':
                 url = id.match(/^av/) ? 'http://www.bilibili.com/video/' + id + '/' : 'http://bangumi.bilibili.com/anime/' + id + '/';
@@ -3716,7 +3686,7 @@ exports.default = {
                     }
                     var newTag = new _set2.default();
                     setTag.forEach(function (i) {
-                        return newTag.add(_constants.TRANS_LIST.includes(i) ? _constants.TRANS_LIST_CH[_constants.TRANS_LIST.indexOf(i)] : i);
+                        return newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i);
                     });
                     return [name, newTag, new _set2.default(), 'bilibili', thumb, url];
                 });

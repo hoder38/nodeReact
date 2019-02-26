@@ -562,47 +562,62 @@ function process(collection) {
             }
         },
         getMadQuery: function getMadQuery(search_arr, sortName, page) {
-            var comic_type = -1;
             var query_term = null;
             var search = false;
+            var tag = -1;
+            var area = -1;
+            var st = 0;
+            var group = 0;
+            var a18 = 0;
             search_arr.forEach(function (s) {
                 var normal = normalize(s);
                 var index = isDefaultTag(normal);
                 if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
-                    var mIndex = _constants.ANIME_LIST.indexOf(normal);
-                    if (mIndex !== -1) {
-                        comic_type = mIndex;
-                        query_term = null;
+                    if (index.index === 0) {
+                        a18 = 1;
+                    } else if (index.index === 6) {
+                        a18 = 0;
                     } else {
-                        query_term = s;
-                        comic_type = -1;
+                        var mIndex = _constants.DM5_LIST.indexOf(normal);
+                        if (mIndex !== -1) {
+                            if (mIndex < 21) {
+                                tag = mIndex;
+                            } else if (mIndex < 23) {
+                                st = mIndex - 20;
+                            } else if (mIndex < 26) {
+                                group = mIndex - 22;
+                            } else {
+                                area = mIndex - 26;
+                            }
+                        } else {
+                            query_term = s;
+                            comic_type = -1;
+                        }
                     }
                 } else if (index.index === 14 || index.index === 22) {
                     search = true;
                 }
             });
             if (search) {
+                query_term = a18 ? null : query_term;
                 if (query_term) {
-                    var ret = {
-                        url: 'https://www.cartoonmad.com/search.html',
-                        post: {
-                            keyword: query_term,
-                            searchtype: 'all'
-                        }
-                    };
-                    console.log(ret);
-                    return ret;
-                } else {
-                    var url = 'https://www.cartoonmad.com/comic' + (comic_type !== -1 ? _constants.MAD_INDEX[comic_type] : '99');
-                    if (page > 1 && page < 10) {
-                        url = url + '.0' + page + '.html';
-                    } else if (page >= 10) {
-                        url = url + '.' + page + '.html';
-                    } else {
-                        url = url + '.html';
-                    }
+                    var url = 'http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=' + encodeURIComponent(query_term);
                     console.log(url);
                     return url;
+                } else {
+                    if (a18) {
+                        tag = '-tag61';
+                    } else {
+                        tag = tag !== -1 ? '-tag' + _constants.DM5_TAG_LIST[tag] : '';
+                    }
+                    group = group ? '-group' + group : '';
+                    st = st ? '-st' + st : '';
+                    area = area !== -1 ? '-area' + _constants.DM5_AREA_LIST[area] : '';
+                    var s = sortName === 'mtime' ? '-s2' : '';
+                    var p = page > 1 ? '-p' + page : '';
+                    var _url = 'http://www.dm5.com/manhua-list' + area + tag + group + st + s + p + '/';
+                    console.log(_url);
+                    return _url;
                 }
             } else {
                 return false;

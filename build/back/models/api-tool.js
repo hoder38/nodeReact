@@ -223,7 +223,9 @@ function download(user, url) {
         _ref$rest = _ref.rest,
         rest = _ref$rest === undefined ? null : _ref$rest,
         _ref$errHandle = _ref.errHandle,
-        errHandle = _ref$errHandle === undefined ? null : _ref$errHandle;
+        errHandle = _ref$errHandle === undefined ? null : _ref$errHandle,
+        _ref$is_dm = _ref.is_dm5,
+        is_dm5 = _ref$is_dm === undefined ? false : _ref$is_dm;
 
     var qspost = null;
     if (post) {
@@ -246,7 +248,7 @@ function download(user, url) {
             } : {}, fake_ip ? {
                 'X-Forwarded-For': fake_ip,
                 'Client-IP': fake_ip
-            } : {}) }, post ? {
+            } : {}, is_dm5 ? { 'Accept-Language': 'en-US,en;q=0.9' } : {}) }, post ? {
             method: 'POST',
             body: qspost
         } : {})).then(function (res) {

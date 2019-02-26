@@ -526,20 +526,20 @@ router.post('/upload/url', function(req, res, next) {
                             url: url,
                         }]);
                     });
-                } else if (decodeUrl.match(/^(https|http):\/\/www\.cartoonmad\.com\/comic\//)) {
+                } else if (decodeUrl.match(/^(https|http):\/\/www\.dm5\.com\//)) {
                     return Mongo('find', STORAGEDB, {
-                        owner: 'cartoonmad',
+                        owner: 'dm5',
                         url: encodeURIComponent(decodeUrl),
                     }, {limit: 1}).then(items => {
                         if (items.length > 0) {
                             return handleError(new HoError('already has one'));
                         }
-                        const cartoonmad_id = decodeUrl.match(/([^\/]+)\.html$/);
+                        const cartoonmad_id = decodeUrl.match(/^(https|http):\/\/www\.dm5\.com\/([^\/]+)/);
                         if (!cartoonmad_id) {
-                            return handleError(new HoError('cartoonmad url invalid'));
+                            return handleError(new HoError('dm5 url invalid'));
                         }
                         is_media = 2;
-                        return External.saveSingle('cartoonmad', cartoonmad_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                        return External.saveSingle('dm5', cartoonmad_id[2]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
                             owner: owner,
                             untag: 0,
                             thumb: thumb,

@@ -260,7 +260,7 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
         } else if (random_tag[0] === '圖片' && (random_tag[1] === '漫畫' || random_tag[2] === '漫畫')) {
             var _mtype4 = (0, _utility.selectRandom)([4, 1]);
             if (_mtype4 === 1) {
-                random_tag = ['cartoonmad comic', 'no local', OPTION_TAG[(0, _utility.selectRandom)(count, [24, 25, 27, 28, 32, 34, 35, 37, 38, 39, 40])]];
+                random_tag = ['dm5 comic', 'no local', OPTION_TAG[(0, _utility.selectRandom)(count, [24, 25, 27, 28, 32, 34, 35, 37, 38, 39, 40])]];
             }
         } else if (random_tag[0] === '音頻') {
             var _mtype5 = (0, _utility.selectRandom)([4, 1, 1]);
@@ -337,7 +337,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function (re
         })));
     }).then(function () {
         var query = StorageTagTool.getMadQuery(parentList.cur, req.params.sortName, index);
-        return query.post ? _externalTool2.default.getSingleList('cartoonmad', query.url, query.post) : _externalTool2.default.getSingleList('cartoonmad', query);
+        return query.post ? _externalTool2.default.getSingleList('dm5', query.url, query.post) : _externalTool2.default.getSingleList('dm5', query);
     }).then(function (list) {
         return itemList = [].concat((0, _toConsumableArray3.default)(itemList), (0, _toConsumableArray3.default)(list.map(function (item) {
             return {
@@ -763,8 +763,8 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function (
                         playurl = 'https://yts.ag/api/v2/movie_details.json?movie_id=' + playlistId;
                         playtype = 'yify';
                     } else if (playlist === 5) {
-                        playurl = 'https://www.cartoonmad.com/comic/' + playlistId + '.html';
-                        playtype = 'cartoonmad';
+                        playurl = 'http://www.dm5.com/' + playlistId + '/';
+                        playtype = 'dm5';
                     } else if (playlist === 6) {
                         playurl = playlistId.match(/^av/) ? 'http://www.bilibili.com/video/' + playlistId + '/' : 'http://www.bilibili.com/bangumi/i/' + playlistId + '/';
                         playtype = 'bilibili';

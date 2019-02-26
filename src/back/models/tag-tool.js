@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, MAD_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, COMIC_LIST, ANIME_LIST, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -400,39 +400,60 @@ export default function process(collection) {
             }
         },
         getMadQuery: function(search_arr, sortName, page) {
-            let comic_type = -1;
             let query_term = null;
             let search = false;
+            let tag = -1;
+            let area = -1;
+            let st = 0;
+            let group = 0;
+            let a18 = 0;
             search_arr.forEach(s => {
                 const normal = normalize(s);
                 const index = isDefaultTag(normal);
                 if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
-                    const mIndex = ANIME_LIST.indexOf(normal);
-                    if (mIndex !== -1) {
-                        comic_type = mIndex;
-                        query_term = null;
+                    if (index.index === 0) {
+                        a18 = 1;
+                    } else if (index.index === 6) {
+                        a18 = 0;
                     } else {
-                        query_term = s;
-                        comic_type = -1;
+                        const mIndex = DM5_LIST.indexOf(normal);
+                        if (mIndex !== -1) {
+                            if (mIndex < 21) {
+                                tag = mIndex;
+                            } else if (mIndex < 23) {
+                                st = mIndex - 20;
+                            } else if (mIndex < 26) {
+                                group = mIndex - 22;
+                            } else {
+                                area = mIndex - 26;
+                            }
+                        } else {
+                            query_term = s;
+                            comic_type = -1;
+                        }
                     }
                 } else if (index.index === 14 || index.index === 22) {
                     search = true;
                 }
             });
             if (search) {
+                query_term = a18 ? null : query_term;
                 if (query_term) {
                     const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${encodeURIComponent(query_term)}`;
                     console.log(url);
                     return url;
                 } else {
-                    let url = `https://www.cartoonmad.com/comic${comic_type !== -1 ? MAD_INDEX[comic_type] : '99'}`;
-                    if (page > 1 && page < 10) {
-                        url =  `${url}.0${page}.html`;
-                    } else if (page >= 10) {
-                        url =  `${url}.${page}.html`;
+                    if (a18) {
+                        tag = '-tag61';
                     } else {
-                        url = `${url}.html`;
+                        tag = (tag !== -1) ? `-tag${DM5_TAG_LIST[tag]}` : '';
                     }
+                    group = group ? `-group${group}` : '';
+                    st = st ? `-st${st}` : '';
+                    area = (area !== -1) ? `-area${DM5_AREA_LIST[area]}` : '';
+                    let s = (sortName === 'mtime') ? '-s2' : '';
+                    let p = (page > 1) ? `-p${page}` : '';
+                    let url = `http://www.dm5.com/manhua-list${area}${tag}${group}${st}${s}${p}/`;
                     console.log(url);
                     return url;
                 }

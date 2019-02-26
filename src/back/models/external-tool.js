@@ -1,4 +1,4 @@
-import { GENRE_LIST, GENRE_LIST_CH, TRANS_LIST, TRANS_LIST_CH, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB, KUBO_TYPE } from '../constants'
+import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB, KUBO_TYPE } from '../constants'
 import OpenCC from 'opencc'
 import Htmlparser from 'htmlparser2'
 import { dirname as PathDirname, extname as PathExtname, join as PathJoin } from 'path'
@@ -609,23 +609,34 @@ export default {
                     });
                 }
             });
-            case 'cartoonmad':
+            case 'dm5':
             return Api('url', url, {
-                //referer: 'https://www.cartoonmad.com/',
                 referer: 'http://www.dm5.com/',
-                post: post,
+                post,
                 is_dm5: true,
-                //not_utf8: true,
             }).then(raw_data => {
                 let list = [];
-                Htmlparser.parseDOM(raw_data).forEach(l => {
-                    list.push({
-                        id: l.attribs.onclick.match(/\'\/([^\/]+)\/\'/)[1],
-                        name: opencc.convertSync(findTag(findTag(findTag(l, 'a')[0], 'span')[0])[0]),
-                        thumb: 'dm5.png',
-                        tags: ['漫畫', 'comic'],
+                const data = Htmlparser.parseDOM(raw_data);
+                if (findTag(data, 'html').length > 0) {
+                    findTag(findTag(findTag(findTag(findTag(findTag(data, 'html')[0], 'body')[0], 'section', 'box container pb40 overflow-Show')[0], 'div', 'box-body')[0], 'ul', 'mh-list col7')[0], 'li').forEach(l => {
+                        const a = findTag(findTag(findTag(findTag(l, 'div', 'mh-item')[0], 'div', 'mh-tip-wrap')[0], 'div', 'mh-item-tip')[0], 'a')[0];
+                        list.push({
+                            id: a.attribs.href.match(/\/([^\/]+)/)[1],
+                            name: opencc.convertSync(a.attribs.title),
+                            thumb: findTag(findTag(l, 'div', 'mh-item')[0], 'p', 'mh-cover')[0].attribs.style.match(/url\(([^\)]+)/)[1],
+                            tags: ['漫畫', 'comic'],
+                        });
                     });
-                });
+                } else {
+                    data.forEach(l => {
+                        list.push({
+                            id: l.attribs.onclick.match(/\'\/([^\/]+)/)[1],
+                            name: opencc.convertSync(findTag(findTag(findTag(l, 'a')[0], 'span')[0])[0]),
+                            thumb: 'dm5.png',
+                            tags: ['漫畫', 'comic'],
+                        });
+                    });
+                }
                 return list;
             });
             case 'bls':
@@ -2312,7 +2323,7 @@ export default {
                 };
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : kuboGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
-            case 'cartoonmad':
+            case 'dm5':
             const madGetlist = () => Api('url', url, {
                 referer: 'http://www.dm5.com/',
                 cookie: 'SERVERID=node1; isAdult=1; frombot=1',
@@ -2321,7 +2332,7 @@ export default {
                 const list = [];
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                 const is_end = (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body,'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结') ? true : false;
-                findTag(findTag(findTag(findTag(findTag(findTag(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul', 'view-win-list detail-list-select').forEach(u => {
+                findTag(findTag(findTag(findTag(findTag(findTag(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(u => {
                     let li = findTag(u, 'li');
                     const more = findTag(u, 'ul');
                     if (more.length > 0) {
@@ -2329,8 +2340,12 @@ export default {
                     }
                     li.reverse().forEach(l => {
                         const a = findTag(l, 'a')[0];
+                        let title = findTag(a)[0];
+                        if (!title) {
+                            title = findTag(findTag(findTag(a, 'div', 'info')[0], 'p', 'title ')[0])[0];
+                        }
                         list.push({
-                            title: findTag(a)[0],
+                            title: opencc.convertSync(title),
                             url: addPre(a.attribs.href, 'http://www.dm5.com'),
                         });
                     });
@@ -2476,29 +2491,21 @@ export default {
                     url,
                 ];
             });
-            case 'cartoonmad':
-            url = `https://www.cartoonmad.com/comic/${id}.html`;
-            return Api('url', url, {
-                referer: 'https://www.cartoonmad.com/',
-                not_utf8: true,
-            }).then(raw_data => {
-                const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[0], 'tr')[0], 'td')[1], 'table')[0], 'tr');
-                const comicPath = findTag(findTag(info[2], 'td')[1], 'a');
-                const table = findTag(findTag(findTag(findTag(findTag(info[3],'td')[0], 'table')[0], 'tr')[1], 'td')[1], 'table')[0];
-                let setTag = new Set(['cartoonmad', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
-                const category = findTag(findTag(findTag(findTag(table, 'tr')[2], 'td')[0], 'a')[0])[0];
-                setTag.add(category.match(/^(.*)系列$/)[1]);
-                const author = findTag(findTag(findTag(table, 'tr')[4], 'td')[0])[0];
-                setTag.add(author.match(/原創作者： (.*)/)[1]);
-                const type = findTag(findTag(findTag(table, 'tr')[12], 'td')[0], 'a').map(a => setTag.add(findTag(a)[0]));
+            case 'dm5':
+            url = `http://www.dm5.com/${id}/`;
+            return Api('url', url, {is_dm5: true,}).then(raw_data => {
+                const info = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                let setTag = new Set(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
+                findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(a)[0])));
+                findTag(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(findTag(a, 'span')[0])[0])));
                 let newTag = new Set();
-                setTag.forEach(i => newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i));
+                setTag.forEach(i => newTag.add(DM5_ORI_LIST.includes(i) ? DM5_CH_LIST[DM5_ORI_LIST.indexOf(i)] : i));
                 return [
-                    findTag(comicPath[comicPath.length - 1])[0],
+                    opencc.convertSync(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'title')[0])[0]),
                     newTag,
                     new Set(),
-                    'cartoonmad',
-                    addPre(findTag(findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'img')[0].attribs.src, 'https://www.cartoonmad.com'),
+                    'dm5',
+                    findTag(findTag(info, 'div', 'cover')[0], 'img')[0].attribs.src,
                     url,
                 ];
             });
