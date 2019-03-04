@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
 import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, TRANS_LIST, TRANS_LIST_CH, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
 import Mongo, { objectID } from '../models/mongo-tool'
 import { getOptionTag } from '../util/mime'
@@ -1678,7 +1678,7 @@ export const completeMimeTag = add => {
                 console.log('end');
             } else {
                 items[index].tags.forEach(i => {
-                    const tran_tag = getTag(i, TRANS_LIST, TRANS_LIST_CH);
+                    const tran_tag = getTag(i, DM5_ORI_LIST, DM5_CH_LIST);
                     if (tran_tag) {
                         getTag(tran_tag, GENRE_LIST_CH, GENRE_LIST);
                     }

@@ -3542,7 +3542,7 @@ exports.default = {
                         }
                         var newTag = new _set2.default();
                         setTag.forEach(function (i) {
-                            return newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i);
+                            return newTag.add(_constants.GENRE_LIST.includes(i) ? _constants.GENRE_LIST_CH[_constants.GENRE_LIST.indexOf(i)] : i);
                         });
                         return [json_data['data']['movie']['title'], newTag, new _set2.default(), 'yify', json_data['data']['movie']['small_cover_image'], url];
                     });
@@ -3621,8 +3621,8 @@ exports.default = {
                     });
                     var newTag = new _set2.default();
                     tags.forEach(function (t) {
-                        var index = TRANS_LIST.indexOf(t);
-                        newTag.add(index !== -1 ? TRANS_LIST_CH[index] : t);
+                        var index = _constants.DM5_ORI_LIST.indexOf(t);
+                        newTag.add(index !== -1 ? _constants.DM5_CH_LIST[index] : t);
                     });
                     return [img.attribs.alt, newTag, new _set2.default(), 'kubo', img.attribs.src, url];
                 });
@@ -3686,7 +3686,7 @@ exports.default = {
                     }
                     var newTag = new _set2.default();
                     setTag.forEach(function (i) {
-                        return newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i);
+                        return newTag.add(_constants.DM5_ORI_LIST.includes(i) ? _constants.DM5_CH_LIST[_constants.DM5_ORI_LIST.indexOf(i)] : i);
                     });
                     return [name, newTag, new _set2.default(), 'bilibili', thumb, url];
                 });

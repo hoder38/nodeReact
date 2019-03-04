@@ -2400,7 +2400,7 @@ export default {
                         json_data['data']['movie']['cast'].forEach(i => setTag.add(i.name));
                     }
                     let newTag = new Set();
-                    setTag.forEach(i => newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i));
+                    setTag.forEach(i => newTag.add(GENRE_LIST.includes(i) ? GENRE_LIST_CH[GENRE_LIST.indexOf(i)] : i));
                     return [
                         json_data['data']['movie']['title'],
                         newTag,
@@ -2479,8 +2479,8 @@ export default {
                 });
                 let newTag = new Set();
                 tags.forEach(t => {
-                    const index = TRANS_LIST.indexOf(t);
-                    newTag.add((index !== -1) ? TRANS_LIST_CH[index] : t);
+                    const index = DM5_ORI_LIST.indexOf(t);
+                    newTag.add((index !== -1) ? DM5_CH_LIST[index] : t);
                 });
                 return [
                     img.attribs.alt,
@@ -2545,7 +2545,7 @@ export default {
                     thumb = findTag(body, 'img')[0].attribs.src;
                 }
                 let newTag = new Set();
-                setTag.forEach(i => newTag.add(TRANS_LIST.includes(i) ? TRANS_LIST_CH[TRANS_LIST.indexOf(i)] : i));
+                setTag.forEach(i => newTag.add(DM5_ORI_LIST.includes(i) ? DM5_CH_LIST[DM5_ORI_LIST.indexOf(i)] : i));
                 return [
                     name,
                     newTag,

@@ -2072,7 +2072,7 @@ var completeMimeTag = exports.completeMimeTag = function completeMimeTag(add) {
                     console.log('end');
                 } else {
                     items[index].tags.forEach(function (i) {
-                        var tran_tag = getTag(i, _constants.TRANS_LIST, _constants.TRANS_LIST_CH);
+                        var tran_tag = getTag(i, _constants.DM5_ORI_LIST, _constants.DM5_CH_LIST);
                         if (tran_tag) {
                             getTag(tran_tag, _constants.GENRE_LIST_CH, _constants.GENRE_LIST);
                         }
