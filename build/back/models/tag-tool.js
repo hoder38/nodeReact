@@ -591,7 +591,6 @@ function process(collection) {
                             }
                         } else {
                             query_term = s;
-                            comic_type = -1;
                         }
                     }
                 } else if (index.index === 14 || index.index === 22) {
