@@ -3471,7 +3471,7 @@ export default {
                     })
                     return {
                         remain: Math.floor(remain * 100) / 100,
-                        total: Math.floor(totalPrice + remain * 100) / 100,
+                        total: Math.floor((totalPrice + remain) * 100) / 100,
                         stock,
                     };
                 } else {
