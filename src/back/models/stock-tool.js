@@ -3458,6 +3458,7 @@ export default {
             }
             const recurGet = index => {
                 if (index >= items.length) {
+                    totalPrice = Math.floor(totalPrice * 100) / 100;
                     stock.unshift({
                         name: totalName,
                         type: totalType,
@@ -3515,6 +3516,7 @@ export default {
                             if (cmd[1] === items[i].index) {
                                 is_find = true;
                                 if (!cmd[3]) {
+                                    const orig_count = items[i].count;
                                     items[i].count += +cmd[2];
                                     if (items[i].count > 0) {
                                         return getStockPrice('twse', items[i].index).then(price => {
@@ -3532,12 +3534,14 @@ export default {
                                             }
                                         });
                                     } else {
-                                        remain -= items[i].cost;
-                                        updateTotal[totalId] = {cost: remain};
-                                        if (items[i]._id) {
-                                            removeTotal.push(items[i]._id);
-                                        }
-                                        items.splice(i, 1);
+                                        return getStockPrice('twse', items[i].index).then(price => {
+                                            remain += (price * orig_count);
+                                            updateTotal[totalId] = {cost: remain};
+                                            if (items[i]._id) {
+                                                removeTotal.push(items[i]._id);
+                                            }
+                                            items.splice(i, 1);
+                                        });
                                     }
                                 } else if (cmd[4]) {
                                     items[i].count = +cmd[2];

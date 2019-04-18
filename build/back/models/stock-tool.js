@@ -3957,6 +3957,7 @@ exports.default = {
             };
             var recurGet = function recurGet(index) {
                 if (index >= items.length) {
+                    totalPrice = Math.floor(totalPrice * 100) / 100;
                     stock.unshift({
                         name: totalName,
                         type: totalType,
@@ -4041,32 +4042,45 @@ exports.default = {
                             if (cmd[1] === items[i].index) {
                                 is_find = true;
                                 if (!cmd[3]) {
-                                    items[i].count += +cmd[2];
-                                    if (items[i].count > 0) {
-                                        return {
-                                            v: getStockPrice('twse', items[i].index).then(function (price) {
-                                                var new_cost = Math.floor(price * +cmd[2] * 100) / 100;
-                                                items[i].cost += new_cost;
-                                                remain -= new_cost;
-                                                updateTotal[totalId] = { cost: remain };
-                                                if (items[i]._id) {
-                                                    if (updateTotal[items[i]._id]) {
-                                                        updateTotal[items[i]._id].count = items[i].count;
-                                                        updateTotal[items[i]._id].cost = items[i].cost;
-                                                    } else {
-                                                        updateTotal[items[i]._id] = { count: items[i].count, cost: items[i].cost };
-                                                    }
+                                    var _ret7 = function () {
+                                        var orig_count = items[i].count;
+                                        items[i].count += +cmd[2];
+                                        if (items[i].count > 0) {
+                                            return {
+                                                v: {
+                                                    v: getStockPrice('twse', items[i].index).then(function (price) {
+                                                        var new_cost = Math.floor(price * +cmd[2] * 100) / 100;
+                                                        items[i].cost += new_cost;
+                                                        remain -= new_cost;
+                                                        updateTotal[totalId] = { cost: remain };
+                                                        if (items[i]._id) {
+                                                            if (updateTotal[items[i]._id]) {
+                                                                updateTotal[items[i]._id].count = items[i].count;
+                                                                updateTotal[items[i]._id].cost = items[i].cost;
+                                                            } else {
+                                                                updateTotal[items[i]._id] = { count: items[i].count, cost: items[i].cost };
+                                                            }
+                                                        }
+                                                    })
                                                 }
-                                            })
-                                        };
-                                    } else {
-                                        remain -= items[i].cost;
-                                        updateTotal[totalId] = { cost: remain };
-                                        if (items[i]._id) {
-                                            removeTotal.push(items[i]._id);
+                                            };
+                                        } else {
+                                            return {
+                                                v: {
+                                                    v: getStockPrice('twse', items[i].index).then(function (price) {
+                                                        remain += price * orig_count;
+                                                        updateTotal[totalId] = { cost: remain };
+                                                        if (items[i]._id) {
+                                                            removeTotal.push(items[i]._id);
+                                                        }
+                                                        items.splice(i, 1);
+                                                    })
+                                                }
+                                            };
                                         }
-                                        items.splice(i, 1);
-                                    }
+                                    }();
+
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                 } else if (cmd[4]) {
                                     items[i].count = +cmd[2];
                                     if (items[i].count > 0) {
@@ -4264,7 +4278,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret7 = function () {
+    var _ret8 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -4296,7 +4310,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -4364,7 +4378,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret8 = function () {
+            var _ret9 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -4411,7 +4425,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
