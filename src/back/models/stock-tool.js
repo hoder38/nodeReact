@@ -3470,8 +3470,8 @@ export default {
                         current: totalPrice,
                     })
                     return {
-                        remain: remain,
-                        total: totalPrice + remain,
+                        remain: Math.floor(remain * 100) / 100,
+                        total: Math.floor(totalPrice + remain * 100) / 100,
                         stock,
                     };
                 } else {
