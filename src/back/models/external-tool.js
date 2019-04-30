@@ -1851,11 +1851,6 @@ export default {
                                 const a = findTag(h, 'a')[0];
                                 if (a) {
                                     const name = findTag(a)[0];
-                                    if (name.match(/劇集列表/)) {
-                                        url = a.attribs.href;
-                                        console.log(url);
-                                        return lovetvGetlist();
-                                    }
                                     if (!name.match(/Synopsis$/i)) {
                                         list.splice(0, 0, {
                                             name,
@@ -1883,16 +1878,11 @@ export default {
                         }
                     }
                 } else {
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tr').forEach(t => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                         const h = findTag(findTag(t, 'td')[0], 'h3')[0];
                         if (h) {
                             const a = findTag(h, 'a')[0];
                             const name = findTag(a)[0];
-                            if (name.match(/劇集列表/)) {
-                                url = a.attribs.href;
-                                console.log(url);
-                                return lovetvGetlist();
-                            }
                             if (!name.match(/Synopsis$/i)) {
                                 list.splice(0, 0, {
                                     name,

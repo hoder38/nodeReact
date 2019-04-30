@@ -2710,11 +2710,6 @@ exports.default = {
                                             var a = (0, _utility.findTag)(h, 'a')[0];
                                             if (a) {
                                                 var name = (0, _utility.findTag)(a)[0];
-                                                if (name.match(/劇集列表/)) {
-                                                    url = a.attribs.href;
-                                                    console.log(url);
-                                                    return lovetvGetlist();
-                                                }
                                                 if (!name.match(/Synopsis$/i)) {
                                                     list.splice(0, 0, {
                                                         name: name,
@@ -2763,16 +2758,11 @@ exports.default = {
                                     }
                                 }
                             } else {
-                                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tr').forEach(function (t) {
+                                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
                                     var h = (0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'h3')[0];
                                     if (h) {
                                         var _a2 = (0, _utility.findTag)(h, 'a')[0];
                                         var _name = (0, _utility.findTag)(_a2)[0];
-                                        if (_name.match(/劇集列表/)) {
-                                            url = _a2.attribs.href;
-                                            console.log(url);
-                                            return lovetvGetlist();
-                                        }
                                         if (!_name.match(/Synopsis$/i)) {
                                             list.splice(0, 0, {
                                                 name: _name,
