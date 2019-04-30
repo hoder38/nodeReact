@@ -2699,15 +2699,47 @@ exports.default = {
                     var lovetvGetlist = function lovetvGetlist() {
                         return (0, _apiTool2.default)('url', url).then(function (raw_data) {
                             var list = [];
-                            var outer = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'Blog1')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer');
-                            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(outer[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-                            if (table) {
-                                (0, _utility.findTag)(table, 'tr').forEach(function (t) {
-                                    var h = (0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'h3')[0];
-                                    if (h) {
-                                        var a = (0, _utility.findTag)(h, 'a')[0];
-                                        if (a) {
+                            var content = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
+                            if (content) {
+                                var outer = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'Blog1')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer');
+                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(outer[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+                                if (table) {
+                                    (0, _utility.findTag)(table, 'tr').forEach(function (t) {
+                                        var h = (0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'h3')[0];
+                                        if (h) {
+                                            var a = (0, _utility.findTag)(h, 'a')[0];
+                                            if (a) {
+                                                var name = (0, _utility.findTag)(a)[0];
+                                                if (name.match(/劇集列表/)) {
+                                                    url = a.attribs.href;
+                                                    console.log(url);
+                                                    return lovetvGetlist();
+                                                }
+                                                if (!name.match(/Synopsis$/i)) {
+                                                    list.splice(0, 0, {
+                                                        name: name,
+                                                        url: a.attribs.href
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    var _iteratorNormalCompletion22 = true;
+                                    var _didIteratorError22 = false;
+                                    var _iteratorError22 = undefined;
+
+                                    try {
+                                        for (var _iterator22 = (0, _getIterator3.default)(outer), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                                            var o = _step22.value;
+
+                                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
                                             var name = (0, _utility.findTag)(a)[0];
+                                            if (name.match(/劇集列表/)) {
+                                                url = a.attribs.href;
+                                                console.log(url);
+                                                return lovetvGetlist();
+                                            }
                                             if (!name.match(/Synopsis$/i)) {
                                                 list.splice(0, 0, {
                                                     name: name,
@@ -2715,45 +2747,40 @@ exports.default = {
                                                 });
                                             }
                                         }
-                                    }
-                                });
-                            } else {
-                                var _iteratorNormalCompletion22 = true;
-                                var _didIteratorError22 = false;
-                                var _iteratorError22 = undefined;
-
-                                try {
-                                    for (var _iterator22 = (0, _getIterator3.default)(outer), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                        var o = _step22.value;
-
-                                        var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
-                                        var name = (0, _utility.findTag)(a)[0];
-                                        if (name.match(/劇集列表/)) {
-                                            url = a.attribs.href;
-                                            console.log(url);
-                                            return lovetvGetlist();
-                                        }
-                                        if (!name.match(/Synopsis$/i)) {
-                                            list.splice(0, 0, {
-                                                name: name,
-                                                url: a.attribs.href
-                                            });
-                                        }
-                                    }
-                                } catch (err) {
-                                    _didIteratorError22 = true;
-                                    _iteratorError22 = err;
-                                } finally {
-                                    try {
-                                        if (!_iteratorNormalCompletion22 && _iterator22.return) {
-                                            _iterator22.return();
-                                        }
+                                    } catch (err) {
+                                        _didIteratorError22 = true;
+                                        _iteratorError22 = err;
                                     } finally {
-                                        if (_didIteratorError22) {
-                                            throw _iteratorError22;
+                                        try {
+                                            if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                                                _iterator22.return();
+                                            }
+                                        } finally {
+                                            if (_didIteratorError22) {
+                                                throw _iteratorError22;
+                                            }
                                         }
                                     }
                                 }
+                            } else {
+                                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tr').forEach(function (t) {
+                                    var h = (0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'h3')[0];
+                                    if (h) {
+                                        var _a2 = (0, _utility.findTag)(h, 'a')[0];
+                                        var _name = (0, _utility.findTag)(_a2)[0];
+                                        if (_name.match(/劇集列表/)) {
+                                            url = _a2.attribs.href;
+                                            console.log(url);
+                                            return lovetvGetlist();
+                                        }
+                                        if (!_name.match(/Synopsis$/i)) {
+                                            list.splice(0, 0, {
+                                                name: _name,
+                                                url: _a2.attribs.href
+                                            });
+                                        }
+                                    }
+                                });
                             }
                             var is_end = false;
                             var _iteratorNormalCompletion23 = true;
@@ -2764,7 +2791,7 @@ exports.default = {
                                 for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
                                     var _i = _step23.value;
 
-                                    if (_i.url.match(/大結局/)) {
+                                    if (_i.name.match(/大結局/)) {
                                         is_end = true;
                                         break;
                                     }

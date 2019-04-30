@@ -1840,44 +1840,71 @@ export default {
             prefix = prefix[1];
             const lovetvGetlist = () => Api('url', url).then(raw_data => {
                 let list = [];
-                const outer = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'Blog1')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer');
-                const table = findTag(findTag(findTag(findTag(findTag(outer[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
-                if (table) {
-                    findTag(table, 'tr').forEach(t => {
+                const content = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
+                if (content) {
+                    const outer = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(content, 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0], 'div', 'column-center-outer')[0], 'div', 'column-center-inner')[0], 'div', 'main')[0], 'div', 'Blog1')[0], 'div', 'blog-posts hfeed')[0], 'div', 'date-outer');
+                    const table = findTag(findTag(findTag(findTag(findTag(outer[0], 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'div', 'post-body entry-content')[0], 'table')[0];
+                    if (table) {
+                        findTag(table, 'tr').forEach(t => {
+                            const h = findTag(findTag(t, 'td')[0], 'h3')[0];
+                            if (h) {
+                                const a = findTag(h, 'a')[0];
+                                if (a) {
+                                    const name = findTag(a)[0];
+                                    if (name.match(/劇集列表/)) {
+                                        url = a.attribs.href;
+                                        console.log(url);
+                                        return lovetvGetlist();
+                                    }
+                                    if (!name.match(/Synopsis$/i)) {
+                                        list.splice(0, 0, {
+                                            name,
+                                            url: a.attribs.href,
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        for (let o of outer) {
+                            const a = findTag(findTag(findTag(findTag(findTag(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
+                            const name = findTag(a)[0];
+                            if (name.match(/劇集列表/)) {
+                                url = a.attribs.href;
+                                console.log(url);
+                                return lovetvGetlist();
+                            }
+                            if (!name.match(/Synopsis$/i)) {
+                                list.splice(0, 0, {
+                                    name,
+                                    url: a.attribs.href,
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'main')[0], 'div', 'container')[0], 'div', 'content')[0], 'div')[2], 'div', 'entry-content')[0], 'table')[0], 'tr').forEach(t => {
                         const h = findTag(findTag(t, 'td')[0], 'h3')[0];
                         if (h) {
                             const a = findTag(h, 'a')[0];
-                            if (a) {
-                                const name = findTag(a)[0];
-                                if (!name.match(/Synopsis$/i)) {
-                                    list.splice(0, 0, {
-                                        name,
-                                        url: a.attribs.href,
-                                    });
-                                }
+                            const name = findTag(a)[0];
+                            if (name.match(/劇集列表/)) {
+                                url = a.attribs.href;
+                                console.log(url);
+                                return lovetvGetlist();
+                            }
+                            if (!name.match(/Synopsis$/i)) {
+                                list.splice(0, 0, {
+                                    name,
+                                    url: a.attribs.href,
+                                });
                             }
                         }
                     });
-                } else {
-                    for (let o of outer) {
-                        const a = findTag(findTag(findTag(findTag(findTag(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
-                        const name = findTag(a)[0];
-                        if (name.match(/劇集列表/)) {
-                            url = a.attribs.href;
-                            console.log(url);
-                            return lovetvGetlist();
-                        }
-                        if (!name.match(/Synopsis$/i)) {
-                            list.splice(0, 0, {
-                                name,
-                                url: a.attribs.href,
-                            });
-                        }
-                    }
                 }
                 let is_end = false;
                 for (let i of list) {
-                    if (i.url.match(/大結局/)) {
+                    if (i.name.match(/大結局/)) {
                         is_end = true;
                         break;
                     }
