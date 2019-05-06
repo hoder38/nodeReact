@@ -821,36 +821,31 @@ exports.default = {
                     return list;
                 });
             case 'bea':
-                return (0, _apiTool2.default)('url', 'http://www.bea.gov/news/current-releases').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.bea.gov/news/current-releases').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
-                    var docDate = date.getMonth() + 1 + '/' + date.getDate() + '/' + date.getFullYear() % 100;
+                    var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div');
+                    var trs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                     var _iteratorNormalCompletion2 = true;
                     var _didIteratorError2 = false;
                     var _iteratorError2 = undefined;
 
                     try {
-                        for (var _iterator2 = (0, _getIterator3.default)(divs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                            var div = _step2.value;
+                        for (var _iterator2 = (0, _getIterator3.default)(trs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                            var tr = _step2.value;
 
-                            if ((0, _utility.findTag)((0, _utility.findTag)(div, 'h3')[0])[0] === _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getFullYear()) {
-                                (0, _utility.findTag)((0, _utility.findTag)(div, 'ul')[0], 'li').forEach(function (l) {
-                                    if ((0, _utility.findTag)((0, _utility.findTag)(l, 'span', 'date-published')[0])[0] === '- ' + docDate) {
-                                        var a = (0, _utility.findTag)((0, _utility.findTag)(l, 'span', 'release-name')[0], 'a')[0];
-                                        list.push({
-                                            url: (0, _utility.addPre)(a.attribs.href, 'http://www.bea.gov'),
-                                            name: (0, _utility.toValidName)((0, _utility.findTag)(a)[0]),
-                                            date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
-                                        });
-                                    }
+                            if ((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[1])[0].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
+                                var a = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'a')[0];
+                                list.push({
+                                    url: (0, _utility.addPre)(a.attribs.href, 'http://www.bea.gov'),
+                                    name: (0, _utility.toValidName)((0, _utility.findTag)(a)[0]),
+                                    date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                                 });
-                                break;
                             }
                         }
                     } catch (err) {

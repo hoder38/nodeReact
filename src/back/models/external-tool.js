@@ -684,29 +684,24 @@ export default {
                 return list;
             });
             case 'bea':
-            return Api('url', 'http://www.bea.gov/news/current-releases').then(raw_data => {
+            return Api('url', 'https://www.bea.gov/news/current-releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()%100}`;
+                const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div');
-                for (let div of divs) {
-                    if (findTag(findTag(div, 'h3')[0])[0] === `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`) {
-                        findTag(findTag(div, 'ul')[0], 'li').forEach(l => {
-                            if (findTag(findTag(l, 'span', 'date-published')[0])[0] === `- ${docDate}`) {
-                                const a = findTag(findTag(l, 'span', 'release-name')[0], 'a')[0];
-                                list.push({
-                                    url: addPre(a.attribs.href, 'http://www.bea.gov'),
-                                    name: toValidName(findTag(a)[0]),
-                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                                });
-                            }
+                const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                for (let tr of trs) {
+                    if (findTag(findTag(tr, 'td')[1])[0].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
+                        const a = findTag(findTag(tr, 'td')[0], 'a')[0];
+                        list.push({
+                            url: addPre(a.attribs.href, 'http://www.bea.gov'),
+                            name: toValidName(findTag(a)[0]),
+                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
-                        break;
                     }
                 }
                 return list;
