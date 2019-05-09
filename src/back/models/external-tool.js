@@ -817,7 +817,7 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div', 'layout-container')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content inner-content-page')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div', 'views-row');
+                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content inner-content-page')[0], 'div')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
                 for (let i in divs) {
                     const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
                     const a = findTag(div, 'a')[0];
