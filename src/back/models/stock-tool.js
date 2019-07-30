@@ -1691,13 +1691,13 @@ const getTwseXml = (stockCode, year, quarter, filePath) => {
         functionName: (year > 2012) ? 't164sb01' : 't147sb02',
         report_id: (year > 2012) ? 'C' : 'B',
     };
-    return Api('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath}).catch(err => {
+    return Api('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath}).catch(err => {
         if (err.code === 'HPE_INVALID_CONSTANT') {
             post.report_id = (post.report_id === 'C') ? 'B' : 'A';
-            return Api('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath}).catch(err => {
+            return Api('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath}).catch(err => {
                 if (err.code === 'HPE_INVALID_CONSTANT') {
                     post.report_id = 'A';
-                    return Api('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath});
+                    return Api('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', {post, filePath});
                 } else {
                     return handleError(err);
                 }
@@ -1740,7 +1740,7 @@ const trans_tag = (item, append) => {
 const getBasicStockData = (type, index) => {
     switch(type) {
         case 'twse':
-        return Api('url', `http://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
+        return Api('url', `https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
             let i = 0;
             findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'table')[0], 'table', 'zoom')[0], 'tr')[1], 'td').forEach(d => {
@@ -2624,7 +2624,7 @@ export default {
             }
             switch(items[0].type) {
                 case 'twse':
-                const getTable = index => Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
+                const getTable = index => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
                     const table = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                     if (!table) {
                         return handleError(new HoError('heavy query'));
@@ -2774,7 +2774,7 @@ export default {
                             };
                             return rest_predict(index);
                         } else {
-                            const getTable = tIndex => Api('url', `http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
+                            const getTable = tIndex => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
                                 if (raw_data.length > 500) {
                                     const table = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
                                     if (!table) {
@@ -3034,7 +3034,7 @@ export default {
                         console.log('done');
                         return [interval_data, ret_str];
                     }
-                    const getTpexList = () => Api('url', `http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
+                    const getTpexList = () => Api('url', `https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
                         const json_data = getJson(raw_data);
                         if (json_data === false) {
                             return handleError(new HoError('json parse error!!!'));
@@ -3051,7 +3051,7 @@ export default {
                         }
                         return [2, {high, low, vol}];
                     });
-                    const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => Api('url', `http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
+                    const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => Api('url', `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
                         let high = [];
                         let low = [];
                         let vol = [];
@@ -3710,7 +3710,7 @@ export const getStockList = (type, stocktype=0) => {
         case 'twse':
         //1: sii(odd) 2: sii(even)
         //3: otc(odd) 4: odd(even)
-        const getList = stocktype => Api('url', `http://mops.twse.com.tw/mops/web/ajax_t51sb01?encodeURIComponent=1&step=1&firstin=1&code=&TYPEK=${(stocktype === 3 || stocktype  === 4) ? 'otc' : 'sii'}`).then(raw_data => {
+        const getList = stocktype => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t51sb01?encodeURIComponent=1&step=1&firstin=1&code=&TYPEK=${(stocktype === 3 || stocktype  === 4) ? 'otc' : 'sii'}`).then(raw_data => {
             return findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[1], 'tr', (stocktype === 2 || stocktype === 4) ? 'even' : 'odd').map(t => findTag(findTag(t, 'td')[0])[0].match(/\d+/)[0]);
         });
         return stocktype ? getList(stocktype) : getList(1).then(list => getList(2).then(list2 => {
@@ -3725,7 +3725,7 @@ export const getStockList = (type, stocktype=0) => {
     }
 }
 
-const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
+const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
     const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
     if (!center) {
         console.log(raw_data);
@@ -3750,10 +3750,10 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `http://doc.twse.com
     }
     console.log(filename);
     if (getExtname(filename).ext === '.zip') {
-        return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}, {filePath}).then(() => filename);
+        return Api('url', `https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'https://doc.twse.com.tw/'}, {filePath}).then(() => filename);
     } else {
-        return Api('url', `http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'http://doc.twse.com.tw/'}).then(raw_data => {
-            return Api('url', addPre(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), {filePath}).then(() => filename);
+        return Api('url', `https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
+            return Api('url', addPre(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'https://doc.twse.com.tw'), {filePath}).then(() => filename);
         });
     }
 });

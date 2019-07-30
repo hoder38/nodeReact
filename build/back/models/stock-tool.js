@@ -1771,13 +1771,13 @@ var getTwseXml = function getTwseXml(stockCode, year, quarter, filePath) {
         functionName: year > 2012 ? 't164sb01' : 't147sb02',
         report_id: year > 2012 ? 'C' : 'B'
     };
-    return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath }).catch(function (err) {
+    return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath }).catch(function (err) {
         if (err.code === 'HPE_INVALID_CONSTANT') {
             post.report_id = post.report_id === 'C' ? 'B' : 'A';
-            return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath }).catch(function (err) {
+            return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath }).catch(function (err) {
                 if (err.code === 'HPE_INVALID_CONSTANT') {
                     post.report_id = 'A';
-                    return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath });
+                    return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/server-java/FileDownLoad', { post: post, filePath: filePath });
                 } else {
                     return (0, _utility.handleError)(err);
                 }
@@ -1820,7 +1820,7 @@ var trans_tag = function trans_tag(item, append) {
 var getBasicStockData = function getBasicStockData(type, index) {
     switch (type) {
         case 'twse':
-            return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=' + index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=' + index).then(function (raw_data) {
+            return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=' + index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=' + index).then(function (raw_data) {
                 var result = { stock_location: ['tw', '台灣', '臺灣'] };
                 var i = 0;
                 (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'table')[0], 'table', 'zoom')[0], 'tr')[1], 'td').forEach(function (d) {
@@ -2838,7 +2838,7 @@ exports.default = {
                 switch (items[0].type) {
                     case 'twse':
                         var getTable = function getTable(index) {
-                            return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=' + items[0].index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=' + items[0].index).then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=' + items[0].index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=' + items[0].index).then(function (raw_data) {
                                 var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                                 if (!table) {
                                     return (0, _utility.handleError)(new _utility.HoError('heavy query'));
@@ -3015,7 +3015,7 @@ exports.default = {
                             } else {
                                 var _ret5 = function () {
                                     var getTable = function getTable(tIndex) {
-                                        return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
+                                        return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
                                             if (raw_data.length > 500) {
                                                 var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
                                                 if (!table) {
@@ -3401,7 +3401,7 @@ exports.default = {
                             return [interval_data, ret_str];
                         };
                         var getTpexList = function getTpexList() {
-                            return (0, _apiTool2.default)('url', 'http://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
                                 var json_data = (0, _utility.getJson)(raw_data);
                                 if (json_data === false) {
                                     return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'));
@@ -3446,7 +3446,7 @@ exports.default = {
                                     return resolve();
                                 }, 5000);
                             }).then(function () {
-                                return (0, _apiTool2.default)('url', 'http://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=' + year + month_str + '01&stockNo=' + items[0].index).then(function (raw_data) {
+                                return (0, _apiTool2.default)('url', 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=' + year + month_str + '01&stockNo=' + items[0].index).then(function (raw_data) {
                                     var high = [];
                                     var low = [];
                                     var vol = [];
@@ -4284,7 +4284,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
                 //1: sii(odd) 2: sii(even)
                 //3: otc(odd) 4: odd(even)
                 var getList = function getList(stocktype) {
-                    return (0, _apiTool2.default)('url', 'http://mops.twse.com.tw/mops/web/ajax_t51sb01?encodeURIComponent=1&step=1&firstin=1&code=&TYPEK=' + (stocktype === 3 || stocktype === 4 ? 'otc' : 'sii')).then(function (raw_data) {
+                    return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t51sb01?encodeURIComponent=1&step=1&firstin=1&code=&TYPEK=' + (stocktype === 3 || stocktype === 4 ? 'otc' : 'sii')).then(function (raw_data) {
                         return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table')[1], 'tr', stocktype === 2 || stocktype === 4 ? 'even' : 'odd').map(function (t) {
                             return (0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0])[0].match(/\d+/)[0];
                         });
@@ -4314,7 +4314,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
-    return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=' + index + '&year=' + (year - 1911) + '&seamon=&mtype=F&dtype=F04', { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
+    return (0, _apiTool2.default)('url', 'https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=' + index + '&year=' + (year - 1911) + '&seamon=&mtype=F&dtype=F04', { referer: 'https://doc.twse.com.tw/' }).then(function (raw_data) {
         var center = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
         if (!center) {
             console.log(raw_data);
@@ -4361,12 +4361,12 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
         }
         console.log(filename);
         if ((0, _mime.getExtname)(filename).ext === '.zip') {
-            return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }, { filePath: filePath }).then(function () {
+            return (0, _apiTool2.default)('url', 'https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'https://doc.twse.com.tw/' }, { filePath: filePath }).then(function () {
                 return filename;
             });
         } else {
-            return (0, _apiTool2.default)('url', 'http://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'http://doc.twse.com.tw/' }).then(function (raw_data) {
-                return (0, _apiTool2.default)('url', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'http://doc.twse.com.tw'), { filePath: filePath }).then(function () {
+            return (0, _apiTool2.default)('url', 'https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=' + index + '&filename=' + filename, { referer: 'https://doc.twse.com.tw/' }).then(function (raw_data) {
+                return (0, _apiTool2.default)('url', (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'a')[0].attribs.href, 'https://doc.twse.com.tw'), { filePath: filePath }).then(function () {
                     return filename;
                 });
             });
