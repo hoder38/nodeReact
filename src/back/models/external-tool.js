@@ -19,7 +19,7 @@ const opencc = new OpenCC('s2t.json');
 const dramaList = [
     'http://tw01.lovetvshow.info/2013/05/drama-list.html',
     'http://cn.lovetvshow.info/2012/05/drama-list.html',
-    'http://kr14.vslovetv.com/',
+    'http://vslovetv.com/',
     'http://jp03.jplovetv.com/2012/08/drama-list.html',
     'http://www.lovetvshow.com/',
     'http://krsp1.vslovetv.com/',

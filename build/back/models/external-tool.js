@@ -89,7 +89,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr14.vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp1.vslovetv.com/'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp1.vslovetv.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
