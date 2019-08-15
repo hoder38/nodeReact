@@ -876,7 +876,7 @@ exports.default = {
                     console.log(docDate);
                     var docStr = 'FOR RELEASE: ' + docDate;
                     var list = [];
-                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
+                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
                         list.push({
                             url: 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1',
                             name: (0, _utility.toValidName)('Manufacturing ISM'),
@@ -884,7 +884,7 @@ exports.default = {
                         });
                     }
                     return (0, _apiTool2.default)('url', 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1').then(function (raw_data) {
-                        if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
+                        if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
                             list.push({
                                 url: 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1',
                                 name: (0, _utility.toValidName)('Non-Manufacturing ISM'),
@@ -904,12 +904,18 @@ exports.default = {
                     var docDate = date.getDate() + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + '. ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container tcb-wrapper')[0], 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0] === docDate) {
-                        list.push({
-                            url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
-                            name: (0, _utility.toValidName)('Consumer Confidence Survey'),
-                            date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
-                        });
+                    var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
+                    if (body) {
+                        var con = (0, _utility.findTag)(body, 'div', 'container tcb-wrapper')[0];
+                        if (con) {
+                            if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(con, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0] === docDate) {
+                                list.push({
+                                    url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
+                                    name: (0, _utility.toValidName)('Consumer Confidence Survey'),
+                                    date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
+                                });
+                            }
+                        }
                     }
                     return (0, _apiTool2.default)('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(function (raw_data) {
                         docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
@@ -925,7 +931,7 @@ exports.default = {
                     });
                 });
             case 'sem':
-                return (0, _apiTool2.default)('url', 'http://www.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'http://www1.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));

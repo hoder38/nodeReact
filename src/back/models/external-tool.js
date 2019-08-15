@@ -717,7 +717,7 @@ export default {
                 console.log(docDate);
                 const docStr = `FOR RELEASE: ${docDate}`;
                 let list = [];
-                if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
+                if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
                     list.push({
                         url: 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1',
                         name: toValidName('Manufacturing ISM'),
@@ -725,7 +725,7 @@ export default {
                     });
                 }
                 return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1').then(raw_data => {
-                    if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'bodywrapper')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
+                    if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
                         list.push({
                             url: 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1',
                             name: toValidName('Non-Manufacturing ISM'),
@@ -745,12 +745,18 @@ export default {
                 let docDate = `${date.getDate()} ${MONTH_SHORTS[date.getMonth()]}. ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container tcb-wrapper')[0], 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0] === docDate) {
-                    list.push({
-                        url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
-                        name: toValidName('Consumer Confidence Survey'),
-                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                    });
+                const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                if (body) {
+                    const con = findTag(body, 'div', 'container tcb-wrapper')[0];
+                    if (con) {
+                        if (findTag(findTag(findTag(findTag(con, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0] === docDate) {
+                            list.push({
+                                url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
+                                name: toValidName('Consumer Confidence Survey'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                    }
                 }
                 return Api('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -766,7 +772,7 @@ export default {
                 });
             });
             case 'sem':
-            return Api('url', 'http://www.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(raw_data => {
+            return Api('url', 'http://www1.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
