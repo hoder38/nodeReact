@@ -89,7 +89,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://vslovetv.com/', 'http://jp03.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp1.vslovetv.com/'];
+var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr.vslovetv.com/', 'http://jp.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp1.vslovetv.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
@@ -146,7 +146,7 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
                                     }
                                     var dramaType = dramaIndex === 4 ? null : (0, _utility.findTag)(h)[0];
                                     if (year) {
-                                        var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw01.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : dramaIndex === 3 ? (0, _utility.addPre)(a.attribs.href, 'http://jp03.jplovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://www.lovetvshow.com');
+                                        var url = dramaIndex === 0 ? (0, _utility.addPre)(a.attribs.href, 'http://tw01.lovetvshow.info') : dramaIndex === 1 ? (0, _utility.addPre)(a.attribs.href, 'http://cn.lovetvshow.info') : dramaIndex === 2 ? (0, _utility.addPre)(a.attribs.href, 'http://kr.vslovetv.com') : dramaIndex === 3 ? (0, _utility.addPre)(a.attribs.href, 'http://jp.jplovetv.com') : (0, _utility.addPre)(a.attribs.href, 'http://www.lovetvshow.com');
                                         list.push((0, _assign2.default)({
                                             name: name,
                                             url: url + '?max-results=300',
@@ -406,10 +406,13 @@ exports.default = {
                                 var d = (0, _utility.findTag)(t, 'td', 'forum_thread_post')[0];
                                 if (d) {
                                     var a = (0, _utility.findTag)(d, 'a')[0];
-                                    list.push({
-                                        name: (0, _utility.findTag)(a)[0],
-                                        url: (0, _utility.addPre)(a.attribs.href, 'https://eztv.ag')
-                                    });
+                                    var name = (0, _utility.findTag)(a)[0];
+                                    if (name !== 'Dark Mon£y') {
+                                        list.push({
+                                            name: name,
+                                            url: (0, _utility.addPre)(a.attribs.href, 'https://eztv.ag')
+                                        });
+                                    }
                                 }
                             });
                             console.log(list.length);
