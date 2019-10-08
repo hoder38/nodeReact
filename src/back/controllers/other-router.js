@@ -4,6 +4,7 @@ import { EXTENT_FILE_IP, EXTENT_FILE_PORT } from '../config'
 import Express from 'express'
 import { request as HttpsRequest } from 'https'
 import Mongo from '../models/mongo-tool'
+import { linebotParser } from '../models/line-tool'
 import { handleError, HoError, checkLogin } from '../util/utility'
 
 const router = Express.Router();
@@ -12,6 +13,8 @@ router.get('/refresh', function(req, res, next) {
     console.log('refresh');
     res.end('refresh');
 });
+
+router.post('/line', linebotParser);
 
 router.get('/s', function(req, res, next) {
     console.log('short');

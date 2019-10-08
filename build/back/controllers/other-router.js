@@ -20,6 +20,8 @@ var _mongoTool = require('../models/mongo-tool');
 
 var _mongoTool2 = _interopRequireDefault(_mongoTool);
 
+var _lineTool = require('../models/line-tool');
+
 var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -30,6 +32,8 @@ router.get('/refresh', function (req, res, next) {
     console.log('refresh');
     res.end('refresh');
 });
+
+router.post('/line', _lineTool.linebotParser);
 
 router.get('/s', function (req, res, next) {
     console.log('short');
