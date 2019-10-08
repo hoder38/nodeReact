@@ -1009,7 +1009,7 @@ export default {
                 return list;
             });
             case 'sta':
-            return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(raw_data => {
+            return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1024,7 +1024,7 @@ export default {
                     findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
                         if (findTag(findTag(t, 'td')[1])[0] === docDate) {
                             list.push({
-                                url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
+                                url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
                                 name: toValidName(title),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
@@ -1032,11 +1032,11 @@ export default {
                     });
                 }
                 findDoc('物價指數', raw_data);
-                return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(raw_data => {
+                return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(raw_data => {
                     findDoc('經濟成長率', raw_data);
-                    return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=527&CtUnit=1818&BaseDSD=29&MP=4').then(raw_data => {
+                    return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=527&CtUnit=1818&BaseDSD=29&MP=4').then(raw_data => {
                         findDoc('受僱員工薪資與生產力', raw_data);
-                        return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2294&CtUnit=1818&BaseDSD=29&mp=4').then(raw_data => {
+                        return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2294&CtUnit=1818&BaseDSD=29&mp=4').then(raw_data => {
                             const pDate = new Date(new Date(date).setMonth(date.getMonth()-1));
                             const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
                             console.log(docDate1);
@@ -1048,7 +1048,7 @@ export default {
                                 const a = findTag(l, 'a')[0];
                                 const dateMatch = findTag(a)[0].match(/^\d\d\d年\d\d?月/);
                                 if (dateMatch && dateMatch[0] === docDate1) {
-                                    link = addPre(a.attribs.href, 'http://www.stat.gov.tw');
+                                    link = addPre(a.attribs.href, 'https://www.stat.gov.tw');
                                     break;
                                 }
                             }
@@ -1069,7 +1069,7 @@ export default {
                 });
             });
             case 'mof':
-            return Api('url', 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(raw_data => {
+            return Api('url', 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(raw_data => {
                 const date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1084,7 +1084,7 @@ export default {
                         const name = findTag(findTag(findTag(a, 'div', 'p_title')[0], 'p', 'name')[0])[0];
                         if (name.match(/海關進出口貿易/)) {
                             list.push({
-                                url: addPre(a.attribs.href, 'http://www.mof.gov.tw'),
+                                url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
                                 name: toValidName(name),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
@@ -1095,7 +1095,7 @@ export default {
                 return list;
             });
             case 'moe':
-            return Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(raw_data => {
+            return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1133,7 +1133,7 @@ export default {
                         });
                     }
                 }) : Promise.resolve();
-                return industrial().then(() => Api('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
+                return industrial().then(() => Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
                     html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
                     if (!html) {
                         console.log(raw_data);
@@ -1164,7 +1164,7 @@ export default {
                 }));
             });
             case 'cbc':
-            return Api('url', 'http://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(raw_data => {
+            return Api('url', 'https://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1176,7 +1176,7 @@ export default {
                 findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(t => {
                     if (findTag(findTag(t, 'pubdate')[0])[0].match(/\d\d [a-zA-Z]+ \d\d\d\d/)[0] === docDate) {
                         list.push({
-                            url: addPre(findTag(t)[0], 'http://www.cbc.gov.tw'),
+                            url: addPre(findTag(t)[0], 'https://www.cbc.gov.tw'),
                             name: toValidName(findTag(findTag(t, 'title')[0])[0]),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
@@ -1449,7 +1449,7 @@ export default {
                     if (as.length > 0) {
                         for (let a of as) {
                             if (a.attribs.href.match(/\.pdf$/i)) {
-                                const url = addPre(a.attribs.href, 'http://www.stat.gov.tw');
+                                const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
                                 if (url.match(/87231699T64V6LTY/)) {
                                     continue;
                                 }
@@ -1473,7 +1473,7 @@ export default {
                             if (as.length > 0) {
                                 for (let a of as) {
                                     if (a.attribs.href.match(/\.pdf$/i)) {
-                                        const url = addPre(a.attribs.href, 'http://www.stat.gov.tw');
+                                        const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
                                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                                         console.log(driveName);
                                         return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -1493,12 +1493,12 @@ export default {
             });
             case 'mof':
             console.log(obj);
-            return Api('url', obj.url, {referer: 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281'}).then(raw_data => {
+            return Api('url', obj.url, {referer: 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281'}).then(raw_data => {
                 const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
                 for (let p of ps) {
                     const pc = findTag(p)[0];
                     if (pc && pc.match(/本文及附表/)) {
-                        const url = addPre(findTag(findTag(findTag(findTag(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                        const url = addPre(findTag(findTag(findTag(findTag(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
                         return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -1514,7 +1514,7 @@ export default {
                         const pcsp = findTag(sp)[0];
                         if (pcsp && pcsp.match(/本文及附表/)) {
                             const a = findTag(findTag(sp, 'strong')[0], 'a')[0];
-                            const url = a ? addPre(a.attribs.href, 'http://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                            const url = a ? addPre(a.attribs.href, 'https://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                             driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                             console.log(driveName);
                             return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -1564,7 +1564,7 @@ export default {
                     findTag(findTag(dlPdf, 'ul')[0], 'li').forEach(l => {
                         findTag(l, 'a').forEach(a => {
                             if (a.attribs.href.match(/\.(pdf|xlsx)$/i)) {
-                                downloadList.push(addPre(a.attribs.href, 'http://www.cbc.gov.tw'));
+                                downloadList.push(addPre(a.attribs.href, 'https://www.cbc.gov.tw'));
                             }
                         });
                     });

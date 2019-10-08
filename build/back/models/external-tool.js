@@ -1232,7 +1232,7 @@ exports.default = {
                     return list;
                 });
             case 'sta':
-                return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -1247,7 +1247,7 @@ exports.default = {
                         (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1])[0] === docDate) {
                                 list.push({
-                                    url: (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'a')[0].attribs.href, 'http://www.stat.gov.tw'),
+                                    url: (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
                                     name: (0, _utility.toValidName)(title),
                                     date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                                 });
@@ -1255,11 +1255,11 @@ exports.default = {
                         });
                     };
                     findDoc('物價指數', raw_data);
-                    return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
+                    return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                         findDoc('經濟成長率', raw_data);
-                        return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=527&CtUnit=1818&BaseDSD=29&MP=4').then(function (raw_data) {
+                        return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=527&CtUnit=1818&BaseDSD=29&MP=4').then(function (raw_data) {
                             findDoc('受僱員工薪資與生產力', raw_data);
-                            return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2294&CtUnit=1818&BaseDSD=29&mp=4').then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2294&CtUnit=1818&BaseDSD=29&mp=4').then(function (raw_data) {
                                 var pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
                                 var docDate1 = pDate.getFullYear() - 1911 + '\u5E74' + (pDate.getMonth() + 1) + '\u6708';
                                 console.log(docDate1);
@@ -1278,7 +1278,7 @@ exports.default = {
                                         var a = (0, _utility.findTag)(l, 'a')[0];
                                         var dateMatch = (0, _utility.findTag)(a)[0].match(/^\d\d\d年\d\d?月/);
                                         if (dateMatch && dateMatch[0] === docDate1) {
-                                            link = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
+                                            link = (0, _utility.addPre)(a.attribs.href, 'https://www.stat.gov.tw');
                                             break;
                                         }
                                     }
@@ -1314,7 +1314,7 @@ exports.default = {
                     });
                 });
             case 'mof':
-                return (0, _apiTool2.default)('url', 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -1336,7 +1336,7 @@ exports.default = {
                                 var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'p_title')[0], 'p', 'name')[0])[0];
                                 if (name.match(/海關進出口貿易/)) {
                                     list.push({
-                                        url: (0, _utility.addPre)(a.attribs.href, 'http://www.mof.gov.tw'),
+                                        url: (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw'),
                                         name: (0, _utility.toValidName)(name),
                                         date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                                     });
@@ -1362,7 +1362,7 @@ exports.default = {
                     return list;
                 });
             case 'moe':
-                return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -1426,7 +1426,7 @@ exports.default = {
                         }) : _promise2.default.resolve();
                     };
                     return industrial().then(function () {
-                        return (0, _apiTool2.default)('url', 'http://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
+                        return (0, _apiTool2.default)('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(function (raw_data) {
                             html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
                             if (!html) {
                                 console.log(raw_data);
@@ -1485,7 +1485,7 @@ exports.default = {
                     });
                 });
             case 'cbc':
-                return (0, _apiTool2.default)('url', 'http://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -1497,7 +1497,7 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(function (t) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(t, 'pubdate')[0])[0].match(/\d\d [a-zA-Z]+ \d\d\d\d/)[0] === docDate) {
                             list.push({
-                                url: (0, _utility.addPre)((0, _utility.findTag)(t)[0], 'http://www.cbc.gov.tw'),
+                                url: (0, _utility.addPre)((0, _utility.findTag)(t)[0], 'https://www.cbc.gov.tw'),
                                 name: (0, _utility.toValidName)((0, _utility.findTag)((0, _utility.findTag)(t, 'title')[0])[0]),
                                 date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                             });
@@ -1958,7 +1958,7 @@ exports.default = {
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
                                         var _ret7 = function () {
-                                            var url = (0, _utility.addPre)(a.attribs.href, 'http://www.stat.gov.tw');
+                                            var url = (0, _utility.addPre)(a.attribs.href, 'https://www.stat.gov.tw');
                                             if (url.match(/87231699T64V6LTY/)) {
                                                 return 'continue';
                                             }
@@ -2030,7 +2030,7 @@ exports.default = {
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
                                                     var _ret8 = function () {
-                                                        var url = (0, _utility.addPre)(_a.attribs.href, 'http://www.stat.gov.tw');
+                                                        var url = (0, _utility.addPre)(_a.attribs.href, 'https://www.stat.gov.tw');
                                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                                         console.log(driveName);
                                                         return {
@@ -2091,7 +2091,7 @@ exports.default = {
                 });
             case 'mof':
                 console.log(obj);
-                return (0, _apiTool2.default)('url', obj.url, { referer: 'http://www.mof.gov.tw/Pages/List.aspx?nodeid=281' }).then(function (raw_data) {
+                return (0, _apiTool2.default)('url', obj.url, { referer: 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281' }).then(function (raw_data) {
                     var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
                     var _iteratorNormalCompletion15 = true;
                     var _didIteratorError15 = false;
@@ -2104,7 +2104,7 @@ exports.default = {
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
                                 var _ret9 = function () {
-                                    var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                                    var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
                                     return {
@@ -2134,7 +2134,7 @@ exports.default = {
                                 if (pcsp && pcsp.match(/本文及附表/)) {
                                     var _ret10 = function () {
                                         var a = (0, _utility.findTag)((0, _utility.findTag)(sp, 'strong')[0], 'a')[0];
-                                        var url = a ? (0, _utility.addPre)(a.attribs.href, 'http://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'http://www.mof.gov.tw');
+                                        var url = a ? (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                         console.log(driveName);
                                         return {
@@ -2248,7 +2248,7 @@ exports.default = {
                         (0, _utility.findTag)((0, _utility.findTag)(dlPdf, 'ul')[0], 'li').forEach(function (l) {
                             (0, _utility.findTag)(l, 'a').forEach(function (a) {
                                 if (a.attribs.href.match(/\.(pdf|xlsx)$/i)) {
-                                    downloadList.push((0, _utility.addPre)(a.attribs.href, 'http://www.cbc.gov.tw'));
+                                    downloadList.push((0, _utility.addPre)(a.attribs.href, 'https://www.cbc.gov.tw'));
                                 }
                             });
                         });
