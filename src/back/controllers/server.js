@@ -41,7 +41,7 @@ import { init as WsInit } from '../util/sendWs'
 const credentials = {
     pfx: FsReadFileSync(PFX),
     passphrase: PFX_PWD,
-    ca: FsReadFileSync(CA),
+    //ca: [FsReadFileSync(CA0),FsReadFileSync(CA1),FsReadFileSync(CA2),FsReadFileSync(CA3)],
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",
@@ -58,7 +58,11 @@ const credentials = {
         "!MD5",
         "!PSK",
         "!SRP",
-        "!CAMELLIA"
+        "!CAMELLIA",
+        "!RC4-MD5",
+        "!RC4-SHA",
+        "!ECDHE-RSA-RC4-SHA",
+        "!AECDH-RC4-SHA"
     ].join(':'),
     honorCipherOrder: true,
 }

@@ -14,6 +14,10 @@ router.get('/refresh', function(req, res, next) {
     res.end('refresh');
 });
 
+router.get('/line', function(req, res, next) {
+    console.log('line');
+    res.end('need use post');
+});
 router.post('/line', linebotParser);
 
 router.get('/s', function(req, res, next) {
