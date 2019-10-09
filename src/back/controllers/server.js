@@ -4,7 +4,7 @@ import { readFileSync as FsReadFileSync, createReadStream as FsCreateReadStream 
 import { STATIC_PATH } from '../constants'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
+import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config'
 
 //external
@@ -39,9 +39,10 @@ import { init as WsInit } from '../util/sendWs'
 
 //global
 const credentials = {
-    pfx: FsReadFileSync(PFX),
-    passphrase: PFX_PWD,
-    //ca: [FsReadFileSync(CA0),FsReadFileSync(CA1),FsReadFileSync(CA2),FsReadFileSync(CA3)],
+    cert: FsReadFileSync(CERT),
+    ca: FsReadFileSync(CA),
+    key: FsReadFileSync(PKEY),
+    passphrase: PKEY_PWD,
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

@@ -1,7 +1,7 @@
 import { readFileSync as FsReadFileSync } from 'fs'
 
 //config
-import { ENV_TYPE, PFX, CA, PFX_PWD } from '../../../ver'
+import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver'
 import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT, COM_PORT } from '../config'
 
 //external
@@ -33,9 +33,10 @@ import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filt
 
 //global
 const credentials = {
-    pfx: FsReadFileSync(PFX),
-    passphrase: PFX_PWD,
-    //ca: [FsReadFileSync(CA0),FsReadFileSync(CA1),FsReadFileSync(CA2),FsReadFileSync(CA3)],
+    cert: FsReadFileSync(CERT),
+    ca: FsReadFileSync(CA),
+    key: FsReadFileSync(PKEY),
+    passphrase: PKEY_PWD,
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

@@ -96,10 +96,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 //config
 var credentials = {
-    pfx: (0, _fs.readFileSync)(_ver.PFX),
-    passphrase: _ver.PFX_PWD,
+    cert: (0, _fs.readFileSync)(_ver.CERT),
     ca: (0, _fs.readFileSync)(_ver.CA),
-    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA"].join(':'),
+    key: (0, _fs.readFileSync)(_ver.PKEY),
+    passphrase: _ver.PKEY_PWD,
+    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA", "!RC4-MD5", "!RC4-SHA", "!ECDHE-RSA-RC4-SHA", "!AECDH-RC4-SHA"].join(':'),
     honorCipherOrder: true
 };
 
