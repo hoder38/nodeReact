@@ -202,6 +202,22 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         interval[2] = Number(interval[2]);
     }
+    let vol = false;
+    if (req.body.vol) {
+        vol = req.body.vol.match(/^([<>])(\d+)$/);
+        if (!vol) {
+            return handleError(new HoError('vol is not vaild'), next);
+        }
+        vol[2] = Number(vol[2]);
+    }
+    let close = false;
+    if (req.body.close) {
+        close = req.body.close.match(/^([<>])(\d+)$/);
+        if (!close) {
+            return handleError(new HoError('close is not vaild'), next);
+        }
+        close[2] = Number(close[2]);
+    }
     res.json({apiOK: true});
     StockTool.stockFilterWarp({
         name,
@@ -214,17 +230,19 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         mm,
         pre,
         interval,
+        vol,
+        close,
     }, req.user, req.session).then(number => {
         sendWs({
             type: req.user.username,
             data: `Filter ${name}: ${number}`,
         }, 0);
     }).catch(err => {
-        handleError(err, 'Stock filter');
         sendWs({
             type: req.user.username,
             data: `Filter fail: ${err.message}`,
         }, 0);
+        return handleError(err, 'Stock filter');
     });
 });
 

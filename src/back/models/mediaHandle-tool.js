@@ -743,6 +743,7 @@ export const completeMedia = (fileID, status, fileIndex, number=0) => Mongo('upd
         return handleError(new HoError('cannot find file!!!'));
     }
     console.log(items);
+    sendWs(`${items[0].name} complete!!!`, 0, 0, true);
     sendWs({
         type: 'file',
         data: items[0]._id,

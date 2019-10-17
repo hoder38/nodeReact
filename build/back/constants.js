@@ -350,7 +350,9 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     ss: [1, '>', -500],
     mm: [1, '>', 3],
     pre: [1, '>', 10],
-    interval: [1, '>', 700]
+    interval: [1, '>', 700],
+    vol: [1, '>', 10],
+    close: [1, '<', 15]
 };
 
 var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];

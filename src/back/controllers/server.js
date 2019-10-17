@@ -59,25 +59,21 @@ const credentials = {
         "!MD5",
         "!PSK",
         "!SRP",
-        "!CAMELLIA",
-        "!RC4-MD5",
-        "!RC4-SHA",
-        "!ECDHE-RSA-RC4-SHA",
-        "!AECDH-RC4-SHA"
+        "!CAMELLIA"
     ].join(':'),
     honorCipherOrder: true,
 }
-credentials.agent = new HttpsAgent(credentials)
+//credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
 WsInit();
-
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))
 app.use(Passport.initialize())
 app.use(Passport.session())
 //app.use(Express.static(STATIC_PATH))
+
 
 app.use(function(req, res, next) {
     showLog(req, next);

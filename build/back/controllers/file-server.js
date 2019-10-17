@@ -26,8 +26,6 @@ var _connectMultiparty = require('connect-multiparty');
 
 var _connectMultiparty2 = _interopRequireDefault(_connectMultiparty);
 
-var _net = require('net');
-
 var _sessionTool = require('../models/session-tool');
 
 var _sessionTool2 = _interopRequireDefault(_sessionTool);
@@ -60,8 +58,6 @@ var _utility = require('../util/utility');
 
 var _sendWs = require('../util/sendWs');
 
-var _sendWs2 = _interopRequireDefault(_sendWs);
-
 var _background = require('../cmd/background');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -70,14 +66,22 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 
 //model
+
+
+//external
+
+
+//config
 var credentials = {
     cert: (0, _fs.readFileSync)(_ver.CERT),
     ca: (0, _fs.readFileSync)(_ver.CA),
     key: (0, _fs.readFileSync)(_ver.PKEY),
     passphrase: _ver.PKEY_PWD,
-    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA", "!RC4-MD5", "!RC4-SHA", "!ECDHE-RSA-RC4-SHA", "!AECDH-RC4-SHA"].join(':'),
+    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA"].join(':'),
     honorCipherOrder: true
 };
+//credentials.agent = new HttpsAgent(credentials)
+
 
 //background
 
@@ -86,14 +90,6 @@ var credentials = {
 
 
 //router
-
-
-//external
-
-
-//config
-
-credentials.agent = new _https.Agent(credentials);
 var app = (0, _express2.default)();
 var server = (0, _https.createServer)(credentials, app);
 (0, _sendWs.mainInit)(server);
@@ -149,24 +145,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 process.on('uncaughtException', function (err) {
     return (0, _utility.handleError)(err, 'Threw exception');
 });
-
-//client
-var server0 = (0, _net.createServer)(function (c) {
-    console.log('client connected');
-    c.on('end', function () {
-        console.log('client disconnected');
-    });
-    c.on('data', function (data) {
-        try {
-            var recvData = JSON.parse(data.toString());
-            console.log('websocket: ' + recvData.send);
-            (0, _sendWs2.default)(recvData.data, recvData.adultonly, recvData.auth);
-        } catch (e) {
-            (0, _utility.handleError)(e, 'Client');
-            console.log(data);
-        }
-    });
-}).listen((0, _config.COM_PORT)(_ver.ENV_TYPE));
 
 server.listen((0, _config.FILE_PORT)(_ver.ENV_TYPE), (0, _config.FILE_IP)(_ver.ENV_TYPE));
 console.log('start express server\n');

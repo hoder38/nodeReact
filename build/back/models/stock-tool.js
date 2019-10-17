@@ -3178,6 +3178,9 @@ exports.default = {
         var year = date.getFullYear();
         var month = date.getMonth() + 1;
         var month_str = (0, _utility.completeZero)(month.toString(), 2);
+        var vol_year = year;
+        var vol_month = month;
+        var vol_month_str = month_str;
         console.log(year);
         console.log(month_str);
         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
@@ -3346,9 +3349,24 @@ exports.default = {
                             }
                             console.log(max);
                             console.log(min);
+                            var min_vol = 0;
+                            for (var i = 12; i > 0 && interval_data[vol_year][vol_month_str]; i--) {
+                                min_vol = interval_data[vol_year][vol_month_str].raw.reduce(function (a, v) {
+                                    return a && v.v > a ? a : v.v;
+                                }, min_vol);
+                                if (vol_month === 1) {
+                                    vol_month = 12;
+                                    vol_year--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                } else {
+                                    vol_month--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                }
+                            }
+                            console.log(min_vol);
                             var final_arr = [];
-                            for (var i = 0; i < 100; i++) {
-                                final_arr[i] = 0;
+                            for (var _i26 = 0; _i26 < 100; _i26++) {
+                                final_arr[_i26] = 0;
                             }
                             var diff = (max - min) / 100;
                             var _iteratorNormalCompletion7 = true;
@@ -3357,12 +3375,12 @@ exports.default = {
 
                             try {
                                 for (var _iterator7 = (0, _getIterator3.default)(raw_arr), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                                    var _i28 = _step7.value;
+                                    var _i29 = _step7.value;
 
-                                    var e = Math.ceil((_i28.h - min) / diff);
-                                    var s = Math.floor((_i28.l - min) / diff);
+                                    var e = Math.ceil((_i29.h - min) / diff);
+                                    var s = Math.floor((_i29.l - min) / diff);
                                     for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i28.v;
+                                        final_arr[j] += _i29.v;
                                     }
                                 }
                             } catch (err) {
@@ -3384,21 +3402,29 @@ exports.default = {
                                 return a - b;
                             });
                             var interval = null;
-                            for (var _i26 = 19; _i26 > 0; _i26--) {
-                                interval = group_interval(_i26, 5, final_arr, sort_arr);
+                            for (var _i27 = 19; _i27 > 0; _i27--) {
+                                interval = group_interval(_i27, 5, final_arr, sort_arr);
                                 if (interval) {
                                     console.log(interval);
-                                    console.log(_i26);
+                                    console.log(_i27);
                                     break;
                                 }
                             }
-                            var ret_str = Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100 + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                            for (var _i27 = 1; _i27 < interval.length; _i27++) {
-                                ret_str = ret_str + ', ' + Math.ceil(((interval[_i27].start - 1) * diff + min) * 100) / 100 + '-' + Math.ceil((interval[_i27].end * diff + min) * 100) / 100;
-                            }
-                            ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length;
-                            console.log('done');
-                            return [interval_data, ret_str];
+                            return getStockPrice('twse', items[0].index).then(function (price) {
+                                var llow = Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100;
+                                var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                                var fint = lint;
+                                var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
+                                for (var _i28 = 1; _i28 < interval.length; _i28++) {
+                                    llow = Math.ceil(((interval[_i28].start - 1) * diff + min) * 100) / 100;
+                                    lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                                    fint = lint < fint ? lint : fint;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i28].end * diff + min) * 100) / 100;
+                                }
+                                ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
+                                console.log('done');
+                                return [interval_data, ret_str];
+                            });
                         };
                         var getTpexList = function getTpexList() {
                             return (0, _apiTool2.default)('url', 'https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
@@ -3829,9 +3855,14 @@ exports.default = {
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
-                    var intervalVal = result.match(/\d+$/);
-                    if (intervalVal && option.interval[1] === '>' && intervalVal[0] > option.interval[2] || option.interval[1] === '<' && intervalVal[0] < option.interval[2]) {
-                        filterList1.push(filterList[iIndex]);
+                    var intervalVal = result.match(/(\d+) (\d+) (\d+)$/);
+                    if (intervalVal) {
+                        var iok = option.interval ? option.interval[1] === '>' && intervalVal[1] > option.interval[2] || option.interval[1] === '<' && intervalVal[1] < option.interval[2] ? true : false : true;
+                        var vok = option.vol ? option.vol[1] === '>' && intervalVal[2] > option.vol[2] || option.vol[1] === '<' && intervalVal[2] < option.vol[2] ? true : false : true;
+                        var cok = option.close ? option.close[1] === '>' && intervalVal[3] > option.close[2] || option.close[1] === '<' && intervalVal[3] < option.close[2] ? true : false : true;
+                        if (iok && vok && cok) {
+                            filterList1.push(filterList[iIndex]);
+                        }
                     }
                 }).catch(function (err) {
                     if (web) {
@@ -3846,7 +3877,7 @@ exports.default = {
                 }) : _promise2.default.resolve();
             };
             console.log('stage three');
-            return option.interval ? stage3(0).then(function () {
+            return option.interval || option.vol || option.close ? stage3(0).then(function () {
                 return filterList1;
             }) : filterList;
         }).then(function (filterList) {
@@ -3866,7 +3897,7 @@ exports.default = {
                     (0, _utility.handleError)(err, 'Stock filter');
                 }).then(function () {
                     return addFilter(index + 1);
-                }) : _promise2.default.resolve(filterList.length);
+                }) : _promise2.default.resolve(filterList);
             };
             return addFilter(0);
         });
@@ -3880,9 +3911,16 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilter(option, user, session).then(function (number) {
+        return this.stockFilter(option, user, session).then(function (list) {
             stockFiltering = false;
+            var number = list.length;
             console.log('End: ' + number);
+            (0, _sendWs2.default)('stock filter: ' + number, 0, 0, true);
+            if (number > 0) {
+                (0, _sendWs2.default)(list.reduce(function (a, v) {
+                    return a + ' ' + v.name;
+                }, ''), 0, 0, true);
+            }
             return number;
         }).catch(function (err) {
             stockFiltering = false;

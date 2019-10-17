@@ -10,16 +10,22 @@ import PlaylistApi from '../models/api-tool-playlist'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
 import { dbDump } from './cmd'
 import { handleError, completeZero } from '../util/utility'
+import sendWs from '../util/sendWs'
 
 let stock_batch_list = [];
 let stock_batch_list_2 = [];
+
+function bgError(err, type) {
+    sendWs(`${type}: ${err.message}`, 0, 0, true);
+    handleError(err, type);
+}
 
 export const autoUpload = () => {
     if (AUTO_UPLOAD(ENV_TYPE)) {
         const loopDrive = () => {
             console.log('loopDrive');
             console.log(new Date());
-            return Mongo('find', USERDB, {auto: {$exists: true}}).then(userlist => userDrive(userlist, 0)).catch(err => handleError(err, 'Loop drive')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DRIVE_INTERVAL * 1000))).then(() => loopDrive());
+            return Mongo('find', USERDB, {auto: {$exists: true}}).then(userlist => userDrive(userlist, 0)).catch(err => bgError(err, 'Loop drive')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DRIVE_INTERVAL * 1000))).then(() => loopDrive());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopDrive());
     }
@@ -44,7 +50,7 @@ export const autoDownload = () => {
                     default:
                     return Promise.resolve();
                 }
-            }).catch(err => handleError(err, 'Loop doc')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopDoc());
+            }).catch(err => bgError(err, 'Loop doc')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopDoc());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => loopDoc());
     }
@@ -55,7 +61,7 @@ export const checkMedia = () => {
         const loopHandleMedia = () => {
             console.log('loopCheckMedia');
             console.log(new Date());
-            return PlaylistApi('playlist kick').then(() => MediaHandleTool.checkMedia()).catch(err => handleError(err, 'Loop checkMedia')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAl * 1000))).then(() => loopHandleMedia());
+            return PlaylistApi('playlist kick').then(() => MediaHandleTool.checkMedia()).catch(err => bgError(err, 'Loop checkMedia')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAl * 1000))).then(() => loopHandleMedia());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 180000)).then(() => loopHandleMedia());
     }
@@ -67,7 +73,7 @@ export const updateExternal = () => {
             console.log('loopUpdateExternal');
             console.log(new Date());
             console.log('complete tag');
-            return completeMimeTag(1).then(() => External.getList('lovetv')).then(() => External.getList('eztv')).catch(err => handleError(err, 'Loop updateExternal')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), EXTERNAL_INTERVAL * 1000))).then(() => loopUpdateExternal());
+            return completeMimeTag(1).then(() => External.getList('lovetv')).then(() => External.getList('eztv')).catch(err => bgError(err, 'Loop updateExternal')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), EXTERNAL_INTERVAL * 1000))).then(() => loopUpdateExternal());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 240000)).then(() => loopUpdateExternal());
     }
@@ -157,7 +163,7 @@ export const updateStock = () => {
                 }).then(userlist => recur_find(userlist, 0)) : Promise.resolve();
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
             }));
-            return parseStockList().catch(err => handleError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), STOCK_INTERVAL * 1000))).then(() => loopUpdateStock());
+            return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), STOCK_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
     }
@@ -170,7 +176,7 @@ export const filterStock = () => {
             console.log(new Date());
             const sd = new Date();
             const sdf = () => (sd.getDay() === 5 && sd.getHours() === 23) ? StockTool.stockFilterWarp() : Promise.resolve();
-            return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
+            return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
     }
@@ -192,7 +198,7 @@ export const dbBackup = () => {
                 return dbDump(BACKUP_COLLECTION[index], backupDate).then(() => singleBackup(index + 1));
             }
             const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
-            return sdf().catch(err => handleError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
+            return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => allBackup());
     }

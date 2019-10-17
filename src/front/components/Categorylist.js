@@ -41,7 +41,7 @@ const Categorylist = React.createClass({
         if (!isValidString(tag, 'name')) {
             return Promise.reject('Filter tag is not vaild!!!')
         }
-        const condition = cond.match(/^(per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*)\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval)([<>]\-?\d+\.?\d*))?$/)
+        const condition = cond.match(/^(per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*)\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?$/)
         if (!condition) {
             return Promise.reject('Filter condition is not vaild!!!')
         }
@@ -52,6 +52,8 @@ const Categorylist = React.createClass({
         let mm = ''
         let pre = ''
         let interval = ''
+        let vol = ''
+        let close = ''
         function inData(index) {
             if (condition[index] === 'per') {
                 per = condition[index + 1]
@@ -67,6 +69,10 @@ const Categorylist = React.createClass({
                 pre = condition[index + 1]
             } else if (condition[index] === 'interval') {
                 interval = condition[index + 1]
+            } else if (condition[index] === 'vol') {
+                vol = condition[index + 1]
+            } else if (condition[index] === 'close') {
+                close = condition[index + 1]
             }
         }
         inData(1)
@@ -76,6 +82,8 @@ const Categorylist = React.createClass({
         inData(13)
         inData(16)
         inData(19)
+        inData(22)
+        inData(25)
         let data = {}
         if (per) {
             data['per'] = per
@@ -97,6 +105,12 @@ const Categorylist = React.createClass({
         }
         if (interval) {
             data['interval'] = interval
+        }
+        if (vol) {
+            data['vol'] = vol
+        }
+        if (close) {
+            data['close'] = close
         }
         if (Object.keys(data).length > 0) {
             return api(`/api/stock/filter/${tag}/${this.props.sortName}/${this.props.sortType}`, data, 'PUT');

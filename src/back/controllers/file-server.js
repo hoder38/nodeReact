@@ -2,7 +2,7 @@ import { readFileSync as FsReadFileSync } from 'fs'
 
 //config
 import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver'
-import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT, COM_PORT } from '../config'
+import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT } from '../config'
 
 //external
 import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
@@ -11,7 +11,6 @@ import ExpressSession from 'express-session'
 import { urlencoded as BodyParserUrlencoded, json as BodyParserJson } from 'body-parser'
 import Passport from 'passport'
 import ConnectMultiparty from 'connect-multiparty'
-import { createServer as NetCreateServer } from 'net'
 
 //model
 import SessionStore from '../models/session-tool'
@@ -26,7 +25,7 @@ import PlaylistRouter from './playlist-router'
 
 //util
 import { handleError, HoError, showLog } from '../util/utility'
-import sendWs, { mainInit } from '../util/sendWs'
+import { mainInit } from '../util/sendWs'
 
 //background
 import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup } from '../cmd/background'
@@ -53,15 +52,11 @@ const credentials = {
         "!MD5",
         "!PSK",
         "!SRP",
-        "!CAMELLIA",
-        "!RC4-MD5",
-        "!RC4-SHA",
-        "!ECDHE-RSA-RC4-SHA",
-        "!AECDH-RC4-SHA"
+        "!CAMELLIA"
     ].join(':'),
     honorCipherOrder: true,
 }
-credentials.agent = new HttpsAgent(credentials)
+//credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
 mainInit(server);
@@ -115,24 +110,6 @@ app.use(function(err, req, res, next) {
 });
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 process.on('uncaughtException', err => handleError(err, 'Threw exception'));
-
-//client
-const server0 = NetCreateServer(function(c) {
-    console.log('client connected');
-    c.on('end', function() {
-        console.log('client disconnected');
-    });
-    c.on('data', function(data) {
-        try {
-            const recvData = JSON.parse(data.toString());
-            console.log(`websocket: ${recvData.send}`);
-            sendWs(recvData.data, recvData.adultonly, recvData.auth);
-        } catch (e) {
-            handleError(e, 'Client');
-            console.log(data);
-        }
-    });
-}).listen(COM_PORT(ENV_TYPE));
 
 server.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
 console.log('start express server\n');

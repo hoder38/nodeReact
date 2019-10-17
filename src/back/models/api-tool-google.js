@@ -938,6 +938,9 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
         const data = {folderId: current.id};
         return api('list file', data).then(metadataList => {
             if (metadataList.length > 0) {
+                sendWs(metadataList.reduce((a, v) => `${a} ${v.title}`, `${userlist[index].username}: `), 0, 0, true);
+            }
+            if (metadataList.length > 0) {
                 if (metadataList.length > (drive_batch - file_count)) {
                     metadataList.splice(drive_batch - file_count);
                 }
@@ -990,6 +993,9 @@ export function autoDoc(userlist, index, type, date=null) {
         downloaded = downloadedList[0].id;
         const download_ext_doc = (tIndex, doc_type) => External.getSingleList(doc_type[tIndex], date).then(doclist => {
             console.log(doclist);
+            if (doclist.length > 0) {
+                sendWs(doclist.reduce((a, v) => `${a} ${v.name}`, `${doc_type[tIndex]}: `), 0, 0, true);
+            }
             const recur_download = dIndex => {
                 const single_download = () => (dIndex < doclist.length) ? External.save2Drive(doc_type[tIndex], doclist[dIndex], downloaded) : Promise.resolve();
                 return single_download().then(() => {
@@ -1058,7 +1064,10 @@ export const googleBackupDb = backupDate => api('create', {name: backupDate, par
             parent: backup_collection[index].id,
             name: backup_collection[index].list[index2],
             filePath: `${backup_collection[index].path}/${backup_collection[index].list[index2]}`,
-        }).then(() => upload_db(index, index2 + 1));
+        }).then(() => {
+            sendWs(`db backup: ${backup_collection[index].name}/${backup_collection[index].list[index2]} backupDate`, 0, 0, true);
+            return upload_db(index, index2 + 1);
+        });
     }
     return create_collection(0);
 });

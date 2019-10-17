@@ -100,9 +100,11 @@ var credentials = {
     ca: (0, _fs.readFileSync)(_ver.CA),
     key: (0, _fs.readFileSync)(_ver.PKEY),
     passphrase: _ver.PKEY_PWD,
-    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA", "!RC4-MD5", "!RC4-SHA", "!ECDHE-RSA-RC4-SHA", "!AECDH-RC4-SHA"].join(':'),
+    ciphers: ["ECDHE-RSA-AES256-SHA384", "DHE-RSA-AES256-SHA384", "ECDHE-RSA-AES256-SHA256", "DHE-RSA-AES256-SHA256", "ECDHE-RSA-AES128-SHA256", "DHE-RSA-AES128-SHA256", "HIGH", "!aNULL", "!eNULL", "!EXPORT", "!DES", "!RC4", "!MD5", "!PSK", "!SRP", "!CAMELLIA"].join(':'),
     honorCipherOrder: true
 };
+//credentials.agent = new HttpsAgent(credentials)
+
 
 //router
 
@@ -111,18 +113,16 @@ var credentials = {
 
 
 //constant
-
-credentials.agent = new _https.Agent(credentials);
 var app = (0, _express2.default)();
 var server = (0, _https.createServer)(credentials, app);
 (0, _sendWs.init)();
-
 app.use((0, _bodyParser.urlencoded)({ extended: true }));
 app.use((0, _bodyParser.json)({ extended: true }));
 app.use((0, _expressSession2.default)((0, _sessionTool2.default)(_expressSession2.default).config));
 app.use(_passport2.default.initialize());
 app.use(_passport2.default.session());
 //app.use(Express.static(STATIC_PATH))
+
 
 app.use(function (req, res, next) {
     (0, _utility.showLog)(req, next);

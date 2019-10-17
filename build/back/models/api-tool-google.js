@@ -1452,6 +1452,11 @@ function userDrive(userlist, index) {
         var data = { folderId: current.id };
         return api('list file', data).then(function (metadataList) {
             if (metadataList.length > 0) {
+                (0, _sendWs2.default)(metadataList.reduce(function (a, v) {
+                    return a + ' ' + v.title;
+                }, userlist[index].username + ': '), 0, 0, true);
+            }
+            if (metadataList.length > 0) {
                 var _ret5 = function () {
                     if (metadataList.length > drive_batch - file_count) {
                         metadataList.splice(drive_batch - file_count);
@@ -1521,6 +1526,11 @@ function autoDoc(userlist, index, type) {
         var download_ext_doc = function download_ext_doc(tIndex, doc_type) {
             return _externalTool2.default.getSingleList(doc_type[tIndex], date).then(function (doclist) {
                 console.log(doclist);
+                if (doclist.length > 0) {
+                    (0, _sendWs2.default)(doclist.reduce(function (a, v) {
+                        return a + ' ' + v.name;
+                    }, doc_type[tIndex] + ': '), 0, 0, true);
+                }
                 var recur_download = function recur_download(dIndex) {
                     var single_download = function single_download() {
                         return dIndex < doclist.length ? _externalTool2.default.save2Drive(doc_type[tIndex], doclist[dIndex], downloaded) : _promise2.default.resolve();
@@ -1601,6 +1611,7 @@ var googleBackupDb = exports.googleBackupDb = function googleBackupDb(backupDate
                 name: backup_collection[index].list[index2],
                 filePath: backup_collection[index].path + '/' + backup_collection[index].list[index2]
             }).then(function () {
+                (0, _sendWs2.default)('db backup: ' + backup_collection[index].name + '/' + backup_collection[index].list[index2] + ' backupDate', 0, 0, true);
                 return upload_db(index, index2 + 1);
             });
         };

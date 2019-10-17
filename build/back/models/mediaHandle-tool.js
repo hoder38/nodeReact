@@ -1127,6 +1127,7 @@ var completeMedia = exports.completeMedia = function completeMedia(fileID, statu
             return (0, _utility.handleError)(new _utility.HoError('cannot find file!!!'));
         }
         console.log(items);
+        (0, _sendWs2.default)(items[0].name + ' complete!!!', 0, 0, true);
         (0, _sendWs2.default)({
             type: 'file',
             data: items[0]._id

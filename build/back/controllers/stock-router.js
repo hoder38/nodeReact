@@ -304,6 +304,22 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         interval[2] = Number(interval[2]);
     }
+    var vol = false;
+    if (req.body.vol) {
+        vol = req.body.vol.match(/^([<>])(\d+)$/);
+        if (!vol) {
+            return (0, _utility.handleError)(new _utility.HoError('vol is not vaild'), next);
+        }
+        vol[2] = Number(vol[2]);
+    }
+    var close = false;
+    if (req.body.close) {
+        close = req.body.close.match(/^([<>])(\d+)$/);
+        if (!close) {
+            return (0, _utility.handleError)(new _utility.HoError('close is not vaild'), next);
+        }
+        close[2] = Number(close[2]);
+    }
     res.json({ apiOK: true });
     _stockTool2.default.stockFilterWarp({
         name: name,
@@ -315,18 +331,20 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         ss: ss,
         mm: mm,
         pre: pre,
-        interval: interval
+        interval: interval,
+        vol: vol,
+        close: close
     }, req.user, req.session).then(function (number) {
         (0, _sendWs2.default)({
             type: req.user.username,
             data: 'Filter ' + name + ': ' + number
         }, 0);
     }).catch(function (err) {
-        (0, _utility.handleError)(err, 'Stock filter');
         (0, _sendWs2.default)({
             type: req.user.username,
             data: 'Filter fail: ' + err.message
         }, 0);
+        return (0, _utility.handleError)(err, 'Stock filter');
     });
 });
 

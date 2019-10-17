@@ -1,8 +1,9 @@
 import Ws from 'ws'
 import { ENV_TYPE } from '../../../ver'
 import { FILE_IP, COM_PORT } from '../config'
+import sendDs, { init as initDs } from '../models/discord-tool'
 import { handleError } from './utility'
-import { connect as NetConnect } from 'net'
+import { connect as NetConnect, createServer as NetCreateServer } from 'net'
 
 let wsServer = null;
 let client = null;
@@ -24,6 +25,22 @@ export function mainInit(server) {
         });
         ws.on('close', (reasonCode, description) => console.log(`Peer disconnected with reason: ${reasonCode} ${description}`));
     });
+    //client
+    const server0 = NetCreateServer(c => {
+        console.log('client connected');
+        c.on('end', () => console.log('client disconnected'));
+        c.on('data', data => {
+            try {
+                const recvData = JSON.parse(data.toString());
+                console.log(`websocket: ${recvData.send}`);
+                sendWs(recvData.data, recvData.adultonly, recvData.auth);
+            } catch (e) {
+                handleError(e, 'Client');
+                console.log(data);
+            }
+        });
+    }).listen(COM_PORT(ENV_TYPE));
+    initDs();
 }
 
 export function init() {
@@ -31,7 +48,7 @@ export function init() {
     client.on('end', () => console.log('disconnected from server'));
 }
 
-export default (data, adultonly, auth) => {
+function sendWs(data, adultonly, auth) {
     if (wsServer) {
         data.level = (auth && adultonly) ? 2 : adultonly ? 1 : 0;
         const sendData = JSON.stringify(data);
@@ -39,6 +56,14 @@ export default (data, adultonly, auth) => {
             client.send(sendData);
         });
     }
+}
+
+export default (data, adultonly, auth, ds=false) => {
+    if (ds) {
+        sendDs(data.toString());
+        return;
+    }
+    sendWs(data, adultonly, auth);
     if (client) {
         client.write(JSON.stringify({
             send: 'web',

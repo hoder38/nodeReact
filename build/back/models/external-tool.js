@@ -85,6 +85,10 @@ var _apiTool2 = _interopRequireDefault(_apiTool);
 
 var _kubo = require('../util/kubo');
 
+var _sendWs = require('../util/sendWs');
+
+var _sendWs2 = _interopRequireDefault(_sendWs);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var opencc = new _opencc2.default('s2t.json');
@@ -294,6 +298,7 @@ exports.default = {
                             }, type, setArr)).then(function (item) {
                                 console.log('lovetv save');
                                 console.log(item[0].name);
+                                (0, _sendWs2.default)('love: ' + item[0].name, 0, 0, true);
                                 return nextLove(index + 1, dramaIndex, list);
                             });
                         });
@@ -394,6 +399,7 @@ exports.default = {
                                 }, type, setArr)).then(function (item) {
                                     console.log('eztvtv save');
                                     console.log(item[0].name);
+                                    (0, _sendWs2.default)('eztvtv: ' + item[0].name, 0, 0, true);
                                     return nextEztv(index + 1, list);
                                 });
                             });
@@ -780,7 +786,7 @@ exports.default = {
                     return list;
                 });
             case 'bls':
-                return (0, _apiTool2.default)('url', 'http://www.bls.gov/bls/newsrels.htm#latest-releases').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.bls.gov/bls/newsrels.htm#latest-releases').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -793,7 +799,7 @@ exports.default = {
                         if ((0, _utility.findTag)(l)[0] === docDate) {
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             list.push({
-                                url: (0, _utility.addPre)(a.attribs.href, 'http://www.bls.gov'),
+                                url: (0, _utility.addPre)(a.attribs.href, 'https://www.bls.gov'),
                                 name: (0, _utility.toValidName)((0, _utility.findTag)(a)[0]),
                                 date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                             });
@@ -1012,7 +1018,7 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div').forEach(function (d) {
                         var content = (0, _utility.findTag)((0, _utility.findTag)(d, 'article')[0], 'div', 'card-view__content')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'card-view__footer')[0], 'div', 'node__date')[0], 'span')[0])[0] === docDate) {
-                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'card-view__header')[0], 'div', 'field field--title')[0], 'h3', 'card-view__title')[0], 'a')[0];
+                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'card-view__header')[0], 'h3', 'card-view__title')[0], 'a')[0];
                             list.push({
                                 url: (0, _utility.addPre)(a.attribs.href, 'https://www.nar.realtor'),
                                 name: (0, _utility.toValidName)((0, _utility.findTag)(a)[0]),
@@ -1528,7 +1534,7 @@ exports.default = {
                     if (!(0, _utility.findTag)(a)[0].match(/PDF/i)) {
                         return (0, _utility.handleError)(new _utility.HoError('cannot find release'));
                     }
-                    var url = (0, _utility.addPre)(a.attribs.href, 'http://www.bls.gov');
+                    var url = (0, _utility.addPre)(a.attribs.href, 'https://www.bls.gov');
                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                     console.log(driveName);
                     return mkFolder((0, _path.dirname)(filePath)).then(function () {

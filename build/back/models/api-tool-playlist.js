@@ -1398,6 +1398,7 @@ function playlistKick() {
         var kick_time = Math.round((new Date().getTime() - _constants.TORRENT_DURATION * 1000) / 1000);
         for (var i in torrent_pool) {
             if (torrent_pool[i].engine && torrent_pool[i].start < kick_time) {
+                (0, _sendWs2.default)('torrent ' + i + ' stop', 0, 0, true);
                 return process('torrent stop', null, i);
             }
         }
@@ -1407,6 +1408,7 @@ function playlistKick() {
         var kick_time = Math.round((new Date().getTime() - _constants.ZIP_DURATION * 1000) / 1000);
         for (var i in zip_pool) {
             if (zip_pool[i].run && zip_pool[i].time < kick_time) {
+                (0, _sendWs2.default)('zip ' + i + ' stop', 0, 0, true);
                 return process('zip stop', null, i);
             }
         }
@@ -1416,6 +1418,7 @@ function playlistKick() {
         var kick_time = Math.round((new Date().getTime() - _constants.MEGA_DURATION * 1000) / 1000);
         for (var i in mega_pool) {
             if (mega_pool[i].run && mega_pool[i].time < kick_time) {
+                (0, _sendWs2.default)('mega ' + i + ' stop', 0, 0, true);
                 return process('mega stop', null, i);
             }
         }

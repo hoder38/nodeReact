@@ -13,6 +13,7 @@ import { handleError, HoError, toValidName, isValidString, getJson, completeZero
 import { addPost } from '../util/mime'
 import Api from './api-tool'
 import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo'
+import sendWs from '../util/sendWs'
 
 const opencc = new OpenCC('s2t.json');
 
@@ -215,6 +216,7 @@ export default {
                     }).then(item => {
                         console.log('lovetv save');
                         console.log(item[0].name);
+                        sendWs(`love: ${item[0].name}`, 0, 0, true);
                         return nextLove(index + 1, dramaIndex, list);
                     });
                 });
@@ -308,6 +310,7 @@ export default {
                         }).then(item => {
                             console.log('eztvtv save');
                             console.log(item[0].name);
+                            sendWs(`eztvtv: ${item[0].name}`, 0, 0, true);
                             return nextEztv(index + 1, list);
                         });
                     });
@@ -643,7 +646,7 @@ export default {
                 return list;
             });
             case 'bls':
-            return Api('url', 'http://www.bls.gov/bls/newsrels.htm#latest-releases').then(raw_data => {
+            return Api('url', 'https://www.bls.gov/bls/newsrels.htm#latest-releases').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -656,7 +659,7 @@ export default {
                     if (findTag(l)[0] === docDate) {
                         const a = findTag(l, 'a')[0];
                         list.push({
-                            url: addPre(a.attribs.href, 'http://www.bls.gov'),
+                            url: addPre(a.attribs.href, 'https://www.bls.gov'),
                             name: toValidName(findTag(a)[0]),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
@@ -853,7 +856,7 @@ export default {
                 findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div').forEach(d => {
                     const content =  findTag(findTag(d, 'article')[0], 'div', 'card-view__content')[0];
                     if (findTag(findTag(findTag(findTag(content, 'div', 'card-view__footer')[0], 'div', 'node__date')[0], 'span')[0])[0] === docDate) {
-                        const a = findTag(findTag(findTag(findTag(content, 'div', 'card-view__header')[0], 'div', 'field field--title')[0], 'h3', 'card-view__title')[0], 'a')[0];
+                        const a = findTag(findTag(findTag(content, 'div', 'card-view__header')[0], 'h3', 'card-view__title')[0], 'a')[0];
                         list.push({
                             url: addPre(a.attribs.href, 'https://www.nar.realtor'),
                             name: toValidName(findTag(a)[0]),
@@ -1201,7 +1204,7 @@ export default {
                 if (!findTag(a)[0].match(/PDF/i)) {
                     return handleError(new HoError('cannot find release'));
                 }
-                const url = addPre(a.attribs.href, 'http://www.bls.gov');
+                const url = addPre(a.attribs.href, 'https://www.bls.gov');
                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                 console.log(driveName);
                 return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {

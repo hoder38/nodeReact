@@ -2913,6 +2913,9 @@ export default {
         let year = date.getFullYear();
         let month = date.getMonth() + 1;
         let month_str = completeZero(month.toString(), 2);
+        let vol_year = year;
+        let vol_month = month;
+        let vol_month_str = month_str;
         console.log(year);
         console.log(month_str);
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
@@ -3004,6 +3007,19 @@ export default {
                         }
                         console.log(max);
                         console.log(min);
+                        let min_vol = 0;
+                        for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
+                            min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                            if (vol_month === 1) {
+                                vol_month = 12;
+                                vol_year--;
+                                vol_month_str = completeZero(vol_month.toString(), 2);
+                            } else {
+                                vol_month--;
+                                vol_month_str = completeZero(vol_month.toString(), 2);
+                            }
+                        }
+                        console.log(min_vol);
                         let final_arr = [];
                         for (let i = 0; i < 100; i++) {
                             final_arr[i] = 0;
@@ -3026,13 +3042,21 @@ export default {
                                 break;
                             }
                         }
-                        let ret_str = `${Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100} -${Math.ceil((interval[0].end * diff + min) * 100) / 100}`;
-                        for (let i = 1; i < interval.length; i++) {
-                            ret_str = `${ret_str}, ${Math.ceil(((interval[i].start - 1) * diff + min) * 100) / 100}-${Math.ceil((interval[i].end * diff + min) * 100) / 100}`;
-                        }
-                        ret_str = `${ret_str} ${start_month} ${raw_arr.length}`;
-                        console.log('done');
-                        return [interval_data, ret_str];
+                        return getStockPrice('twse', items[0].index).then(price => {
+                            let llow = Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100;
+                            let lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                            let fint = lint;
+                            let ret_str = `${llow} -${Math.ceil((interval[0].end * diff + min) * 100) / 100}`;
+                            for (let i = 1; i < interval.length; i++) {
+                                llow = Math.ceil(((interval[i].start - 1) * diff + min) * 100) / 100;
+                                lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                                fint = lint < fint ? lint : fint;
+                                ret_str = `${ret_str}, ${llow}-${Math.ceil((interval[i].end * diff + min) * 100) / 100}`;
+                            }
+                            ret_str = `${ret_str} ${start_month} ${raw_arr.length} ${min_vol} ${fint}`;
+                            console.log('done');
+                            return [interval_data, ret_str];
+                        });
                     }
                     const getTpexList = () => Api('url', `https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
                         const json_data = getJson(raw_data);
@@ -3345,9 +3369,14 @@ export default {
             const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
                 console.log(filterList[iIndex].name);
                 console.log(result);
-                const intervalVal = result.match(/\d+$/);
-                if (intervalVal && (option.interval[1] === '>' && intervalVal[0] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[0] < option.interval[2])) {
-                    filterList1.push(filterList[iIndex]);
+                const intervalVal = result.match(/(\d+) (\d+) (\d+)$/);
+                if (intervalVal) {
+                    const iok = option.interval ? ((option.interval[1] === '>' && intervalVal[1] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[1] < option.interval[2])) ? true : false : true;
+                    const vok = option.vol ? ((option.vol[1] === '>' && intervalVal[2] > option.vol[2]) || (option.vol[1] === '<' && intervalVal[2] < option.vol[2])) ? true : false : true;
+                    const cok = option.close ? ((option.close[1] === '>' && intervalVal[3] > option.close[2]) || (option.close[1] === '<' && intervalVal[3] < option.close[2])) ? true : false : true;
+                    if (iok && vok && cok) {
+                        filterList1.push(filterList[iIndex]);
+                    }
                 }
             }).catch(err => {
                 if (web) {
@@ -3359,7 +3388,7 @@ export default {
                 handleError(err, 'Stock filter');
             }).then(() => stage3(iIndex + 1)) : Promise.resolve();
             console.log('stage three');
-            return option.interval ? stage3(0).then(() => filterList1) : filterList;
+            return (option.interval || option.vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
         }).then(filterList => {
             const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
                 sendWs({
@@ -3374,7 +3403,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
-            }).then(() => addFilter(index+1)) : Promise.resolve(filterList.length);
+            }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
             return addFilter(0);
         });
     },
@@ -3383,9 +3412,14 @@ export default {
             return handleError(new HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilter(option, user, session).then(number => {
+        return this.stockFilter(option, user, session).then(list => {
             stockFiltering = false;
+            const number = list.length;
             console.log(`End: ${number}`);
+            sendWs(`stock filter: ${number}`, 0, 0, true);
+            if (number > 0) {
+                sendWs(list.reduce((a, v) => `${a} ${v.name}`, ''), 0, 0, true);
+            }
             return number;
         }).catch(err => {
             stockFiltering = false;

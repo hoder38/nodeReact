@@ -53,10 +53,19 @@ var _cmd = require('./cmd');
 
 var _utility = require('../util/utility');
 
+var _sendWs = require('../util/sendWs');
+
+var _sendWs2 = _interopRequireDefault(_sendWs);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var stock_batch_list = [];
 var stock_batch_list_2 = [];
+
+function bgError(err, type) {
+    (0, _sendWs2.default)(type + ': ' + err.message, 0, 0, true);
+    (0, _utility.handleError)(err, type);
+}
 
 var autoUpload = exports.autoUpload = function autoUpload() {
     if ((0, _config.AUTO_UPLOAD)(_ver.ENV_TYPE)) {
@@ -67,7 +76,7 @@ var autoUpload = exports.autoUpload = function autoUpload() {
                 return (0, _mongoTool2.default)('find', _constants.USERDB, { auto: { $exists: true } }).then(function (userlist) {
                     return (0, _apiToolGoogle.userDrive)(userlist, 0);
                 }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop drive');
+                    return bgError(err, 'Loop drive');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -114,7 +123,7 @@ var autoDownload = exports.autoDownload = function autoDownload() {
                             return _promise2.default.resolve();
                     }
                 }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop doc');
+                    return bgError(err, 'Loop doc');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -149,7 +158,7 @@ var checkMedia = exports.checkMedia = function checkMedia() {
                 return (0, _apiToolPlaylist2.default)('playlist kick').then(function () {
                     return _mediaHandleTool2.default.checkMedia();
                 }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop checkMedia');
+                    return bgError(err, 'Loop checkMedia');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -187,7 +196,7 @@ var updateExternal = exports.updateExternal = function updateExternal() {
                 }).then(function () {
                     return _externalTool2.default.getList('eztv');
                 }).catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop updateExternal');
+                    return bgError(err, 'Loop updateExternal');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -311,7 +320,7 @@ var updateStock = exports.updateStock = function updateStock() {
                     });
                 };
                 return parseStockList().catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop updateStock');
+                    return bgError(err, 'Loop updateStock');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -348,7 +357,7 @@ var filterStock = exports.filterStock = function filterStock() {
                     return sd.getDay() === 5 && sd.getHours() === 23 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
                 };
                 return sdf().catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop stockFilter');
+                    return bgError(err, 'Loop stockFilter');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
@@ -396,7 +405,7 @@ var dbBackup = exports.dbBackup = function dbBackup() {
                     return sd.getDate() === 2 ? singleBackup(0) : _promise2.default.resolve();
                 };
                 return sdf().catch(function (err) {
-                    return (0, _utility.handleError)(err, 'Loop stockFilter');
+                    return bgError(err, 'Loop stockFilter');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {

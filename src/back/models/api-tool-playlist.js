@@ -992,6 +992,7 @@ function playlistKick() {
         const kick_time = Math.round((new Date().getTime() - TORRENT_DURATION * 1000)/ 1000);
         for (let i in torrent_pool) {
             if (torrent_pool[i].engine && torrent_pool[i].start < kick_time) {
+                sendWs(`torrent ${i} stop`, 0, 0, true);
                 return process('torrent stop', null, i);
             }
         }
@@ -1001,6 +1002,7 @@ function playlistKick() {
         const kick_time = Math.round((new Date().getTime() - ZIP_DURATION * 1000)/ 1000);
         for (let i in zip_pool) {
             if (zip_pool[i].run && zip_pool[i].time < kick_time) {
+                sendWs(`zip ${i} stop`, 0, 0, true);
                 return process('zip stop', null, i);
             }
         }
@@ -1010,6 +1012,7 @@ function playlistKick() {
         const kick_time = Math.round((new Date().getTime() - MEGA_DURATION * 1000)/ 1000);
         for (let i in mega_pool) {
             if (mega_pool[i].run && mega_pool[i].time < kick_time) {
+                sendWs(`mega ${i} stop`, 0, 0, true);
                 return process('mega stop', null, i);
             }
         }

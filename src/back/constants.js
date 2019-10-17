@@ -805,6 +805,8 @@ export const STOCK_FILTER = {
     mm: [1, '>', 3],
     pre: [1, '>', 10],
     interval: [1, '>', 700],
+    vol: [1, '>', 10],
+    close: [1, '<', 15],
 }
 
 export const BACKUP_COLLECTION = [

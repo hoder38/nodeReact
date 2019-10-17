@@ -19,6 +19,10 @@ var _ver = require('../../../ver');
 
 var _config = require('../config');
 
+var _discordTool = require('../models/discord-tool');
+
+var _discordTool2 = _interopRequireDefault(_discordTool);
+
 var _utility = require('./utility');
 
 var _net = require('net');
@@ -47,6 +51,24 @@ function mainInit(server) {
             return console.log('Peer disconnected with reason: ' + reasonCode + ' ' + description);
         });
     });
+    //client
+    var server0 = (0, _net.createServer)(function (c) {
+        console.log('client connected');
+        c.on('end', function () {
+            return console.log('client disconnected');
+        });
+        c.on('data', function (data) {
+            try {
+                var recvData = JSON.parse(data.toString());
+                console.log('websocket: ' + recvData.send);
+                sendWs(recvData.data, recvData.adultonly, recvData.auth);
+            } catch (e) {
+                (0, _utility.handleError)(e, 'Client');
+                console.log(data);
+            }
+        });
+    }).listen((0, _config.COM_PORT)(_ver.ENV_TYPE));
+    (0, _discordTool.init)();
 }
 
 function init() {
@@ -58,7 +80,7 @@ function init() {
     });
 }
 
-exports.default = function (data, adultonly, auth) {
+function sendWs(data, adultonly, auth) {
     if (wsServer) {
         (function () {
             data.level = auth && adultonly ? 2 : adultonly ? 1 : 0;
@@ -68,6 +90,16 @@ exports.default = function (data, adultonly, auth) {
             });
         })();
     }
+}
+
+exports.default = function (data, adultonly, auth) {
+    var ds = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+    if (ds) {
+        (0, _discordTool2.default)(data.toString());
+        return;
+    }
+    sendWs(data, adultonly, auth);
     if (client) {
         client.write((0, _stringify2.default)({
             send: 'web',
