@@ -3,15 +3,11 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getSingleAnnual = exports.getStockList = undefined;
+exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
 var _stringify2 = _interopRequireDefault(_stringify);
-
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
 
 var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
 
@@ -24,6 +20,10 @@ var _set2 = _interopRequireDefault(_set);
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
 var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
 
 var _promise = require('babel-runtime/core-js/promise');
 
@@ -600,7 +600,7 @@ var getManagementIndex = function getManagementIndex(managementStatus, year, qua
     }
 };
 
-var initXml = function initXml(filelocation) {
+var initXml = exports.initXml = function initXml(filelocation) {
     return new _promise2.default(function (resolve, reject) {
         return (0, _fs.readFile)(filelocation, 'utf8', function (err, data) {
             return err ? reject(err) : resolve(data);
@@ -614,7 +614,39 @@ var initXml = function initXml(filelocation) {
                     console.log(data);
                     return reject(err);
                 } else {
-                    return resolve(result);
+                    if (result.html) {
+                        var _ret = function () {
+                            var ixbrl = { xbrl: {} };
+                            var enumerate = function enumerate(obj) {
+                                for (var o in obj) {
+                                    if ((0, _typeof3.default)(obj[o]) === 'object') {
+                                        if (o.match(/^ix:/)) {
+                                            for (var j in obj[o]) {
+                                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^t?ifrs/)) {
+                                                    if (!ixbrl['xbrl'][obj[o][j]['$']['name']]) {
+                                                        ixbrl['xbrl'][obj[o][j]['$']['name']] = [obj[o][j]];
+                                                    } else {
+                                                        ixbrl['xbrl'][obj[o][j]['$']['name']].push(obj[o][j]);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        enumerate(obj[o]);
+                                    }
+                                }
+                            };
+                            enumerate(result.html.body);
+                            console.log(ixbrl);
+                            return {
+                                v: resolve(ixbrl)
+                            };
+                        }();
+
+                        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+                    } else {
+                        console.log(result);
+                        return resolve(result);
+                    }
                 }
             });
         });
@@ -2530,7 +2562,7 @@ exports.default = {
                 };
             });
         } else {
-            var _ret2 = function () {
+            var _ret3 = function () {
                 var id_db = null;
                 var normal_tags = [];
                 var is_start = false;
@@ -2602,7 +2634,7 @@ exports.default = {
                                         (0, _fs.unlinkSync)(xml_path);
                                     }
                                     if (is_start) {
-                                        var _ret3 = function () {
+                                        var _ret4 = function () {
                                             var cashStatus = getCashStatus(cash, asset);
                                             var assetStatus = getAssetStatus(asset);
                                             var salesStatus = getSalesStatus(sales, asset);
@@ -2724,7 +2756,7 @@ exports.default = {
                                             };
                                         }();
 
-                                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                                     } else {
                                         console.log('not');
                                         if (not > 4) {
@@ -2814,7 +2846,7 @@ exports.default = {
                 };
             }();
 
-            if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
         }
     },
     getStockPER: function getStockPER(id) {
@@ -2834,7 +2866,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
 
-            var _ret4 = function () {
+            var _ret5 = function () {
                 switch (items[0].type) {
                     case 'twse':
                         var getTable = function getTable(index) {
@@ -2886,7 +2918,7 @@ exports.default = {
                 }
             }();
 
-            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -3013,7 +3045,7 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                var _ret5 = function () {
+                                var _ret6 = function () {
                                     var getTable = function getTable(tIndex) {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
                                             if (raw_data.length > 500) {
@@ -3092,7 +3124,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -4080,7 +4112,7 @@ exports.default = {
                             if (cmd[1] === items[i].index) {
                                 is_find = true;
                                 if (!cmd[3]) {
-                                    var _ret7 = function () {
+                                    var _ret8 = function () {
                                         var orig_count = items[i].count;
                                         items[i].count += +cmd[2];
                                         if (items[i].count > 0) {
@@ -4118,7 +4150,7 @@ exports.default = {
                                         }
                                     }();
 
-                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                                 } else if (cmd[4]) {
                                     items[i].count = +cmd[2];
                                     if (items[i].count > 0) {
@@ -4163,14 +4195,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret6 = _loop(i);
+                            var _ret7 = _loop(i);
 
-                            switch (_ret6) {
+                            switch (_ret7) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                             }
                         }
 
@@ -4316,7 +4348,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret8 = function () {
+    var _ret9 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -4348,7 +4380,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -4416,7 +4448,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret9 = function () {
+            var _ret10 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -4463,7 +4495,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
         } else {
             cYear--;
             if (cYear > year - 5) {

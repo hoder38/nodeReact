@@ -530,14 +530,40 @@ const getManagementIndex = (managementStatus, year, quarter) => {
     }
 }
 
-const initXml = filelocation => new Promise((resolve, reject) => FsReadFile(filelocation, 'utf8', (err, data) => err ? reject(err) : resolve(data))).then(data => new Promise((resolve, reject) => Xmlparser.parseString(data, (err, result) => {
+export const initXml = filelocation => new Promise((resolve, reject) => FsReadFile(filelocation, 'utf8', (err, data) => err ? reject(err) : resolve(data))).then(data => new Promise((resolve, reject) => Xmlparser.parseString(data, (err, result) => {
     if (err) {
         console.log(err.code);
         console.log(err.message);
         console.log(data);
         return reject(err);
     } else {
-        return resolve(result);
+        if (result.html) {
+            const ixbrl = {xbrl:{}};
+            const enumerate = obj => {
+                for (let o in obj) {
+                    if (typeof obj[o] === 'object') {
+                        if (o.match(/^ix:/)) {
+                            for (let j in obj[o]) {
+                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^t?ifrs/)) {
+                                    if (!ixbrl['xbrl'][obj[o][j]['$']['name']]) {
+                                        ixbrl['xbrl'][obj[o][j]['$']['name']] = [obj[o][j]];
+                                    } else {
+                                        ixbrl['xbrl'][obj[o][j]['$']['name']].push(obj[o][j]);
+                                    }
+                                }
+                            }
+                        }
+                        enumerate(obj[o]);
+                    }
+                }
+            }
+            enumerate(result.html.body);
+            console.log(ixbrl);
+            return resolve(ixbrl);
+        } else {
+            console.log(result);
+            return resolve(result);
+        }
     }
 })));
 
