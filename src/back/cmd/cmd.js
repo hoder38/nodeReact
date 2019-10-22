@@ -8,6 +8,7 @@ import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
 import Mongo, { objectID } from '../models/mongo-tool'
+import StockTool from '../models/stock-tool.js'
 import { handleError, isValidString, HoError, completeZero } from '../util/utility'
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
@@ -171,6 +172,9 @@ process.on('uncaughtException', err => {
 rl.on('line', line => {
     const cmd = line.split(' ');
     switch (cmd[0]) {
+        case 'stock':
+        console.log('stock');
+        return StockTool.getSingleStock('twse', cmd[1]|2330, cmd[2]|1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
         case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));
@@ -200,6 +204,7 @@ rl.on('line', line => {
         return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         default:
         console.log('help:');
+        console.log('stock index mode');
         console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');

@@ -157,8 +157,23 @@ var getXmlDate = function getXmlDate(xml, name, index) {
     }
 };
 
+//const getParameter = (xml, name, index) => (xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_']) ? Number(xml.xbrl[name][index]['_']) : 0;
+
 var getParameter = function getParameter(xml, name, index) {
-    return xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_'] ? Number(xml.xbrl[name][index]['_']) : 0;
+    if (xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_']) {
+        var ret = 0;
+        if (Number(xml.xbrl[name][index]['_']) === Number(xml.xbrl[name][index]['_'])) {
+            ret = Number(xml.xbrl[name][index]['_']);
+        } else {
+            var num = xml.xbrl[name][index]['_'].match(/\d+/g);
+            ret = num ? num.reduce(function (a, n) {
+                return a * 1000 + +n;
+            }, 0) : 0;
+        }
+        return xml.xbrl[name][index]['$'] && xml.xbrl[name][index]['$']['scale'] > 0 ? ret * Math.pow(10, xml.xbrl[name][index]['$']['scale']) : ret;
+    } else {
+        return 0;
+    }
 };
 
 var quarterIsEmpty = function quarterIsEmpty(quarter) {
@@ -620,9 +635,9 @@ var initXml = exports.initXml = function initXml(filelocation) {
                             var enumerate = function enumerate(obj) {
                                 for (var o in obj) {
                                     if ((0, _typeof3.default)(obj[o]) === 'object') {
-                                        if (o.match(/^ix:/)) {
+                                        if (o.match(/^ix\:/)) {
                                             for (var j in obj[o]) {
-                                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^t?ifrs/)) {
+                                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^(tifrs|ifrs)/)) {
                                                     if (!ixbrl['xbrl'][obj[o][j]['$']['name']]) {
                                                         ixbrl['xbrl'][obj[o][j]['$']['name']] = [obj[o][j]];
                                                     } else {
@@ -636,7 +651,6 @@ var initXml = exports.initXml = function initXml(filelocation) {
                                 }
                             };
                             enumerate(result.html.body);
-                            console.log(ixbrl);
                             return {
                                 v: resolve(ixbrl)
                             };
@@ -644,7 +658,6 @@ var initXml = exports.initXml = function initXml(filelocation) {
 
                         if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
                     } else {
-                        console.log(result);
                         return resolve(result);
                     }
                 }
@@ -2571,6 +2584,123 @@ exports.default = {
                 var recur_getTwseXml = function recur_getTwseXml() {
                     console.log(year);
                     console.log(quarter);
+                    var final_stage = function final_stage() {
+                        var cashStatus = getCashStatus(cash, asset);
+                        var assetStatus = getAssetStatus(asset);
+                        var salesStatus = getSalesStatus(sales, asset);
+                        var profitStatus = getProfitStatus(salesStatus, cashStatus, asset);
+                        var safetyStatus = getSafetyStatus(salesStatus, cashStatus, asset);
+                        var managementStatus = getManagementStatus(salesStatus, asset);
+                        var earliestYear = 0;
+                        var earliestQuarter = 0;
+                        for (var i in cashStatus) {
+                            earliestYear = Number(i);
+                            for (var j in cashStatus[i]) {
+                                if (cashStatus[i][j]) {
+                                    earliestQuarter = Number(j) + 1;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
+                            console.log('stock finance data not exist');
+                            return false;
+                        }
+                        var profitIndex = getProfitIndex(profitStatus, earliestYear, latestYear);
+                        var safetyIndex = getSafetyIndex(safetyStatus, earliestYear, latestYear);
+                        var managementIndex = getManagementIndex(managementStatus, latestYear, latestQuarter);
+                        return handleStockTag(type, index, latestYear, latestQuarter, assetStatus, cashStatus, safetyStatus, profitStatus, salesStatus, managementStatus).then(function (_ref) {
+                            var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
+                                name = _ref2[0],
+                                tags = _ref2[1];
+
+                            var stock_default = [];
+                            var _iteratorNormalCompletion2 = true;
+                            var _didIteratorError2 = false;
+                            var _iteratorError2 = undefined;
+
+                            try {
+                                for (var _iterator2 = (0, _getIterator3.default)(tags), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                    var t = _step2.value;
+
+                                    var normal = (0, _tagTool.normalize)(t);
+                                    if (!(0, _tagTool.isDefaultTag)(normal)) {
+                                        if (normal_tags.indexOf(normal) === -1) {
+                                            normal_tags.push(normal);
+                                            stock_default.push(normal);
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError2 = true;
+                                _iteratorError2 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                        _iterator2.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError2) {
+                                        throw _iteratorError2;
+                                    }
+                                }
+                            }
+
+                            var retObj = function retObj() {
+                                return id_db ? (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id_db }, { $set: {
+                                        cash: cash,
+                                        asset: asset,
+                                        sales: sales,
+                                        profitIndex: profitIndex,
+                                        safetyIndex: safetyIndex,
+                                        managementIndex: managementIndex,
+                                        tags: normal_tags,
+                                        name: name,
+                                        stock_default: stock_default
+                                    } }).then(function (item) {
+                                    return id_db;
+                                }) : (0, _mongoTool2.default)('insert', _constants.STOCKDB, {
+                                    type: type,
+                                    index: index,
+                                    name: name,
+                                    cash: cash,
+                                    asset: asset,
+                                    sales: sales,
+                                    profitIndex: profitIndex,
+                                    safetyIndex: safetyIndex,
+                                    managementIndex: managementIndex,
+                                    tags: normal_tags,
+                                    important: 0,
+                                    stock_default: stock_default
+                                }).then(function (item) {
+                                    return item[0]._id;
+                                });
+                            };
+                            return retObj().then(function (id) {
+                                return {
+                                    cash: cash,
+                                    asset: asset,
+                                    sales: sales,
+                                    cashStatus: cashStatus,
+                                    assetStatus: assetStatus,
+                                    salesStatus: salesStatus,
+                                    profitStatus: profitStatus,
+                                    safetyStatus: safetyStatus,
+                                    managementStatus: managementStatus,
+                                    latestYear: latestYear,
+                                    latestQuarter: latestQuarter,
+                                    earliestYear: earliestYear,
+                                    earliestQuarter: earliestQuarter,
+                                    profitIndex: profitIndex,
+                                    managementIndex: managementIndex,
+                                    safetyIndex: safetyIndex,
+                                    stockName: '' + type + index + name,
+                                    id: id
+                                };
+                            });
+                        });
+                    };
                     var xml_path = '/mnt/stock/' + type + '/' + index + '/' + year + quarter + '.xml';
                     var parseXml = function parseXml() {
                         return initXml(xml_path).then(function (xml) {
@@ -2617,7 +2747,11 @@ exports.default = {
                             return recur_getTwseXml();
                         } else {
                             console.log('parse');
+                            /*if (year === 2018 && quarter === 3) {
+                                return final_stage();
+                            } else {*/
                             return parseXml();
+                            //}
                         }
                     } else {
                         return getTwseXml(index, year, quarter, xml_path).catch(function (err) {
@@ -2634,129 +2768,7 @@ exports.default = {
                                         (0, _fs.unlinkSync)(xml_path);
                                     }
                                     if (is_start) {
-                                        var _ret4 = function () {
-                                            var cashStatus = getCashStatus(cash, asset);
-                                            var assetStatus = getAssetStatus(asset);
-                                            var salesStatus = getSalesStatus(sales, asset);
-                                            var profitStatus = getProfitStatus(salesStatus, cashStatus, asset);
-                                            var safetyStatus = getSafetyStatus(salesStatus, cashStatus, asset);
-                                            var managementStatus = getManagementStatus(salesStatus, asset);
-                                            var earliestYear = 0;
-                                            var earliestQuarter = 0;
-                                            for (var i in cashStatus) {
-                                                earliestYear = Number(i);
-                                                for (var j in cashStatus[i]) {
-                                                    if (cashStatus[i][j]) {
-                                                        earliestQuarter = Number(j) + 1;
-                                                        break;
-                                                    }
-                                                }
-                                                break;
-                                            }
-                                            if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
-                                                console.log('stock finance data not exist');
-                                                return {
-                                                    v: false
-                                                };
-                                            }
-                                            var profitIndex = getProfitIndex(profitStatus, earliestYear, latestYear);
-                                            var safetyIndex = getSafetyIndex(safetyStatus, earliestYear, latestYear);
-                                            var managementIndex = getManagementIndex(managementStatus, latestYear, latestQuarter);
-                                            return {
-                                                v: handleStockTag(type, index, latestYear, latestQuarter, assetStatus, cashStatus, safetyStatus, profitStatus, salesStatus, managementStatus).then(function (_ref) {
-                                                    var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
-                                                        name = _ref2[0],
-                                                        tags = _ref2[1];
-
-                                                    var stock_default = [];
-                                                    var _iteratorNormalCompletion2 = true;
-                                                    var _didIteratorError2 = false;
-                                                    var _iteratorError2 = undefined;
-
-                                                    try {
-                                                        for (var _iterator2 = (0, _getIterator3.default)(tags), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                                            var t = _step2.value;
-
-                                                            var normal = (0, _tagTool.normalize)(t);
-                                                            if (!(0, _tagTool.isDefaultTag)(normal)) {
-                                                                if (normal_tags.indexOf(normal) === -1) {
-                                                                    normal_tags.push(normal);
-                                                                    stock_default.push(normal);
-                                                                }
-                                                            }
-                                                        }
-                                                    } catch (err) {
-                                                        _didIteratorError2 = true;
-                                                        _iteratorError2 = err;
-                                                    } finally {
-                                                        try {
-                                                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                                                _iterator2.return();
-                                                            }
-                                                        } finally {
-                                                            if (_didIteratorError2) {
-                                                                throw _iteratorError2;
-                                                            }
-                                                        }
-                                                    }
-
-                                                    var retObj = function retObj() {
-                                                        return id_db ? (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id_db }, { $set: {
-                                                                cash: cash,
-                                                                asset: asset,
-                                                                sales: sales,
-                                                                profitIndex: profitIndex,
-                                                                safetyIndex: safetyIndex,
-                                                                managementIndex: managementIndex,
-                                                                tags: normal_tags,
-                                                                name: name,
-                                                                stock_default: stock_default
-                                                            } }).then(function (item) {
-                                                            return id_db;
-                                                        }) : (0, _mongoTool2.default)('insert', _constants.STOCKDB, {
-                                                            type: type,
-                                                            index: index,
-                                                            name: name,
-                                                            cash: cash,
-                                                            asset: asset,
-                                                            sales: sales,
-                                                            profitIndex: profitIndex,
-                                                            safetyIndex: safetyIndex,
-                                                            managementIndex: managementIndex,
-                                                            tags: normal_tags,
-                                                            important: 0,
-                                                            stock_default: stock_default
-                                                        }).then(function (item) {
-                                                            return item[0]._id;
-                                                        });
-                                                    };
-                                                    return retObj().then(function (id) {
-                                                        return {
-                                                            cash: cash,
-                                                            asset: asset,
-                                                            sales: sales,
-                                                            cashStatus: cashStatus,
-                                                            assetStatus: assetStatus,
-                                                            salesStatus: salesStatus,
-                                                            profitStatus: profitStatus,
-                                                            safetyStatus: safetyStatus,
-                                                            managementStatus: managementStatus,
-                                                            latestYear: latestYear,
-                                                            latestQuarter: latestQuarter,
-                                                            earliestYear: earliestYear,
-                                                            earliestQuarter: earliestQuarter,
-                                                            profitIndex: profitIndex,
-                                                            managementIndex: managementIndex,
-                                                            safetyIndex: safetyIndex,
-                                                            stockName: '' + type + index + name,
-                                                            id: id
-                                                        };
-                                                    });
-                                                })
-                                            };
-                                        }();
-
-                                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                                        return final_stage();
                                     } else {
                                         console.log('not');
                                         if (not > 4) {
@@ -2866,7 +2878,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
 
-            var _ret5 = function () {
+            var _ret4 = function () {
                 switch (items[0].type) {
                     case 'twse':
                         var getTable = function getTable(index) {
@@ -2918,7 +2930,7 @@ exports.default = {
                 }
             }();
 
-            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -3045,7 +3057,7 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                var _ret6 = function () {
+                                var _ret5 = function () {
                                     var getTable = function getTable(tIndex) {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
                                             if (raw_data.length > 500) {
@@ -3124,7 +3136,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -4112,7 +4124,7 @@ exports.default = {
                             if (cmd[1] === items[i].index) {
                                 is_find = true;
                                 if (!cmd[3]) {
-                                    var _ret8 = function () {
+                                    var _ret7 = function () {
                                         var orig_count = items[i].count;
                                         items[i].count += +cmd[2];
                                         if (items[i].count > 0) {
@@ -4150,7 +4162,7 @@ exports.default = {
                                         }
                                     }();
 
-                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                 } else if (cmd[4]) {
                                     items[i].count = +cmd[2];
                                     if (items[i].count > 0) {
@@ -4195,14 +4207,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret7 = _loop(i);
+                            var _ret6 = _loop(i);
 
-                            switch (_ret7) {
+                            switch (_ret6) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                    if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                             }
                         }
 
@@ -4348,7 +4360,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret9 = function () {
+    var _ret8 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -4380,7 +4392,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -4448,7 +4460,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret10 = function () {
+            var _ret9 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -4495,7 +4507,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
         } else {
             cYear--;
             if (cYear > year - 5) {

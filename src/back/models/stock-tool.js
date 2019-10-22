@@ -90,7 +90,22 @@ const getXmlDate = (xml, name, index) => {
     }
 }
 
-const getParameter = (xml, name, index) => (xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_']) ? Number(xml.xbrl[name][index]['_']) : 0;
+//const getParameter = (xml, name, index) => (xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_']) ? Number(xml.xbrl[name][index]['_']) : 0;
+
+const getParameter = (xml, name, index) => {
+    if (xml.xbrl[name] && xml.xbrl[name][index] && xml.xbrl[name][index]['_']) {
+        let ret = 0;
+        if (Number(xml.xbrl[name][index]['_']) === Number(xml.xbrl[name][index]['_'])) {
+            ret = Number(xml.xbrl[name][index]['_']);
+        } else {
+            const num = xml.xbrl[name][index]['_'].match(/\d+/g);
+            ret = num ? num.reduce((a, n) => (a * 1000) + +n, 0) : 0;
+        }
+        return (xml.xbrl[name][index]['$'] && xml.xbrl[name][index]['$']['scale'] > 0) ? ret * Math.pow(10, xml.xbrl[name][index]['$']['scale']) : ret;
+    } else {
+        return 0;
+    }
+}
 
 const quarterIsEmpty = quarter => {
     if (!quarter) {
@@ -542,9 +557,9 @@ export const initXml = filelocation => new Promise((resolve, reject) => FsReadFi
             const enumerate = obj => {
                 for (let o in obj) {
                     if (typeof obj[o] === 'object') {
-                        if (o.match(/^ix:/)) {
+                        if (o.match(/^ix\:/)) {
                             for (let j in obj[o]) {
-                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^t?ifrs/)) {
+                                if (obj[o][j]['$'] && obj[o][j]['$']['name'].match(/^(tifrs|ifrs)/)) {
                                     if (!ixbrl['xbrl'][obj[o][j]['$']['name']]) {
                                         ixbrl['xbrl'][obj[o][j]['$']['name']] = [obj[o][j]];
                                     } else {
@@ -558,10 +573,8 @@ export const initXml = filelocation => new Promise((resolve, reject) => FsReadFi
                 }
             }
             enumerate(result.html.body);
-            console.log(ixbrl);
             return resolve(ixbrl);
         } else {
-            console.log(result);
             return resolve(result);
         }
     }
@@ -2441,6 +2454,89 @@ export default {
             const recur_getTwseXml = () => {
                 console.log(year);
                 console.log(quarter);
+                const final_stage = () => {
+                    const cashStatus = getCashStatus(cash, asset);
+                    const assetStatus = getAssetStatus(asset);
+                    const salesStatus = getSalesStatus(sales, asset);
+                    const profitStatus = getProfitStatus(salesStatus, cashStatus, asset);
+                    const safetyStatus = getSafetyStatus(salesStatus, cashStatus, asset);
+                    const managementStatus = getManagementStatus(salesStatus, asset);
+                    let earliestYear = 0;
+                    let earliestQuarter = 0;
+                    for (let i in cashStatus) {
+                        earliestYear = Number(i);
+                        for (let j in cashStatus[i]) {
+                            if (cashStatus[i][j]) {
+                                earliestQuarter = Number(j) + 1;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
+                        console.log('stock finance data not exist');
+                        return false;
+                    }
+                    const profitIndex = getProfitIndex(profitStatus, earliestYear, latestYear);
+                    const safetyIndex = getSafetyIndex(safetyStatus, earliestYear, latestYear);
+                    const managementIndex = getManagementIndex(managementStatus, latestYear, latestQuarter);
+                    return handleStockTag(type, index, latestYear, latestQuarter, assetStatus, cashStatus, safetyStatus, profitStatus, salesStatus, managementStatus).then(([name, tags]) => {
+                        let stock_default = [];
+                        for (let t of tags) {
+                            const normal = normalize(t);
+                            if (!isDefaultTag(normal)) {
+                                if (normal_tags.indexOf(normal) === -1) {
+                                    normal_tags.push(normal);
+                                    stock_default.push(normal);
+                                }
+                            }
+                        }
+                        const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
+                            cash,
+                            asset,
+                            sales,
+                            profitIndex,
+                            safetyIndex,
+                            managementIndex,
+                            tags: normal_tags,
+                            name,
+                            stock_default,
+                        }}).then(item => id_db) : Mongo('insert', STOCKDB, {
+                            type,
+                            index,
+                            name,
+                            cash,
+                            asset,
+                            sales,
+                            profitIndex,
+                            safetyIndex,
+                            managementIndex,
+                            tags: normal_tags,
+                            important: 0,
+                            stock_default,
+                        }).then(item => item[0]._id);
+                        return retObj().then(id => ({
+                            cash,
+                            asset,
+                            sales,
+                            cashStatus,
+                            assetStatus,
+                            salesStatus,
+                            profitStatus,
+                            safetyStatus,
+                            managementStatus,
+                            latestYear,
+                            latestQuarter,
+                            earliestYear,
+                            earliestQuarter,
+                            profitIndex,
+                            managementIndex,
+                            safetyIndex,
+                            stockName: `${type}${index}${name}`,
+                            id,
+                        }));
+                    });
+                }
                 const xml_path = `/mnt/stock/${type}/${index}/${year}${quarter}.xml`;
                 const parseXml = () => initXml(xml_path).then(xml => {
                     cash = getCashflow(xml, cash, is_start);
@@ -2485,7 +2581,11 @@ export default {
                         return recur_getTwseXml();
                     } else {
                         console.log('parse');
+                        /*if (year === 2018 && quarter === 3) {
+                            return final_stage();
+                        } else {*/
                         return parseXml();
+                        //}
                     }
                 } else {
                     return getTwseXml(index, year, quarter, xml_path).catch(err => (err.code !== 'HPE_INVALID_CONSTANT') ? handleError(err) : Promise.resolve(err)).then(err => {
@@ -2500,87 +2600,7 @@ export default {
                                     FsUnlinkSync(xml_path);
                                 }
                                 if (is_start) {
-                                    const cashStatus = getCashStatus(cash, asset);
-                                    const assetStatus = getAssetStatus(asset);
-                                    const salesStatus = getSalesStatus(sales, asset);
-                                    const profitStatus = getProfitStatus(salesStatus, cashStatus, asset);
-                                    const safetyStatus = getSafetyStatus(salesStatus, cashStatus, asset);
-                                    const managementStatus = getManagementStatus(salesStatus, asset);
-                                    let earliestYear = 0;
-                                    let earliestQuarter = 0;
-                                    for (let i in cashStatus) {
-                                        earliestYear = Number(i);
-                                        for (let j in cashStatus[i]) {
-                                            if (cashStatus[i][j]) {
-                                                earliestQuarter = Number(j) + 1;
-                                                break;
-                                            }
-                                        }
-                                        break;
-                                    }
-                                    if (!cashStatus || !cashStatus[earliestYear] || cashStatus[earliestYear].length === 0) {
-                                        console.log('stock finance data not exist');
-                                        return false;
-                                    }
-                                    const profitIndex = getProfitIndex(profitStatus, earliestYear, latestYear);
-                                    const safetyIndex = getSafetyIndex(safetyStatus, earliestYear, latestYear);
-                                    const managementIndex = getManagementIndex(managementStatus, latestYear, latestQuarter);
-                                    return handleStockTag(type, index, latestYear, latestQuarter, assetStatus, cashStatus, safetyStatus, profitStatus, salesStatus, managementStatus).then(([name, tags]) => {
-                                        let stock_default = [];
-                                        for (let t of tags) {
-                                            const normal = normalize(t);
-                                            if (!isDefaultTag(normal)) {
-                                                if (normal_tags.indexOf(normal) === -1) {
-                                                    normal_tags.push(normal);
-                                                    stock_default.push(normal);
-                                                }
-                                            }
-                                        }
-                                        const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
-                                            cash,
-                                            asset,
-                                            sales,
-                                            profitIndex,
-                                            safetyIndex,
-                                            managementIndex,
-                                            tags: normal_tags,
-                                            name,
-                                            stock_default,
-                                        }}).then(item => id_db) : Mongo('insert', STOCKDB, {
-                                            type,
-                                            index,
-                                            name,
-                                            cash,
-                                            asset,
-                                            sales,
-                                            profitIndex,
-                                            safetyIndex,
-                                            managementIndex,
-                                            tags: normal_tags,
-                                            important: 0,
-                                            stock_default,
-                                        }).then(item => item[0]._id);
-                                        return retObj().then(id => ({
-                                            cash,
-                                            asset,
-                                            sales,
-                                            cashStatus,
-                                            assetStatus,
-                                            salesStatus,
-                                            profitStatus,
-                                            safetyStatus,
-                                            managementStatus,
-                                            latestYear,
-                                            latestQuarter,
-                                            earliestYear,
-                                            earliestQuarter,
-                                            profitIndex,
-                                            managementIndex,
-                                            safetyIndex,
-                                            stockName: `${type}${index}${name}`,
-                                            id,
-                                        }));
-                                    });
+                                    return final_stage();
                                 } else {
                                     console.log('not');
                                     if (not > 4) {

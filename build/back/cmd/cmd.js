@@ -47,6 +47,10 @@ var _mongoTool = require('../models/mongo-tool');
 
 var _mongoTool2 = _interopRequireDefault(_mongoTool);
 
+var _stockTool = require('../models/stock-tool.js');
+
+var _stockTool2 = _interopRequireDefault(_stockTool);
+
 var _utility = require('../util/utility');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -274,6 +278,13 @@ process.on('uncaughtException', function (err) {
 rl.on('line', function (line) {
     var cmd = line.split(' ');
     switch (cmd[0]) {
+        case 'stock':
+            console.log('stock');
+            return _stockTool2.default.getSingleStock('twse', cmd[1] | 2330, cmd[2] | 1).then(function () {
+                return console.log('done');
+            }).catch(function (err) {
+                return (0, _utility.handleError)(err, 'CMD stock');
+            });
         case 'drive':
             console.log('drive');
             return cmdUpdateDrive(cmd[1], cmd[2]).then(function () {
@@ -337,6 +348,7 @@ rl.on('line', function (line) {
             });
         default:
             console.log('help:');
+            console.log('stock index mode');
             console.log('drive batchNumber [single username]');
             console.log('doc am|jp|tw [time]');
             console.log('checkdoc');
