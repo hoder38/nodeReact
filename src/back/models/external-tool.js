@@ -23,7 +23,7 @@ const dramaList = [
     'http://vslovetv.com/',
     'http://jp04.jplovetv.com/2012/08/drama-list.html',
     'http://www.lovetvshow.com/',
-    'http://krsp1.vslovetv.com/',
+    'http://krsp01.vslovetv.com/',
 ];
 
 const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
