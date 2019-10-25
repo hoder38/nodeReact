@@ -34,6 +34,7 @@ exports.default = {
     CHECK_MEDIA: false,
     STOCK_FILTER: false,
     DB_BACKUP: false,
+    PING_SERVER: false,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,

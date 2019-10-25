@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP } from '../config'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER } from '../config'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockList, getSingleAnnual } from '../models/stock-tool.js'
@@ -201,5 +201,15 @@ export const dbBackup = () => {
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => allBackup());
+    }
+}
+
+export const pingServer = () => {
+    if (PING_SERVER(ENV_TYPE)) {
+        const pingS = () => new Promise((resolve, reject) => {
+            sendWs('Server is alive!!!', 0, 0, true);
+            return resolve();
+        }).catch(err => bgError(err, 'Loop pingServer')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => pingS());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => pingS());
     }
 }
