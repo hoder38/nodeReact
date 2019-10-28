@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
+exports.getSingleAnnual = exports.getStockList = exports.initXml = exports.getStockPrice = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -188,7 +188,8 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
     return true;
 };
 
-var getStockPrice = function getStockPrice(type, index) {
+var getStockPrice = exports.getStockPrice = function getStockPrice(type, index) {
+    var price_only = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
     return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
         var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
         if (!table) {
@@ -198,6 +199,12 @@ var getStockPrice = function getStockPrice(type, index) {
         if (!price[0]) {
             console.log(raw_data);
             return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
+        }
+        if (!price_only) {
+            var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+            if (up[0]) {
+                price[0] = price[0] + ' ' + up[0];
+            }
         }
         console.log(price[0]);
         return price[0];

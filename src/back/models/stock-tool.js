@@ -120,7 +120,7 @@ const quarterIsEmpty = quarter => {
 }
 
 
-const getStockPrice = (type, index) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+export const getStockPrice = (type, index, price_only = true) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
     const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
     if (!table) {
         return handleError(new HoError(`stock ${index} price get fail`));
@@ -129,6 +129,12 @@ const getStockPrice = (type, index) => Api('url', `https://tw.stock.yahoo.com/q/
     if (!price[0]) {
         console.log(raw_data);
         return handleError(new HoError(`stock ${index} price get fail`));
+    }
+    if (!price_only) {
+        const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+        if (up[0]) {
+            price[0] = `${price[0]} ${up[0]}`;
+        }
     }
     console.log(price[0]);
     return price[0];
