@@ -1,8 +1,8 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER } from '../config'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL } from '../constants'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK } from '../config'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL } from '../constants'
 import Mongo from '../models/mongo-tool'
-import StockTool, { getStockList, getSingleAnnual } from '../models/stock-tool.js'
+import StockTool, { getStockList, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
@@ -209,7 +209,14 @@ export const pingServer = () => {
         const pingS = () => new Promise((resolve, reject) => {
             sendWs('Server is alive!!!', 0, 0, true);
             return resolve();
-        }).catch(err => bgError(err, 'Loop pingServer')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => pingS());
+        }).catch(err => bgError(err, 'Loop pingServer')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => pingS());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => pingS());
+    }
+}
+
+export const checkStock = () => {
+    if (CHECK_STOCK(ENV_TYPE)) {
+        const checkS = () => stockStatus().catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => checkS());
     }
 }

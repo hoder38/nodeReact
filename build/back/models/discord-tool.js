@@ -4,6 +4,11 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.init = undefined;
+
+var _promise = require('babel-runtime/core-js/promise');
+
+var _promise2 = _interopRequireDefault(_promise);
+
 exports.default = discordSend;
 
 var _constants = require('../constants');
@@ -67,15 +72,8 @@ var checkDoc = function checkDoc(msg) {
 };
 
 var stockPrice = function stockPrice(msg) {
-    return (0, _mongoTool2.default)('find', _constants.STOCKDB, { important: 1 }).then(function (items) {
-        var recur_price = function recur_price(index, ret) {
-            return index >= items.length ? msg.reply(ret) : (0, _stockTool.getStockPrice)(items[index].type, items[index].index, false).then(function (price) {
-                return ret + '\n' + items[index].index + ' ' + items[index].name + ' ' + price;
-            }).then(function (ret) {
-                return recur_price(index + 1, ret);
-            });
-        };
-        return recur_price(0, '');
+    return (0, _stockTool.stockShow)().then(function (ret) {
+        return ret.length > 0 ? msg.reply(ret) : _promise2.default.resolve();
     }).catch(function (err) {
         return msg.reply(err.message);
     });

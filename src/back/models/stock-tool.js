@@ -120,7 +120,7 @@ const quarterIsEmpty = quarter => {
 }
 
 
-export const getStockPrice = (type, index, price_only = true) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+const getStockPrice = (type, index, price_only = true) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
     const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
     if (!table) {
         return handleError(new HoError(`stock ${index} price get fail`));
@@ -130,6 +130,7 @@ export const getStockPrice = (type, index, price_only = true) => Api('url', `htt
         console.log(raw_data);
         return handleError(new HoError(`stock ${index} price get fail`));
     }
+    price[0] = +price[0];
     if (!price_only) {
         const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
         if (up[0]) {
@@ -3569,6 +3570,7 @@ export default {
     },
     updateStockTotal: function(user, info, real = false) {
         //remain 800
+        //delete 2330
         //2330 (-)0.5
         //2330 300 220
         //2330 2 450 cost
@@ -3591,11 +3593,25 @@ export default {
             const updateTotal = {};
             const removeTotal = [];
             const single = v => {
-                const cmd = v.match(/(\d+|remain)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/)
+                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/)
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain += +cmd[2];
                         updateTotal[totalId] = {cost: remain};
+                    } else if (cmd[1] === 'delete') {
+                        for (let i in items) {
+                            if (cmd[2] === items[i].index) {
+                                return getStockPrice('twse', items[i].index).then(price => {
+                                    remain += (price * items[i].count);
+                                    updateTotal[totalId] = {cost: remain};
+                                    if (items[i]._id) {
+                                        removeTotal.push(items[i]._id);
+                                    }
+                                    items.splice(i, 1);
+                                });
+                                break;
+                            }
+                        }
                     } else {
                         let is_find = false;
                         for (let i in items) {
@@ -3604,36 +3620,14 @@ export default {
                                 if (!cmd[3]) {
                                     const orig_count = items[i].count;
                                     items[i].count += +cmd[2];
-                                    if (items[i].count > 0) {
-                                        return getStockPrice('twse', items[i].index).then(price => {
-                                            const new_cost = Math.floor(price * +cmd[2] * 100) / 100;
-                                            items[i].cost += new_cost;
-                                            remain -= new_cost;
-                                            updateTotal[totalId] = {cost: remain};
-                                            if (items[i]._id) {
-                                                if (updateTotal[items[i]._id]) {
-                                                    updateTotal[items[i]._id].count = items[i].count;
-                                                    updateTotal[items[i]._id].cost = items[i].cost;
-                                                } else {
-                                                    updateTotal[items[i]._id] = {count: items[i].count, cost: items[i].cost};
-                                                }
-                                            }
-                                        });
-                                    } else {
-                                        return getStockPrice('twse', items[i].index).then(price => {
-                                            remain += (price * orig_count);
-                                            updateTotal[totalId] = {cost: remain};
-                                            if (items[i]._id) {
-                                                removeTotal.push(items[i]._id);
-                                            }
-                                            items.splice(i, 1);
-                                        });
+                                    if (items[i].count < 0) {
+                                        cmd[2] = -orig_count;
+                                        items[i].count = 0;
                                     }
-                                } else if (cmd[4]) {
-                                    items[i].count = +cmd[2];
-                                    if (items[i].count > 0) {
-                                        remain += (+cmd[3] - items[i].cost);
-                                        items[i].cost = +cmd[3];
+                                    return getStockPrice('twse', items[i].index).then(price => {
+                                        const new_cost = Math.floor(price * +cmd[2] * 100) / 100;
+                                        items[i].cost += new_cost;
+                                        remain -= new_cost;
                                         updateTotal[totalId] = {cost: remain};
                                         if (items[i]._id) {
                                             if (updateTotal[items[i]._id]) {
@@ -3643,13 +3637,19 @@ export default {
                                                 updateTotal[items[i]._id] = {count: items[i].count, cost: items[i].cost};
                                             }
                                         }
-                                    } else {
-                                        remain -= items[i].cost;
-                                        updateTotal[totalId] = {cost: remain};
-                                        if (items[i]._id) {
-                                            removeTotal.push(items[i]._id);
+                                    });
+                                } else if (cmd[4]) {
+                                    items[i].count = +cmd[2] > 0 ? +cmd[2] : 0;
+                                    remain += (+cmd[3] - items[i].cost);
+                                    items[i].cost = +cmd[3];
+                                    updateTotal[totalId] = {cost: remain};
+                                    if (items[i]._id) {
+                                        if (updateTotal[items[i]._id]) {
+                                            updateTotal[items[i]._id].count = items[i].count;
+                                            updateTotal[items[i]._id].cost = items[i].cost;
+                                        } else {
+                                            updateTotal[items[i]._id] = {count: items[i].count, cost: items[i].cost};
                                         }
-                                        items.splice(i, 1);
                                     }
                                 } else {
                                     if (+cmd[2] > +cmd[3]) {
@@ -3672,7 +3672,7 @@ export default {
                             }
                         }
                         if (!is_find) {
-                            if (!cmd[3] && +cmd[2] > 0) {
+                            if (!cmd[3] && +cmd[2] >= 0) {
                                 return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('twse', basic.stock_index).then(price => {
                                     console.log(basic);
                                     let cost = Math.floor(+cmd[2] * price * 100) / 100;
@@ -3680,12 +3680,14 @@ export default {
                                     items.push({
                                         owner: user._id,
                                         index: basic.stock_index,
-                                        name: `${basic.stock_name}${basic.stock_index}`,
+                                        name: `${basic.stock_index} ${basic.stock_name}`,
                                         type: basic.stock_class,
                                         cost,
                                         count: +cmd[2],
                                         top: Math.floor(price * 1.2 * 100) / 100,
                                         bottom: Math.floor(price * 0.95 * 100) / 100,
+                                        price,
+                                        high: price,
                                     })
                                     remain -= cost;
                                     updateTotal[totalId] = {cost: remain};
@@ -3697,12 +3699,14 @@ export default {
                                     items.push({
                                         owner: user._id,
                                         index: basic.stock_index,
-                                        name: `${basic.stock_name}${basic.stock_index}`,
+                                        name: `${basic.stock_index} ${basic.stock_name}`,
                                         type: basic.stock_class,
                                         cost,
                                         count: +cmd[2],
                                         top: Math.floor(price * 1.2 * 100) / 100,
                                         bottom: Math.floor(price * 0.95 * 100) / 100,
+                                        price,
+                                        high: price,
                                     })
                                     remain -= cost;
                                     updateTotal[totalId] = {cost: remain};
@@ -3891,3 +3895,42 @@ export const getSingleAnnual = (year, folder, index) => {
         return recur_annual(year, annualList[0].id);
     }));
 }
+
+export const stockStatus = () => Mongo('find', TOTALDB, {}).then(items => {
+    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(price => {
+        const item = items[index];
+        const high = (!item.high || price > item.high) ? price : item.high;
+        if (price > item.price) {
+            if (price <= item.bottom * 1.05 && price >= item.bottom) {
+                sendWs(`${item.name} BUY!!!`, 0, 0, true);
+            }
+        } else if (item.count > 0 && price < item.price) {
+            if (high > item.top && price < item.top) {
+                sendWs(`${item.name} SELL!!!`, 0, 0, true);
+            } else {
+                let midB = item.bottom;
+                let midT = item.bottom * 1.2;
+                while(midB < item.top) {
+                    if (high < midT) {
+                        if (price < midB * 0.95 || price < high*0.9) {
+                            sendWs(`${item.name} SELL!!!`, 0, 0, true);
+                            break;
+                        }
+                    }
+                    midB = midT;
+                    midT = midB * 1.2;
+                }
+            }
+        }
+        return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
+            high,
+            price,
+        }});
+    }).then(() => recur_price(index + 1));
+    return recur_price(0);
+});
+
+export const stockShow = () => Mongo('find', TOTALDB, {}).then(items => {
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
+    return recur_price(0, '');
+});

@@ -44,6 +44,7 @@ export const MEDIA_INTERVAl = 7200;
 export const EXTERNAL_INTERVAL = 604800;
 export const STOCK_INTERVAL = 172800;
 export const BACKUP_INTERVAL = 86400;
+export const PRICE_INTERVAL = 180;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800

@@ -35,6 +35,7 @@ exports.default = {
     STOCK_FILTER: true,
     DB_BACKUP: true,
     PING_SERVER: true,
+    CHECK_STOCK: true,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,

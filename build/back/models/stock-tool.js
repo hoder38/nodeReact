@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getSingleAnnual = exports.getStockList = exports.initXml = exports.getStockPrice = undefined;
+exports.stockShow = exports.stockStatus = exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -188,7 +188,7 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
     return true;
 };
 
-var getStockPrice = exports.getStockPrice = function getStockPrice(type, index) {
+var getStockPrice = function getStockPrice(type, index) {
     var price_only = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
     return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
         var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
@@ -200,6 +200,7 @@ var getStockPrice = exports.getStockPrice = function getStockPrice(type, index) 
             console.log(raw_data);
             return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
         }
+        price[0] = +price[0];
         if (!price_only) {
             var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
             if (up[0]) {
@@ -4075,6 +4076,7 @@ exports.default = {
         var real = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
         //remain 800
+        //delete 2330
         //2330 (-)0.5
         //2330 300 220
         //2330 2 450 cost
@@ -4119,96 +4121,24 @@ exports.default = {
             var updateTotal = {};
             var removeTotal = [];
             var single = function single(v) {
-                var cmd = v.match(/(\d+|remain)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/);
+                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain += +cmd[2];
                         updateTotal[totalId] = { cost: remain };
-                    } else {
-                        var is_find = false;
-
+                    } else if (cmd[1] === 'delete') {
                         var _loop = function _loop(i) {
-                            if (cmd[1] === items[i].index) {
-                                is_find = true;
-                                if (!cmd[3]) {
-                                    var _ret7 = function () {
-                                        var orig_count = items[i].count;
-                                        items[i].count += +cmd[2];
-                                        if (items[i].count > 0) {
-                                            return {
-                                                v: {
-                                                    v: getStockPrice('twse', items[i].index).then(function (price) {
-                                                        var new_cost = Math.floor(price * +cmd[2] * 100) / 100;
-                                                        items[i].cost += new_cost;
-                                                        remain -= new_cost;
-                                                        updateTotal[totalId] = { cost: remain };
-                                                        if (items[i]._id) {
-                                                            if (updateTotal[items[i]._id]) {
-                                                                updateTotal[items[i]._id].count = items[i].count;
-                                                                updateTotal[items[i]._id].cost = items[i].cost;
-                                                            } else {
-                                                                updateTotal[items[i]._id] = { count: items[i].count, cost: items[i].cost };
-                                                            }
-                                                        }
-                                                    })
-                                                }
-                                            };
-                                        } else {
-                                            return {
-                                                v: {
-                                                    v: getStockPrice('twse', items[i].index).then(function (price) {
-                                                        remain += price * orig_count;
-                                                        updateTotal[totalId] = { cost: remain };
-                                                        if (items[i]._id) {
-                                                            removeTotal.push(items[i]._id);
-                                                        }
-                                                        items.splice(i, 1);
-                                                    })
-                                                }
-                                            };
-                                        }
-                                    }();
-
-                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
-                                } else if (cmd[4]) {
-                                    items[i].count = +cmd[2];
-                                    if (items[i].count > 0) {
-                                        remain += +cmd[3] - items[i].cost;
-                                        items[i].cost = +cmd[3];
-                                        updateTotal[totalId] = { cost: remain };
-                                        if (items[i]._id) {
-                                            if (updateTotal[items[i]._id]) {
-                                                updateTotal[items[i]._id].count = items[i].count;
-                                                updateTotal[items[i]._id].cost = items[i].cost;
-                                            } else {
-                                                updateTotal[items[i]._id] = { count: items[i].count, cost: items[i].cost };
-                                            }
-                                        }
-                                    } else {
-                                        remain -= items[i].cost;
+                            if (cmd[2] === items[i].index) {
+                                return {
+                                    v: getStockPrice('twse', items[i].index).then(function (price) {
+                                        remain += price * items[i].count;
                                         updateTotal[totalId] = { cost: remain };
                                         if (items[i]._id) {
                                             removeTotal.push(items[i]._id);
                                         }
                                         items.splice(i, 1);
-                                    }
-                                } else {
-                                    if (+cmd[2] > +cmd[3]) {
-                                        items[i].top = +cmd[2];
-                                        items[i].bottom = +cmd[3];
-                                    } else {
-                                        items[i].top = +cmd[3];
-                                        items[i].bottom = +cmd[2];
-                                    }
-                                    if (items[i]._id) {
-                                        if (updateTotal[items[i]._id]) {
-                                            updateTotal[items[i]._id].top = items[i].top;
-                                            updateTotal[items[i]._id].bottom = items[i].bottom;
-                                        } else {
-                                            updateTotal[items[i]._id] = { top: items[i].top, bottom: items[i].bottom };
-                                        }
-                                    }
-                                }
+                                    })
+                                };
                                 return 'break';
                             }
                         };
@@ -4224,9 +4154,83 @@ exports.default = {
                                     if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                             }
                         }
+                    } else {
+                        var is_find = false;
+
+                        var _loop3 = function _loop3(_i30) {
+                            if (cmd[1] === items[_i30].index) {
+                                is_find = true;
+                                if (!cmd[3]) {
+                                    var orig_count = items[_i30].count;
+                                    items[_i30].count += +cmd[2];
+                                    if (items[_i30].count < 0) {
+                                        cmd[2] = -orig_count;
+                                        items[_i30].count = 0;
+                                    }
+                                    return {
+                                        v: getStockPrice('twse', items[_i30].index).then(function (price) {
+                                            var new_cost = Math.floor(price * +cmd[2] * 100) / 100;
+                                            items[_i30].cost += new_cost;
+                                            remain -= new_cost;
+                                            updateTotal[totalId] = { cost: remain };
+                                            if (items[_i30]._id) {
+                                                if (updateTotal[items[_i30]._id]) {
+                                                    updateTotal[items[_i30]._id].count = items[_i30].count;
+                                                    updateTotal[items[_i30]._id].cost = items[_i30].cost;
+                                                } else {
+                                                    updateTotal[items[_i30]._id] = { count: items[_i30].count, cost: items[_i30].cost };
+                                                }
+                                            }
+                                        })
+                                    };
+                                } else if (cmd[4]) {
+                                    items[_i30].count = +cmd[2] > 0 ? +cmd[2] : 0;
+                                    remain += +cmd[3] - items[_i30].cost;
+                                    items[_i30].cost = +cmd[3];
+                                    updateTotal[totalId] = { cost: remain };
+                                    if (items[_i30]._id) {
+                                        if (updateTotal[items[_i30]._id]) {
+                                            updateTotal[items[_i30]._id].count = items[_i30].count;
+                                            updateTotal[items[_i30]._id].cost = items[_i30].cost;
+                                        } else {
+                                            updateTotal[items[_i30]._id] = { count: items[_i30].count, cost: items[_i30].cost };
+                                        }
+                                    }
+                                } else {
+                                    if (+cmd[2] > +cmd[3]) {
+                                        items[_i30].top = +cmd[2];
+                                        items[_i30].bottom = +cmd[3];
+                                    } else {
+                                        items[_i30].top = +cmd[3];
+                                        items[_i30].bottom = +cmd[2];
+                                    }
+                                    if (items[_i30]._id) {
+                                        if (updateTotal[items[_i30]._id]) {
+                                            updateTotal[items[_i30]._id].top = items[_i30].top;
+                                            updateTotal[items[_i30]._id].bottom = items[_i30].bottom;
+                                        } else {
+                                            updateTotal[items[_i30]._id] = { top: items[_i30].top, bottom: items[_i30].bottom };
+                                        }
+                                    }
+                                }
+                                return 'break';
+                            }
+                        };
+
+                        _loop4: for (var _i30 in items) {
+                            var _ret7 = _loop3(_i30);
+
+                            switch (_ret7) {
+                                case 'break':
+                                    break _loop4;
+
+                                default:
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                            }
+                        }
 
                         if (!is_find) {
-                            if (!cmd[3] && +cmd[2] > 0) {
+                            if (!cmd[3] && +cmd[2] >= 0) {
                                 return getBasicStockData('twse', cmd[1]).then(function (basic) {
                                     return getStockPrice('twse', basic.stock_index).then(function (price) {
                                         console.log(basic);
@@ -4235,12 +4239,14 @@ exports.default = {
                                         items.push({
                                             owner: user._id,
                                             index: basic.stock_index,
-                                            name: '' + basic.stock_name + basic.stock_index,
+                                            name: basic.stock_index + ' ' + basic.stock_name,
                                             type: basic.stock_class,
                                             cost: cost,
                                             count: +cmd[2],
                                             top: Math.floor(price * 1.2 * 100) / 100,
-                                            bottom: Math.floor(price * 0.95 * 100) / 100
+                                            bottom: Math.floor(price * 0.95 * 100) / 100,
+                                            price: price,
+                                            high: price
                                         });
                                         remain -= cost;
                                         updateTotal[totalId] = { cost: remain };
@@ -4254,12 +4260,14 @@ exports.default = {
                                         items.push({
                                             owner: user._id,
                                             index: basic.stock_index,
-                                            name: '' + basic.stock_name + basic.stock_index,
+                                            name: basic.stock_index + ' ' + basic.stock_name,
                                             type: basic.stock_class,
                                             cost: cost,
                                             count: +cmd[2],
                                             top: Math.floor(price * 1.2 * 100) / 100,
-                                            bottom: Math.floor(price * 0.95 * 100) / 100
+                                            bottom: Math.floor(price * 0.95 * 100) / 100,
+                                            price: price,
+                                            high: price
                                         });
                                         remain -= cost;
                                         updateTotal[totalId] = { cost: remain };
@@ -4560,5 +4568,58 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
             console.log(annual_list);
             return recur_annual(year, annualList[0].id);
         });
+    });
+};
+
+var stockStatus = exports.stockStatus = function stockStatus() {
+    return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
+        var recur_price = function recur_price(index) {
+            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(function (price) {
+                var item = items[index];
+                var high = !item.high || price > item.high ? price : item.high;
+                if (price > item.price) {
+                    if (price <= item.bottom * 1.05 && price >= item.bottom) {
+                        (0, _sendWs2.default)(item.name + ' BUY!!!', 0, 0, true);
+                    }
+                } else if (item.count > 0 && price < item.price) {
+                    if (high > item.top && price < item.top) {
+                        (0, _sendWs2.default)(item.name + ' SELL!!!', 0, 0, true);
+                    } else {
+                        var midB = item.bottom;
+                        var midT = item.bottom * 1.2;
+                        while (midB < item.top) {
+                            if (high < midT) {
+                                if (price < midB * 0.95 || price < high * 0.9) {
+                                    (0, _sendWs2.default)(item.name + ' SELL!!!', 0, 0, true);
+                                    break;
+                                }
+                            }
+                            midB = midT;
+                            midT = midB * 1.2;
+                        }
+                    }
+                }
+                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                        high: high,
+                        price: price
+                    } });
+            }).then(function () {
+                return recur_price(index + 1);
+            });
+        };
+        return recur_price(0);
+    });
+};
+
+var stockShow = exports.stockShow = function stockShow() {
+    return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
+        var recur_price = function recur_price(index, ret) {
+            return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(function (price) {
+                return ret + '\n' + items[index].name + ' ' + price;
+            }).then(function (ret) {
+                return recur_price(index + 1, ret);
+            });
+        };
+        return recur_price(0, '');
     });
 };

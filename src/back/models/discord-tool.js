@@ -1,8 +1,8 @@
-import { DOCDB, STOCKDB } from '../constants'
+import { DOCDB } from '../constants'
 import { DISCORD_TOKEN, DISCORD_CHANNEL } from '../../../ver'
 import Discord from 'discord.js'
 import Mongo from '../models/mongo-tool'
-import { getStockPrice } from '../models/stock-tool'
+import { stockShow } from '../models/stock-tool'
 
 let channel = null;
 export const init = () => {
@@ -36,10 +36,7 @@ const help = msg => msg.reply('\nCommand:\ncheckdoc\nstock');
 
 const checkDoc = msg => Mongo('find', DOCDB).then(doclist => msg.reply(doclist.reduce((a, v) => `${a}\ntype: ${v.type}, date: ${v.date}`, ''))).catch(err => msg.reply(err.message));
 
-const stockPrice = msg => Mongo('find', STOCKDB, {important: 1}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? msg.reply(ret) : getStockPrice(items[index].type, items[index].index, false).then(price => `${ret}\n${items[index].index} ${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
-    return recur_price(0, '');
-}).catch(err => msg.reply(err.message));
+const stockPrice = msg => stockShow().then(ret => (ret.length > 0) ? msg.reply(ret) : Promise.resolve()).catch(err => msg.reply(err.message));
 
 export default function discordSend(msg) {
     if (channel) {
