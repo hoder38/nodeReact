@@ -217,6 +217,6 @@ export const pingServer = () => {
 export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
         const checkS = () => stockStatus().catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => checkS());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => checkS());
     }
 }

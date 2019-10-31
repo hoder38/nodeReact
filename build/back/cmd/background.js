@@ -485,7 +485,7 @@ var checkStock = exports.checkStock = function checkStock() {
                 v: new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
                         return resolve();
-                    }, 60000);
+                    }, 120000);
                 }).then(function () {
                     return checkS();
                 })

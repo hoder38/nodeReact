@@ -1320,7 +1320,7 @@ exports.default = {
                     });
                 });
             case 'mof':
-                return (0, _apiTool2.default)('url', 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.mof.gov.tw/multiplehtml/384fb3077bb349ea973e7fc6f13b6974').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -1333,13 +1333,13 @@ exports.default = {
                     var _iteratorError7 = undefined;
 
                     try {
-                        for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'div_newsDataBox')[0], 'ul', 'list')[0], 'li')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                        for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'div', 'application')[0], 'table')[0], 'tbody')[0], 'tr')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
                             var l = _step7.value;
 
-                            var a = (0, _utility.findTag)(l, 'a')[0];
-                            var day = (0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'day')[0], 'p')[0];
-                            if ((0, _utility.findTag)(day)[0] + '-' + (0, _utility.findTag)((0, _utility.findTag)(day, 'span')[0])[0] === docDate) {
-                                var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(a, 'div', 'p_title')[0], 'p', 'name')[0])[0];
+                            if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[2], 'span')[0])[0] === docDate) {
+                                var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[1], 'span')[0], 'a')[0];
+                                var name = (0, _utility.findTag)(a)[0];
+                                console.log(name);
                                 if (name.match(/海關進出口貿易/)) {
                                     list.push({
                                         url: (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw'),
@@ -2099,8 +2099,8 @@ exports.default = {
                 });
             case 'mof':
                 console.log(obj);
-                return (0, _apiTool2.default)('url', obj.url, { referer: 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281' }).then(function (raw_data) {
-                    var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
+                return (0, _apiTool2.default)('url', obj.url, { referer: 'https://www.mof.gov.tw/' }).then(function (raw_data) {
+                    var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'article')[0], 'p');
                     var _iteratorNormalCompletion15 = true;
                     var _didIteratorError15 = false;
                     var _iteratorError15 = undefined;

@@ -4604,6 +4604,12 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                         price: price
                     } });
             }).then(function () {
+                return new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 300);
+                });
+            }).then(function () {
                 return recur_price(index + 1);
             });
         };
@@ -4616,6 +4622,12 @@ var stockShow = exports.stockShow = function stockShow() {
         var recur_price = function recur_price(index, ret) {
             return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(function (price) {
                 return ret + '\n' + items[index].name + ' ' + price;
+            }).then(function (ret) {
+                return new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve(ret);
+                    }, 300);
+                });
             }).then(function (ret) {
                 return recur_price(index + 1, ret);
             });

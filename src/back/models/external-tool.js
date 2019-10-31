@@ -1072,7 +1072,7 @@ export default {
                 });
             });
             case 'mof':
-            return Api('url', 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281').then(raw_data => {
+            return Api('url', 'https://www.mof.gov.tw/multiplehtml/384fb3077bb349ea973e7fc6f13b6974').then(raw_data => {
                 const date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -1080,11 +1080,11 @@ export default {
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                for (let l of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'div_newsDataBox')[0], 'ul', 'list')[0], 'li')) {
-                    const a = findTag(l, 'a')[0];
-                    const day = findTag(findTag(a, 'div', 'day')[0], 'p')[0];
-                    if (`${findTag(day)[0]}-${findTag(findTag(day, 'span')[0])[0]}` === docDate) {
-                        const name = findTag(findTag(findTag(a, 'div', 'p_title')[0], 'p', 'name')[0])[0];
+                for (let l of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'div', 'application')[0], 'table')[0], 'tbody')[0], 'tr')) {
+                    if (findTag(findTag(findTag(l, 'td')[2], 'span')[0])[0] === docDate) {
+                        const a = findTag(findTag(findTag(l, 'td')[1], 'span')[0], 'a')[0];
+                        const name = findTag(a)[0];
+                        console.log(name);
                         if (name.match(/海關進出口貿易/)) {
                             list.push({
                                 url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
@@ -1498,8 +1498,8 @@ export default {
             });
             case 'mof':
             console.log(obj);
-            return Api('url', obj.url, {referer: 'https://www.mof.gov.tw/Pages/List.aspx?nodeid=281'}).then(raw_data => {
-                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main', 'mainBox insideDataBox')[0], 'div', 'contentBox')[0], 'div', 'bothBox clearfix')[0], 'div', 'newsBox')[0], 'div', 'articleBox')[0], 'div', 'theAbox')[0], 'p');
+            return Api('url', obj.url, {referer: 'https://www.mof.gov.tw/'}).then(raw_data => {
+                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'article')[0], 'p');
                 for (let p of ps) {
                     const pc = findTag(p)[0];
                     if (pc && pc.match(/本文及附表/)) {
