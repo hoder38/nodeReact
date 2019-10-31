@@ -4591,8 +4591,8 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                             if (high < midT) {
                                 if (price < midB * 0.95 || price < high * 0.9) {
                                     (0, _sendWs2.default)(item.name + ' SELL!!!', 0, 0, true);
-                                    break;
                                 }
+                                break;
                             }
                             midB = midT;
                             midT = midB * 1.2;
@@ -4607,7 +4607,7 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                 return new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
                         return resolve();
-                    }, 300);
+                    }, 500);
                 });
             }).then(function () {
                 return recur_price(index + 1);
@@ -4626,7 +4626,7 @@ var stockShow = exports.stockShow = function stockShow() {
                 return new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
                         return resolve(ret);
-                    }, 300);
+                    }, 500);
                 });
             }).then(function (ret) {
                 return recur_price(index + 1, ret);

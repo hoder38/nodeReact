@@ -3914,8 +3914,8 @@ export const stockStatus = () => Mongo('find', TOTALDB, {}).then(items => {
                     if (high < midT) {
                         if (price < midB * 0.95 || price < high*0.9) {
                             sendWs(`${item.name} SELL!!!`, 0, 0, true);
-                            break;
                         }
+                        break;
                     }
                     midB = midT;
                     midT = midB * 1.2;
@@ -3926,11 +3926,11 @@ export const stockStatus = () => Mongo('find', TOTALDB, {}).then(items => {
             high,
             price,
         }});
-    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 300))).then(() => recur_price(index + 1));
+    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 500))).then(() => recur_price(index + 1));
     return recur_price(0);
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => new Promise((resolve, reject) => setTimeout(() => resolve(ret), 300))).then(ret => recur_price(index + 1, ret));
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => new Promise((resolve, reject) => setTimeout(() => resolve(ret), 500))).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
