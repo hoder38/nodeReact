@@ -120,26 +120,33 @@ const quarterIsEmpty = quarter => {
 }
 
 
-const getStockPrice = (type, index, price_only = true) => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
-    const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
-    if (!table) {
-        return handleError(new HoError(`stock ${index} price get fail`));
-    }
-    const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
-    if (!price[0]) {
-        console.log(raw_data);
-        return handleError(new HoError(`stock ${index} price get fail`));
-    }
-    price[0] = +price[0];
-    if (!price_only) {
-        const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
-        if (up[0]) {
-            price[0] = `${price[0]} ${up[0]}`;
+const getStockPrice = (type, index, price_only = true) => {
+    let count = 0;
+    const real = () => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+        const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
+        if (!table) {
+            return handleError(new HoError(`stock ${index} price get fail`));
         }
-    }
-    console.log(price[0]);
-    return price[0];
-});
+        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
+        if (!price || !price[0]) {
+            console.log(raw_data);
+            return handleError(new HoError(`stock ${index} price get fail`));
+        }
+        price[0] = +price[0];
+        if (!price_only) {
+            const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+            if (up && up[0]) {
+                price[0] = `${price[0]} ${up[0]}`;
+            }
+        }
+        console.log(price[0]);
+        return price[0];
+    });
+    return real().catch(err => {
+        console.log(err.message);
+        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
+    });
+}
 
 const getEPS = sales => {
     let year = new Date().getFullYear();
@@ -2677,6 +2684,7 @@ export default {
             }
             switch(items[0].type) {
                 case 'twse':
+                let count = 0;
                 const getTable = index => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=${items[0].index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=${items[0].index}`).then(raw_data => {
                     const table = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
                     if (!table) {
@@ -2685,12 +2693,12 @@ export default {
                     return table;
                 }).catch(err => {
                     if (err.name === 'HoError' && err.message === 'heavy query') {
-                        console.log(index);
+                        console.log(count);
                         handleError(err, 'Stock yield');
-                        if (index > MAX_RETRY) {
+                        if (++count > MAX_RETRY) {
                             return handleError(new HoError('twse yield fail'));
                         }
-                        return new Promise((resolve, reject) => setTimeout(() => resolve(getTable(index + 1)), 60000));
+                        return new Promise((resolve, reject) => setTimeout(() => resolve(getTable(count + 1)), 60000));
                     } else {
                         return handleError(err);
                     }
@@ -2827,11 +2835,18 @@ export default {
                             };
                             return rest_predict(index);
                         } else {
-                            const getTable = tIndex => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
+                            let count = 0;
+                            const getTable = () => Api('url', `https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=${year}${month_str}&colorchg=&TYPEK=all&co_id=${items[0].index}&off=1&year=${year}&month=${month_str}&firstin=true`).then(raw_data => {
                                 if (raw_data.length > 500) {
-                                    const table = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
+                                    const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                                    const table = findTag(body, 'table', 'hasBorder')[0];
                                     if (!table) {
-                                        return handleError(new HoError('heavy query'));
+                                        const center = findTag(findTag(body, 'center')[0])[0];
+                                        if (center.match(/資料庫中查無需求資料/)) {
+                                            return false;
+                                        } else {
+                                            return handleError(new HoError('heavy query'));
+                                        }
                                     }
                                     return table;
                                 } else if (raw_data.length > 400) {
@@ -2849,17 +2864,17 @@ export default {
                                 }
                             }).catch(err => {
                                 if (err.name === 'HoError' && err.message === 'heavy query') {
-                                    console.log(tIndex);
+                                    console.log(count);
                                     handleError(err, 'Stock predict');
-                                    if (tIndex > MAX_RETRY) {
+                                    if (++count > MAX_RETRY) {
                                         return handleError(new HoError('twse predict fail'));
                                     }
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(getTable(tIndex + 1)), 60000));
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(getTable()), 60000));
                                 } else {
                                     return handleError(err);
                                 }
                             });
-                            return getTable(0).then(table => {
+                            return getTable().then(table => {
                                 if (table) {
                                     if (!start_month) {
                                         start_month = `${year}${month_str}`;
@@ -3926,11 +3941,11 @@ export const stockStatus = () => Mongo('find', TOTALDB, {}).then(items => {
             high,
             price,
         }});
-    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 500))).then(() => recur_price(index + 1));
+    }).then(() => recur_price(index + 1));
     return recur_price(0);
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => new Promise((resolve, reject) => setTimeout(() => resolve(ret), 500))).then(ret => recur_price(index + 1, ret));
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });

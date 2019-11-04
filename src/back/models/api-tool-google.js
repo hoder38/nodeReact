@@ -458,7 +458,8 @@ function upload(data) {
     if (data['convert'] && data['convert'] === true) {
         param['convert'] = true;
     }
-    const proc = index => new Promise((resolve, reject) => googleapis.drive({
+    let index = 0;
+    const proc = () => new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
     }).files.insert(param, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
@@ -468,15 +469,14 @@ function upload(data) {
         }
     }).catch(err => {
         console.log(index);
-        console.log(MAX_RETRY);
         handleError(err, 'google upload');
-        if (index > MAX_RETRY) {
+        if (++index > MAX_RETRY) {
             console.log(data);
             return handleError(err, data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc(index + 1));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(checkOauth()), index * 1000)).then(() => proc());
     });
-    return proc(1);
+    return proc();
 }
 
 function stopApi() {
@@ -489,7 +489,8 @@ function list(data) {
         return handleError(new HoError('list parameter lost!!!'));
     }
     const find_name = data['name'] ? ` and title = '${data['name']}'` : '';
-    const proc = index => new Promise((resolve, reject) => googleapis.drive({
+    let index = 0;
+    const proc = () => new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
     }).files.list({
@@ -502,7 +503,7 @@ function list(data) {
             console.log('drive empty');
             console.log(metadata);
             console.log(index);
-            return (index > MAX_RETRY) ? [] : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), 3000));
+            return (++index > MAX_RETRY) ? [] : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), 3000));
         }
     });
     return proc(1);
@@ -515,14 +516,15 @@ function listFile(data) {
     if (data['max']) {
         max = data['max'];
     }
+    let index = 0;
     const proc = index => new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), OATH_WAITING * 1000)) : handleError(err));
-    return proc(1);
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), OATH_WAITING * 1000)) : handleError(err));
+    return proc();
 }
 
 function create(data) {
@@ -545,7 +547,8 @@ function download(data) {
     }
     const temp = `${data['filePath']}_t`;
     const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
-    const proc = index => Fetch(data['url'], {headers: {
+    let index = 0;
+    const proc = () => Fetch(data['url'], {headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Authorization: `Bearer ${oauth2Client.credentials.access_token}`,
     }}).then(res => checkTmp().then(() => new Promise((resolve, reject) => {
@@ -560,13 +563,13 @@ function download(data) {
     }).catch(err => {
         console.log(index);
         handleError(err, 'Google Fetch');
-        if (index > MAX_RETRY) {
+        if (++index > MAX_RETRY) {
             console.log(data['url']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), index * 1000));
     });
-    return proc(1);
+    return proc();
 }
 
 function deleteFile(data) {
@@ -617,7 +620,8 @@ function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
         return handleError(new HoError('get parameter lost!!!'), data['errhandle']);
     }
-    const proc = index => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, ['-F'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+    let index = 0;
+    const proc = () => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, ['-F'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
         let info = [];
         for (let i of output) {
             const row = i.match(/^(\d+)\s+mp4\s+\d+x(\d+)/);
@@ -659,13 +663,13 @@ function downloadMedia(data) {
     }).catch(err => {
         console.log(index);
         handleError(err, 'Youtubedl Fetch');
-        if (index > MAX_RETRY) {
+        if (++index > MAX_RETRY) {
             console.log(data['key']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), Math.pow(2, index) * 10 * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), Math.pow(2, index) * 10 * 1000));
     });
-    return proc(1);
+    return proc();
 }
 
 function downloadPresent(data) {

@@ -120,7 +120,8 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
     }
     const temp = `${filePath}_t`;
     const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
-    const proc = index => Fetch(url, Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
+    let index = 0;
+    const proc = () => Fetch(url, Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Content-Length': qspost.length,
         } : {}, fake_ip ? {
@@ -165,11 +166,11 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
         }
         console.log(index);
         handleError(err, 'Fetch');
-        if (index > MAX_RETRY) {
+        if (++index > MAX_RETRY) {
             console.log(url);
             return handleError(new HoError('timeout'), errHandle);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc(index + 1)), index * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), index * 1000));
     });
-    return proc(1);
+    return proc();
 }

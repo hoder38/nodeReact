@@ -190,25 +190,37 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
 
 var getStockPrice = function getStockPrice(type, index) {
     var price_only = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
-    return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
-        var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
-        if (!table) {
-            return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
-        }
-        var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
-        if (!price[0]) {
-            console.log(raw_data);
-            return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
-        }
-        price[0] = +price[0];
-        if (!price_only) {
-            var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
-            if (up[0]) {
-                price[0] = price[0] + ' ' + up[0];
+
+    var count = 0;
+    var real = function real() {
+        return (0, _apiTool2.default)('url', 'https://tw.stock.yahoo.com/q/q?s=' + index).then(function (raw_data) {
+            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
+            if (!table) {
+                return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
             }
-        }
-        console.log(price[0]);
-        return price[0];
+            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
+            if (!price || !price[0]) {
+                console.log(raw_data);
+                return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
+            }
+            price[0] = +price[0];
+            if (!price_only) {
+                var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+                if (up && up[0]) {
+                    price[0] = price[0] + ' ' + up[0];
+                }
+            }
+            console.log(price[0]);
+            return price[0];
+        });
+    };
+    return real().catch(function (err) {
+        console.log(err.message);
+        return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+            return setTimeout(function () {
+                return resolve(real());
+            }, count * 1000);
+        });
     });
 };
 
@@ -2889,6 +2901,7 @@ exports.default = {
             var _ret4 = function () {
                 switch (items[0].type) {
                     case 'twse':
+                        var count = 0;
                         var getTable = function getTable(index) {
                             return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st09?encodeURIComponent=1&step=1&firstin=1&off=1&keyword4=' + items[0].index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&isnew=true&co_id=' + items[0].index).then(function (raw_data) {
                                 var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table', 'hasBorder')[0];
@@ -2898,14 +2911,14 @@ exports.default = {
                                 return table;
                             }).catch(function (err) {
                                 if (err.name === 'HoError' && err.message === 'heavy query') {
-                                    console.log(index);
+                                    console.log(count);
                                     (0, _utility.handleError)(err, 'Stock yield');
-                                    if (index > _constants.MAX_RETRY) {
+                                    if (++count > _constants.MAX_RETRY) {
                                         return (0, _utility.handleError)(new _utility.HoError('twse yield fail'));
                                     }
                                     return new _promise2.default(function (resolve, reject) {
                                         return setTimeout(function () {
-                                            return resolve(getTable(index + 1));
+                                            return resolve(getTable(count + 1));
                                         }, 60000);
                                     });
                                 } else {
@@ -3066,12 +3079,19 @@ exports.default = {
                                 return rest_predict(index);
                             } else {
                                 var _ret5 = function () {
-                                    var getTable = function getTable(tIndex) {
+                                    var count = 0;
+                                    var getTable = function getTable() {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
                                             if (raw_data.length > 500) {
-                                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table', 'hasBorder')[0];
+                                                var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
+                                                var table = (0, _utility.findTag)(body, 'table', 'hasBorder')[0];
                                                 if (!table) {
-                                                    return (0, _utility.handleError)(new _utility.HoError('heavy query'));
+                                                    var center = (0, _utility.findTag)((0, _utility.findTag)(body, 'center')[0])[0];
+                                                    if (center.match(/資料庫中查無需求資料/)) {
+                                                        return false;
+                                                    } else {
+                                                        return (0, _utility.handleError)(new _utility.HoError('heavy query'));
+                                                    }
                                                 }
                                                 return table;
                                             } else if (raw_data.length > 400) {
@@ -3089,14 +3109,14 @@ exports.default = {
                                             }
                                         }).catch(function (err) {
                                             if (err.name === 'HoError' && err.message === 'heavy query') {
-                                                console.log(tIndex);
+                                                console.log(count);
                                                 (0, _utility.handleError)(err, 'Stock predict');
-                                                if (tIndex > _constants.MAX_RETRY) {
+                                                if (++count > _constants.MAX_RETRY) {
                                                     return (0, _utility.handleError)(new _utility.HoError('twse predict fail'));
                                                 }
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
-                                                        return resolve(getTable(tIndex + 1));
+                                                        return resolve(getTable());
                                                     }, 60000);
                                                 });
                                             } else {
@@ -3105,7 +3125,7 @@ exports.default = {
                                         });
                                     };
                                     return {
-                                        v: getTable(0).then(function (table) {
+                                        v: getTable().then(function (table) {
                                             if (table) {
                                                 if (!start_month) {
                                                     start_month = '' + year + month_str;
@@ -4604,12 +4624,6 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                         price: price
                     } });
             }).then(function () {
-                return new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve();
-                    }, 500);
-                });
-            }).then(function () {
                 return recur_price(index + 1);
             });
         };
@@ -4622,12 +4636,6 @@ var stockShow = exports.stockShow = function stockShow() {
         var recur_price = function recur_price(index, ret) {
             return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(function (price) {
                 return ret + '\n' + items[index].name + ' ' + price;
-            }).then(function (ret) {
-                return new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve(ret);
-                    }, 500);
-                });
             }).then(function (ret) {
                 return recur_price(index + 1, ret);
             });

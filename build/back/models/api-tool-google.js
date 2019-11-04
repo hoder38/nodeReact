@@ -730,7 +730,8 @@ function upload(data) {
     if (data['convert'] && data['convert'] === true) {
         param['convert'] = true;
     }
-    var proc = function proc(index) {
+    var index = 0;
+    var proc = function proc() {
         return new _promise2.default(function (resolve, reject) {
             return _googleapis2.default.drive({
                 version: 'v2',
@@ -755,9 +756,8 @@ function upload(data) {
             }
         }).catch(function (err) {
             console.log(index);
-            console.log(_constants.MAX_RETRY);
             (0, _utility.handleError)(err, 'google upload');
-            if (index > _constants.MAX_RETRY) {
+            if (++index > _constants.MAX_RETRY) {
                 console.log(data);
                 return (0, _utility.handleError)(err, data['errhandle']);
             }
@@ -766,11 +766,11 @@ function upload(data) {
                     return resolve(checkOauth());
                 }, index * 1000);
             }).then(function () {
-                return proc(index + 1);
+                return proc();
             });
         });
     };
-    return proc(1);
+    return proc();
 }
 
 function stopApi() {
@@ -783,7 +783,8 @@ function list(data) {
         return (0, _utility.handleError)(new _utility.HoError('list parameter lost!!!'));
     }
     var find_name = data['name'] ? ' and title = \'' + data['name'] + '\'' : '';
-    var proc = function proc(index) {
+    var index = 0;
+    var proc = function proc() {
         return new _promise2.default(function (resolve, reject) {
             return _googleapis2.default.drive({
                 version: 'v2',
@@ -801,9 +802,9 @@ function list(data) {
                 console.log('drive empty');
                 console.log(metadata);
                 console.log(index);
-                return index > _constants.MAX_RETRY ? [] : new _promise2.default(function (resolve, reject) {
+                return ++index > _constants.MAX_RETRY ? [] : new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
-                        return resolve(proc(index + 1));
+                        return resolve(proc());
                     }, 3000);
                 });
             }
@@ -819,6 +820,7 @@ function listFile(data) {
     if (data['max']) {
         max = data['max'];
     }
+    var index = 0;
     var proc = function proc(index) {
         return new _promise2.default(function (resolve, reject) {
             return _googleapis2.default.drive({
@@ -833,14 +835,14 @@ function listFile(data) {
         }).then(function (metadata) {
             return metadata.items;
         }).catch(function (err) {
-            return err.code == '401' ? index > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+            return err.code == '401' ? ++index > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
-                    return resolve(proc(index + 1));
+                    return resolve(proc());
                 }, _constants.OATH_WAITING * 1000);
             }) : (0, _utility.handleError)(err);
         });
     };
-    return proc(1);
+    return proc();
 }
 
 function create(data) {
@@ -873,7 +875,8 @@ function download(data) {
             });
         }) : _promise2.default.resolve();
     };
-    var proc = function proc(index) {
+    var index = 0;
+    var proc = function proc() {
         return (0, _nodeFetch2.default)(data['url'], { headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 Authorization: 'Bearer ' + oauth2Client.credentials.access_token
@@ -907,18 +910,18 @@ function download(data) {
         }).catch(function (err) {
             console.log(index);
             (0, _utility.handleError)(err, 'Google Fetch');
-            if (index > _constants.MAX_RETRY) {
+            if (++index > _constants.MAX_RETRY) {
                 console.log(data['url']);
                 return (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
-                    return resolve(proc(index + 1));
+                    return resolve(proc());
                 }, index * 1000);
             });
         });
     };
-    return proc(1);
+    return proc();
 }
 
 function deleteFile(data) {
@@ -985,7 +988,8 @@ function downloadMedia(data) {
     if (!data['key'] || !data['filePath']) {
         return (0, _utility.handleError)(new _utility.HoError('get parameter lost!!!'), data['errhandle']);
     }
-    var proc = function proc(index) {
+    var index = 0;
+    var proc = function proc() {
         return new _promise2.default(function (resolve, reject) {
             return _youtubeDl2.default.exec('https://drive.google.com/open?id=' + data['key'], ['-F'], { maxBuffer: 10 * 1024 * 1024 }, function (err, output) {
                 return err ? reject(err) : resolve(output);
@@ -1084,18 +1088,18 @@ function downloadMedia(data) {
         }).catch(function (err) {
             console.log(index);
             (0, _utility.handleError)(err, 'Youtubedl Fetch');
-            if (index > _constants.MAX_RETRY) {
+            if (++index > _constants.MAX_RETRY) {
                 console.log(data['key']);
                 return (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
-                    return resolve(proc(index + 1));
+                    return resolve(proc());
                 }, Math.pow(2, index) * 10 * 1000);
             });
         });
     };
-    return proc(1);
+    return proc();
 }
 
 function downloadPresent(data) {

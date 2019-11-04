@@ -241,7 +241,8 @@ function download(user, url) {
             });
         }) : _promise2.default.resolve();
     };
-    var proc = function proc(index) {
+    var index = 0;
+    var proc = function proc() {
         return (0, _nodeFetch2.default)(url, (0, _assign2.default)({ headers: (0, _assign2.default)(referer ? { 'Referer': referer } : {}, user ? {} : { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36' }, cookie ? { Cookie: cookie } : {}, qspost ? {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': qspost.length
@@ -315,16 +316,16 @@ function download(user, url) {
             }
             console.log(index);
             (0, _utility.handleError)(err, 'Fetch');
-            if (index > _constants.MAX_RETRY) {
+            if (++index > _constants.MAX_RETRY) {
                 console.log(url);
                 return (0, _utility.handleError)(new _utility.HoError('timeout'), errHandle);
             }
             return new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
-                    return resolve(proc(index + 1));
+                    return resolve(proc());
                 }, index * 1000);
             });
         });
     };
-    return proc(1);
+    return proc();
 }
