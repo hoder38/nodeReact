@@ -444,7 +444,7 @@ var pingServer = exports.pingServer = function pingServer() {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
-                        }, _constants.DOC_INTERVAL * 1000);
+                        }, _constants.BACKUP_INTERVAL * 1000);
                     });
                 }).then(function () {
                     return pingS();
