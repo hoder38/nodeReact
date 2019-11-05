@@ -54,7 +54,8 @@ const MediaWidget = React.createClass({
         }, this._input.getValue())
     },
     componentDidMount: function() {
-        let is_firefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        const is_firefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
         this._targetArr = Array.from(document.querySelectorAll('[data-widget]')).filter(node => node.getAttribute('data-widget') === this.props.toggle)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
@@ -99,7 +100,7 @@ const MediaWidget = React.createClass({
                         }
                     }, 1000)
                 }
-                if (!is_firefox) {
+                if (!is_firefox && !isChrome) {
                     this._video.onclick = e => {
                         if (this._video.paused) {
                             this._video.play()
