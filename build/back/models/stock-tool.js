@@ -198,7 +198,7 @@ var getStockPrice = function getStockPrice(type, index) {
             if (!table) {
                 return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
             }
-            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?)|\-)/);
+            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
             if (!price || !price[0]) {
                 console.log(raw_data);
                 return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));

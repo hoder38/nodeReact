@@ -127,7 +127,7 @@ const getStockPrice = (type, index, price_only = true) => {
         if (!table) {
             return handleError(new HoError(`stock ${index} price get fail`));
         }
-        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?)|\-)/);
+        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
         if (!price || !price[0]) {
             console.log(raw_data);
             return handleError(new HoError(`stock ${index} price get fail`));
