@@ -127,25 +127,25 @@ const getStockPrice = (type, index, price_only = true) => {
         if (!table) {
             return handleError(new HoError(`stock ${index} price get fail`));
         }
-        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
+        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?)|\-)/);
         if (!price || !price[0]) {
             console.log(raw_data);
             return handleError(new HoError(`stock ${index} price get fail`));
         }
         price[0] = +price[0];
         if (!price_only) {
-            const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+            const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
             if (up && up[0]) {
                 price[0] = `${price[0]} ${up[0]}`;
             }
         }
         console.log(price[0]);
         return price[0];
-    });
-    return real().catch(err => {
-        console.log(err.message);
+    }).catch(err => {
+        console.log(count);
         return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
     });
+    return real();
 }
 
 const getEPS = sales => {

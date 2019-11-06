@@ -198,30 +198,30 @@ var getStockPrice = function getStockPrice(type, index) {
             if (!table) {
                 return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
             }
-            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^\d+(\.\d+)?$/);
+            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?)|\-)/);
             if (!price || !price[0]) {
                 console.log(raw_data);
                 return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
             }
             price[0] = +price[0];
             if (!price_only) {
-                var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^.?\d+(\.\d+)?$/);
+                var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
                 if (up && up[0]) {
                     price[0] = price[0] + ' ' + up[0];
                 }
             }
             console.log(price[0]);
             return price[0];
+        }).catch(function (err) {
+            console.log(count);
+            return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+                return setTimeout(function () {
+                    return resolve(real());
+                }, count * 1000);
+            });
         });
     };
-    return real().catch(function (err) {
-        console.log(err.message);
-        return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
-            return setTimeout(function () {
-                return resolve(real());
-            }, count * 1000);
-        });
-    });
+    return real();
 };
 
 var getEPS = function getEPS(sales) {
