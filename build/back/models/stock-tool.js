@@ -203,6 +203,16 @@ var getStockPrice = function getStockPrice(type, index) {
                 console.log(raw_data);
                 return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
             }
+            if (price[0] === '-') {
+                var last_price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
+                if (!last_price || !last_price[0]) {
+                    return (0, _utility.handleError)(new _utility.HoError('stock ' + index + ' price get fail'));
+                }
+                if (price[0] === '-') {
+                    last_price[0] = 0;
+                }
+                price[0] = last_price[0];
+            }
             price[0] = +price[0];
             if (!price_only) {
                 var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);

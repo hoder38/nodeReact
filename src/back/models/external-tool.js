@@ -934,7 +934,7 @@ export default {
                 });
             });
             case 'sea':
-            return Api('url', 'http://www.seaj.or.jp/english/statistics/page_en.php?CMD=1').then(raw_data => {
+            return Api('url', 'http://www.seaj.or.jp/english/statistics/').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));

@@ -132,6 +132,16 @@ const getStockPrice = (type, index, price_only = true) => {
             console.log(raw_data);
             return handleError(new HoError(`stock ${index} price get fail`));
         }
+        if (price[0] === '-') {
+            const last_price = findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
+            if (!last_price || !last_price[0]) {
+                return handleError(new HoError(`stock ${index} price get fail`));
+            }
+            if (price[0] === '-') {
+                last_price[0] = 0;
+            }
+            price[0] = last_price[0];
+        }
         price[0] = +price[0];
         if (!price_only) {
             const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
