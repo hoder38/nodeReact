@@ -21,7 +21,7 @@ case "$1" in
 
 start)
         echo "starting node: $NODE $SERVER_JS_FILE"
-        sudo -u $USER $NODE $SERVER_JS_FILE >> $OUT 2>>$OUT &
+        sudo -u $USER $NODE --max-old-space-size=768 $SERVER_JS_FILE >> $OUT 2>>$OUT &
         ;;
 
 stop)
