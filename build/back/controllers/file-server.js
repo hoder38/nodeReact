@@ -100,7 +100,6 @@ var server = (0, _https.createServer)(credentials, app);
 (0, _background.updateStock)();
 (0, _background.filterStock)();
 (0, _background.dbBackup)();
-(0, _background.pingServer)();
 (0, _background.checkStock)();
 
 app.use((0, _bodyParser.urlencoded)({ extended: true }));

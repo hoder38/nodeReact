@@ -204,16 +204,6 @@ export const dbBackup = () => {
     }
 }
 
-export const pingServer = () => {
-    if (PING_SERVER(ENV_TYPE)) {
-        const pingS = () => new Promise((resolve, reject) => {
-            sendWs('Server is alive!!!', 0, 0, true);
-            return resolve();
-        }).catch(err => bgError(err, 'Loop pingServer')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => pingS());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => pingS());
-    }
-}
-
 export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
         const checkS = () => stockStatus().catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());

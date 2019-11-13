@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.checkStock = exports.pingServer = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
 
@@ -431,43 +431,9 @@ var dbBackup = exports.dbBackup = function dbBackup() {
     }
 };
 
-var pingServer = exports.pingServer = function pingServer() {
-    if ((0, _config.PING_SERVER)(_ver.ENV_TYPE)) {
-        var _ret8 = function () {
-            var pingS = function pingS() {
-                return new _promise2.default(function (resolve, reject) {
-                    (0, _sendWs2.default)('Server is alive!!!', 0, 0, true);
-                    return resolve();
-                }).catch(function (err) {
-                    return bgError(err, 'Loop pingServer');
-                }).then(function () {
-                    return new _promise2.default(function (resolve, reject) {
-                        return setTimeout(function () {
-                            return resolve();
-                        }, _constants.BACKUP_INTERVAL * 1000);
-                    });
-                }).then(function () {
-                    return pingS();
-                });
-            };
-            return {
-                v: new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve();
-                    }, 60000);
-                }).then(function () {
-                    return pingS();
-                })
-            };
-        }();
-
-        if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
-    }
-};
-
 var checkStock = exports.checkStock = function checkStock() {
     if ((0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
-        var _ret9 = function () {
+        var _ret8 = function () {
             var checkS = function checkS() {
                 return (0, _stockTool.stockStatus)().catch(function (err) {
                     return bgError(err, 'Loop checkStock');
@@ -492,6 +458,6 @@ var checkStock = exports.checkStock = function checkStock() {
             };
         }();
 
-        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+        if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
     }
 };

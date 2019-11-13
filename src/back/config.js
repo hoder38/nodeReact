@@ -38,5 +38,4 @@ export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : De
 export const STOCK_FILTER = env => env === RELEASE ? ReleaseConfig.STOCK_FILTER : DevConfig.STOCK_FILTER
 export const DB_BACKUP = env => env === RELEASE ? ReleaseConfig.DB_BACKUP : DevConfig.DB_BACKUP
 export const BACKUP_PATH = env => env === RELEASE ? ReleaseConfig.BACKUP_PATH : DevConfig.BACKUP_PATH
-export const PING_SERVER = env => env === RELEASE ? ReleaseConfig.PING_SERVER : DevConfig.PING_SERVER
 export const CHECK_STOCK = env => env === RELEASE ? ReleaseConfig.CHECK_STOCK : DevConfig.CHECK_STOCK
