@@ -4605,6 +4605,9 @@ var stockStatus = exports.stockStatus = function stockStatus() {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
         var recur_price = function recur_price(index) {
             return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(function (price) {
+                if (price === 0) {
+                    return 0;
+                }
                 var item = items[index];
                 var high = !item.high || price > item.high ? price : item.high;
                 if (price > item.price) {

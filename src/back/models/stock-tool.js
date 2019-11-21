@@ -3923,6 +3923,9 @@ export const getSingleAnnual = (year, folder, index) => {
 
 export const stockStatus = () => Mongo('find', TOTALDB, {}).then(items => {
     const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(price => {
+        if (price === 0) {
+            return 0;
+        }
         const item = items[index];
         const high = (!item.high || price > item.high) ? price : item.high;
         if (price > item.price) {
