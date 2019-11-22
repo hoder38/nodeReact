@@ -1537,25 +1537,22 @@ export default {
             case 'moe':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-td-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
+                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-content-white100')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
                 for (let f of files) {
-                    const kind = findTag(f, 'div', 'td-filesKind')[0];
-                    if (kind) {
-                        const a = findTag(kind, 'a')[0];
-                        if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                            let url = a.attribs.href;
-                            url = url.match(/^(http|https):\/\//) ? url : `http://${PathJoin('www.moea.gov.tw/MNS/populace/news', url)}`;
-                            driveName = `${obj.name} ${obj.date}.pdf`;
-                            console.log(driveName);
-                            return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                                type: 'auto',
-                                name: driveName,
-                                filePath,
-                                parent,
-                                rest: () => updateDocDate(type, obj.date),
-                                errhandle: err => handleError(err),
-                            })));
-                        }
+                    const a = findTag(findTag(findTag(findTag(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0]
+                    if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {
+                        let url = a.attribs.href;
+                        url = url.match(/^(http|https):\/\//) ? url : `http://${PathJoin('www.moea.gov.tw/MNS/populace/news', url)}`;
+                        driveName = `${obj.name} ${obj.date}.pdf`;
+                        console.log(driveName);
+                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                            type: 'auto',
+                            name: driveName,
+                            filePath,
+                            parent,
+                            rest: () => updateDocDate(type, obj.date),
+                            errhandle: err => handleError(err),
+                        })));
                     }
                 }
             });

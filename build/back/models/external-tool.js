@@ -2189,7 +2189,7 @@ exports.default = {
             case 'moe':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'div')[2], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'div-table-content')[0], 'div', 'row div-tr-content')[0], 'div', 'div-td-content')[0], 'div', 'div_Content')[0], 'div', 'divNewsDetail')[0], 'div', 'holderContent_wUctlNewsDetail_divFiles')[0], 'div', 'table-files')[0], 'div', 'tr-files');
+                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-content-white100')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
                     var _iteratorNormalCompletion16 = true;
                     var _didIteratorError16 = false;
                     var _iteratorError16 = undefined;
@@ -2198,37 +2198,34 @@ exports.default = {
                         for (var _iterator16 = (0, _getIterator3.default)(files), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
                             var f = _step16.value;
 
-                            var kind = (0, _utility.findTag)(f, 'div', 'td-filesKind')[0];
-                            if (kind) {
-                                var a = (0, _utility.findTag)(kind, 'a')[0];
-                                if (a.attribs.title.match(/新聞稿.*pdf/)) {
-                                    var _ret11 = function () {
-                                        var url = a.attribs.href;
-                                        url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
-                                        driveName = obj.name + ' ' + obj.date + '.pdf';
-                                        console.log(driveName);
-                                        return {
-                                            v: mkFolder((0, _path.dirname)(filePath)).then(function () {
-                                                return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
-                                                    return (0, _apiToolGoogle2.default)('upload', {
-                                                        type: 'auto',
-                                                        name: driveName,
-                                                        filePath: filePath,
-                                                        parent: parent,
-                                                        rest: function rest() {
-                                                            return updateDocDate(type, obj.date);
-                                                        },
-                                                        errhandle: function errhandle(err) {
-                                                            return (0, _utility.handleError)(err);
-                                                        }
-                                                    });
+                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0];
+                            if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {
+                                var _ret11 = function () {
+                                    var url = a.attribs.href;
+                                    url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
+                                    driveName = obj.name + ' ' + obj.date + '.pdf';
+                                    console.log(driveName);
+                                    return {
+                                        v: mkFolder((0, _path.dirname)(filePath)).then(function () {
+                                            return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                                return (0, _apiToolGoogle2.default)('upload', {
+                                                    type: 'auto',
+                                                    name: driveName,
+                                                    filePath: filePath,
+                                                    parent: parent,
+                                                    rest: function rest() {
+                                                        return updateDocDate(type, obj.date);
+                                                    },
+                                                    errhandle: function errhandle(err) {
+                                                        return (0, _utility.handleError)(err);
+                                                    }
                                                 });
-                                            })
-                                        };
-                                    }();
+                                            });
+                                        })
+                                    };
+                                }();
 
-                                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
-                                }
+                                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                             }
                         }
                     } catch (err) {
