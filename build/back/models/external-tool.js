@@ -305,14 +305,14 @@ exports.default = {
                     };
 
                     var nextLove = function nextLove(index, dramaIndex, list) {
-                        //if (index < list.length) {
-                        //    return recur_loveSave(index, dramaIndex, list);
-                        //} else {
-                        dramaIndex++;
-                        if (dramaIndex < dramaList.length) {
-                            return recur_loveList(dramaIndex, nextLove);
+                        if (index < list.length) {
+                            return recur_loveSave(index, dramaIndex, list);
+                        } else {
+                            dramaIndex++;
+                            if (dramaIndex < dramaList.length) {
+                                return recur_loveList(dramaIndex, nextLove);
+                            }
                         }
-                        //}
                         return _promise2.default.resolve();
                     };
 
@@ -427,9 +427,9 @@ exports.default = {
                     };
 
                     var nextEztv = function nextEztv(index, list) {
-                        //if (index < list.length) {
-                        //    return recur_eztvSave(index, list);
-                        //}
+                        if (index < list.length) {
+                            return recur_eztvSave(index, list);
+                        }
                         return _promise2.default.resolve();
                     };
 

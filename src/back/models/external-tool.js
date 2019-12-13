@@ -222,14 +222,14 @@ export default {
                 });
             }
             function nextLove(index, dramaIndex, list) {
-                //if (index < list.length) {
-                //    return recur_loveSave(index, dramaIndex, list);
-                //} else {
+                if (index < list.length) {
+                    return recur_loveSave(index, dramaIndex, list);
+                } else {
                     dramaIndex++;
                     if (dramaIndex < dramaList.length) {
                         return recur_loveList(dramaIndex, nextLove);
                     }
-                //}
+                }
                 return Promise.resolve();
             }
             return clearExtenal().then(() => recur_loveList(0, nextLove));
@@ -335,9 +335,9 @@ export default {
                 return nextEztv(0, list);
             });
             function nextEztv(index, list) {
-                //if (index < list.length) {
-                //    return recur_eztvSave(index, list);
-                //}
+                if (index < list.length) {
+                    return recur_eztvSave(index, list);
+                }
                 return Promise.resolve();
             }
             return clearExtenal().then(() => eztvList());
