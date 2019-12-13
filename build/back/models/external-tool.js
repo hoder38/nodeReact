@@ -93,7 +93,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var opencc = new _opencc2.default('s2t.json');
 
-var dramaList = ['http://tw01.lovetvshow.info/2013/05/drama-list.html', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr19.vslovetv.com/', 'http://jp04.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp01.vslovetv.com/'];
+var dramaList = ['http://tw02.lovetvshow.info/', 'http://cn.lovetvshow.info/2012/05/drama-list.html', 'http://kr19.vslovetv.com/', 'http://jp04.jplovetv.com/2012/08/drama-list.html', 'http://www.lovetvshow.com/', 'http://krsp01.vslovetv.com/'];
 
 var recur_loveList = function recur_loveList(dramaIndex, next) {
     return (0, _apiTool2.default)('url', dramaList[dramaIndex]).then(function (raw_data) {
@@ -103,20 +103,20 @@ var recur_loveList = function recur_loveList(dramaIndex, next) {
             year = '台灣';
         }
         var top = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
-        if (dramaIndex === 2 || dramaIndex === 5) {
+        if (dramaIndex === 0 || dramaIndex === 2 || dramaIndex === 5) {
             (function () {
                 var krscript = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
                 var urlList = krscript.match(/http\:\/\/[^\']+/g);
                 krscript.match(/var OldLabel = \"[^\"]+/g).forEach(function (n, i) {
-                    var krst = n.match(/(Pre)?(\d\d\d\d)韓國電視劇\-(.*)$/);
+                    var krst = n.match(/(?:Pre)?(\d\d\d\d)(?:韓國|台灣)電視劇\-(.*)$/);
                     if (krst) {
-                        if (krst[2].match(/�/)) {
+                        if (krst[1].match(/�/)) {
                             return true;
                         }
                         list.push({
-                            name: krst[3],
+                            name: krst[2],
                             url: urlList[i],
-                            year: krst[2]
+                            year: krst[1]
                         });
                     }
                 });
@@ -305,14 +305,14 @@ exports.default = {
                     };
 
                     var nextLove = function nextLove(index, dramaIndex, list) {
-                        if (index < list.length) {
-                            return recur_loveSave(index, dramaIndex, list);
-                        } else {
-                            dramaIndex++;
-                            if (dramaIndex < dramaList.length) {
-                                return recur_loveList(dramaIndex, nextLove);
-                            }
+                        //if (index < list.length) {
+                        //    return recur_loveSave(index, dramaIndex, list);
+                        //} else {
+                        dramaIndex++;
+                        if (dramaIndex < dramaList.length) {
+                            return recur_loveList(dramaIndex, nextLove);
                         }
+                        //}
                         return _promise2.default.resolve();
                     };
 
@@ -427,9 +427,9 @@ exports.default = {
                     };
 
                     var nextEztv = function nextEztv(index, list) {
-                        if (index < list.length) {
-                            return recur_eztvSave(index, list);
-                        }
+                        //if (index < list.length) {
+                        //    return recur_eztvSave(index, list);
+                        //}
                         return _promise2.default.resolve();
                     };
 
@@ -2099,7 +2099,7 @@ exports.default = {
             case 'mof':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url, { referer: 'https://www.mof.gov.tw/' }).then(function (raw_data) {
-                    var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'article')[0], 'p');
+                    var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div')[1], 'article')[0], 'p');
                     var _iteratorNormalCompletion15 = true;
                     var _didIteratorError15 = false;
                     var _iteratorError15 = undefined;

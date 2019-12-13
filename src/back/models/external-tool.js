@@ -18,7 +18,7 @@ import sendWs from '../util/sendWs'
 const opencc = new OpenCC('s2t.json');
 
 const dramaList = [
-    'http://tw01.lovetvshow.info/2013/05/drama-list.html',
+    'http://tw02.lovetvshow.info/',
     'http://cn.lovetvshow.info/2012/05/drama-list.html',
     'http://kr19.vslovetv.com/',
     'http://jp04.jplovetv.com/2012/08/drama-list.html',
@@ -33,19 +33,19 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
         year = '台灣';
     }
     const top = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
-    if (dramaIndex === 2 || dramaIndex === 5) {
+    if (dramaIndex === 0 || dramaIndex === 2 || dramaIndex === 5) {
         const krscript = findTag(findTag(findTag(findTag(findTag(findTag(findTag(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
         const urlList = krscript.match(/http\:\/\/[^\']+/g);
         krscript.match(/var OldLabel = \"[^\"]+/g).forEach((n, i) => {
-            const krst = n.match(/(Pre)?(\d\d\d\d)韓國電視劇\-(.*)$/);
+            const krst = n.match(/(?:Pre)?(\d\d\d\d)(?:韓國|台灣)電視劇\-(.*)$/);
             if (krst) {
-                if (krst[2].match(/�/)) {
+                if (krst[1].match(/�/)) {
                     return true;
                 }
                 list.push({
-                    name: krst[3],
+                    name: krst[2],
                     url: urlList[i],
-                    year: krst[2],
+                    year: krst[1],
                 });
             }
         });
@@ -222,14 +222,14 @@ export default {
                 });
             }
             function nextLove(index, dramaIndex, list) {
-                if (index < list.length) {
-                    return recur_loveSave(index, dramaIndex, list);
-                } else {
+                //if (index < list.length) {
+                //    return recur_loveSave(index, dramaIndex, list);
+                //} else {
                     dramaIndex++;
                     if (dramaIndex < dramaList.length) {
                         return recur_loveList(dramaIndex, nextLove);
                     }
-                }
+                //}
                 return Promise.resolve();
             }
             return clearExtenal().then(() => recur_loveList(0, nextLove));
@@ -335,9 +335,9 @@ export default {
                 return nextEztv(0, list);
             });
             function nextEztv(index, list) {
-                if (index < list.length) {
-                    return recur_eztvSave(index, list);
-                }
+                //if (index < list.length) {
+                //    return recur_eztvSave(index, list);
+                //}
                 return Promise.resolve();
             }
             return clearExtenal().then(() => eztvList());
@@ -1498,7 +1498,7 @@ export default {
             case 'mof':
             console.log(obj);
             return Api('url', obj.url, {referer: 'https://www.mof.gov.tw/'}).then(raw_data => {
-                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div')[1], 'div')[0], 'article')[0], 'p');
+                const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div')[1], 'article')[0], 'p');
                 for (let p of ps) {
                     const pc = findTag(p)[0];
                     if (pc && pc.match(/本文及附表/)) {
