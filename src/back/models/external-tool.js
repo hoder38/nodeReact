@@ -1080,17 +1080,20 @@ export default {
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                for (let l of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0], 'table')[0], 'tbody')[0], 'tr')) {
-                    if (findTag(findTag(findTag(l, 'td')[2], 'span')[0])[0] === docDate) {
-                        const a = findTag(findTag(findTag(l, 'td')[1], 'span')[0], 'a')[0];
-                        const name = findTag(a)[0];
-                        if (name.match(/海關進出口貿易/)) {
-                            list.push({
-                                url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
-                                name: toValidName(name),
-                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                            });
-                            break;
+                const application = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0];
+                if (application) {
+                    for (let l of findTag(findTag(findTag(application, 'table')[0], 'tbody')[0], 'tr')) {
+                        if (findTag(findTag(findTag(l, 'td')[2], 'span')[0])[0] === docDate) {
+                            const a = findTag(findTag(findTag(l, 'td')[1], 'span')[0], 'a')[0];
+                            const name = findTag(a)[0];
+                            if (name.match(/海關進出口貿易/)) {
+                                list.push({
+                                    url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
+                                    name: toValidName(name),
+                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                });
+                                break;
+                            }
                         }
                     }
                 }
@@ -1126,7 +1129,7 @@ export default {
                     }
                 };
                 const industrial = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                     console.log(matchT);
                     if (matchT && matchT[0] === docDate) {
                         list.push({
@@ -1154,7 +1157,7 @@ export default {
                         }
                     };
                     const output = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                         console.log(matchT);
                         if (matchT && matchT[0] === docDate) {
                             list.push({
@@ -1536,7 +1539,7 @@ export default {
             case 'moe':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-content-white100')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
+                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
                 for (let f of files) {
                     const a = findTag(findTag(findTag(findTag(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0]
                     if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {

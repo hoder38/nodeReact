@@ -1328,42 +1328,44 @@ exports.default = {
                     var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
                     var list = [];
-                    var _iteratorNormalCompletion7 = true;
-                    var _didIteratorError7 = false;
-                    var _iteratorError7 = undefined;
+                    var application = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0];
+                    if (application) {
+                        var _iteratorNormalCompletion7 = true;
+                        var _didIteratorError7 = false;
+                        var _iteratorError7 = undefined;
 
-                    try {
-                        for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0], 'table')[0], 'tbody')[0], 'tr')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                            var l = _step7.value;
+                        try {
+                            for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(application, 'table')[0], 'tbody')[0], 'tr')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                                var l = _step7.value;
 
-                            if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[2], 'span')[0])[0] === docDate) {
-                                var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[1], 'span')[0], 'a')[0];
-                                var name = (0, _utility.findTag)(a)[0];
-                                if (name.match(/海關進出口貿易/)) {
-                                    list.push({
-                                        url: (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw'),
-                                        name: (0, _utility.toValidName)(name),
-                                        date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
-                                    });
-                                    break;
+                                if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[2], 'span')[0])[0] === docDate) {
+                                    var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[1], 'span')[0], 'a')[0];
+                                    var name = (0, _utility.findTag)(a)[0];
+                                    if (name.match(/海關進出口貿易/)) {
+                                        list.push({
+                                            url: (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw'),
+                                            name: (0, _utility.toValidName)(name),
+                                            date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
+                                        });
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            _didIteratorError7 = true;
+                            _iteratorError7 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                    _iterator7.return();
+                                }
+                            } finally {
+                                if (_didIteratorError7) {
+                                    throw _iteratorError7;
                                 }
                             }
                         }
-                    } catch (err) {
-                        _didIteratorError7 = true;
-                        _iteratorError7 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                                _iterator7.return();
-                            }
-                        } finally {
-                            if (_didIteratorError7) {
-                                throw _iteratorError7;
-                            }
-                        }
                     }
-
                     return list;
                 });
             case 'moe':
@@ -1420,7 +1422,7 @@ exports.default = {
                     ;
                     var industrial = function industrial() {
                         return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
-                            var matchT = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                            var matchT = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                             console.log(matchT);
                             if (matchT && matchT[0] === docDate) {
                                 list.push({
@@ -1474,7 +1476,7 @@ exports.default = {
                             ;
                             var output = function output() {
                                 return dUrl ? (0, _apiTool2.default)('url', dUrl).then(function (raw_data) {
-                                    var matchT = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
+                                    var matchT = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
                                     console.log(matchT);
                                     if (matchT && matchT[0] === docDate) {
                                         list.push({
@@ -2188,7 +2190,7 @@ exports.default = {
             case 'moe':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'container')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'divPageDetail')[0], 'div', 'div-content-white100')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
+                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
                     var _iteratorNormalCompletion16 = true;
                     var _didIteratorError16 = false;
                     var _iteratorError16 = undefined;
