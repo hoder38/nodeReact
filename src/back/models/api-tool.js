@@ -121,7 +121,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
     const temp = `${filePath}_t`;
     const checkTmp = () => FsExistsSync(temp) ? new Promise((resolve, reject) => FsUnlink(temp, err => err ? reject(err) : resolve())) : Promise.resolve();
     let index = 0;
-    const proc = () => Fetch(url, Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
+    const proc = () => Fetch(encodeURI(url), Object.assign({headers: Object.assign(referer ? {'Referer': referer} : {}, user ? {} : {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36'}, cookie ? {Cookie: cookie} : {}, qspost ? {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Content-Length': qspost.length,
         } : {}, fake_ip ? {
