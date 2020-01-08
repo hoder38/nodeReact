@@ -1171,20 +1171,21 @@ export default {
                 }));
             });
             case 'cbc':
-            return Api('url', 'https://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(raw_data => {
+            return Api('url', 'https://www.cbc.gov.tw/tw/sp-news-list-1.html').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${completeZero(date.getDate(), 2)} ${MONTH_SHORTS[date.getMonth()]} ${date.getFullYear()}`;
+                const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(t => {
-                    if (findTag(findTag(t, 'pubdate')[0])[0].match(/\d\d [a-zA-Z]+ \d\d\d\d/)[0] === docDate) {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0],'div', 'center')[0], 'div', 'container')[0], 'section', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li').forEach(l => {
+                    const a = findTag(l, 'a')[0];
+                    if (findTag(findTag(a, 'time')[0])[0] === docDate) {
                         list.push({
-                            url: addPre(findTag(t)[0], 'https://www.cbc.gov.tw'),
-                            name: toValidName(findTag(findTag(t, 'title')[0])[0]),
+                            url: addPre(a.attribs.href, 'https://www.cbc.gov.tw/tw'),
+                            name: toValidName(a.attribs.title),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
                     }
@@ -1505,7 +1506,7 @@ export default {
                 for (let p of ps) {
                     const pc = findTag(p)[0];
                     if (pc && pc.match(/本文及附表/)) {
-                        const url = addPre(findTag(findTag(findTag(findTag(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
+                        const url = addPre(findTag(findTag(findTag(findTag(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw').replace('http:', 'https:');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
                         return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -1521,7 +1522,7 @@ export default {
                         const pcsp = findTag(sp)[0];
                         if (pcsp && pcsp.match(/本文及附表/)) {
                             const a = findTag(findTag(sp, 'strong')[0], 'a')[0];
-                            const url = a ? addPre(a.attribs.href, 'https://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
+                            const url = a ? addPre(a.attribs.href, 'https://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw').replace('http:', 'https:');
                             driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                             console.log(driveName);
                             return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
@@ -1561,24 +1562,24 @@ export default {
             case 'cbc':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const article = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0];
-                const dlPdf = findTag(article, 'div', 'download')[0] ? findTag(article, 'div', 'download')[0] : findTag(findTag(article, 'div', 'Body')[0], 'div', 'download')[0];
+                const download = findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'center')[0], 'div', 'container')[0], 'div', 'file_download')[0];
                 let downloadList = [];
-                if (dlPdf) {
-                    findTag(findTag(dlPdf, 'ul')[0], 'li').forEach(l => {
-                        findTag(l, 'a').forEach(a => {
-                            if (a.attribs.href.match(/\.(pdf|xlsx)$/i)) {
-                                downloadList.push(addPre(a.attribs.href, 'https://www.cbc.gov.tw'));
-                            }
-                        });
-                    });
+                if (download) {
+                    findTag(findTag(download, 'ul')[0], 'li').forEach(l => findTag(l, 'a').forEach(a => {
+                        if (a.attribs.title.match(/\.(pdf|xlsx)$/i)) {
+                            downloadList.push({
+                                url: addPre(a.attribs.href, 'https://www.cbc.gov.tw/tw'),
+                                name: a.attribs.title,
+                            });
+                        }
+                    }));
                 }
                 const recur_down = dIndex => {
                     if (dIndex < downloadList.length) {
-                        driveName = `${obj.name} ${obj.date}.${dIndex}${PathExtname(downloadList[dIndex])}`;
+                        driveName = `${obj.name} ${obj.date}.${dIndex}${PathExtname(downloadList[dIndex].name)}`;
                         console.log(driveName);
                         const subPath = getFileLocation(type, objectID());
-                        return mkFolder(PathDirname(subPath)).then(() => Api('url', downloadList[dIndex], {filePath: subPath}).then(() => GoogleApi('upload', {
+                        return mkFolder(PathDirname(subPath)).then(() => Api('url', downloadList[dIndex].url, {filePath: subPath}).then(() => GoogleApi('upload', {
                             type: 'auto',
                             name: driveName,
                             filePath: subPath,

@@ -1494,20 +1494,21 @@ exports.default = {
                     });
                 });
             case 'cbc':
-                return (0, _apiTool2.default)('url', 'https://www.cbc.gov.tw/rss.asp?ctNodeid=302').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.cbc.gov.tw/tw/sp-news-list-1.html').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
-                    var docDate = (0, _utility.completeZero)(date.getDate(), 2) + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + ' ' + date.getFullYear();
+                    var docDate = date.getFullYear() + '-' + (0, _utility.completeZero)(date.getMonth() + 1, 2) + '-' + (0, _utility.completeZero)(date.getDate(), 2);
                     console.log(docDate);
                     var list = [];
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(function (t) {
-                        if ((0, _utility.findTag)((0, _utility.findTag)(t, 'pubdate')[0])[0].match(/\d\d [a-zA-Z]+ \d\d\d\d/)[0] === docDate) {
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'center')[0], 'div', 'container')[0], 'section', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li').forEach(function (l) {
+                        var a = (0, _utility.findTag)(l, 'a')[0];
+                        if ((0, _utility.findTag)((0, _utility.findTag)(a, 'time')[0])[0] === docDate) {
                             list.push({
-                                url: (0, _utility.addPre)((0, _utility.findTag)(t)[0], 'https://www.cbc.gov.tw'),
-                                name: (0, _utility.toValidName)((0, _utility.findTag)((0, _utility.findTag)(t, 'title')[0])[0]),
+                                url: (0, _utility.addPre)(a.attribs.href, 'https://www.cbc.gov.tw/tw'),
+                                name: (0, _utility.toValidName)(a.attribs.title),
                                 date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                             });
                         }
@@ -2113,7 +2114,7 @@ exports.default = {
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
                                 var _ret9 = function () {
-                                    var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
+                                    var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw').replace('http:', 'https:');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
                                     return {
@@ -2143,7 +2144,7 @@ exports.default = {
                                 if (pcsp && pcsp.match(/本文及附表/)) {
                                     var _ret10 = function () {
                                         var a = (0, _utility.findTag)((0, _utility.findTag)(sp, 'strong')[0], 'a')[0];
-                                        var url = a ? (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
+                                        var url = a ? (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw').replace('http:', 'https:');
                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                         console.log(driveName);
                                         return {
@@ -2247,14 +2248,16 @@ exports.default = {
             case 'cbc':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var article = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'main')[0], 'div', 'cp')[0], 'div', 'zone.content')[0], 'div', 'Article')[0];
-                    var dlPdf = (0, _utility.findTag)(article, 'div', 'download')[0] ? (0, _utility.findTag)(article, 'div', 'download')[0] : (0, _utility.findTag)((0, _utility.findTag)(article, 'div', 'Body')[0], 'div', 'download')[0];
+                    var download = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0], 'div', 'center')[0], 'div', 'container')[0], 'div', 'file_download')[0];
                     var downloadList = [];
-                    if (dlPdf) {
-                        (0, _utility.findTag)((0, _utility.findTag)(dlPdf, 'ul')[0], 'li').forEach(function (l) {
-                            (0, _utility.findTag)(l, 'a').forEach(function (a) {
-                                if (a.attribs.href.match(/\.(pdf|xlsx)$/i)) {
-                                    downloadList.push((0, _utility.addPre)(a.attribs.href, 'https://www.cbc.gov.tw'));
+                    if (download) {
+                        (0, _utility.findTag)((0, _utility.findTag)(download, 'ul')[0], 'li').forEach(function (l) {
+                            return (0, _utility.findTag)(l, 'a').forEach(function (a) {
+                                if (a.attribs.title.match(/\.(pdf|xlsx)$/i)) {
+                                    downloadList.push({
+                                        url: (0, _utility.addPre)(a.attribs.href, 'https://www.cbc.gov.tw/tw'),
+                                        name: a.attribs.title
+                                    });
                                 }
                             });
                         });
@@ -2262,12 +2265,12 @@ exports.default = {
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
                             var _ret12 = function () {
-                                driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex]);
+                                driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex].name);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
                                 return {
                                     v: mkFolder((0, _path.dirname)(subPath)).then(function () {
-                                        return (0, _apiTool2.default)('url', downloadList[dIndex], { filePath: subPath }).then(function () {
+                                        return (0, _apiTool2.default)('url', downloadList[dIndex].url, { filePath: subPath }).then(function () {
                                             return (0, _apiToolGoogle2.default)('upload', {
                                                 type: 'auto',
                                                 name: driveName,
