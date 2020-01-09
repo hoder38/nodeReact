@@ -1067,7 +1067,7 @@ exports.default = {
                             });
                         }
                     });
-                    return (0, _apiTool2.default)('url', 'http://www.federalreserve.gov/releases/g17/Current/default.htm').then(function (raw_data) {
+                    return (0, _apiTool2.default)('url', 'https://www.federalreserve.gov/releases/g17/Current/default.htm').then(function (raw_data) {
                         docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                         console.log(docDate);
                         var content = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
@@ -1104,10 +1104,10 @@ exports.default = {
                                 }
                             }
                         }
-                        return (0, _apiTool2.default)('url', 'http://www.federalreserve.gov/releases/g19/current/default.htm').then(function (raw_data) {
-                            if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[2] === ': ' + docDate) {
+                        return (0, _apiTool2.default)('url', 'https://www.federalreserve.gov/releases/g19/current/default.htm').then(function (raw_data) {
+                            if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                                 list.push({
-                                    url: 'http://www.federalreserve.gov/releases/g19/current/default.htm',
+                                    url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
                                     name: (0, _utility.toValidName)('Consumer Credit'),
                                     date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
                                 });
@@ -1839,35 +1839,64 @@ exports.default = {
                     });
                 }
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var share = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'row')[0], 'div', 'page-header')[0], 'div', 'header-group')[0], 'div', 'shareDL')[0];
-                    if (share) {
-                        var a = (0, _utility.findTag)(share, 'a')[0];
-                        if ((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[1])[0].match(/pdf/i)) {
-                            var _ret6 = function () {
-                                var url = (0, _utility.addPre)(a.attribs.href, 'https://www.federalreserve.gov');
-                                driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
-                                console.log(driveName);
-                                return {
-                                    v: mkFolder((0, _path.dirname)(filePath)).then(function () {
-                                        return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
-                                            return (0, _apiToolGoogle2.default)('upload', {
-                                                type: 'auto',
-                                                name: driveName,
-                                                filePath: filePath,
-                                                parent: parent,
-                                                rest: function rest() {
-                                                    return updateDocDate(type, obj.date);
-                                                },
-                                                errhandle: function errhandle(err) {
-                                                    return (0, _utility.handleError)(err);
-                                                }
-                                            });
+                    var match = obj.url.match(/^https\:\/\/www\.federalreserve\.gov\/releases\/(g\d+)\/current\//i);
+                    if (match) {
+                        var _ret6 = function () {
+                            var url = '' + match[0] + match[1] + '.pdf';
+                            driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
+                            console.log(driveName);
+                            return {
+                                v: mkFolder((0, _path.dirname)(filePath)).then(function () {
+                                    return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                        return (0, _apiToolGoogle2.default)('upload', {
+                                            type: 'auto',
+                                            name: driveName,
+                                            filePath: filePath,
+                                            parent: parent,
+                                            rest: function rest() {
+                                                return updateDocDate(type, obj.date);
+                                            },
+                                            errhandle: function errhandle(err) {
+                                                return (0, _utility.handleError)(err);
+                                            }
                                         });
-                                    })
-                                };
-                            }();
+                                    });
+                                })
+                            };
+                        }();
 
-                            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                    } else {
+                        var share = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'row')[0], 'div', 'page-header')[0], 'div', 'header-group')[0], 'div', 'shareDL')[0];
+                        if (share) {
+                            var a = (0, _utility.findTag)(share, 'a')[0];
+                            if ((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[1])[0].match(/pdf/i)) {
+                                var _ret7 = function () {
+                                    var url = (0, _utility.addPre)(a.attribs.href, 'https://www.federalreserve.gov');
+                                    driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
+                                    console.log(driveName);
+                                    return {
+                                        v: mkFolder((0, _path.dirname)(filePath)).then(function () {
+                                            return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                                return (0, _apiToolGoogle2.default)('upload', {
+                                                    type: 'auto',
+                                                    name: driveName,
+                                                    filePath: filePath,
+                                                    parent: parent,
+                                                    rest: function rest() {
+                                                        return updateDocDate(type, obj.date);
+                                                    },
+                                                    errhandle: function errhandle(err) {
+                                                        return (0, _utility.handleError)(err);
+                                                    }
+                                                });
+                                            });
+                                        })
+                                    };
+                                }();
+
+                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                            }
                         }
                     }
                     driveName = obj.name + ' ' + obj.date + '.txt';
@@ -1967,7 +1996,7 @@ exports.default = {
                                     var a = _step12.value;
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
-                                        var _ret7 = function () {
+                                        var _ret8 = function () {
                                             var url = (0, _utility.addPre)(a.attribs.href, 'https://www.stat.gov.tw');
                                             if (url.match(/87231699T64V6LTY/)) {
                                                 return 'continue';
@@ -1994,12 +2023,12 @@ exports.default = {
                                             };
                                         }();
 
-                                        switch (_ret7) {
+                                        switch (_ret8) {
                                             case 'continue':
                                                 continue;
 
                                             default:
-                                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                                         }
                                     }
                                 }
@@ -2039,7 +2068,7 @@ exports.default = {
                                                 var _a = _step14.value;
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
-                                                    var _ret8 = function () {
+                                                    var _ret9 = function () {
                                                         var url = (0, _utility.addPre)(_a.attribs.href, 'https://www.stat.gov.tw');
                                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                                         console.log(driveName);
@@ -2063,7 +2092,7 @@ exports.default = {
                                                         };
                                                     }();
 
-                                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                                                 }
                                             }
                                         } catch (err) {
@@ -2113,7 +2142,7 @@ exports.default = {
 
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
-                                var _ret9 = function () {
+                                var _ret10 = function () {
                                     var url = (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                                     driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
                                     console.log(driveName);
@@ -2137,12 +2166,12 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                             } else {
                                 var sp = (0, _utility.findTag)(p, 'span')[0];
                                 var pcsp = (0, _utility.findTag)(sp)[0];
                                 if (pcsp && pcsp.match(/本文及附表/)) {
-                                    var _ret10 = function () {
+                                    var _ret11 = function () {
                                         var a = (0, _utility.findTag)((0, _utility.findTag)(sp, 'strong')[0], 'a')[0];
                                         var url = a ? (0, _utility.addPre)(a.attribs.href, 'https://www.mof.gov.tw') : (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                                         driveName = obj.name + ' ' + obj.date + (0, _path.extname)(url);
@@ -2167,7 +2196,7 @@ exports.default = {
                                         };
                                     }();
 
-                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                                 }
                             }
                         }
@@ -2202,7 +2231,7 @@ exports.default = {
 
                             var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0];
                             if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {
-                                var _ret11 = function () {
+                                var _ret12 = function () {
                                     var url = a.attribs.href;
                                     url = url.match(/^(http|https):\/\//) ? url : 'http://' + (0, _path.join)('www.moea.gov.tw/MNS/populace/news', url);
                                     driveName = obj.name + ' ' + obj.date + '.pdf';
@@ -2227,7 +2256,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                                if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                             }
                         }
                     } catch (err) {
@@ -2264,7 +2293,7 @@ exports.default = {
                     }
                     var recur_down = function recur_down(dIndex) {
                         if (dIndex < downloadList.length) {
-                            var _ret12 = function () {
+                            var _ret13 = function () {
                                 driveName = obj.name + ' ' + obj.date + '.' + dIndex + (0, _path.extname)(downloadList[dIndex].name);
                                 console.log(driveName);
                                 var subPath = (0, _utility.getFileLocation)(type, (0, _mongoTool.objectID)());
@@ -2288,7 +2317,7 @@ exports.default = {
                                 };
                             }();
 
-                            if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                            if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
                         } else {
                             return updateDocDate(type, obj.date);
                         }
@@ -2690,7 +2719,7 @@ exports.default = {
             });
         };
 
-        var _ret13 = function () {
+        var _ret14 = function () {
             switch (type) {
                 case 'youtube':
                     var youtube_id = url.match(/list=([^&]+)/);
@@ -2847,9 +2876,9 @@ exports.default = {
                                         };
 
                                         for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-                                            var _ret14 = _loop();
+                                            var _ret15 = _loop();
 
-                                            if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
+                                            if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
                                         }
                                     } catch (err) {
                                         _didIteratorError24 = true;
@@ -3537,7 +3566,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+        if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
     },
     saveSingle: function saveSingle(type, id) {
         var url = null;

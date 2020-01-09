@@ -905,7 +905,7 @@ export default {
                         });
                     }
                 });
-                return Api('url', 'http://www.federalreserve.gov/releases/g17/Current/default.htm').then(raw_data => {
+                return Api('url', 'https://www.federalreserve.gov/releases/g17/Current/default.htm').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                     console.log(docDate);
                     const content = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
@@ -921,10 +921,10 @@ export default {
                             }
                         }
                     }
-                    return Api('url', 'http://www.federalreserve.gov/releases/g19/current/default.htm').then(raw_data => {
-                        if (findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[2] === `: ${docDate}`) {
+                    return Api('url', 'https://www.federalreserve.gov/releases/g19/current/default.htm').then(raw_data => {
+                        if (findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                             list.push({
-                                url: 'http://www.federalreserve.gov/releases/g19/current/default.htm',
+                                url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
                                 name: toValidName('Consumer Credit'),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
@@ -1380,21 +1380,36 @@ export default {
                 })));
             }
             return Api('url', obj.url).then(raw_data => {
-                const share = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'row')[0], 'div', 'page-header')[0], 'div', 'header-group')[0], 'div', 'shareDL')[0];
-                if (share) {
-                    const a = findTag(share, 'a')[0];
-                    if (findTag(findTag(a, 'span')[1])[0].match(/pdf/i)) {
-                        const url = addPre(a.attribs.href, 'https://www.federalreserve.gov');
-                        driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
-                        console.log(driveName);
-                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                            type: 'auto',
-                            name: driveName,
-                            filePath,
-                            parent,
-                            rest: () => updateDocDate(type, obj.date),
-                            errhandle: err => handleError(err),
-                        })));
+                const match = obj.url.match(/^https\:\/\/www\.federalreserve\.gov\/releases\/(g\d+)\/current\//i);
+                if (match) {
+                    const url = `${match[0]}${match[1]}.pdf`;
+                    driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                    console.log(driveName);
+                    return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                        type: 'auto',
+                        name: driveName,
+                        filePath,
+                        parent,
+                        rest: () => updateDocDate(type, obj.date),
+                        errhandle: err => handleError(err),
+                    })));
+                } else {
+                    const share = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'row')[0], 'div', 'page-header')[0], 'div', 'header-group')[0], 'div', 'shareDL')[0];
+                    if (share) {
+                        const a = findTag(share, 'a')[0];
+                        if (findTag(findTag(a, 'span')[1])[0].match(/pdf/i)) {
+                            const url = addPre(a.attribs.href, 'https://www.federalreserve.gov');
+                            driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                            console.log(driveName);
+                            return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                                type: 'auto',
+                                name: driveName,
+                                filePath,
+                                parent,
+                                rest: () => updateDocDate(type, obj.date),
+                                errhandle: err => handleError(err),
+                            })));
+                        }
                     }
                 }
                 driveName = `${obj.name} ${obj.date}.txt`;
