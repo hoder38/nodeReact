@@ -2969,7 +2969,7 @@ exports.default = {
 
         var date = new Date();
         var year = date.getFullYear() - 1911;
-        var month = date.getMonth();
+        var month = date.getMonth() + 1;
         var month_str = (0, _utility.completeZero)(month.toString(), 2);
         var latest_date = '' + year + month_str;
         console.log(year);
@@ -3092,19 +3092,18 @@ exports.default = {
                                     var count = 0;
                                     var getTable = function getTable() {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
-                                            if (raw_data.length > 500) {
+                                            if (raw_data.length > 400) {
                                                 var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                                                 var table = (0, _utility.findTag)(body, 'table', 'hasBorder')[0];
                                                 if (!table) {
-                                                    var center = (0, _utility.findTag)((0, _utility.findTag)(body, 'center')[0])[0];
-                                                    if (center.match(/資料庫中查無需求資料/)) {
+                                                    if (raw_data.match(/資料庫中查無需求資料/)) {
                                                         return false;
                                                     } else {
                                                         return (0, _utility.handleError)(new _utility.HoError('heavy query'));
                                                     }
                                                 }
                                                 return table;
-                                            } else if (raw_data.length > 400) {
+                                            } else if (raw_data.length > 300) {
                                                 console.log(raw_data);
                                                 /*if (sales_data) {
                                                     Redis('hmset', `sales: ${items[0].type}${items[0].index}`, {
