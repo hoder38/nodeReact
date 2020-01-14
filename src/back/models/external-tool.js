@@ -767,7 +767,7 @@ export default {
                 return Api('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                     console.log(docDate);
-                    if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container tcb-wrapper')[0], 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
+                    if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container')[0], 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                         list.push({
                             url: 'https://www.conference-board.org/data/bcicountry.cfm?cid=1',
                             name: toValidName('US Business Cycle Indicators'),
