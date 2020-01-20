@@ -3688,7 +3688,7 @@ exports.default = {
             case 'dm5':
                 url = 'http://www.dm5.com/' + id + '/';
                 return (0, _apiTool2.default)('url', url, { is_dm5: true }).then(function (raw_data) {
-                    var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                    var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
                     var setTag = new _set2.default(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(function (a) {
                         return setTag.add(opencc.convertSync((0, _utility.findTag)(a)[0]));
