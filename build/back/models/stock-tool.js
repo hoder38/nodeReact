@@ -3096,7 +3096,7 @@ exports.default = {
                                                 var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
                                                 var table = (0, _utility.findTag)(body, 'table', 'hasBorder')[0];
                                                 if (!table) {
-                                                    if (raw_data.match(/資料庫中查無需求資料/)) {
+                                                    if (raw_data.match(/(資料庫中查無需求資料|外國發行人免申報本項資訊)/)) {
                                                         return false;
                                                     } else {
                                                         return (0, _utility.handleError)(new _utility.HoError('heavy query'));

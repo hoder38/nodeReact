@@ -2851,7 +2851,7 @@ export default {
                                     const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                                     const table = findTag(body, 'table', 'hasBorder')[0];
                                     if (!table) {
-                                        if (raw_data.match(/資料庫中查無需求資料/)) {
+                                        if (raw_data.match(/(資料庫中查無需求資料|外國發行人免申報本項資訊)/)) {
                                             return false;
                                         } else {
                                             return handleError(new HoError('heavy query'));
