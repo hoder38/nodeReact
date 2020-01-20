@@ -636,8 +636,8 @@ export default {
                 } else {
                     data.forEach(l => {
                         list.push({
-                            id: l.attribs.onclick.match(/\'\/([^\/]+)/)[1],
-                            name: opencc.convertSync(findTag(findTag(findTag(l, 'a')[0], 'span')[0])[0]),
+                            id: l.attribs.href.match(/\/([^\/]+)/)[1],
+                            name: opencc.convertSync(findTag(findTag(findTag(l, 'p')[0], 'span')[0])[0]),
                             thumb: 'dm5.png',
                             tags: ['漫畫', 'comic'],
                         });
@@ -2372,7 +2372,7 @@ export default {
             }).then(raw_data => {
                 const list = [];
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
-                const is_end = (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body,'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结') ? true : false;
+                const is_end = (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(body,'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结') ? true : false;
                 findTag(findTag(findTag(findTag(findTag(findTag(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(u => {
                     let li = findTag(u, 'li');
                     const more = findTag(u, 'ul');

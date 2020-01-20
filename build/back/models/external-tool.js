@@ -776,8 +776,8 @@ exports.default = {
                     } else {
                         data.forEach(function (l) {
                             list.push({
-                                id: l.attribs.onclick.match(/\'\/([^\/]+)/)[1],
-                                name: opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'a')[0], 'span')[0])[0]),
+                                id: l.attribs.href.match(/\/([^\/]+)/)[1],
+                                name: opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'p')[0], 'span')[0])[0]),
                                 thumb: 'dm5.png',
                                 tags: ['漫畫', 'comic']
                             });
@@ -3509,7 +3509,7 @@ exports.default = {
                         }).then(function (raw_data) {
                             var list = [];
                             var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
-                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[0], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结' ? true : false;
+                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结' ? true : false;
                             (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(function (u) {
                                 var li = (0, _utility.findTag)(u, 'li');
                                 var more = (0, _utility.findTag)(u, 'ul');

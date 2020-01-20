@@ -281,7 +281,7 @@ export default function process(collection) {
                     url = `${url}&page=${page}`;
                 }
                 if (query_term) {
-                    url = `${url}&query_term=${encodeURIComponent(query_term)}`;
+                    url = `${url}&query_term=${query_term}`;
                 }
                 if (genre) {
                     url = `${url}&genre=${genre}`;
@@ -333,7 +333,7 @@ export default function process(collection) {
                 let url = '';
                 if (query_term) {
                     const s_append = search === 2 ? sOrder ? `&tids_1=23&duration=4&order=&{sOrder}` : '&tids_1=23&duration=4' : '';
-                    url = `http://search.bilibili.com/ajax_api/${search === 2 ? 'video' : 'bangumi'}?keyword=${encodeURIComponent(query_term)}${s_append}`;
+                    url = `http://search.bilibili.com/ajax_api/${search === 2 ? 'video' : 'bangumi'}?keyword=${query_term}${s_append}`;
                     if (page > 1) {
                         url = `${url}&page=${page}`;
                     }
@@ -438,7 +438,7 @@ export default function process(collection) {
             if (search) {
                 query_term = a18 ? null : query_term;
                 if (query_term) {
-                    const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${encodeURIComponent(query_term)}`;
+                    const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${query_term}`;
                     console.log(url);
                     return url;
                 } else {
@@ -505,7 +505,7 @@ export default function process(collection) {
             if (type) {
                 const order = (sortName === 'mtime') ? 'vod_addtime' : 'vod_hits_month';
                 const sOrder = (sortName === 'mtime') ? 1 : 2;
-                const url = searchWord ? `http://www.58b.tv/index.php?s=Vod-innersearch-q-${encodeURIComponent(searchWord)}-order-${sOrder}-page-${page}` : `http://www.58b.tv/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
+                const url = searchWord ? `http://www.58b.tv/index.php?s=Vod-innersearch-q-${searchWord}-order-${sOrder}-page-${page}` : `http://www.58b.tv/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
                 console.log(url);
                 return url;
             } else {
