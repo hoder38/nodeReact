@@ -1711,12 +1711,18 @@ exports.default = {
                     var _iteratorError11 = undefined;
 
                     try {
-                        for (var _iterator11 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                        for (var _iterator11 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'doc-type-container')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
                             var p = _step11.value;
 
                             var s = (0, _utility.findTag)(p, 'strong')[0];
                             if (s) {
                                 var a = (0, _utility.findTag)(s, 'a')[0];
+                                if (!a) {
+                                    var ss = (0, _utility.findTag)(s, 'strong')[0];
+                                    if (ss) {
+                                        a = (0, _utility.findTag)(ss, 'a')[0];
+                                    }
+                                }
                                 if (a) {
                                     if ((0, _utility.findTag)(a)[0].match(/pdf/i)) {
                                         var _ret5 = function () {
@@ -2220,7 +2226,7 @@ exports.default = {
             case 'moe':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
+                    var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div')[0], 'div');
                     var _iteratorNormalCompletion16 = true;
                     var _didIteratorError16 = false;
                     var _iteratorError16 = undefined;

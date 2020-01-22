@@ -1306,10 +1306,16 @@ export default {
             case 'oec':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                for (let p of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')) {
+                for (let p of findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'doc-type-container')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')) {
                     const s = findTag(p, 'strong')[0];
                     if (s) {
-                        const a = findTag(s, 'a')[0];
+                        let a = findTag(s, 'a')[0];
+                        if (!a) {
+                            const ss = findTag(s, 'strong')[0];
+                            if (ss) {
+                                a = findTag(ss, 'a')[0];
+                            }
+                        }
                         if (a) {
                             if (findTag(a)[0].match(/pdf/i)) {
                                 const url = addPre(a.attribs.href, 'http://www.oecd.org');
@@ -1555,9 +1561,9 @@ export default {
             case 'moe':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div');
+                const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div')[0], 'div');
                 for (let f of files) {
-                    const a = findTag(findTag(findTag(findTag(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0]
+                    const a = findTag(findTag(findTag(findTag(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0];
                     if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {
                         let url = a.attribs.href;
                         url = url.match(/^(http|https):\/\//) ? url : `http://${PathJoin('www.moea.gov.tw/MNS/populace/news', url)}`;
