@@ -1898,7 +1898,9 @@ var getBasicStockData = function getBasicStockData(type, index) {
             return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=' + index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=' + index).then(function (raw_data) {
                 var result = { stock_location: ['tw', '台灣', '臺灣'] };
                 var i = 0;
-                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'table')[0], 'table', 'zoom')[0], 'tr')[1], 'td').forEach(function (d) {
+                var form = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
+                var table = (0, _utility.findTag)(form, 'table', 'zoom')[0] ? (0, _utility.findTag)(form, 'table', 'zoom')[0] : (0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table', 'zoom')[0];
+                (0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td').forEach(function (d) {
                     var as = (0, _utility.findTag)(d, 'a');
                     if (as.length > 0) {
                         (function () {

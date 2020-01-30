@@ -1806,7 +1806,9 @@ const getBasicStockData = (type, index) => {
         return Api('url', `https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
             let i = 0;
-            findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'table')[0], 'table', 'zoom')[0], 'tr')[1], 'td').forEach(d => {
+            const form = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
+            const table = findTag(form, 'table', 'zoom')[0] ? findTag(form, 'table', 'zoom')[0] : findTag(findTag(form, 'table')[0], 'table', 'zoom')[0];
+            findTag(findTag(table, 'tr')[1], 'td').forEach(d => {
                 const as = findTag(d, 'a');
                 if (as.length > 0) {
                     let texts = [];
