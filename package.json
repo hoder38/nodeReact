@@ -62,7 +62,8 @@
     "youtube-dl": "^1.10.5",
     "node-fetch": "^1.6.3",
     "htmlparser2": "^3.9.2",
-    "pdfjs-dist": "^1.8.339"
+    "pdfjs-dist": "^1.8.339",
+    "utf8": "^3.0.0"
   },
   "author": {
     "name": "hoder",

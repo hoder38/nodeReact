@@ -81,6 +81,10 @@ var _path = require('path');
 
 var _url = require('url');
 
+var _utf = require('utf8');
+
+var _utf2 = _interopRequireDefault(_utf);
+
 var _utility = require('../util/utility');
 
 var _sendWs = require('../util/sendWs');
@@ -243,7 +247,7 @@ function download(user, url) {
     };
     var index = 0;
     var proc = function proc() {
-        return (0, _nodeFetch2.default)(encodeURI(url), (0, _assign2.default)({ headers: (0, _assign2.default)(referer ? { 'Referer': referer } : {}, user ? {} : { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36' }, cookie ? { Cookie: cookie } : {}, qspost ? {
+        return (0, _nodeFetch2.default)(_utf2.default.encode(url), (0, _assign2.default)({ headers: (0, _assign2.default)(referer ? { 'Referer': referer } : {}, user ? {} : { 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36' }, cookie ? { Cookie: cookie } : {}, qspost ? {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Content-Length': qspost.length
             } : {}, fake_ip ? {
