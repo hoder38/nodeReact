@@ -263,8 +263,11 @@ const getSalesStatus = (sales, asset) => {
                         salesStatus[i][j].quarterEPS = sales[i][j].eps;
                     } else {
                         salesStatus[i][j].quarterRevenue = sales[i][j].revenue - sales[i][j - 1].revenue;
-                        if (!salesStatus[i][j].quarterRevenue || salesStatus[i][j].quarterRevenue < 0) {
+                        /*if (!salesStatus[i][j].quarterRevenue || salesStatus[i][j].quarterRevenue < 0) {
                             salesStatus[i][j].quarterRevenue = sales[i][j].profit ? (sales[i][j - 1].profit && (sales[i][j].profit - sales[i][j - 1].profit)) ? Math.abs((sales[i][j].profit - sales[i][j - 1].profit) / 100000) : Math.abs(sales[i][j].profit / 100000) : 1000;
+                        }*/
+                        if (!salesStatus[i][j].quarterRevenue) {
+                            salesStatus[i][j].quarterRevenue =  1000;
                         }
                         salesStatus[i][j].quarterGross = show(sales[i][j].gross_profit - sales[i][j - 1].gross_profit, salesStatus[i][j].quarterRevenue, 3, 1);
                         salesStatus[i][j].quarterOperating = show(sales[i][j].operating - sales[i][j - 1].operating, salesStatus[i][j].quarterRevenue, 3, 1);

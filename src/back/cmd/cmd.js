@@ -174,7 +174,7 @@ rl.on('line', line => {
     switch (cmd[0]) {
         case 'stock':
         console.log('stock');
-        return StockTool.getSingleStock('twse', cmd[1]|2330, cmd[2]|1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
+        return StockTool.getSingleStock('twse', cmd[1]||2330, cmd[2]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
         case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));

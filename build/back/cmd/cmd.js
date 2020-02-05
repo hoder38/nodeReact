@@ -280,7 +280,7 @@ rl.on('line', function (line) {
     switch (cmd[0]) {
         case 'stock':
             console.log('stock');
-            return _stockTool2.default.getSingleStock('twse', cmd[1] | 2330, cmd[2] | 1).then(function () {
+            return _stockTool2.default.getSingleStock('twse', cmd[1] || 2330, cmd[2] || 1).then(function () {
                 return console.log('done');
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, 'CMD stock');
