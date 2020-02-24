@@ -2935,12 +2935,13 @@ export default {
                                 etime: Math.round(new Date().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
                         }
-                        if (is_latest) {
+                        //先拿掉 觀察一陣子看看
+                        /*if (is_latest) {
                             const uDate = ret_obj.match(/(\d+) (\d+)$/);
                             if (!uDate || uDate[1] !== latest_date) {
                                 ret_obj = `-9999 ${latest_date} ${uDate[2]}`;
                             }
-                        }
+                        }*/
                         return [ret_obj, items[0].index];
                     });
                 });

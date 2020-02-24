@@ -18,12 +18,12 @@ import sendWs from '../util/sendWs'
 const opencc = new OpenCC('s2t.json');
 
 const dramaList = [
-    'http://tw02.lovetvshow.info/',
-    'http://cn.lovetvshow.info/2012/05/drama-list.html',
-    'http://kr19.vslovetv.com/',
-    'http://jp04.jplovetv.com/2012/08/drama-list.html',
-    'http://www.lovetvshow.com/',
-    'http://krsp01.vslovetv.com/',
+    'https://tw02.lovetvshow.info/',
+    'https://cn.lovetvshow.info/2012/05/drama-list.html',
+    'https://kr19.vslovetv.com/',
+    'https://jp04.jplovetv.com/2012/08/drama-list.html',
+    'https://www.lovetvshow.com/',
+    'https://krsp01.vslovetv.com/',
 ];
 
 const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).then(raw_data => {
@@ -35,7 +35,7 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
     const top = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'content-outer')[0], 'div', 'fauxborder-left content-fauxborder-left')[0], 'div', 'content-inner')[0], 'div', 'main-outer')[0], 'div', 'fauxborder-left main-fauxborder-left')[0], 'div', 'region-inner main-inner')[0], 'div', 'columns fauxcolumns')[0], 'div', 'columns-inner')[0];
     if (dramaIndex === 0 || dramaIndex === 2 || dramaIndex === 5) {
         const krscript = findTag(findTag(findTag(findTag(findTag(findTag(findTag(top, 'div', 'column-right-outer')[0], 'div', 'column-right-inner')[0], 'aside')[0], 'div', 'sidebar-right-1')[0], 'div', 'Label1')[0], 'div', 'widget-content list-label-widget-content')[0], 'script')[0].children[0].data;
-        const urlList = krscript.match(/http\:\/\/[^\']+/g);
+        const urlList = krscript.match(/https?\:\/\/[^\']+/g);
         krscript.match(/var OldLabel = \"[^\"]+/g).forEach((n, i) => {
             const krst = n.match(/(?:Pre)?(\d\d\d\d)(?:韓國|台灣)電視劇\-(.*)$/);
             if (krst) {
@@ -76,7 +76,7 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
                         }
                         const dramaType = (dramaIndex === 4) ? null : findTag(h)[0];
                         if (year) {
-                            const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'http://tw01.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'http://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'http://vslovetv.com') : (dramaIndex === 3) ? addPre(a.attribs.href, 'http://jp.jplovetv.com') : addPre(a.attribs.href, 'http://www.lovetvshow.com');
+                            const url = (dramaIndex === 0) ? addPre(a.attribs.href, 'https://tw01.lovetvshow.info') : (dramaIndex === 1) ? addPre(a.attribs.href, 'https://cn.lovetvshow.info') : (dramaIndex === 2) ? addPre(a.attribs.href, 'https://vslovetv.com') : (dramaIndex === 3) ? addPre(a.attribs.href, 'https://jp.jplovetv.com') : addPre(a.attribs.href, 'https://www.lovetvshow.com');
                             list.push(Object.assign({
                                 name,
                                 url: `${url}?max-results=300`,

@@ -3198,12 +3198,13 @@ exports.default = {
                                     return (0, _utility.handleError)(err, 'Redis');
                                 });
                             }
-                            if (is_latest) {
-                                var uDate = ret_obj.match(/(\d+) (\d+)$/);
+                            //先拿掉 觀察一陣子看看
+                            /*if (is_latest) {
+                                const uDate = ret_obj.match(/(\d+) (\d+)$/);
                                 if (!uDate || uDate[1] !== latest_date) {
-                                    ret_obj = '-9999 ' + latest_date + ' ' + uDate[2];
+                                    ret_obj = `-9999 ${latest_date} ${uDate[2]}`;
                                 }
-                            }
+                            }*/
                             return [ret_obj, items[0].index];
                         });
                     });
