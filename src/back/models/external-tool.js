@@ -922,7 +922,7 @@ export default {
                         }
                     }
                     return Api('url', 'https://www.federalreserve.gov/releases/g19/current/default.htm').then(raw_data => {
-                        if (findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
+                        if (findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                             list.push({
                                 url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
                                 name: toValidName('Consumer Credit'),
