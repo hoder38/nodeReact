@@ -193,9 +193,8 @@ var updateExternal = exports.updateExternal = function updateExternal() {
                 console.log('loopUpdateExternal');
                 console.log(new Date());
                 console.log('complete tag');
+                //return completeMimeTag(1).then(() => External.getList('lovetv')).then(() => External.getList('eztv')).catch(err => bgError(err, 'Loop updateExternal')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), EXTERNAL_INTERVAL * 1000))).then(() => loopUpdateExternal());
                 return (0, _tagTool.completeMimeTag)(1).then(function () {
-                    return _externalTool2.default.getList('lovetv');
-                }).then(function () {
                     return _externalTool2.default.getList('eztv');
                 }).catch(function (err) {
                     return bgError(err, 'Loop updateExternal');
