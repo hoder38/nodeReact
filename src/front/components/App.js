@@ -1,6 +1,6 @@
 import React from 'react'
 import { IndexLink, browserHistory } from 'react-router'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE } from '../constants'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE, BITFINEX_PAGE } from '../constants'
 import { collapseToggle } from '../actions'
 import { api, doLogout, isValidString } from '../utility'
 import Navlist from './Navlist'
@@ -28,6 +28,7 @@ const App = React.createClass({
                 //{title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
                 //{title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
                 {title: "Lottery", hash: LOTTERY_PAGE, css: "glyphicon glyphicon-yen", key: 6},
+                {title: "Bitfinex", hash: BITFINEX_PAGE, css: "glyphicon glyphicon-bitcoin", key: 7},
             ],
             zipPw: null,
         }

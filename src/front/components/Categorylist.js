@@ -1,9 +1,10 @@
 import React from 'react'
 import ReDirlist from '../containers/ReDirlist'
 import RePasswordInfo from '../containers/RePasswordInfo'
-import ReFitnessInfo from '../containers/ReFitnessInfo'
-import ReRankInfo from '../containers/ReRankInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
+import ReBitfinexInfo from '../containers/ReBitfinexInfo'
+//import ReFitnessInfo from '../containers/ReFitnessInfo'
+//import ReRankInfo from '../containers/ReRankInfo'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, /*FITNESS, RANK, */LOTTERY,BITFINEX } from '../constants'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
 
 const Categorylist = React.createClass({
@@ -155,7 +156,7 @@ const Categorylist = React.createClass({
                 </li>
             )
             break
-            case FITNESS:
+            /*case FITNESS:
             if (this.props.level === 2) {
                 open = (
                     <li>
@@ -182,7 +183,7 @@ const Categorylist = React.createClass({
                     edit = <ReRankInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
                 }
             }
-            break;
+            break;*/
             case LOTTERY:
             open = this.props.stockopen ? (
                 <li>
@@ -191,7 +192,19 @@ const Categorylist = React.createClass({
                     </a>
                 </li>
             ) : null;
-            break
+            break;
+            case BITFINEX:
+            if (this.state.edit) {
+                edit = <ReBitfinexInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
+            }
+            open = (
+                <li>
+                    <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
+                        Bot Settings&nbsp;<i className="glyphicon glyphicon-off"></i>
+                    </a>
+                </li>
+            )
+            break;
         }
         const chartOpen = this.props.stockopen ? <i className="glyphicon glyphicon-chevron-up"></i> : <i className="glyphicon glyphicon-chevron-down"></i>;
         const chart = this.props.stock ? (
@@ -206,6 +219,13 @@ const Categorylist = React.createClass({
                 {open}
                 {open2}
                 <ReDirlist name="USER LIST" time="mtime" dir={this.props.itemlist} del={()=>{}} edit={false} collapse={false} dirItem={()=>{}} noSort={true} />
+            </ul>
+        ) : (this.props.itemType === BITFINEX) ? (
+            <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
+                {chart}
+                {open}
+                {open2}
+                {rows}
             </ul>
         ) : this.props.stockopen ? (
             <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>

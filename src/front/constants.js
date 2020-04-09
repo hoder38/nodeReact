@@ -8,6 +8,7 @@ export const STOCK_PAGE = '/Stock'
 export const FITNESS_PAGE = '/Fitness'
 export const RANK_PAGE = '/Rank'
 export const LOTTERY_PAGE = '/Lottery'
+export const BITFINEX_PAGE = '/Bitfinex'
 
 //item type
 export const STORAGE = 'storage'
@@ -16,6 +17,7 @@ export const STOCK = 'stock'
 export const FITNESS = 'fitness'
 export const RANK = 'rank'
 export const LOTTERY = 'lottery'
+export const BITFINEX = 'bitfinex'
 
 //action
 export const ALERT_PUSH = 'ALERT_PUSH'

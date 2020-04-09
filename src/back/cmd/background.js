@@ -1,11 +1,12 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK } from '../config'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL } from '../constants'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN } from '../config'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockList, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
+import { calRate, setWsOffer } from '../models/bitfinex-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
 import { dbDump } from './cmd'
@@ -16,7 +17,7 @@ let stock_batch_list = [];
 let stock_batch_list_2 = [];
 
 function bgError(err, type) {
-    sendWs(`${type}: ${err.message}`, 0, 0, true);
+    sendWs(`${type}: ${err.message||err.msg}`, 0, 0, true);
     handleError(err, type);
 }
 
@@ -208,5 +209,20 @@ export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
         const checkS = () => stockStatus().catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => checkS());
+    }
+}
+
+export const rateCalculator = () => {
+    if (BITFINEX_LOAN(ENV_TYPE)) {
+        const calR = () => calRate([FUSD_SYM, FUSDT_SYM]).catch(err => bgError(err, 'Loop rate calculator')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => calR());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => calR());
+    }
+}
+
+export const setUserOffer = () => {
+    if (BITFINEX_LOAN(ENV_TYPE)) {
+        const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex).then(() => checkUser(index + 1, userlist));
+        const setO = () => Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => bgError(err, 'Loop set offer'))).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 90000)).then(() => setO());
     }
 }

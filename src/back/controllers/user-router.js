@@ -184,7 +184,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         }).then(user => res.json(ret)).catch(err => handleError(err, next))
     } else {
         if (Object.getOwnPropertyNames(data).length === 0) {
-            return handleError(new HoError('nnothing to change!!!'), next);
+            return handleError(new HoError('nothing to change!!!'), next);
         }
         console.log(data);
         console.log(id);

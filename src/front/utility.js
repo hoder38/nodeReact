@@ -59,6 +59,11 @@ export function isValidString(str, type) {
             return true;
         }
         break
+        case 'zeroint':
+        if ((Number(str) || Number(str) === 0) && Number(str) >= 0) {
+            return true;
+        }
+        break
         case 'perm':
         if ((Number(str) || Number(str) === 0) && Number(str) < 32 && Number(str) >= 0) {
             return true

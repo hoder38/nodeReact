@@ -45,6 +45,7 @@ export const EXTERNAL_INTERVAL = 604800;
 export const STOCK_INTERVAL = 172800;
 export const BACKUP_INTERVAL = 86400;
 export const PRICE_INTERVAL = 600;
+export const RATE_INTERVAL = 60;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800
@@ -820,3 +821,16 @@ export const BACKUP_COLLECTION = [
     `${STOCKDB}User`,
     `${PASSWORDDB}User`,
 ]
+
+export const FUSD_SYM = 'fUSD'
+export const FUSDT_SYM = 'fUST'
+export const TBTC_SYM = 'tBTCUSD'
+export const TETH_SYM = 'tETHUSD';
+export const BITFINEX_EXP = 100000000;
+export const BITFINEX_MIN = 100;
+export const DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
+export const RISK_MAX = 10;
+export const OFFER_MAX = 10;
+export const COIN_MAX = -30;
+export const COIN_MAX_MAX = -60;
+export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM];

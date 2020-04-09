@@ -42,4 +42,5 @@ exports.default = {
     STOCK_DATE: [5, 6, 12, 13, 19, 20, 26, 27],
     STOCK_MODE: 1,
     //3: xml重抓 2: xml重parse 1: parse tag
+    BITFINEX_LOAN: true,
 }

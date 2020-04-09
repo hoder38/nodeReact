@@ -3,11 +3,12 @@ import { Provider } from 'react-redux'
 import { Router, Route, IndexRoute, Redirect, browserHistory } from 'react-router'
 import { syncHistoryWithStore } from 'react-router-redux'
 import configureStore from '../configureStore'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, STOCK_PAGE, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE } from '../constants'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, STOCK_PAGE, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE, BITFINEX_PAGE } from '../constants'
 import ReApp from './ReApp'
 import Homepage from '../components/Homepage'
 import ReUserlist from './ReUserlist'
 import Storage from '../components/Storage'
+import Bitfinex from '../components/Bitfinex'
 //import ReFitness from './ReFitness'
 //import ReRank from './ReRank'
 //要用rank fitess記得router加上
@@ -48,6 +49,7 @@ export default function Root() {
                         <Route path={STOCK_PAGE} component={ReStock} />
                         <Route path={USER_PAGE} component={ReUserlist} />
                         <Route path={LOTTERY_PAGE} component={ReLottery} />
+                        <Route path={BITFINEX_PAGE} component={Bitfinex} />
                     </Route>
                     <Redirect from="*" to={ROOT_PAGE} />
                 </Router>

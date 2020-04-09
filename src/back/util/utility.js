@@ -49,6 +49,11 @@ export function isValidString(str, type) {
                 return Number(str)
             }
             break
+            case 'zeroint':
+            if ((Number(str) || Number(str) === 0) && Number(str) >= 0) {
+                return Number(str)
+            }
+            break
             case 'passwd':
             if (str.match(/^[0-9a-zA-Z!@#$%]{6,20}$/)) {
                 return str
@@ -124,7 +129,7 @@ HoError.prototype = Object.create(Error.prototype)
 HoError.prototype.constructor = HoError
 
 function showError(err, type) {
-    console.log(`${type} error: ${err.name} ${err.message}`);
+    console.log(`${type} error: ${err.name} ${err.message||err.msg}`);
     if (err.code !== undefined) {
         console.log(err.code);
     }

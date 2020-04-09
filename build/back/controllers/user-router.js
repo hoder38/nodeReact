@@ -237,7 +237,7 @@ router.route('/act/:uid?').get(function (req, res, next) {
         if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
     } else {
         if ((0, _getOwnPropertyNames2.default)(data).length === 0) {
-            return (0, _utility.handleError)(new _utility.HoError('nnothing to change!!!'), next);
+            return (0, _utility.handleError)(new _utility.HoError('nothing to change!!!'), next);
         }
         console.log(data);
         console.log(id);

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
 
@@ -41,6 +41,8 @@ var _externalTool = require('../models/external-tool');
 
 var _externalTool2 = _interopRequireDefault(_externalTool);
 
+var _bitfinexTool = require('../models/bitfinex-tool');
+
 var _apiToolPlaylist = require('../models/api-tool-playlist');
 
 var _apiToolPlaylist2 = _interopRequireDefault(_apiToolPlaylist);
@@ -63,7 +65,7 @@ var stock_batch_list = [];
 var stock_batch_list_2 = [];
 
 function bgError(err, type) {
-    (0, _sendWs2.default)(type + ': ' + err.message, 0, 0, true);
+    (0, _sendWs2.default)(type + ': ' + (err.message || err.msg), 0, 0, true);
     (0, _utility.handleError)(err, type);
 }
 
@@ -459,5 +461,74 @@ var checkStock = exports.checkStock = function checkStock() {
         }();
 
         if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+    }
+};
+
+var rateCalculator = exports.rateCalculator = function rateCalculator() {
+    if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
+        var _ret9 = function () {
+            var calR = function calR() {
+                return (0, _bitfinexTool.calRate)([_constants.FUSD_SYM, _constants.FUSDT_SYM]).catch(function (err) {
+                    return bgError(err, 'Loop rate calculator');
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.RATE_INTERVAL * 1000);
+                    });
+                }).then(function () {
+                    return calR();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 60000);
+                }).then(function () {
+                    return calR();
+                })
+            };
+        }();
+
+        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+    }
+};
+
+var setUserOffer = exports.setUserOffer = function setUserOffer() {
+    if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
+        var _ret10 = function () {
+            var checkUser = function checkUser(index, userlist) {
+                return index >= userlist.length ? _promise2.default.resolve() : (0, _bitfinexTool.setWsOffer)(userlist[index].username, userlist[index].bitfinex).then(function () {
+                    return checkUser(index + 1, userlist);
+                });
+            };
+            var setO = function setO() {
+                return (0, _mongoTool2.default)('find', _constants.USERDB, { bitfinex: { $exists: true } }).then(function (userlist) {
+                    return checkUser(0, userlist).catch(function (err) {
+                        return bgError(err, 'Loop set offer');
+                    });
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.RATE_INTERVAL * 1000);
+                    });
+                }).then(function () {
+                    return setO();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 90000);
+                }).then(function () {
+                    return setO();
+                })
+            };
+        }();
+
+        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
     }
 };

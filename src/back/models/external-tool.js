@@ -934,7 +934,7 @@ export default {
                 });
             });
             case 'sea':
-            return Api('url', 'http://www.seaj.or.jp/english/statistics/').then(raw_data => {
+            return Api('url', 'https://www.seaj.or.jp/english/statistics/index.html').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -943,7 +943,7 @@ export default {
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'table')[2], 'tr')[0], 'td')[2], 'table')[5], 'tr')[1], 'td')[0], 'table')[0], 'tr')[0], 'td')[0], 'table')[0], 'tr').forEach(t => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'pagecontent')[0], 'div', 'row column-content')[0], 'main', 'col-md-9 order-md-last')[0], 'section')[1], 'section')[0], 'div', 'table-responsive')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                     if (findTag(findTag(t, 'td')[2])[0] === docDate) {
                         let urlS = findTag(findTag(t, 'td')[1], 'a')[0].attribs.href;
                         urlS = urlS.match(/^(http|https):\/\//) ? urlS : `http://${PathJoin('www.seaj.or.jp/english/statistics', urlS)}`;
