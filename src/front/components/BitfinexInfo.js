@@ -1,5 +1,6 @@
 import React from 'react'
 import UserInput from './UserInput'
+import Tooltip from './Tooltip'
 import { killEvent, checkInput, api, isValidString } from '../utility'
 import { FILE_ZINDEX } from '../constants'
 
@@ -136,7 +137,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('riskLimit')}
                                         placeholder="1~10">
                                         <tr>
-                                            <td key={0}>Risk:</td>
+                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="風險指數設定1~10，會隨著時間或筆數(同時最多10單)降低" place="right" />Risk:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -145,7 +146,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('waitTime')}
                                         placeholder="min.">
                                         <tr>
-                                            <td key={0}>Time Intervel:</td>
+                                            <td key={0}><Tooltip tip="調降風險指數的時間區隔(分鐘)" place="right" />Time Intervel:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -154,7 +155,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('amountLimit')}
                                         placeholder=">50">
                                         <tr>
-                                            <td key={0}>Amount Limit:</td>
+                                            <td key={0}><Tooltip tip="最大單筆金額上限，最小50" place="right" />Amount Limit:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -163,7 +164,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('miniRate')}
                                         placeholder="5">
                                         <tr>
-                                            <td key={0}>Mini Rate:</td>
+                                            <td key={0}><Tooltip tip="掛出最小利率" place="right" />Mini Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -172,7 +173,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('dynamic')}
                                         placeholder="20">
                                         <tr>
-                                            <td key={0}>Dynamic Rate:</td>
+                                            <td key={0}><Tooltip tip="超過此利率，日期變30天" place="right" />Dynamic Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -181,12 +182,12 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('keepAmount')}
                                         placeholder="0">
                                         <tr>
-                                            <td key={0}>Reserved Amount:</td>
+                                            <td key={0}><Tooltip tip="保留此金額不貸出" place="right" />Reserved Amount:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
                                     <tr>
-                                        <td>Keep:</td>
+                                        <td><Tooltip tip="比特幣或以太幣一天跌超過30%就保留資金" place="right" />Keep:</td>
                                         <td>
                                             <input
                                                 type="checkbox"

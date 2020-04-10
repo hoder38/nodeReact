@@ -68,7 +68,7 @@ const Tooltip = React.createClass({
         return (
             <div className={`tooltip in ${this.props.place}`} style={this._show}>
                 <div className="tooltip-arrow"></div>
-                <div className="tooltip-inner">{this.props.tip}</div>
+                <div style={this.props.style} className="tooltip-inner">{this.props.tip}</div>
             </div>
         )
     }
