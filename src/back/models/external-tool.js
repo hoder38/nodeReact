@@ -1025,12 +1025,15 @@ export default {
                     const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
                     const html2 = findTag(html, 'html')[0];
                     findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
-                        if (findTag(findTag(t, 'td')[1])[0] === docDate) {
-                            list.push({
-                                url: addPre(findTag(findTag(t, 'td')[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
-                                name: toValidName(title),
-                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                            });
+                        const timeTd = findTag(t, 'td');
+                        if (timeTd.length > 0) {
+                            if (findTag(timeTd[1])[0] === docDate) {
+                                list.push({
+                                    url: addPre(findTag(timeTd[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
+                                    name: toValidName(title),
+                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                });
+                            }
                         }
                     });
                 }

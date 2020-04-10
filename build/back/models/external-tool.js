@@ -1251,12 +1251,15 @@ exports.default = {
                         var html = (0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0];
                         var html2 = (0, _utility.findTag)(html, 'html')[0];
                         (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(function (t) {
-                            if ((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1])[0] === docDate) {
-                                list.push({
-                                    url: (0, _utility.addPre)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
-                                    name: (0, _utility.toValidName)(title),
-                                    date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
-                                });
+                            var timeTd = (0, _utility.findTag)(t, 'td');
+                            if (timeTd.length > 0) {
+                                if ((0, _utility.findTag)(timeTd[1])[0] === docDate) {
+                                    list.push({
+                                        url: (0, _utility.addPre)((0, _utility.findTag)(timeTd[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
+                                        name: (0, _utility.toValidName)(title),
+                                        date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
+                                    });
+                                }
                             }
                         });
                     };
