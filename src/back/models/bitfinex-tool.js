@@ -230,13 +230,15 @@ export const setWsOffer = (id, curArr=[]) => {
             });
             userWs[id].onFundingOfferClose({ symbol: t }, fo => {
                 console.log(`${t} offer close`);
-                for (let j = 0; j < offer[t].length; j++) {
-                    if (offer[t][j].id === fo.id) {
-                        offer[t].splice(j, 1);
-                        break;
+                if (offer[t]) {
+                    for (let j = 0; j < offer[t].length; j++) {
+                        if (offer[t][j].id === fo.id) {
+                            offer[t].splice(j, 1);
+                            break;
+                        }
                     }
+                    console.log(offer[t].length);
                 }
-                console.log(offer[t].length);
             });
             /*userWs[id].onFundingCreditSnapshot({ symbol: curArr[i].type }, fcs => {
                 console.log(`${curArr[i].type} credit`);

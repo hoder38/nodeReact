@@ -291,13 +291,15 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             });
             userWs[id].onFundingOfferClose({ symbol: t }, function (fo) {
                 console.log(t + ' offer close');
-                for (var j = 0; j < offer[t].length; j++) {
-                    if (offer[t][j].id === fo.id) {
-                        offer[t].splice(j, 1);
-                        break;
+                if (offer[t]) {
+                    for (var j = 0; j < offer[t].length; j++) {
+                        if (offer[t][j].id === fo.id) {
+                            offer[t].splice(j, 1);
+                            break;
+                        }
                     }
+                    console.log(offer[t].length);
                 }
-                console.log(offer[t].length);
             });
             /*userWs[id].onFundingCreditSnapshot({ symbol: curArr[i].type }, fcs => {
                 console.log(`${curArr[i].type} credit`);
