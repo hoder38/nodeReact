@@ -2,7 +2,7 @@ import { ALERT_PUSH, ALERT_POP, SET_BASIC, SET_UPLOAD, SEND_GLB_PW, CLOSE_GLB_PW
     CLOSE_GLB_CF, FEEDBACK_POP, FEEDBACK_PUSH, BOOKMARK_POP, BOOKMARK_PUSH, SET_DIRS, DIR_POP,
     DIR_PUSH, USER_POP, USER_PUSH, ITEM_PUSH, ITEM_POP, SET_ITEM, SEND_GLB_IN, CLOSE_GLB_IN,
     PASS_PUSH, PASS_POP, SET_PASS, SET_PDIRS, PDIR_POP, PDIR_PUSH, PBOOKMARK_POP, PBOOKMARK_PUSH,
-    STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH, RANK_PUSH, RANK_POP, SET_RANK, SET_RDIRS, RDIR_PUSH, RDIR_POP, RBOOKMARK_POP, RBOOKMARK_PUSH, LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY } from '../constants'
+    STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH, RANK_PUSH, RANK_POP, SET_RANK, SET_RDIRS, RDIR_PUSH, RDIR_POP, RBOOKMARK_POP, RBOOKMARK_PUSH, LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY, BITFINEX_PUSH, SET_BITFINEX, BITFINEX_POP } from '../constants'
 
 export const alertPush = msg => ({
     type: ALERT_PUSH,
@@ -412,6 +412,36 @@ export const lotteryPush = (item, path=null, bookmark=null, latest=null, sortNam
 
 export const setLottery = (select, latest=null, bookmark=null, multi=null, list=null, id=null, opt=null, time=null) => ({
     type: SET_LOTTERY,
+    select,
+    latest,
+    bookmark,
+    multi,
+    list,
+    id,
+    opt,
+    time,
+})
+
+//bitfinex
+export const bitfinexPop = id => ({
+    type: BITFINEX_POP,
+    id,
+})
+
+export const bitfinexPush = (item, path=null, bookmark=null, latest=null, sortName=null, sortType=null, pageToken=null, list='item') => ({
+    type: BITFINEX_PUSH,
+    item,
+    path,
+    bookmark,
+    latest,
+    sortName,
+    sortType,
+    pageToken,
+    list,
+})
+
+export const setBitfinex = (select, latest=null, bookmark=null, multi=null, list=null, id=null, opt=null, time=null) => ({
+    type: SET_BITFINEX,
     select,
     latest,
     bookmark,

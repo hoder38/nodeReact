@@ -45,7 +45,7 @@ export const EXTERNAL_INTERVAL = 604800;
 export const STOCK_INTERVAL = 172800;
 export const BACKUP_INTERVAL = 86400;
 export const PRICE_INTERVAL = 600;
-export const RATE_INTERVAL = 90;
+export const RATE_INTERVAL = 60;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800
@@ -822,6 +822,7 @@ export const BACKUP_COLLECTION = [
     `${PASSWORDDB}User`,
 ]
 
+export const BITFINEX = 'bitfinex'
 export const FUSD_SYM = 'fUSD'
 export const FUSDT_SYM = 'fUST'
 export const TBTC_SYM = 'tBTCUSD'
@@ -834,3 +835,37 @@ export const OFFER_MAX = 10;
 export const COIN_MAX = -30;
 export const COIN_MAX_MAX = -60;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM];
+export const BITNIFEX_PARENT = [
+    {
+        name: 'all',
+        show: '全部',
+    },
+    {
+        name: 'usd',
+        show: 'USD',
+    },
+    {
+        name: 'ust',
+        show: 'UST',
+    },
+    {
+        name: 'wallet',
+        show: '錢包',
+    },
+    {
+        name: 'rate',
+        show: '利率',
+    },
+    {
+        name: 'offer',
+        show: '掛單',
+    },
+    {
+        name: 'credit',
+        show: '放款',
+    },
+    {
+        name: 'payment',
+        show: '利息收入',
+    },
+];

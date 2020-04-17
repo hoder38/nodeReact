@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
@@ -21,8 +21,8 @@ let ethDailyChange = 0;
 let available = {};
 let offer = {};
 
-//let credit = {};
-//legder
+let credit = {};
+let ledger = {};
 
 //wallet history
 //credit history
@@ -36,8 +36,11 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
     if (btcDailyChange < COIN_MAX || ethDailyChange < COIN_MAX) {
         sendWs(`Bitfinex Daily Change: ${btcDailyChange} ${ethDailyChange}` , 0, 0, true);
     }
-    const singleCal = curType => rest.ticker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
-        currentRate[curType] = curTicker.lastPrice * BITFINEX_EXP;
+    const singleCal = (curType, index) => rest.ticker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
+        currentRate[curType] = {
+            rate: curTicker.lastPrice * BITFINEX_EXP,
+            time: Math.round(new Date().getTime() / 1000),
+        };
         const hl = [];
         const weight = [];
         return rest.candles({symbol: curType, timeframe: '1m', period: 'p2', query: {limit: 1440}}).then(entries => {
@@ -128,7 +131,7 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
             //console.log(maxRange[curType]);
         });
     }));
-    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index]).then(() => recurType(index + 1)) : recurType(index + 1);
+    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
     return recurType(0);
 }));
 
@@ -154,7 +157,7 @@ export const setWsOffer = (id, curArr=[]) => {
         userWs[id] = userBfx.ws(2,{ transform: true });
         userWs[id].on('error', err => {
             sendWs(`${id} Bitfinex Ws Error: ${err.message||err.msg}`, 0, 0, true);
-            handleError(err, 'Bitfinex Ws Error');
+            handleError(err, `${id} Bitfinex Ws Error`);
         });
         userWs[id].on('open', () => userWs[id].auth());
         userWs[id].once('auth', () => {
@@ -162,24 +165,24 @@ export const setWsOffer = (id, curArr=[]) => {
             userOk[id] = true;
         });
         userWs[id].onWalletUpdate ({}, wallet => {
-            SUPPORT_COIN.forEach(t => {
+            SUPPORT_COIN.forEach((t, i) => {
                 if (wallet.type === 'funding' && wallet.currency === t.substr(1)) {
-                    available[t] = wallet.balanceAvailable;
-                    console.log('available');
-                    console.log(available);
+                    if (!available[id]) {
+                        available[id] = {}
+                    }
+                    available[id][t] = {
+                        avail: wallet.balanceAvailable,
+                        time: Math.round(new Date().getTime() / 1000),
+                        total: wallet.balance,
+                    }
+                    //console.log('available');
+                    //console.log(available[id]);
                 }
             });
         });
         SUPPORT_COIN.forEach(t => {
-            /*userRest.ledgers({ccy: curArr[i].type.substr(1), category: 28}).then(entries => {
-                console.log(`${curArr[i].type} ledgers`);
-                console.log(entries.length);
-            }).catch(err => {
-                sendWs(`Bitfinex ${curArr[i].type} Ws Error: ${err.message||err.msg}`, 0, 0, true);
-                handleError(err, `Bitfinex ${curArr[i].type} Ledger Error`);
-            });*/
             userWs[id].onFundingOfferSnapshot({ symbol: t }, fos => {
-                console.log(`${t} offer`);
+                //console.log(`${t} offer`);
                 let risk = RISK_MAX;
                 const temp = [];
                 fos.forEach(v => {
@@ -195,30 +198,36 @@ export const setWsOffer = (id, curArr=[]) => {
                         });
                     }
                 });
-                offer[t] = temp;
-                console.log(offer[t].length);
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                offer[id][t] = temp;
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferUpdate({ symbol: t }, fo => {
-                console.log(`${t} offer update`);
-                for (let j = 0; j < offer[t].length; j++) {
-                    if (offer[t][j].id === fo.id) {
-                        offer[t][j].id = fo.id;
-                        //offer[t][j].time = fo.mtsCreate;
-                        offer[t][j].amount = fo.amount;
-                        offer[t][j].rate = fo.rate;
-                        offer[t][j].period = fo.period;
-                        offer[t][j].status = fo.status;
+                //console.log(`${t} offer update`);
+                for (let j = 0; j < offer[id][t].length; j++) {
+                    if (offer[id][t][j].id === fo.id) {
+                        offer[id][t][j].id = fo.id;
+                        //offer[id][t][j].time = fo.mtsCreate;
+                        offer[id][t][j].amount = fo.amount;
+                        offer[id][t][j].rate = fo.rate;
+                        offer[id][t][j].period = fo.period;
+                        offer[id][t][j].status = fo.status;
                         break;
                     }
                 }
-                console.log(offer[t].length);
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferNew({ symbol: t }, fo => {
-                console.log(`${t} offer new`);
-                if (!offer[t]) {
-                    offer[t] = [];
+                //console.log(`${t} offer new`);
+                if (!offer[id]) {
+                    offer[id] = {};
                 }
-                offer[t].push({
+                if (!offer[id][t]) {
+                    offer[id][t] = [];
+                }
+                offer[id][t].push({
                     id: fo.id,
                     time: Math.round(fo.mtsCreate / 1000),
                     amount: fo.amount,
@@ -226,52 +235,93 @@ export const setWsOffer = (id, curArr=[]) => {
                     period: fo.period,
                     status: fo.status,
                 });
-                console.log(offer[t].length);
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferClose({ symbol: t }, fo => {
-                console.log(`${t} offer close`);
-                if (offer[t]) {
-                    for (let j = 0; j < offer[t].length; j++) {
-                        if (offer[t][j].id === fo.id) {
-                            offer[t].splice(j, 1);
+                //console.log(`${t} offer close`);
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                if (offer[id][t]) {
+                    for (let j = 0; j < offer[id][t].length; j++) {
+                        if (offer[id][t][j].id === fo.id) {
+                            offer[id][t].splice(j, 1);
                             break;
                         }
                     }
-                    console.log(offer[t].length);
+                    //console.log(offer[id][t].length);
                 }
             });
-            /*userWs[id].onFundingCreditSnapshot({ symbol: curArr[i].type }, fcs => {
-                console.log(`${curArr[i].type} credit`);
-                credit[curArr[i].type] = fcs.map(v => ({
-                    id: v.id,
-                    time: Math.round(v.mtsOpening / 1000),
-                    amount: v.amount,
-                    rate: v.rate,
-                    period: v.period,
-                    pair: v.positionPair,
-                    status: v.status,
-                }));
-                console.log(credit[curArr[i].type].length);
+            userWs[id].onFundingOfferSnapshot({ symbol: t }, fos => {
+                //console.log(`${t} offer`);
+                let risk = RISK_MAX;
+                const temp = [];
+                fos.forEach(v => {
+                    if (v.symbol === t) {
+                        temp.push({
+                            id: v.id,
+                            time: Math.round(v.mtsCreate / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            risk: risk > 0 ? risk-- : 0,
+                        });
+                    }
+                });
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                offer[id][t] = temp;
+                //console.log(offer[id][t].length);
             });
-            userWs[id].onFundingCreditUpdate({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit update`);
-                for (let j = 0; j < credit[curArr[i].type].length; j++) {
-                    if (credit[curArr[i].type][j].id === fc.id) {
-                        credit[curArr[i].type][j].id = fc.id;
-                        credit[curArr[i].type][j].time = Math.round(fc.mtsOpening / 1000);
-                        credit[curArr[i].type][j].amount = fc.amount;
-                        credit[curArr[i].type][j].rate = fc.rate;
-                        credit[curArr[i].type][j].period = fc.period;
-                        credit[curArr[i].type][j].pair = fc.positionPair;
-                        credit[curArr[i].type][j].status = fc.status;
+            userWs[id].onFundingCreditSnapshot({ symbol: t }, fcs => {
+                //console.log(`${t} credit`);
+                const temp = [];
+                fcs.forEach(v => {
+                    if (v.symbol === t) {
+                        temp.push({
+                            id: v.id,
+                            time: Math.round(v.mtsOpening / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            pair: v.positionPair,
+                        });
+                    }
+                });
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                credit[id][t] = temp;
+                //console.log(credit[id][t].length);
+            });
+            userWs[id].onFundingCreditUpdate({ symbol: t }, fc => {
+                //console.log(`${t} credit update`);
+                for (let j = 0; j < credit[id][t].length; j++) {
+                    if (credit[id][t][j].id === fc.id) {
+                        credit[id][t][j].id = fc.id;
+                        credit[id][t][j].time = Math.round(fc.mtsOpening / 1000);
+                        credit[id][t][j].amount = fc.amount;
+                        credit[id][t][j].rate = fc.rate;
+                        credit[id][t][j].period = fc.period;
+                        credit[id][t][j].pair = fc.positionPair;
+                        credit[id][t][j].status = fc.status;
                         break;
                     }
                 }
-                console.log(credit[curArr[i].type].length);
+                //console.log(credit[id][t].length);
             });
-            userWs[id].onFundingCreditNew({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit new`);
-                credit[curArr[i].type].push({
+            userWs[id].onFundingCreditNew({ symbol: t }, fc => {
+                //console.log(`${t} credit new`);
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                if (!credit[id][t]) {
+                    credit[id][t] = [];
+                }
+                credit[id][t].push({
                     id: fc.id,
                     time: Math.round(fc.mtsOpening / 1000),
                     amount: fc.amount,
@@ -280,18 +330,23 @@ export const setWsOffer = (id, curArr=[]) => {
                     pair: fc.positionPair,
                     status: fc.status,
                 });
-                console.log(credit[curArr[i].type].length);
+                //console.log(credit[id][t].length);
             });
-            userWs[id].onFundingCreditClose({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit close`);
-                for (let j = 0; j < credit[curArr[i].type].length; j++) {
-                    if (credit[curArr[i].type][j].id === fc.id) {
-                        credit[curArr[i].type].splice(j, 1);
-                        break;
+            userWs[id].onFundingCreditClose({ symbol: t }, fc => {
+                //console.log(`${t} credit close`);
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                if (credit[id][t]) {
+                    for (let j = 0; j < credit[id][t].length; j++) {
+                        if (credit[id][t][j].id === fc.id) {
+                            credit[id][t].splice(j, 1);
+                            break;
+                        }
                     }
                 }
-                console.log(credit[curArr[i].type].length);
-            });*/
+                //console.log(credit[id][t].length);
+            });
         });
         userWs[id].open();
     } else if (!userWs[id].isOpen()) {
@@ -322,11 +377,14 @@ export const setWsOffer = (id, curArr=[]) => {
         // adjust offer & history
         const adjustOffer = () => {
             console.log(`${id} ${current.type}`);
-            if (offer[current.type]) {
+            if (!offer[id]) {
+                offer[id] = {};
+            }
+            if (offer[id][current.type]) {
                 //console.log(offer[current.type]);
                 //produce retain delete
-                offer[current.type].forEach(v => {
-                    if ((v.rate - currentRate[current.type]) > maxRange[current.type]) {
+                offer[id][current.type].forEach(v => {
+                    if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                     } else if ((Math.round(new Date().getTime() / 1000) - v.time) >= (current.waitTime * 60)) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
@@ -351,7 +409,7 @@ export const setWsOffer = (id, curArr=[]) => {
         }
         //keep cash
         const calKeepCash = avail => {
-            let kp = avail ? avail : 0;
+            let kp = avail ? (avail[current.type] ? avail[current.type].avail : 0) : 0;
             if (current.isKeep) {
                 if (btcDailyChange < COIN_MAX || ethDailyChange < COIN_MAX) {
                     const dailyChange = (btcDailyChange < ethDailyChange) ? btcDailyChange : ethDailyChange;
@@ -362,7 +420,7 @@ export const setWsOffer = (id, curArr=[]) => {
         }
         //produce new
         const newOffer = risk => {
-            let keep_available = calKeepCash(available[current.type]);
+            let keep_available = calKeepCash(available[id]);
             //console.log('keep available');
             //console.log(keep_available);
             if (risk > RISK_MAX) {
@@ -373,7 +431,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < current.amountLimit * 0.2 || keep_available < 50) {
+                if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
                 let amount = current.amountLimit;
@@ -404,10 +462,10 @@ export const setWsOffer = (id, curArr=[]) => {
             needNew.forEach(v => {
                 const notDelete = checkDelete(v.rate, v.amount);
                 if (notDelete !== -1) {
-                    for (let i = 0; i < offer[current.type].length; i++) {
-                        if (needDelete[notDelete].id === offer[current.type][i].id) {
-                            offer[current.type][i].time = Math.round(new Date().getTime() / 1000);
-                            offer[current.type][i].risk = v.risk;
+                    for (let i = 0; i < offer[id][current.type].length; i++) {
+                        if (needDelete[notDelete].id === offer[id][current.type][i].id) {
+                            offer[id][current.type][i].time = Math.round(new Date().getTime() / 1000);
+                            offer[id][current.type][i].risk = v.risk;
                             break;
                         }
                     }
@@ -418,10 +476,10 @@ export const setWsOffer = (id, curArr=[]) => {
             });
             //console.log('retain');
             //console.log(needRetain);
-            console.log('delete');
-            console.log(needDelete);
-            console.log('final');
-            console.log(finalNew);
+            //console.log('delete');
+            //console.log(needDelete);
+            //console.log('final');
+            //console.log(finalNew);
         }
         adjustOffer();
         newOffer(current.riskLimit);
@@ -440,10 +498,10 @@ export const setWsOffer = (id, curArr=[]) => {
                     type: 'LIMIT',
                 }, userRest);
                 return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => {
-                    for (let i = 0; i < offer[current.type].length; i++) {
-                        if (fo.id === offer[current.type][i].id) {
-                            offer[current.type][i].risk = finalNew[index].risk;
-                            console.log(`Offer ${offer[current.type][i].id} ${offer[current.type][i].risk}`);
+                    for (let i = 0; i < offer[id][current.type].length; i++) {
+                        if (fo.id === offer[id][current.type][i].id) {
+                            offer[id][current.type][i].risk = finalNew[index].risk;
+                            //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
                             break;
                         }
                     }
@@ -453,8 +511,37 @@ export const setWsOffer = (id, curArr=[]) => {
         }
         return cancelOffer(0).then(() => submitOffer(0));
     }
-
-    const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? singleLoan(curArr[index]).then(() => recurLoan(index + 1)) : recurLoan(index + 1);
+    const getLegder = current => {
+        if (!ledger[id]) {
+            ledger[id] = {};
+        }
+        if (ledger[id][current.type] && ledger[id][current.type].length > 0) {
+            const now = new Date();
+            now.setHours(0);
+            now.setMinutes(0);
+            now.setSeconds(0);
+            if ((ledger[id][current.type][0].time * 1000) >= now.getTime()) {
+                return Promise.resolve();
+            } else {
+                now.setHours(9);
+                now.setMinutes(30);
+                if (new Date().getTime() < now.getTime()) {
+                    return Promise.resolve();
+                }
+            }
+        }
+        return userRest.ledgers({ccy: current.type.substr(1), category: 28}).then(entries => {
+            console.log(`${current.type} ledger`);
+            ledger[id][current.type] = entries.map(e => ({
+                id: e.id,
+                time: Math.round(e.mts / 1000),
+                amount: Math.round(e.amount * 100) / 100,
+                rate: e.amount / e.balance,
+            }));
+            console.log(ledger[id][current.type].length);
+        });
+    }
+    const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => recurLoan(index + 1))) : recurLoan(index + 1);
     return recurLoan(0);
 }
 
@@ -576,7 +663,7 @@ export default {
             }
             if (items[0].bitfinex) {
                 const bitfinex = items[0].bitfinex.filter(v => (v.type === type) ? false : true);
-                console.log(bitfinex);
+                //console.log(bitfinex);
                 return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
                     console.log(user);
                     return returnSupport(bitfinex);
@@ -586,6 +673,186 @@ export default {
             }
         });
     },
+    query: function(page, name, sortName, sortType, user, session) {
+        const id = user.username;
+        if (name) {
+            name = isValidString(name, 'name');
+            if (!name) {
+                return handleError(new HoError('tag name is not valid'));
+            }
+        }
+        page = isValidString(page, 'zeroint');
+        if (page === false) {
+            return handleError(new HoError('page is not valid'));
+        }
+        const itemList = [];
+        if (!session['bitfinex']) {
+            session['bitfinex'] = 'all';
+        }
+        if (name) {
+            session['bitfinex'] = name;
+        }
+        let type = 0;
+        let coin = 'all';
+        const sess = session['bitfinex'];
+        switch(sess) {
+            case 'usd':
+            case 'USD':
+            coin = FUSD_SYM;
+            break;
+            case 'ust':
+            case 'UST':
+            coin = FUSDT_SYM;
+            break;
+            case 'wallet':
+            case '錢包':
+            type = 1;
+            break;
+            case 'rate':
+            case '利率':
+            type = 2;
+            break;
+            case 'offer':
+            case '掛單':
+            type = 3;
+            break;
+            case 'credit':
+            case '放款':
+            type = 4;
+            break;
+            case 'payment':
+            case '利息收入':
+            type = 5;
+            break;
+        }
+        if (type === 0 || type === 1) {
+            SUPPORT_COIN.forEach((v, i) => {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (available[id] && available[id][v]) {
+                    itemList.push({
+                        name: `閒置 ${v.substr(1)} $${Math.round(available[id][v].avail * 100) / 100}`,
+                        id: (i+1) * 10000,
+                        tags: [v.substr(1).toLowerCase(), 'wallet', '錢包'],
+                        rate: `$${Math.round(available[id][v].total * 100) / 100}`,
+                        count: available[id][v].total,
+                        utime: available[id][v].time,
+                        type: 0,
+                    })
+                }
+            });
+        }
+        if (type === 0 || type === 2) {
+            SUPPORT_COIN.forEach((v, i) => {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (currentRate[v]) {
+                    const rate = Math.round(currentRate[v].rate / 10) / 100000;
+                    const showRate = Math.round(rate * 36500) / 100;
+                    itemList.push({
+                        name: `${v.substr(1)} Rate`,
+                        id: i,
+                        tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
+                        rate: `${rate} (${showRate}%)`,
+                        count: rate,
+                        utime: currentRate[v].time,
+                        type: 1,
+                    })
+                }
+            });
+        }
+        if (type === 0 || type === 3) {
+            SUPPORT_COIN.forEach((v, i) => {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (offer[id] && offer[id][v]) {
+                    offer[id][v].forEach(o => {
+                        const rate = Math.round(o.rate * 10000000) / 100000;
+                        const showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: `掛單 ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.status} risk ${o.risk}`,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
+                            rate: `${rate} (${showRate}%)`,
+                            count: rate,
+                            utime: o.time,
+                            type: 2,
+                        })
+                    })
+                }
+            });
+        }
+        if (type === 0 || type === 4) {
+            SUPPORT_COIN.forEach((v, i) => {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (credit[id] && credit[id][v]) {
+                    credit[id][v].forEach(o => {
+                        const rate = Math.round(o.rate * 10000000) / 100000;
+                        const showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: `放款 ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.status} ${o.pair}`,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
+                            rate: `${rate} (${showRate}%)`,
+                            count: rate,
+                            utime: o.time,
+                            type: 3,
+                        })
+                    })
+                }
+            });
+        }
+        if (type === 0 || type === 5) {
+            SUPPORT_COIN.forEach((v, i) => {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (ledger[id] && ledger[id][v]) {
+                    ledger[id][v].forEach(o => {
+                        const rate = Math.round(o.rate * 10000000) / 100000;
+                        const showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: `利息收入 ${v.substr(1)} $${o.amount}`,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
+                            rate: `${rate} (${showRate}%)`,
+                            count: rate,
+                            utime: o.time,
+                            type: 4,
+                        })
+                    })
+                }
+            });
+        }
+        if (sortName === 'name' && sortType === 'desc') {
+            itemList.reverse();
+        } else if (sortName === 'mtime' && sortType === 'asc') {
+            itemList.sort((a, b) => (a.count - b.count));
+        } else if (sortName === 'mtime' && sortType === 'desc') {
+            itemList.sort((a, b) => (b.count - a.count));
+        } else if (sortName === 'count' && sortType === 'asc') {
+            itemList.sort((a, b) => (a.utime - b.utime));
+        } else if (sortName === 'count' && sortType === 'desc') {
+            itemList.sort((a, b) => (b.utime - a.utime));
+        }
+        return {
+            itemList,
+            parentList: {
+                cur: [],
+                his: [],
+                exactly: [],
+                bookmark: '',
+            },
+        }
+    },
+    parent: function() {
+        return BITNIFEX_PARENT;
+    }
 }
 
 const returnSupport = bitfinex => bitfinex ? SUPPORT_COIN.map(v => {

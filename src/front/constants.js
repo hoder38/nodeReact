@@ -84,6 +84,10 @@ export const RBOOKMARK_PUSH = 'RBOOKMARK_PUSH'
 export const LOTTERY_PUSH = 'LOTTERY_PUSH'
 export const LOTTERY_POP = 'LOTTERY_POP'
 export const SET_LOTTERY = 'SET_LOTTERY'
+//bitfinex
+export const BITFINEX_PUSH = 'BITFINEX_PUSH'
+export const BITFINEX_POP = 'BITFINEX_POP'
+export const SET_BITFINEX = 'SET_BITFINEX'
 
 //z-index
 export const RIGHT_SECTION_ZINDEX = 20

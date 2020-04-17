@@ -72,10 +72,6 @@ var _lotteryRouter = require('./lottery-router');
 
 var _lotteryRouter2 = _interopRequireDefault(_lotteryRouter);
 
-var _bitfinexRouter = require('./bitfinex-router');
-
-var _bitfinexRouter2 = _interopRequireDefault(_bitfinexRouter);
-
 var _otherRouter = require('./other-router');
 
 var _otherRouter2 = _interopRequireDefault(_otherRouter);
@@ -91,14 +87,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 //util
 
-
-//router
-
-
-//model
+//import FitnessRouter from './fitness-router'
+//import RankRouter from './rank-router'
 
 
-//constant
+//external
+
+
+//config
 var credentials = {
     cert: (0, _fs.readFileSync)(_ver.CERT),
     ca: (0, _fs.readFileSync)(_ver.CA),
@@ -109,14 +105,14 @@ var credentials = {
 };
 //credentials.agent = new HttpsAgent(credentials)
 
-//import FitnessRouter from './fitness-router'
-//import RankRouter from './rank-router'
+
+//router
 
 
-//external
+//model
 
 
-//config
+//constant
 var app = (0, _express2.default)();
 var server = (0, _https.createServer)(credentials, app);
 (0, _sendWs.init)();
@@ -153,8 +149,6 @@ app.use('/api/bookmark', _bookmarkRouter2.default);
 app.use('/api/parent', _parentRouter2.default);
 
 app.use('/api/lottery', _lotteryRouter2.default);
-
-app.use('/api/bitfinex', _bitfinexRouter2.default);
 
 //other
 app.use('/', _otherRouter2.default);

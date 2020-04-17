@@ -17,7 +17,7 @@ const BitfinexInfo = React.createClass({
         }, this._input.initValue());
     },
     componentWillMount: function() {
-        api('/api/bitfinex/bot').then(result => this._setList(result)).catch(err => this.props.addalert(err));
+        api(`${this.props.mainUrl}/api/bitfinex/bot`).then(result => this._setList(result)).catch(err => this.props.addalert(err));
     },
     _handleSubmit: function() {
         const item = this.state.list[this.state.current];
@@ -34,7 +34,7 @@ const BitfinexInfo = React.createClass({
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
             keep, active);
         if (Object.keys(set_obj).length > 0) {
-            this.props.sendglbcf(() => api('/api/bitfinex/bot', Object.assign({}, set_obj, {type: item.type}), 'PUT').then(result => {
+            this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot`, Object.assign({}, set_obj, {type: item.type}), 'PUT').then(result => {
                 this._setList(result, item.type);
                 this.props.addalert(`${item.type.substr(1)} Bot update completed`);
             }).catch(err => this.props.addalert(err)), `Would you sure to update ${item.type.substr(1)} Bot?`);
@@ -69,7 +69,7 @@ const BitfinexInfo = React.createClass({
     },
     _delBot: function() {
         const type = this.state.list[this.state.current].type;
-        this.props.sendglbcf(() => api(`/api/bitfinex/bot/del/${type}`).then(result => this._setList(result, type)).catch(err => this.props.addalert(err)), `Would you sure to delete ${this.state.list[this.state.current].type.substr(1)} Bot?`);
+        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot/del/${type}`).then(result => this._setList(result, type)).catch(err => this.props.addalert(err)), `Would you sure to delete ${this.state.list[this.state.current].type.substr(1)} Bot?`);
     },
     render: function() {
         const list = this.state.list.map((v, i) => {

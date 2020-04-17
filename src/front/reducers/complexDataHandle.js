@@ -1,5 +1,5 @@
 import { arrayObject, arrayId } from '../utility'
-import { SET_STOCK, SET_LOTTERY } from '../constants'
+import { SET_STOCK, SET_LOTTERY, SET_BITFINEX } from '../constants'
 
 const rest_item = item => {
     if (item.utime) {
@@ -99,7 +99,7 @@ export default function complexDataHandle (push, pop, set) {
                 if (action.list === 'item') {
                     window.scrollTo(0, 0)
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY || set === SET_BITFINEX) ? rest_item1 : rest_item),
                         latest: action.latest === null ? '' : action.latest,
                         path: action.path === null ? state.path : action.path,
                         select: new Set(),
@@ -119,11 +119,11 @@ export default function complexDataHandle (push, pop, set) {
             } else {
                 if (action.pageToken === null) {
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY || set === SET_BITFINEX) ? rest_item1 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             page: action.item.length ? state[action.list].page + action.item.length : state[action.list].page,
                             more: (Array.isArray(action.item) && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY || set === SET_BITFINEX) ? rest_item1 : rest_item),
                         }),
                     })
                 } else {
@@ -133,11 +133,11 @@ export default function complexDataHandle (push, pop, set) {
                         }
                     }
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY || set === SET_BITFINEX) ? rest_item1 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             pageToken: action.pageToken,
                             more: (!state[action.list].more && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY || set === SET_BITFINEX) ? rest_item1 : rest_item),
                         }),
                     })
                 }

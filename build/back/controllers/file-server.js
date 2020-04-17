@@ -54,6 +54,10 @@ var _playlistRouter = require('./playlist-router');
 
 var _playlistRouter2 = _interopRequireDefault(_playlistRouter);
 
+var _bitfinexRouter = require('./bitfinex-router');
+
+var _bitfinexRouter2 = _interopRequireDefault(_bitfinexRouter);
+
 var _utility = require('../util/utility');
 
 var _sendWs = require('../util/sendWs');
@@ -65,13 +69,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 //global
 
 
-//model
-
-
-//external
-
-
-//config
+//router
 var credentials = {
     cert: (0, _fs.readFileSync)(_ver.CERT),
     ca: (0, _fs.readFileSync)(_ver.CA),
@@ -89,7 +87,13 @@ var credentials = {
 //util
 
 
-//router
+//model
+
+
+//external
+
+
+//config
 var app = (0, _express2.default)();
 var server = (0, _https.createServer)(credentials, app);
 (0, _sendWs.mainInit)(server);
@@ -129,6 +133,8 @@ app.use('/f/api/torrent', _playlistRouter2.default);
 app.use('/f/api/external', _externalRouter2.default);
 //file&media
 app.use('/f/api/file', _fileRouter2.default);
+//bitfinex
+app.use('/f/api/bitfinex', _bitfinexRouter2.default);
 //other&stock
 app.use('/f', _fileOtherRouter2.default);
 //login

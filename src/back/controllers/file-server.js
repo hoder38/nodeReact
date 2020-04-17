@@ -22,6 +22,7 @@ import OtherRouter from './file-other-router'
 import FileRouter from './file-router'
 import ExternalRouter from './external-router'
 import PlaylistRouter from './playlist-router'
+import BitfinexRouter from './bitfinex-router'
 
 //util
 import { handleError, HoError, showLog } from '../util/utility'
@@ -96,6 +97,8 @@ app.use('/f/api/torrent', PlaylistRouter);
 app.use('/f/api/external', ExternalRouter);
 //file&media
 app.use('/f/api/file', FileRouter);
+//bitfinex
+app.use('/f/api/bitfinex', BitfinexRouter);
 //other&stock
 app.use('/f', OtherRouter);
 //login

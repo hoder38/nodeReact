@@ -58,8 +58,8 @@ var ethDailyChange = 0;
 var available = {};
 var offer = {};
 
-//let credit = {};
-//legder
+var credit = {};
+var ledger = {};
 
 //wallet history
 //credit history
@@ -75,10 +75,13 @@ var calRate = exports.calRate = function calRate(curArr) {
             if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
                 (0, _sendWs2.default)('Bitfinex Daily Change: ' + btcDailyChange + ' ' + ethDailyChange, 0, 0, true);
             }
-            var singleCal = function singleCal(curType) {
+            var singleCal = function singleCal(curType, index) {
                 return rest.ticker(curType).then(function (curTicker) {
                     return rest.orderBook(curType, 'P0', 100).then(function (orderBooks) {
-                        currentRate[curType] = curTicker.lastPrice * _constants.BITFINEX_EXP;
+                        currentRate[curType] = {
+                            rate: curTicker.lastPrice * _constants.BITFINEX_EXP,
+                            time: Math.round(new Date().getTime() / 1000)
+                        };
                         var hl = [];
                         var weight = [];
                         return rest.candles({ symbol: curType, timeframe: '1m', period: 'p2', query: { limit: 1440 } }).then(function (entries) {
@@ -178,7 +181,7 @@ var calRate = exports.calRate = function calRate(curArr) {
                 });
             };
             var recurType = function recurType(index) {
-                return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_COIN.indexOf(curArr[index]) !== -1 ? singleCal(curArr[index]).then(function () {
+                return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_COIN.indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
                     return recurType(index + 1);
                 }) : recurType(index + 1);
             };
@@ -213,7 +216,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         userWs[id] = userBfx.ws(2, { transform: true });
         userWs[id].on('error', function (err) {
             (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + (err.message || err.msg), 0, 0, true);
-            (0, _utility.handleError)(err, 'Bitfinex Ws Error');
+            (0, _utility.handleError)(err, id + ' Bitfinex Ws Error');
         });
         userWs[id].on('open', function () {
             return userWs[id].auth();
@@ -223,24 +226,24 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             userOk[id] = true;
         });
         userWs[id].onWalletUpdate({}, function (wallet) {
-            _constants.SUPPORT_COIN.forEach(function (t) {
+            _constants.SUPPORT_COIN.forEach(function (t, i) {
                 if (wallet.type === 'funding' && wallet.currency === t.substr(1)) {
-                    available[t] = wallet.balanceAvailable;
-                    console.log('available');
-                    console.log(available);
+                    if (!available[id]) {
+                        available[id] = {};
+                    }
+                    available[id][t] = {
+                        avail: wallet.balanceAvailable,
+                        time: Math.round(new Date().getTime() / 1000),
+                        total: wallet.balance
+                    };
+                    //console.log('available');
+                    //console.log(available[id]);
                 }
             });
         });
         _constants.SUPPORT_COIN.forEach(function (t) {
-            /*userRest.ledgers({ccy: curArr[i].type.substr(1), category: 28}).then(entries => {
-                console.log(`${curArr[i].type} ledgers`);
-                console.log(entries.length);
-            }).catch(err => {
-                sendWs(`Bitfinex ${curArr[i].type} Ws Error: ${err.message||err.msg}`, 0, 0, true);
-                handleError(err, `Bitfinex ${curArr[i].type} Ledger Error`);
-            });*/
             userWs[id].onFundingOfferSnapshot({ symbol: t }, function (fos) {
-                console.log(t + ' offer');
+                //console.log(`${t} offer`);
                 var risk = _constants.RISK_MAX;
                 var temp = [];
                 fos.forEach(function (v) {
@@ -256,30 +259,36 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         });
                     }
                 });
-                offer[t] = temp;
-                console.log(offer[t].length);
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                offer[id][t] = temp;
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferUpdate({ symbol: t }, function (fo) {
-                console.log(t + ' offer update');
-                for (var j = 0; j < offer[t].length; j++) {
-                    if (offer[t][j].id === fo.id) {
-                        offer[t][j].id = fo.id;
-                        //offer[t][j].time = fo.mtsCreate;
-                        offer[t][j].amount = fo.amount;
-                        offer[t][j].rate = fo.rate;
-                        offer[t][j].period = fo.period;
-                        offer[t][j].status = fo.status;
+                //console.log(`${t} offer update`);
+                for (var j = 0; j < offer[id][t].length; j++) {
+                    if (offer[id][t][j].id === fo.id) {
+                        offer[id][t][j].id = fo.id;
+                        //offer[id][t][j].time = fo.mtsCreate;
+                        offer[id][t][j].amount = fo.amount;
+                        offer[id][t][j].rate = fo.rate;
+                        offer[id][t][j].period = fo.period;
+                        offer[id][t][j].status = fo.status;
                         break;
                     }
                 }
-                console.log(offer[t].length);
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferNew({ symbol: t }, function (fo) {
-                console.log(t + ' offer new');
-                if (!offer[t]) {
-                    offer[t] = [];
+                //console.log(`${t} offer new`);
+                if (!offer[id]) {
+                    offer[id] = {};
                 }
-                offer[t].push({
+                if (!offer[id][t]) {
+                    offer[id][t] = [];
+                }
+                offer[id][t].push({
                     id: fo.id,
                     time: Math.round(fo.mtsCreate / 1000),
                     amount: fo.amount,
@@ -287,72 +296,118 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     period: fo.period,
                     status: fo.status
                 });
-                console.log(offer[t].length);
+                //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferClose({ symbol: t }, function (fo) {
-                console.log(t + ' offer close');
-                if (offer[t]) {
-                    for (var j = 0; j < offer[t].length; j++) {
-                        if (offer[t][j].id === fo.id) {
-                            offer[t].splice(j, 1);
+                //console.log(`${t} offer close`);
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                if (offer[id][t]) {
+                    for (var j = 0; j < offer[id][t].length; j++) {
+                        if (offer[id][t][j].id === fo.id) {
+                            offer[id][t].splice(j, 1);
                             break;
                         }
                     }
-                    console.log(offer[t].length);
+                    //console.log(offer[id][t].length);
                 }
             });
-            /*userWs[id].onFundingCreditSnapshot({ symbol: curArr[i].type }, fcs => {
-                console.log(`${curArr[i].type} credit`);
-                credit[curArr[i].type] = fcs.map(v => ({
-                    id: v.id,
-                    time: Math.round(v.mtsOpening / 1000),
-                    amount: v.amount,
-                    rate: v.rate,
-                    period: v.period,
-                    pair: v.positionPair,
-                    status: v.status,
-                }));
-                console.log(credit[curArr[i].type].length);
+            userWs[id].onFundingOfferSnapshot({ symbol: t }, function (fos) {
+                //console.log(`${t} offer`);
+                var risk = _constants.RISK_MAX;
+                var temp = [];
+                fos.forEach(function (v) {
+                    if (v.symbol === t) {
+                        temp.push({
+                            id: v.id,
+                            time: Math.round(v.mtsCreate / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            risk: risk > 0 ? risk-- : 0
+                        });
+                    }
+                });
+                if (!offer[id]) {
+                    offer[id] = {};
+                }
+                offer[id][t] = temp;
+                //console.log(offer[id][t].length);
             });
-            userWs[id].onFundingCreditUpdate({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit update`);
-                for (let j = 0; j < credit[curArr[i].type].length; j++) {
-                    if (credit[curArr[i].type][j].id === fc.id) {
-                        credit[curArr[i].type][j].id = fc.id;
-                        credit[curArr[i].type][j].time = Math.round(fc.mtsOpening / 1000);
-                        credit[curArr[i].type][j].amount = fc.amount;
-                        credit[curArr[i].type][j].rate = fc.rate;
-                        credit[curArr[i].type][j].period = fc.period;
-                        credit[curArr[i].type][j].pair = fc.positionPair;
-                        credit[curArr[i].type][j].status = fc.status;
+            userWs[id].onFundingCreditSnapshot({ symbol: t }, function (fcs) {
+                //console.log(`${t} credit`);
+                var temp = [];
+                fcs.forEach(function (v) {
+                    if (v.symbol === t) {
+                        temp.push({
+                            id: v.id,
+                            time: Math.round(v.mtsOpening / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            pair: v.positionPair
+                        });
+                    }
+                });
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                credit[id][t] = temp;
+                //console.log(credit[id][t].length);
+            });
+            userWs[id].onFundingCreditUpdate({ symbol: t }, function (fc) {
+                //console.log(`${t} credit update`);
+                for (var j = 0; j < credit[id][t].length; j++) {
+                    if (credit[id][t][j].id === fc.id) {
+                        credit[id][t][j].id = fc.id;
+                        credit[id][t][j].time = Math.round(fc.mtsOpening / 1000);
+                        credit[id][t][j].amount = fc.amount;
+                        credit[id][t][j].rate = fc.rate;
+                        credit[id][t][j].period = fc.period;
+                        credit[id][t][j].pair = fc.positionPair;
+                        credit[id][t][j].status = fc.status;
                         break;
                     }
                 }
-                console.log(credit[curArr[i].type].length);
+                //console.log(credit[id][t].length);
             });
-            userWs[id].onFundingCreditNew({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit new`);
-                credit[curArr[i].type].push({
+            userWs[id].onFundingCreditNew({ symbol: t }, function (fc) {
+                //console.log(`${t} credit new`);
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                if (!credit[id][t]) {
+                    credit[id][t] = [];
+                }
+                credit[id][t].push({
                     id: fc.id,
                     time: Math.round(fc.mtsOpening / 1000),
                     amount: fc.amount,
                     rate: fc.rate,
                     period: fc.period,
                     pair: fc.positionPair,
-                    status: fc.status,
+                    status: fc.status
                 });
-                console.log(credit[curArr[i].type].length);
+                //console.log(credit[id][t].length);
             });
-            userWs[id].onFundingCreditClose({ symbol: curArr[i].type }, fc => {
-                console.log(`${curArr[i].type} credit close`);
-                for (let j = 0; j < credit[curArr[i].type].length; j++) {
-                    if (credit[curArr[i].type][j].id === fc.id) {
-                        credit[curArr[i].type].splice(j, 1);
-                        break;
+            userWs[id].onFundingCreditClose({ symbol: t }, function (fc) {
+                //console.log(`${t} credit close`);
+                if (!credit[id]) {
+                    credit[id] = {};
+                }
+                if (credit[id][t]) {
+                    for (var j = 0; j < credit[id][t].length; j++) {
+                        if (credit[id][t][j].id === fc.id) {
+                            credit[id][t].splice(j, 1);
+                            break;
+                        }
                     }
                 }
-                console.log(credit[curArr[i].type].length);
-            });*/
+                //console.log(credit[id][t].length);
+            });
         });
         userWs[id].open();
     } else if (!userWs[id].isOpen()) {
@@ -429,11 +484,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         // adjust offer & history
         var adjustOffer = function adjustOffer() {
             console.log(id + ' ' + current.type);
-            if (offer[current.type]) {
+            if (!offer[id]) {
+                offer[id] = {};
+            }
+            if (offer[id][current.type]) {
                 //console.log(offer[current.type]);
                 //produce retain delete
-                offer[current.type].forEach(function (v) {
-                    if (v.rate - currentRate[current.type] > maxRange[current.type]) {
+                offer[id][current.type].forEach(function (v) {
+                    if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                     } else if (Math.round(new Date().getTime() / 1000) - v.time >= current.waitTime * 60) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
@@ -458,7 +516,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         };
         //keep cash
         var calKeepCash = function calKeepCash(avail) {
-            var kp = avail ? avail : 0;
+            var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
             if (current.isKeep) {
                 if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
                     var dailyChange = btcDailyChange < ethDailyChange ? btcDailyChange : ethDailyChange;
@@ -469,7 +527,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         };
         //produce new
         var newOffer = function newOffer(risk) {
-            var keep_available = calKeepCash(available[current.type]);
+            var keep_available = calKeepCash(available[id]);
             //console.log('keep available');
             //console.log(keep_available);
             if (risk > _constants.RISK_MAX) {
@@ -480,7 +538,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < current.amountLimit * 0.2 || keep_available < 50) {
+                if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
                 var amount = current.amountLimit;
@@ -511,10 +569,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             needNew.forEach(function (v) {
                 var notDelete = checkDelete(v.rate, v.amount);
                 if (notDelete !== -1) {
-                    for (var _i4 = 0; _i4 < offer[current.type].length; _i4++) {
-                        if (needDelete[notDelete].id === offer[current.type][_i4].id) {
-                            offer[current.type][_i4].time = Math.round(new Date().getTime() / 1000);
-                            offer[current.type][_i4].risk = v.risk;
+                    for (var _i4 = 0; _i4 < offer[id][current.type].length; _i4++) {
+                        if (needDelete[notDelete].id === offer[id][current.type][_i4].id) {
+                            offer[id][current.type][_i4].time = Math.round(new Date().getTime() / 1000);
+                            offer[id][current.type][_i4].risk = v.risk;
                             break;
                         }
                     }
@@ -525,10 +583,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             });
             //console.log('retain');
             //console.log(needRetain);
-            console.log('delete');
-            console.log(needDelete);
-            console.log('final');
-            console.log(finalNew);
+            //console.log('delete');
+            //console.log(needDelete);
+            //console.log('final');
+            //console.log(finalNew);
         };
         adjustOffer();
         newOffer(current.riskLimit);
@@ -564,10 +622,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     return resolve();
                                 }, 1000);
                             }).then(function () {
-                                for (var _i5 = 0; _i5 < offer[current.type].length; _i5++) {
-                                    if (fo.id === offer[current.type][_i5].id) {
-                                        offer[current.type][_i5].risk = finalNew[index].risk;
-                                        console.log('Offer ' + offer[current.type][_i5].id + ' ' + offer[current.type][_i5].risk);
+                                for (var _i5 = 0; _i5 < offer[id][current.type].length; _i5++) {
+                                    if (fo.id === offer[id][current.type][_i5].id) {
+                                        offer[id][current.type][_i5].risk = finalNew[index].risk;
+                                        //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
                                         break;
                                     }
                                 }
@@ -584,10 +642,43 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             return submitOffer(0);
         });
     };
-
+    var getLegder = function getLegder(current) {
+        if (!ledger[id]) {
+            ledger[id] = {};
+        }
+        if (ledger[id][current.type] && ledger[id][current.type].length > 0) {
+            var now = new Date();
+            now.setHours(0);
+            now.setMinutes(0);
+            now.setSeconds(0);
+            if (ledger[id][current.type][0].time * 1000 >= now.getTime()) {
+                return _promise2.default.resolve();
+            } else {
+                now.setHours(9);
+                now.setMinutes(30);
+                if (new Date().getTime() < now.getTime()) {
+                    return _promise2.default.resolve();
+                }
+            }
+        }
+        return userRest.ledgers({ ccy: current.type.substr(1), category: 28 }).then(function (entries) {
+            console.log(current.type + ' ledger');
+            ledger[id][current.type] = entries.map(function (e) {
+                return {
+                    id: e.id,
+                    time: Math.round(e.mts / 1000),
+                    amount: Math.round(e.amount * 100) / 100,
+                    rate: e.amount / e.balance
+                };
+            });
+            console.log(ledger[id][current.type].length);
+        });
+    };
     var recurLoan = function recurLoan(index) {
-        return index >= curArr.length ? _promise2.default.resolve() : curArr[index] && _constants.SUPPORT_COIN.indexOf(curArr[index].type) !== -1 ? singleLoan(curArr[index]).then(function () {
-            return recurLoan(index + 1);
+        return index >= curArr.length ? _promise2.default.resolve() : curArr[index] && _constants.SUPPORT_COIN.indexOf(curArr[index].type) !== -1 ? getLegder(curArr[index]).then(function () {
+            return singleLoan(curArr[index]).then(function () {
+                return recurLoan(index + 1);
+            });
         }) : recurLoan(index + 1);
     };
     return recurLoan(0);
@@ -736,7 +827,7 @@ exports.default = {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
-                    console.log(bitfinex);
+                    //console.log(bitfinex);
                     return {
                         v: (0, _mongoTool2.default)('update', _constants.USERDB, { _id: id }, { $set: { bitfinex: bitfinex } }).then(function (user) {
                             console.log(user);
@@ -750,6 +841,194 @@ exports.default = {
                 return returnSupport();
             }
         });
+    },
+    query: function query(page, name, sortName, sortType, user, session) {
+        var id = user.username;
+        if (name) {
+            name = (0, _utility.isValidString)(name, 'name');
+            if (!name) {
+                return (0, _utility.handleError)(new _utility.HoError('tag name is not valid'));
+            }
+        }
+        page = (0, _utility.isValidString)(page, 'zeroint');
+        if (page === false) {
+            return (0, _utility.handleError)(new _utility.HoError('page is not valid'));
+        }
+        var itemList = [];
+        if (!session['bitfinex']) {
+            session['bitfinex'] = 'all';
+        }
+        if (name) {
+            session['bitfinex'] = name;
+        }
+        var type = 0;
+        var coin = 'all';
+        var sess = session['bitfinex'];
+        switch (sess) {
+            case 'usd':
+            case 'USD':
+                coin = _constants.FUSD_SYM;
+                break;
+            case 'ust':
+            case 'UST':
+                coin = _constants.FUSDT_SYM;
+                break;
+            case 'wallet':
+            case '錢包':
+                type = 1;
+                break;
+            case 'rate':
+            case '利率':
+                type = 2;
+                break;
+            case 'offer':
+            case '掛單':
+                type = 3;
+                break;
+            case 'credit':
+            case '放款':
+                type = 4;
+                break;
+            case 'payment':
+            case '利息收入':
+                type = 5;
+                break;
+        }
+        if (type === 0 || type === 1) {
+            _constants.SUPPORT_COIN.forEach(function (v, i) {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (available[id] && available[id][v]) {
+                    itemList.push({
+                        name: '\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(available[id][v].avail * 100) / 100,
+                        id: (i + 1) * 10000,
+                        tags: [v.substr(1).toLowerCase(), 'wallet', '錢包'],
+                        rate: '$' + Math.round(available[id][v].total * 100) / 100,
+                        count: available[id][v].total,
+                        utime: available[id][v].time,
+                        type: 0
+                    });
+                }
+            });
+        }
+        if (type === 0 || type === 2) {
+            _constants.SUPPORT_COIN.forEach(function (v, i) {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (currentRate[v]) {
+                    var rate = Math.round(currentRate[v].rate / 10) / 100000;
+                    var showRate = Math.round(rate * 36500) / 100;
+                    itemList.push({
+                        name: v.substr(1) + ' Rate',
+                        id: i,
+                        tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
+                        rate: rate + ' (' + showRate + '%)',
+                        count: rate,
+                        utime: currentRate[v].time,
+                        type: 1
+                    });
+                }
+            });
+        }
+        if (type === 0 || type === 3) {
+            _constants.SUPPORT_COIN.forEach(function (v, i) {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (offer[id] && offer[id][v]) {
+                    offer[id][v].forEach(function (o) {
+                        var rate = Math.round(o.rate * 10000000) / 100000;
+                        var showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: '\u639B\u55AE ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' risk ' + o.risk,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
+                            rate: rate + ' (' + showRate + '%)',
+                            count: rate,
+                            utime: o.time,
+                            type: 2
+                        });
+                    });
+                }
+            });
+        }
+        if (type === 0 || type === 4) {
+            _constants.SUPPORT_COIN.forEach(function (v, i) {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (credit[id] && credit[id][v]) {
+                    credit[id][v].forEach(function (o) {
+                        var rate = Math.round(o.rate * 10000000) / 100000;
+                        var showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: '\u653E\u6B3E ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' ' + o.pair,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
+                            rate: rate + ' (' + showRate + '%)',
+                            count: rate,
+                            utime: o.time,
+                            type: 3
+                        });
+                    });
+                }
+            });
+        }
+        if (type === 0 || type === 5) {
+            _constants.SUPPORT_COIN.forEach(function (v, i) {
+                if (coin !== 'all' && coin !== v) {
+                    return false;
+                }
+                if (ledger[id] && ledger[id][v]) {
+                    ledger[id][v].forEach(function (o) {
+                        var rate = Math.round(o.rate * 10000000) / 100000;
+                        var showRate = Math.round(rate * 36500) / 100;
+                        itemList.push({
+                            name: '\u5229\u606F\u6536\u5165 ' + v.substr(1) + ' $' + o.amount,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
+                            rate: rate + ' (' + showRate + '%)',
+                            count: rate,
+                            utime: o.time,
+                            type: 4
+                        });
+                    });
+                }
+            });
+        }
+        if (sortName === 'name' && sortType === 'desc') {
+            itemList.reverse();
+        } else if (sortName === 'mtime' && sortType === 'asc') {
+            itemList.sort(function (a, b) {
+                return a.count - b.count;
+            });
+        } else if (sortName === 'mtime' && sortType === 'desc') {
+            itemList.sort(function (a, b) {
+                return b.count - a.count;
+            });
+        } else if (sortName === 'count' && sortType === 'asc') {
+            itemList.sort(function (a, b) {
+                return a.utime - b.utime;
+            });
+        } else if (sortName === 'count' && sortType === 'desc') {
+            itemList.sort(function (a, b) {
+                return b.utime - a.utime;
+            });
+        }
+        return {
+            itemList: itemList,
+            parentList: {
+                cur: [],
+                his: [],
+                exactly: [],
+                bookmark: ''
+            }
+        };
+    },
+    parent: function parent() {
+        return _constants.BITNIFEX_PARENT;
     }
 };
 

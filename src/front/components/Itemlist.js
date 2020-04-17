@@ -5,10 +5,11 @@ import ReItemStock from '../containers/ReItemStock'
 import ReItemFitness from '../containers/ReItemFitness'
 import ReItemRank from '../containers/ReItemRank'
 import ReItemLottery from '../containers/ReItemLottery'
+import ItemBitfinex from './ItemBitfinex'
 import Tooltip from './Tooltip'
 import Dropdown from './Dropdown'
 import { isValidString, getItemList, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY, BITFINEX } from '../constants'
 
 const Itemlist = React.createClass({
     getInitialState: function() {
@@ -23,14 +24,21 @@ const Itemlist = React.createClass({
         }
     },
     componentWillMount: function() {
-        if (this.props.list.size === 0) {
+        if (this.props.list.size === 0 && (this.props.itemType !== BITFINEX || this.props.mainUrl)) {
             let name = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortName`)) ? localStorage.getItem(`${this.props.itemType}SortName`): this.props.sortName
             let type = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortType`)) ? localStorage.getItem(`${this.props.itemType}SortType`): this.props.sortType
-            this._getlist(name, type, false)
+            this._getlist(this.props.mainUrl, name, type, false)
         }
     },
-    _getlist: function(name=this.props.sortName, type=this.props.sortType, push=true) {
-        (this.props.itemType === LOTTERY) ? this.props.set(this.props.itemList, null, null, null, name, type) : this.setState(Object.assign({}, this.state, {loading: true}), () => getItemList(this.props.itemType, name, type, this.props.set, this.props.page, this.props.pageToken, push).then(() => this.setState(Object.assign({}, this.state, {loading: false}))).catch(err => this.props.addalert(err)))
+    componentWillReceiveProps: function(nextProps) {
+        if (this.props.itemType === BITFINEX && (nextProps.mainUrl !== this.props.mainUrl)) {
+            let name = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortName`)) ? localStorage.getItem(`${this.props.itemType}SortName`): this.props.sortName
+            let type = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortType`)) ? localStorage.getItem(`${this.props.itemType}SortType`): this.props.sortType
+            this._getlist(nextProps.mainUrl, name, type, false)
+        }
+    },
+    _getlist: function(preurl='', name=this.props.sortName, type=this.props.sortType, push=true) {
+        this.setState(Object.assign({}, this.state, {loading: true}), () => getItemList(this.props.itemType, name, type, this.props.set, this.props.page, this.props.pageToken, push, null, 0, false, false, false, preurl).then(() => this.setState(Object.assign({}, this.state, {loading: false}))).catch(err => this.props.addalert(err)))
     },
     _handleSelect: function() {
         let newList = new Set()
@@ -59,7 +67,7 @@ const Itemlist = React.createClass({
                     </button>
                 </td>
                 <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
-                    <a href="#" className={className} onClick={e => killEvent(e, () => getItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set, 0, '', false, tag, 0, true, this.props.multi))}>
+                    <a href="#" className={className} onClick={e => killEvent(e, () => getItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set, 0, '', false, tag, 0, true, this.props.multi, false, this.props.mainUrl))}>
                         <i className="glyphicon glyphicon-folder-open" style={{height: '42px', width: '42px', fontSize: '35px'}}></i>
                         {tag}
                     </a>
@@ -83,7 +91,7 @@ const Itemlist = React.createClass({
             allTag: false,
             relative: new Set(),
         })) : this.setState(Object.assign({}, this.state, {allTag: true}), () => {
-            if (this.state.relative.size === 0) {
+            if (this.state.relative.size === 0 && this.props.itemType !== BITFINEX) {
                 api(`/api/${this.props.itemType}/getOptionTag`, {tags: this._tags}).then(result => this.setState(Object.assign({}, this.state, {relative: new Set(result.relative.filter(x => (!this._tags.has(x) && !this._except.has(x))))}))).catch(err => this.props.addalert(err))
             }
         })
@@ -113,6 +121,9 @@ const Itemlist = React.createClass({
                 break
                 case LOTTERY:
                 rows.push(<ReItemLottery key={item.id} item={item} owner={this.props.owner} />)
+                break
+                case BITFINEX:
+                rows.push(<ItemBitfinex key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} check={select} />)
                 break
             }
             if (select) {
@@ -166,16 +177,17 @@ const Itemlist = React.createClass({
         } else {
             this._first = 0
         }
+        const paddingTop = (this.props.itemType === BITFINEX) ? '37px' : '125px';
         const more = this.props.more ? (
             <tr>
                 <td className="text-center" style={{width: '56px'}}></td>
                 <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
-                    <button className="btn btn-default" type="button" disabled={this.state.loading} onClick={() => this._getlist()}>More</button>
+                    <button className="btn btn-default" type="button" disabled={this.state.loading} onClick={() => this._getlist(this.props.mainUrl)}>More</button>
                 </td>
             </tr>
         ) : null
         return (
-            <section style={{paddingTop: '125px'}}>
+            <section style={{paddingTop}}>
                 <div className="table-responsive" style={{overflowX: 'visible'}}>
                     <table className="table table-hover">
                         <tbody>

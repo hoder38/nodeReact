@@ -8,6 +8,21 @@ router.use(function(req, res, next) {
     checkLogin(req, res, next);
 });
 
+router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
+    console.log('bitfinex');
+    res.json(BitfinexTool.query(Number(req.params.page), req.params.name, req.params.sortName, req.params.sortType, req.user, req.session));
+});
+
+router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
+    console.log('bitfinex get single');
+    res.json(BitfinexTool.query(Number(req.params.page), req.params.name, req.params.sortName, req.params.sortType, req.user, req.session));
+});
+
+router.get('/parent', function(req, res, next){
+    console.log('bitfinex parent');
+    res.json(BitfinexTool.parent());
+});
+
 router.route('/bot').get(function(req, res, next) {
     console.log('get bot');
     BitfinexTool.getBot(req.user._id).then(list => res.json(list)).catch(err => handleError(err, next));

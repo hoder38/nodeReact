@@ -31,7 +31,6 @@ import StockRouter from './stock-router'
 import BookmarkRouter from './bookmark-router'
 import ParentRouter from './parent-router'
 import LotteryRouter from './lottery-router'
-import BitfinexRouter from './bitfinex-router'
 import OtherRouter from './other-router'
 
 //util
@@ -101,8 +100,6 @@ app.use('/api/bookmark', BookmarkRouter);
 app.use('/api/parent', ParentRouter);
 
 app.use('/api/lottery', LotteryRouter);
-
-app.use('/api/bitfinex', BitfinexRouter);
 
 //other
 app.use('/', OtherRouter);

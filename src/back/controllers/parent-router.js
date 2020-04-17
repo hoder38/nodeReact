@@ -1,4 +1,4 @@
-import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB } from '../constants'
+import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB, BITFINEX } from '../constants'
 import Express from 'express'
 import TagTool from '../models/tag-tool'
 import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility'

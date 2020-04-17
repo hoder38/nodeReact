@@ -8,7 +8,6 @@ import ReApp from './ReApp'
 import Homepage from '../components/Homepage'
 import ReUserlist from './ReUserlist'
 import Storage from '../components/Storage'
-import Bitfinex from '../components/Bitfinex'
 //import ReFitness from './ReFitness'
 //import ReRank from './ReRank'
 //要用rank fitess記得router加上
@@ -17,6 +16,7 @@ import Bitfinex from '../components/Bitfinex'
 import RePassword from './RePassword'
 import ReStock from './ReStock'
 import ReLottery from './ReLottery'
+import ReBitfinex from './ReBitfinex'
 import ReLogin from './ReLogin'
 import { testLogin } from '../utility'
 
@@ -49,7 +49,7 @@ export default function Root() {
                         <Route path={STOCK_PAGE} component={ReStock} />
                         <Route path={USER_PAGE} component={ReUserlist} />
                         <Route path={LOTTERY_PAGE} component={ReLottery} />
-                        <Route path={BITFINEX_PAGE} component={Bitfinex} />
+                        <Route path={BITFINEX_PAGE} component={ReBitfinex} />
                     </Route>
                     <Redirect from="*" to={ROOT_PAGE} />
                 </Router>

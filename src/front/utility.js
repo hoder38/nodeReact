@@ -229,16 +229,16 @@ export const arrayObjectIndexOf = (myArray, searchTerm, property) => {
 //itemlist
 const externalList = (pageToken, set, parentList, sortname) => api(`/api/storage/external/get/${sortname}/${pageToken}`).then(result => set(result.itemList, parentList, null, null, null, null, result.pageToken))
 
-export const getItemList = (itemType, sortname, type, set, page=0, pageToken='', push=false, name=null, index=0, exact=false, multi=false, random=false) => {
+export const getItemList = (itemType, sortname, type, set, page=0, pageToken='', push=false, name=null, index=0, exact=false, multi=false, random=false, preurl = '') => {
     const rest = result => push ? set(result.itemList) : set(result.itemList, result.parentList, result.bookmarkID, result.latest, sortname, type)
     let queryItem = null
     if (name === null) {
-        queryItem = random && itemType === STORAGE ? api(`/api/${itemType}/getRandom/${sortname}/${type}/${page}`) : api(`/api/${itemType}/get/${sortname}/${type}/${page}`)
+        queryItem = random && itemType === STORAGE ? api(`${preurl}/api/${itemType}/getRandom/${sortname}/${type}/${page}`) : api(`${preurl}/api/${itemType}/get/${sortname}/${type}/${page}`)
     } else {
         if (!isValidString(name, 'name')) {
             return Promise.reject('search tag is not vaild!!!')
         }
-        queryItem = (multi || index > 0) ? api(`/api/${itemType}/get/${sortname}/${type}/${page}/${name}/${exact}/${index}`) : api(`/api/${itemType}/getSingle/${sortname}/${type}/${page}/${name}/${exact}/${index}`)
+        queryItem = (multi || index > 0) ? api(`${preurl}/api/${itemType}/get/${sortname}/${type}/${page}/${name}/${exact}/${index}`) : api(`${preurl}/api/${itemType}/getSingle/${sortname}/${type}/${page}/${name}/${exact}/${index}`)
     }
     return queryItem.then(result => {
         rest(result)

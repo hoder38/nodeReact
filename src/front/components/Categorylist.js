@@ -4,8 +4,8 @@ import RePasswordInfo from '../containers/RePasswordInfo'
 import ReBitfinexInfo from '../containers/ReBitfinexInfo'
 //import ReFitnessInfo from '../containers/ReFitnessInfo'
 //import ReRankInfo from '../containers/ReRankInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, /*FITNESS, RANK, */LOTTERY,BITFINEX } from '../constants'
-import { dirItemList, bookmarkItemList, killEvent, api, isValidString } from '../utility'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, FITNESS, RANK, LOTTERY,BITFINEX } from '../constants'
+import { dirItemList, bookmarkItemList, killEvent, api, isValidString, getItemList } from '../utility'
 
 const Categorylist = React.createClass({
     getInitialState: function() {
@@ -197,6 +197,15 @@ const Categorylist = React.createClass({
             if (this.state.edit) {
                 edit = <ReBitfinexInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
             }
+            this.props.bdirs.forEach(dir => rows.push(
+                <li key={dir.name}>
+                    <a href="#" onClick={e => killEvent(e, () => {
+                        let name = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortName`)) ? localStorage.getItem(`${this.props.itemType}SortName`): this.props.sortName
+                        let type = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortType`)) ? localStorage.getItem(`${this.props.itemType}SortType`): this.props.sortType
+                        getItemList(this.props.itemType, name, type, this.props.set, 0, '', false, dir.name, 0, false, false, false, this.props.mainUrl).catch(err => this.props.addalert(err))
+                    })}>{dir.show}</a>
+                </li>
+            ))
             open = (
                 <li>
                     <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>

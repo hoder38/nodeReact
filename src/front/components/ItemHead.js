@@ -1,12 +1,12 @@
 import React from 'react'
 import Tooltip from './Tooltip'
 import { getItemList, isValidString, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY } from '../constants'
+import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY, BITFINEX } from '../constants'
 
 const ItemHead = React.createClass({
     _changeSort: function(name) {
         const type = (name === this.props.sortName && this.props.sortType === 'asc') ? 'desc' : 'asc'
-        getItemList(this.props.itemType, name, type, this.props.set).then(() => {
+        getItemList(this.props.itemType, name, type, this.props.set, 0, '', false, null, 0, false, false, false, this.props.mainUrl).then(() => {
             if (typeof(Storage) !== "undefined") {
                 localStorage.setItem(`${this.props.itemType}SortName`, name)
                 localStorage.setItem(`${this.props.itemType}SortType`, type)
@@ -93,6 +93,11 @@ const ItemHead = React.createClass({
             click = () => {}
             click2 = () => {}
             click3 = () => {}
+            break;
+            case BITFINEX:
+            head1 = 'rate / total';
+            head2 = 'time';
+            addTag = () => {}
             break;
         }
         return (
