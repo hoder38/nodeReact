@@ -146,7 +146,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('waitTime')}
                                         placeholder="min.">
                                         <tr>
-                                            <td key={0}><Tooltip tip="調降風險指數的時間區隔(分鐘)" place="right" />Time Intervel:</td>
+                                            <td key={0}><Tooltip tip="調降風險指數的時間間隔(分鐘)" place="right" />Time Intervel:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -173,7 +173,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('dynamic')}
                                         placeholder="20">
                                         <tr>
-                                            <td key={0}><Tooltip tip="超過此利率，日期變30天" place="right" />Dynamic Rate:</td>
+                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此利率日期變30天，金額上限兩倍，時間間隔減半" place="right" />Boost Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>

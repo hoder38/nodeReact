@@ -95,7 +95,7 @@ const ItemHead = React.createClass({
             click3 = () => {}
             break;
             case BITFINEX:
-            head1 = 'rate / total';
+            head1 = 'rate/total';
             head2 = 'time';
             addTag = () => {}
             break;

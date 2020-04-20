@@ -374,6 +374,7 @@ export const setWsOffer = (id, curArr=[]) => {
         const finalNew = [];
         const needDelete = [];
         const MR = (current.miniRate > 0) ? current.miniRate/36500*BITFINEX_EXP : 0;
+        const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
         // adjust offer & history
         const adjustOffer = () => {
             console.log(`${id} ${current.type}`);
@@ -386,10 +387,13 @@ export const setWsOffer = (id, curArr=[]) => {
                 offer[id][current.type].forEach(v => {
                     if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
-                    } else if ((Math.round(new Date().getTime() / 1000) - v.time) >= (current.waitTime * 60)) {
-                        needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                     } else {
-                        needRetain.push({risk: v.risk, rate: v.rate * BITFINEX_EXP});
+                        const waitTime = (v.rate >= DR) ? current.waitTime / 2 : current.waitTime;
+                        if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
+                            needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
+                        } else {
+                            needRetain.push({risk: v.risk, rate: v.rate * BITFINEX_EXP});
+                        }
                     }
                 });
             }
@@ -434,8 +438,9 @@ export const setWsOffer = (id, curArr=[]) => {
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
-                let amount = current.amountLimit;
-                if (keep_available < current.amountLimit * 1.2) {
+                const amountLimit = (finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
+                let amount = amountLimit;
+                if (keep_available < amountLimit * 1.2) {
                     amount = keep_available;
                 }
                 needNew.push({
@@ -484,7 +489,6 @@ export const setWsOffer = (id, curArr=[]) => {
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
         const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
         const submitOffer = index => {
             if (index >= finalNew.length) {
@@ -494,7 +498,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     symbol: current.type,
                     amount: finalNew[index].amount,
                     rate: finalNew[index].rate / BITFINEX_EXP,
-                    period: (current.dynamic > 0 && finalNew[index].rate > DR) ? 30 : 2,
+                    period: (current.dynamic > 0 && finalNew[index].rate >= DR) ? 30 : 2,
                     type: 'LIMIT',
                 }, userRest);
                 return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => {

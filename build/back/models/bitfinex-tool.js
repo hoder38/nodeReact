@@ -481,6 +481,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         var finalNew = [];
         var needDelete = [];
         var MR = current.miniRate > 0 ? current.miniRate / 36500 * _constants.BITFINEX_EXP : 0;
+        var DR = current.dynamic > 0 ? current.dynamic / 36500 * _constants.BITFINEX_EXP : 0;
         // adjust offer & history
         var adjustOffer = function adjustOffer() {
             console.log(id + ' ' + current.type);
@@ -493,10 +494,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 offer[id][current.type].forEach(function (v) {
                     if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
-                    } else if (Math.round(new Date().getTime() / 1000) - v.time >= current.waitTime * 60) {
-                        needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                     } else {
-                        needRetain.push({ risk: v.risk, rate: v.rate * _constants.BITFINEX_EXP });
+                        var waitTime = v.rate >= DR ? current.waitTime / 2 : current.waitTime;
+                        if (Math.round(new Date().getTime() / 1000) - v.time >= waitTime * 60) {
+                            needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
+                        } else {
+                            needRetain.push({ risk: v.risk, rate: v.rate * _constants.BITFINEX_EXP });
+                        }
                     }
                 });
             }
@@ -541,8 +545,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
-                var amount = current.amountLimit;
-                if (keep_available < current.amountLimit * 1.2) {
+                var amountLimit = finalRate[current.type][10 - risk] >= DR ? current.amountLimit * 2 : current.amountLimit;
+                var amount = amountLimit;
+                if (keep_available < amountLimit * 1.2) {
                     amount = keep_available;
                 }
                 needNew.push({
@@ -591,7 +596,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        var DR = current.dynamic > 0 ? current.dynamic / 36500 * _constants.BITFINEX_EXP : 0;
         var cancelOffer = function cancelOffer(index) {
             return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
                 return new _promise2.default(function (resolve, reject) {
@@ -612,7 +616,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         symbol: current.type,
                         amount: finalNew[index].amount,
                         rate: finalNew[index].rate / _constants.BITFINEX_EXP,
-                        period: current.dynamic > 0 && finalNew[index].rate > DR ? 30 : 2,
+                        period: current.dynamic > 0 && finalNew[index].rate >= DR ? 30 : 2,
                         type: 'LIMIT'
                     }, userRest);
                     return {
