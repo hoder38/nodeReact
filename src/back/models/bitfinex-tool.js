@@ -388,7 +388,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                     } else {
-                        const waitTime = (v.rate >= DR) ? current.waitTime / 2 : current.waitTime;
+                        const waitTime = (current.dynamic > 0 && v.rate >= current.dynamic/36500) ? current.waitTime / 2 : current.waitTime;
                         if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                         } else {
@@ -436,9 +436,8 @@ export const setWsOffer = (id, curArr=[]) => {
                     risk--;
                 }
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
-                    break;
                 }
-                const amountLimit = (finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
+                const amountLimit = (current.dynamic > 0 && finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
                 let amount = amountLimit;
                 if (keep_available < amountLimit * 1.2) {
                     amount = keep_available;
