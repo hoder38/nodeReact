@@ -542,10 +542,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < 50) {}
+                if (finalRate[current.type].length <= 0 || keep_available < 50) {
+                    break;
+                }
                 var amountLimit = current.dynamic > 0 && finalRate[current.type][10 - risk] >= DR ? current.amountLimit * 2 : current.amountLimit;
                 var amount = amountLimit;
-                if (keep_available < amountLimit * 1.2) {
+                if (keep_available <= amountLimit * 1.2) {
                     amount = keep_available;
                 }
                 needNew.push({

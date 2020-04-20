@@ -2705,11 +2705,13 @@ exports.default = {
                                     profitIndex: profitIndex,
                                     safetyIndex: safetyIndex,
                                     managementIndex: managementIndex,
-                                    tags: normal_tags,
+                                    //tags: normal_tags,
                                     important: 0,
                                     stock_default: stock_default
                                 }).then(function (item) {
-                                    return item[0]._id;
+                                    return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: item[0]._id }, { $set: { tags: normal_tags } }).then(function () {
+                                        return item[0]._id;
+                                    });
                                 });
                             };
                             return retObj().then(function (id) {

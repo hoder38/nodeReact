@@ -436,10 +436,11 @@ export const setWsOffer = (id, curArr=[]) => {
                     risk--;
                 }
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
+                    break;
                 }
                 const amountLimit = (current.dynamic > 0 && finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
                 let amount = amountLimit;
-                if (keep_available < amountLimit * 1.2) {
+                if (keep_available <= amountLimit * 1.2) {
                     amount = keep_available;
                 }
                 needNew.push({

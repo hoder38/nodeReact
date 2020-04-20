@@ -2540,10 +2540,10 @@ export default {
                             profitIndex,
                             safetyIndex,
                             managementIndex,
-                            tags: normal_tags,
+                            //tags: normal_tags,
                             important: 0,
                             stock_default,
-                        }).then(item => item[0]._id);
+                        }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
                         return retObj().then(id => ({
                             cash,
                             asset,
