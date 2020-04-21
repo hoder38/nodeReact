@@ -388,7 +388,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                     } else {
-                        const waitTime = (current.dynamic > 0 && v.rate >= current.dynamic/36500) ? current.waitTime / 2 : current.waitTime;
+                        const waitTime = (DR > 0 && v.rate >= (DR / BITFINEX_EXP)) ? current.waitTime / 2 : current.waitTime;
                         if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                         } else {
@@ -438,7 +438,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
-                const amountLimit = (current.dynamic > 0 && finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
+                const amountLimit = (DR > 0 && finalRate[current.type][10 - risk] >= DR) ? current.amountLimit * 2 : current.amountLimit;
                 let amount = amountLimit;
                 if (keep_available <= amountLimit * 1.2) {
                     amount = keep_available;
@@ -498,7 +498,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     symbol: current.type,
                     amount: finalNew[index].amount,
                     rate: finalNew[index].rate / BITFINEX_EXP,
-                    period: (current.dynamic > 0 && finalNew[index].rate >= DR) ? 30 : 2,
+                    period: (DR > 0 && finalNew[index].rate >= DR) ? 30 : 2,
                     type: 'LIMIT',
                 }, userRest);
                 return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => {
@@ -781,6 +781,7 @@ export default {
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
                             rate: `${rate} (${showRate}%)`,
+                            boost: (o.period === 30) ? true : false,
                             count: rate,
                             utime: o.time,
                             type: 2,
@@ -804,7 +805,8 @@ export default {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: `${rate} (${showRate}%)`,
                             count: rate,
-                            utime: o.time,
+                            boost: (o.period === 30) ? true : false,
+                            utime: o.time + o.period * 86400,
                             type: 3,
                         })
                     })

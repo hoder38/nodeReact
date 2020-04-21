@@ -495,7 +495,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                     } else {
-                        var waitTime = current.dynamic > 0 && v.rate >= current.dynamic / 36500 ? current.waitTime / 2 : current.waitTime;
+                        var waitTime = DR > 0 && v.rate >= DR / _constants.BITFINEX_EXP ? current.waitTime / 2 : current.waitTime;
                         if (Math.round(new Date().getTime() / 1000) - v.time >= waitTime * 60) {
                             needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                         } else {
@@ -545,7 +545,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
-                var amountLimit = current.dynamic > 0 && finalRate[current.type][10 - risk] >= DR ? current.amountLimit * 2 : current.amountLimit;
+                var amountLimit = DR > 0 && finalRate[current.type][10 - risk] >= DR ? current.amountLimit * 2 : current.amountLimit;
                 var amount = amountLimit;
                 if (keep_available <= amountLimit * 1.2) {
                     amount = keep_available;
@@ -616,7 +616,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         symbol: current.type,
                         amount: finalNew[index].amount,
                         rate: finalNew[index].rate / _constants.BITFINEX_EXP,
-                        period: current.dynamic > 0 && finalNew[index].rate >= DR ? 30 : 2,
+                        period: DR > 0 && finalNew[index].rate >= DR ? 30 : 2,
                         type: 'LIMIT'
                     }, userRest);
                     return {
@@ -950,6 +950,7 @@ exports.default = {
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
                             rate: rate + ' (' + showRate + '%)',
+                            boost: o.period === 30 ? true : false,
                             count: rate,
                             utime: o.time,
                             type: 2
@@ -973,7 +974,8 @@ exports.default = {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate + ' (' + showRate + '%)',
                             count: rate,
-                            utime: o.time,
+                            boost: o.period === 30 ? true : false,
+                            utime: o.time + o.period * 86400,
                             type: 3
                         });
                     });

@@ -18,6 +18,7 @@ const ItemBitfinex = React.createClass({
             fileType = 'success';
             break;
         }
+        fileType = item.boost ? `${fileType} external` : fileType;
         return (
             <tr className={fileType}>
                 <td className="text-center" style={{width: '56px'}}>
