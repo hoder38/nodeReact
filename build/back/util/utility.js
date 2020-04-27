@@ -630,7 +630,18 @@ var findTag = exports.findTag = function findTag(node) {
                     }
                 }
                 if (c.type === 'comment') {
-                    var _str = c.data.toString().match(/^\[CDATA\[(.*)\]\]$/)[1].trim();
+                    var _str = c.data.toString();
+                    var strMatch = _str.match(/^\[CDATA\[(.*)\]\]$/);
+                    if (strMatch) {
+                        _str = strMatch[1].trim();
+                    } else {
+                        strMatch = _str.match(/^\<\!--(.*)--\>$/);
+                        if (strMatch) {
+                            _str = strMatch[1].trim();
+                        } else {
+                            _str = _str.trim();
+                        }
+                    }
                     if (_str) {
                         ret.push(_str);
                     }

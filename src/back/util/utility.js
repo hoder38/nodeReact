@@ -461,7 +461,18 @@ export const findTag = (node, tag=null, id=null) => {
                 }
             }
             if (c.type === 'comment') {
-                const str = c.data.toString().match(/^\[CDATA\[(.*)\]\]$/)[1].trim();
+                let str = c.data.toString();
+                let strMatch = str.match(/^\[CDATA\[(.*)\]\]$/);
+                if (strMatch) {
+                    str = strMatch[1].trim();
+                } else {
+                    strMatch = str.match(/^\<\!--(.*)--\>$/);
+                    if (strMatch) {
+                        str = strMatch[1].trim();
+                    } else {
+                        str = str.trim();
+                    }
+                }
                 if (str) {
                     ret.push(str);
                 }

@@ -848,7 +848,7 @@ exports.default = {
                         for (var _iterator2 = (0, _getIterator3.default)(trs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
                             var tr = _step2.value;
 
-                            if ((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[1])[0].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
+                            if ((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[1])[3].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
                                 var a = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'a')[0];
                                 list.push({
                                     url: (0, _utility.addPre)(a.attribs.href, 'http://www.bea.gov'),
