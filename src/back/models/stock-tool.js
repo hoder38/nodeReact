@@ -4431,7 +4431,7 @@ export const getStockListV2 = (type, year, month) => {
                         findTag(table, 'tr').forEach(tr => {
                             if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
                                 const index = findTag(findTag(tr, 'td')[0])[0];
-                                if (index) {
+                                if (Number(index)) {
                                     let exist = false;
                                     for (let i = 0; i < stock_list.length; i++) {
                                         if (stock_list[i].index === index) {
@@ -4459,3 +4459,5 @@ export const getStockListV2 = (type, year, month) => {
         return handleError(new HoError('stock type unknown!!!'));
     }
 }
+
+getStockListV2('twse', 2020,5);

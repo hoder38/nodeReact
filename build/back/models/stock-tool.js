@@ -5251,7 +5251,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                             (0, _utility.findTag)(table, 'tr').forEach(function (tr) {
                                 if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
                                     var index = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0])[0];
-                                    if (index) {
+                                    if (Number(index)) {
                                         var exist = false;
 
                                         var _loop5 = function _loop5(_i31) {
@@ -5290,3 +5290,5 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
             return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
     }
 };
+
+getStockListV2('twse', 2020, 5);
