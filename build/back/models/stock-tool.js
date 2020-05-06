@@ -5290,5 +5290,3 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
             return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
     }
 };
-
-getStockListV2('twse', 2020, 5);

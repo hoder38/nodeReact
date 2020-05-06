@@ -4459,5 +4459,3 @@ export const getStockListV2 = (type, year, month) => {
         return handleError(new HoError('stock type unknown!!!'));
     }
 }
-
-getStockListV2('twse', 2020,5);
