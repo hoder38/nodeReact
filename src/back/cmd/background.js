@@ -2,7 +2,7 @@ import { ENV_TYPE } from '../../../ver'
 import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN } from '../config'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM } from '../constants'
 import Mongo from '../models/mongo-tool'
-import StockTool, { getStockList, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
+import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
@@ -104,7 +104,7 @@ const updateStockList = (list, type) => {
     console.log('updateStockList');
     console.log(new Date());
     console.log(list[0]);
-    return StockTool.getSingleStock(type, list[0], STOCK_MODE(ENV_TYPE)).then(() => {
+    return StockTool.getSingleStockV2(type, list[0], STOCK_MODE(ENV_TYPE)).then(() => {
         list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
@@ -119,7 +119,7 @@ export const updateStock = () => {
             console.log(new Date());
             const sDay = STOCK_DATE(ENV_TYPE).indexOf(new Date().getDate());
             console.log(sDay);
-            let use_stock_list = stock_batch_list;
+            /*let use_stock_list = stock_batch_list;
             if (stock_batch_list.length > 0) {
                 console.log('stock_batch_list remain');
                 console.log(stock_batch_list.length);
@@ -132,8 +132,9 @@ export const updateStock = () => {
                 stock_batch_list = [...stock_batch_list_2];
                 stock_batch_list_2 = [];
                 use_stock_list = stock_batch_list;
-            }
-            const parseStockList = () => (sDay === -1) ? Promise.resolve() : getStockList('twse', Math.floor(sDay / 2) + 1).then(stocklist => Mongo('find', STOCKDB, {important: 1}).then(items => {
+            }*/
+            let use_stock_list = [];
+            const parseStockList = () => (sDay === -1) ? Promise.resolve() : getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
@@ -170,6 +171,7 @@ export const updateStock = () => {
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
     }
 }
+
 export const filterStock = () => {
     //get db
     if (STOCK_FILTER(ENV_TYPE)) {

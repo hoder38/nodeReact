@@ -419,9 +419,9 @@ var getStockItem = exports.getStockItem = function getStockItem(user, items) {
             name: item.name,
             id: item._id,
             tags: item.tags,
-            profit: item.profitIndex,
-            safety: item.safetyIndex,
-            management: item.managementIndex,
+            profit: item.per,
+            safety: item.pdr,
+            management: item.pbr,
             index: item.index,
             type: item.type
         };

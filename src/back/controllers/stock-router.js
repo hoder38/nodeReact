@@ -91,7 +91,7 @@ router.get('/querySimple/:uid', function(req, res,next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    StockTool.getSingleStock(id, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
+    StockTool.getSingleStockV2(id, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
 });
 
 router.get('/getPER/:uid', function(req, res,next) {
@@ -100,10 +100,10 @@ router.get('/getPER/:uid', function(req, res,next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    StockTool.getStockPER(id).then(([result, index, start]) => StockTool.getStockYield(id).then(result_1 => {
+    StockTool.getStockPERV2(id).then(([result, result2, result3, index, start]) => {
         StockTagTool.setLatest(id, req.session).catch(err => handleError(err, 'Set latest'));
-        res.json({per: `${index}: ${result} ${result_1} ${start}`});
-    })).catch(err => handleError(err, next));
+        res.json({per: `${index}: ${result} ${result2} ${result3} ${start}`});
+    }).catch(err => handleError(err, next));
 });
 
 router.get('/getPredictPER/:uid', function(req, res,next) {
@@ -154,37 +154,21 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         per[2] = Number(per[2]);
     }
-    let yieldNumber = false;
-    if (req.body.yield) {
-        yieldNumber = req.body.yield.match(/^([<>])(\d+)$/);
-        if (!yieldNumber) {
-            return handleError(new HoError('yield is not vaild'), next);
+    let pdr = false;
+    if (req.body.pdr) {
+        pdr = req.body.pdr.match(/^([<>])(\d+)$/);
+        if (!pdr) {
+            return handleError(new HoError('pdr is not vaild'), next);
         }
-        yieldNumber[2] = Number(yieldNumber[2]);
+        pdr[2] = Number(pdr[2]);
     }
-    let pp = false;
-    if (req.body.p) {
-        pp = req.body.p.match(/^([<>])(\d+)$/);
-        if (!pp) {
-            return handleError(new HoError('p is not vaild'), next);
+    let pbr = false;
+    if (req.body.pbr) {
+        pbr = req.body.pbr.match(/^([<>])(\d+\.?\d*)$/);
+        if (!pbr) {
+            return handleError(new HoError('pbr is not vaild'), next);
         }
-        pp[2] = Number(pp[2]);
-    }
-    let ss = false;
-    if (req.body.s) {
-        ss = req.body.s.match(/^([<>])(\-?\d+)$/);
-        if (!ss) {
-            return handleError(new HoError('s is not vaild'), next);
-        }
-        ss[2] = Number(ss[2]);
-    }
-    let mm = false;
-    if (req.body.m) {
-        mm = req.body.m.match(/^([<>])(\d+\.?\d*)$/);
-        if (!mm) {
-            return handleError(new HoError('m is not vaild'), next);
-        }
-        mm[2] = Number(mm[2]);
+        pbr[2] = Number(pbr[2]);
     }
     let pre = false;
     if (req.body.pre) {
@@ -224,10 +208,8 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         sortName: req.params.sortName,
         sortType: req.params.sortType,
         per,
-        yieldNumber,
-        pp,
-        ss,
-        mm,
+        pdr,
+        pbr,
         pre,
         interval,
         vol,

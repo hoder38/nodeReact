@@ -42,15 +42,13 @@ const Categorylist = React.createClass({
         if (!isValidString(tag, 'name')) {
             return Promise.reject('Filter tag is not vaild!!!')
         }
-        const condition = cond.match(/^(per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*)\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?\s*((per|yield|p|s|m|pre|interval|vol|close)([<>]\-?\d+\.?\d*))?$/)
+        const condition = cond.match(/^(per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*)\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?\s*((per|pdr|pbr|pre|interval|vol|close)([<>]\d+\.?\d*))?$/)
         if (!condition) {
             return Promise.reject('Filter condition is not vaild!!!')
         }
         let per = ''
-        let yieldd = ''
-        let pp = ''
-        let ss = ''
-        let mm = ''
+        let pdr = ''
+        let pbr = ''
         let pre = ''
         let interval = ''
         let vol = ''
@@ -58,14 +56,10 @@ const Categorylist = React.createClass({
         function inData(index) {
             if (condition[index] === 'per') {
                 per = condition[index + 1]
-            } else if (condition[index] === 'yield') {
-                yieldd = condition[index + 1]
-            } else if (condition[index] === 'p') {
-                pp = condition[index + 1]
-            } else if (condition[index] === 's') {
-                ss = condition[index + 1]
-            } else if (condition[index] === 'm') {
-                mm = condition[index + 1]
+            } else if (condition[index] === 'pdr') {
+                pdr = condition[index + 1]
+            } else if (condition[index] === 'pbr') {
+                pbr = condition[index + 1]
             } else if (condition[index] === 'pre') {
                 pre = condition[index + 1]
             } else if (condition[index] === 'interval') {
@@ -89,17 +83,11 @@ const Categorylist = React.createClass({
         if (per) {
             data['per'] = per
         }
-        if (yieldd) {
-            data['yield'] = yieldd
+        if (pdr) {
+            data['pdr'] = pdr
         }
-        if (pp) {
-            data['p'] = pp
-        }
-        if (ss) {
-            data['s'] = ss
-        }
-        if (mm) {
-            data['m'] = mm
+        if (pbr) {
+            data['pbr'] = pbr
         }
         if (pre) {
             data['pre'] = pre
@@ -143,7 +131,7 @@ const Categorylist = React.createClass({
             case STOCK:
             open = (
                 <li>
-                    <a href="#" onClick={e => killEvent(e, () => this.props.globalinput(2, this._filter, 'danger', 'Filter Tag', null, 'per<10 yield<30'))}>
+                    <a href="#" onClick={e => killEvent(e, () => this.props.globalinput(2, this._filter, 'danger', 'Filter Tag', null, 'per<10 pdr<30 pbr<10'))}>
                         Filter&nbsp;<i className="glyphicon glyphicon-play"></i>
                     </a>
                 </li>

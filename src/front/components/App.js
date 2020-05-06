@@ -129,7 +129,7 @@ const App = React.createClass({
             cur: [],
             exactly: [],
             his: [],
-        }, '', '', 'name', 'desc', '')
+        }, '', '', 'name', 'asc', '')
         /*this.props.fitnessset([], {
             cur: [],
             exactly: [],

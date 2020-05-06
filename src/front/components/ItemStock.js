@@ -47,7 +47,7 @@ const ItemStock = React.createClass({
                         onChange={this.props.onchange} />
                 </td>
                 <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>
-                    <a href="#" className="item-point" onClick={e => killEvent(e, () => this.props.setstock(item))}>{item.type}{item.index}{item.name}</a>
+                    <a href="#" className="item-point" /*onClick={e => killEvent(e, () => this.props.setstock(item))}*/>{item.type}{item.index}{item.name}</a>
                 </td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.profit}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.safety}</td>

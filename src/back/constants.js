@@ -801,10 +801,11 @@ export const STOCK_FILTER = {
     sortName: 'name',
     sortType: 'desc',
     per: [1, '<', 15],
-    yieldNumber: [1, '<', 50],
-    pp: [1, '>', 100],
-    ss: [1, '>', -500],
-    mm: [1, '>', 3],
+    pdr: [1, '<', 50],
+    pbr: [1, '<', 20],
+    //pp: [1, '>', 100],
+    //ss: [1, '>', -500],
+    //mm: [1, '>', 3],
     pre: [1, '>', 10],
     interval: [1, '>', 700],
     vol: [1, '>', 10],
@@ -869,3 +870,16 @@ export const BITNIFEX_PARENT = [
         show: '利息收入',
     },
 ];
+
+export const STOCK_INDEX = {
+    twse: [
+        {
+            name: '元大台灣卓越50證券投資信託基金',
+            tag: ['元大台灣卓越50證券投資信託基金', '0050','tw50'],
+        },
+        {
+            name: '元大台灣高股息證券投資信託基金',
+            tag: ['元大台灣高股息證券投資信託基金', '0056'],
+        },
+    ],
+}

@@ -162,7 +162,7 @@ router.get('/querySimple/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getSingleStock(id, req.session).then(function (result) {
+    _stockTool2.default.getSingleStockV2(id, req.session).then(function (result) {
         return res.json(result);
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
@@ -175,18 +175,18 @@ router.get('/getPER/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getStockPER(id).then(function (_ref) {
-        var _ref2 = (0, _slicedToArray3.default)(_ref, 3),
+    _stockTool2.default.getStockPERV2(id).then(function (_ref) {
+        var _ref2 = (0, _slicedToArray3.default)(_ref, 5),
             result = _ref2[0],
-            index = _ref2[1],
-            start = _ref2[2];
+            result2 = _ref2[1],
+            result3 = _ref2[2],
+            index = _ref2[3],
+            start = _ref2[4];
 
-        return _stockTool2.default.getStockYield(id).then(function (result_1) {
-            StockTagTool.setLatest(id, req.session).catch(function (err) {
-                return (0, _utility.handleError)(err, 'Set latest');
-            });
-            res.json({ per: index + ': ' + result + ' ' + result_1 + ' ' + start });
+        StockTagTool.setLatest(id, req.session).catch(function (err) {
+            return (0, _utility.handleError)(err, 'Set latest');
         });
+        res.json({ per: index + ': ' + result + ' ' + result2 + ' ' + result3 + ' ' + start });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);
     });
@@ -256,37 +256,21 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }
         per[2] = Number(per[2]);
     }
-    var yieldNumber = false;
-    if (req.body.yield) {
-        yieldNumber = req.body.yield.match(/^([<>])(\d+)$/);
-        if (!yieldNumber) {
-            return (0, _utility.handleError)(new _utility.HoError('yield is not vaild'), next);
+    var pdr = false;
+    if (req.body.pdr) {
+        pdr = req.body.pdr.match(/^([<>])(\d+)$/);
+        if (!pdr) {
+            return (0, _utility.handleError)(new _utility.HoError('pdr is not vaild'), next);
         }
-        yieldNumber[2] = Number(yieldNumber[2]);
+        pdr[2] = Number(pdr[2]);
     }
-    var pp = false;
-    if (req.body.p) {
-        pp = req.body.p.match(/^([<>])(\d+)$/);
-        if (!pp) {
-            return (0, _utility.handleError)(new _utility.HoError('p is not vaild'), next);
+    var pbr = false;
+    if (req.body.pbr) {
+        pbr = req.body.pbr.match(/^([<>])(\d+\.?\d*)$/);
+        if (!pbr) {
+            return (0, _utility.handleError)(new _utility.HoError('pbr is not vaild'), next);
         }
-        pp[2] = Number(pp[2]);
-    }
-    var ss = false;
-    if (req.body.s) {
-        ss = req.body.s.match(/^([<>])(\-?\d+)$/);
-        if (!ss) {
-            return (0, _utility.handleError)(new _utility.HoError('s is not vaild'), next);
-        }
-        ss[2] = Number(ss[2]);
-    }
-    var mm = false;
-    if (req.body.m) {
-        mm = req.body.m.match(/^([<>])(\d+\.?\d*)$/);
-        if (!mm) {
-            return (0, _utility.handleError)(new _utility.HoError('m is not vaild'), next);
-        }
-        mm[2] = Number(mm[2]);
+        pbr[2] = Number(pbr[2]);
     }
     var pre = false;
     if (req.body.pre) {
@@ -326,10 +310,8 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         sortName: req.params.sortName,
         sortType: req.params.sortType,
         per: per,
-        yieldNumber: yieldNumber,
-        pp: pp,
-        ss: ss,
-        mm: mm,
+        pdr: pdr,
+        pbr: pbr,
         pre: pre,
         interval: interval,
         vol: vol,

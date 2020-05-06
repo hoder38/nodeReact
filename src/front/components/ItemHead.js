@@ -69,14 +69,14 @@ const ItemHead = React.createClass({
             head2 = 'user'
             break
             case STOCK:
-            head1 = 's'
-            head2 = 'm'
+            head1 = 'pdr'
+            head2 = 'pbr'
             click = () => {}
             sort = ''
             head3 = (
                 <li className="pull-right" style={{width: '15%', minWidth: '68px'}}>
                     <a href="#" onClick={e => killEvent(e, () => this._changeSort('name'))} style={{padding: '10px 5px'}}>
-                        p&nbsp;
+                        per&nbsp;
                         {nameSort}
                     </a>
                 </li>

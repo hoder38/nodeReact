@@ -5,10 +5,6 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
-var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
-
-var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
-
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
 var _typeof3 = _interopRequireDefault(_typeof2);
@@ -246,7 +242,7 @@ var updateStockList = function updateStockList(list, type) {
     console.log('updateStockList');
     console.log(new Date());
     console.log(list[0]);
-    return _stockTool2.default.getSingleStock(type, list[0], (0, _config.STOCK_MODE)(_ver.ENV_TYPE)).then(function () {
+    return _stockTool2.default.getSingleStockV2(type, list[0], (0, _config.STOCK_MODE)(_ver.ENV_TYPE)).then(function () {
         list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
@@ -262,22 +258,23 @@ var updateStock = exports.updateStock = function updateStock() {
                 console.log(new Date());
                 var sDay = (0, _config.STOCK_DATE)(_ver.ENV_TYPE).indexOf(new Date().getDate());
                 console.log(sDay);
-                var use_stock_list = stock_batch_list;
+                /*let use_stock_list = stock_batch_list;
                 if (stock_batch_list.length > 0) {
                     console.log('stock_batch_list remain');
                     console.log(stock_batch_list.length);
-                    stock_batch_list_2 = [].concat((0, _toConsumableArray3.default)(stock_batch_list));
+                    stock_batch_list_2 = [...stock_batch_list];
                     stock_batch_list = [];
                     use_stock_list = stock_batch_list_2;
                 } else if (stock_batch_list_2.length > 0) {
                     console.log('stock_batch_list_2 remain');
                     console.log(stock_batch_list_2.length);
-                    stock_batch_list = [].concat((0, _toConsumableArray3.default)(stock_batch_list_2));
+                    stock_batch_list = [...stock_batch_list_2];
                     stock_batch_list_2 = [];
                     use_stock_list = stock_batch_list;
-                }
+                }*/
+                var use_stock_list = [];
                 var parseStockList = function parseStockList() {
-                    return sDay === -1 ? _promise2.default.resolve() : (0, _stockTool.getStockList)('twse', Math.floor(sDay / 2) + 1).then(function (stocklist) {
+                    return sDay === -1 ? _promise2.default.resolve() : (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
                         return (0, _mongoTool2.default)('find', _constants.STOCKDB, { important: 1 }).then(function (items) {
                             var annualList = [];
                             var year = new Date().getFullYear();
@@ -346,6 +343,7 @@ var updateStock = exports.updateStock = function updateStock() {
         if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
     }
 };
+
 var filterStock = exports.filterStock = function filterStock() {
     //get db
     if ((0, _config.STOCK_FILTER)(_ver.ENV_TYPE)) {

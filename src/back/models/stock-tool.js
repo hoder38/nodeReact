@@ -1,4 +1,4 @@
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB } from '../constants'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -1869,6 +1869,22 @@ const getBasicStockData = (type, index) => {
     }
 }
 
+const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
+    let tags = new Set();
+    indexTag.forEach(v => tags.add(v));
+    tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_market_e).add(basic.stock_class).add(basic.stock_time);
+    basic.stock_name.forEach(i => tags.add(i));
+    basic.stock_location.forEach(i => tags.add(i));
+    let valid_tags = [];
+    tags.forEach(i => {
+        const valid_name = isValidString(i, 'name');
+        if (valid_name) {
+            valid_tags.push(valid_name);
+        }
+    });
+    return [basic.stock_name[0], valid_tags];
+});
+
 const handleStockTag = (type, index, latestYear, latestQuarter, assetStatus, cashStatus, safetyStatus, profitStatus, salesStatus, managementStatus) => getBasicStockData(type, index).then(basic => {
     let tags = new Set();
     tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_market_e).add(basic.stock_class).add(basic.stock_time);
@@ -2408,7 +2424,269 @@ const handleStockTag = (type, index, latestYear, latestQuarter, assetStatus, cas
     return [basic.stock_name[0], valid_tags];
 });
 
+const getParameterV2 = (data, type, text = null) => {
+    const matchProfit = data.match(new RegExp('\\>' + type + '\\<\\/td\\>([\\s\\S]+?)\\<\\/tr\\>'));
+    if (!matchProfit) {
+        return false;
+    }
+    if (text && !matchProfit[1].match(new RegExp(text))) {
+        return false;
+    }
+    return matchProfit[1].match(/\>[\d,]+\</g).map(v => Number(v.replace(/[\>\<,]/g, '')));
+}
+
 export default {
+    getSingleStockV2: function(type, obj, stage=0) {
+        const index = obj.index;
+        const date = new Date();
+        let year = date.getFullYear();
+        let month = date.getMonth() + 1;
+        let reportType = 'C';
+        let quarter = 3;
+        if (month < 4) {
+            quarter = 4;
+            year--;
+        } else if (month < 7) {
+            quarter = 1;
+        } else if (month < 10) {
+            quarter = 2;
+        }
+        let latestQuarter = 0;
+        let latestYear = 0;
+        if (stage === 0) {
+            return handleError(new HoError('no finance data'));
+        } else {
+            let id_db = null;
+            let normal_tags = [];
+            let not = 0;
+            let profit = 0;
+            let equity = 0;
+            let netValue = 0;
+            let dividends = 0;
+            let needDividends = false;
+            const final_stage = price => {
+                return handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
+                    let stock_default = [];
+                    for (let t of tags) {
+                        const normal = normalize(t);
+                        if (!isDefaultTag(normal)) {
+                            if (normal_tags.indexOf(normal) === -1) {
+                                normal_tags.push(normal);
+                                stock_default.push(normal);
+                            }
+                        }
+                    }
+                    const per = (profit === 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
+                    const pdr = (dividends === 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
+                    const pbr = (netValue === 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
+                    console.log(per);
+                    console.log(pdr);
+                    console.log(pbr);
+                    const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
+                        price,
+                        profit,
+                        equity,
+                        dividends,
+                        netValue,
+                        per,
+                        pdr,
+                        pbr,
+                        latestQuarter,
+                        latestYear,
+                        tags: normal_tags,
+                        name,
+                        stock_default,
+                    }}).then(item => id_db) : Mongo('insert', STOCKDB, {
+                        type,
+                        index,
+                        name,
+                        price,
+                        profit,
+                        equity,
+                        dividends,
+                        netValue,
+                        per,
+                        pdr,
+                        pbr,
+                        latestQuarter,
+                        latestYear,
+                        //tags: normal_tags,
+                        important: 0,
+                        stock_default,
+                    }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
+                    return retObj().then(id => {
+                        return {
+                            per,
+                            pdr,
+                            pbr,
+                            latestQuarter,
+                            latestYear,
+                            stockName: `${type}${index}${name}`,
+                            id,
+                        }
+                    });
+                });
+            }
+            let wait_count = 0;
+            const recur_getTwseProfit = () => {
+                console.log(year);
+                console.log(quarter);
+                return Api('url', `https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
+                    if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
+                        if (latestQuarter) {
+                            return handleError(new HoError('too short stock data'));
+                        } else {
+                            not++;
+                            if (not > 8) {
+                                return handleError(new HoError('cannot find stock data'));
+                            } else {
+                                if (reportType === 'C') {
+                                    reportType = 'A';
+                                    return recur_getTwseProfit();
+                                } else {
+                                    quarter--;
+                                    if (quarter < 1) {
+                                        quarter = 4;
+                                        year--;
+                                    }
+                                    reportType = 'C';
+                                    return recur_getTwseProfit();
+                                }
+                            }
+                        }
+                    } else if (raw_data.match(/\>Overrun \- /)) {
+                        if (wait_count >= 10) {
+                            return handleError(new HoError('too much wait'));
+                        } else {
+                            wait_count++;
+                            console.log('wait');
+                            console.log(wait_count);
+                            return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), 20000));
+                        }
+                    } else {
+                        wait_count = 0;
+                        let profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
+                        if (!profitArr) {
+                            profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
+                            if (!profitArr) {
+                                profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
+                                if (!profitArr) {
+                                    profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
+                                    if (!profitArr) {
+                                        profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
+                                        if (!profitArr) {
+                                            return handleError(new HoError('cannot find stock profit'));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (!equity) {
+                            equity = getParameterV2(raw_data, 3100, '股本合計');
+                            if (!equity) {
+                                equity = getParameterV2(raw_data, 31100, '股本合計');
+                                if (!equity) {
+                                    equity = getParameterV2(raw_data, 31000, '股本合計');
+                                    if (!equity) {
+                                        return handleError(new HoError('cannot find stock equity'));
+                                    } else {
+                                        equity = equity[0];
+                                    }
+                                } else {
+                                    equity = equity[0];
+                                }
+                            } else {
+                                equity = equity[0];
+                            }
+                        }
+                        if (!netValue) {
+                            netValue = getParameterV2(raw_data, '3XXX', '權益總計');
+                            if (!netValue) {
+                                netValue = getParameterV2(raw_data, 30000, '權益總計');
+                                if (!netValue) {
+                                    netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
+                                    if (!netValue) {
+                                        netValue = getParameterV2(raw_data, 39999, '權益總計');
+                                        if (!netValue) {
+                                            return handleError(new HoError('cannot find stock net value'));
+                                        } else {
+                                            netValue = netValue[0];
+                                        }
+                                    } else {
+                                        netValue = netValue[0];
+                                    }
+                                } else {
+                                    netValue = netValue[0];
+                                }
+                            } else {
+                                netValue = netValue[0];
+                            }
+                        }
+                        const matchDividends = getParameterV2(raw_data, 'C04500');
+                        if (matchDividends && matchDividends[0] > dividends) {
+                            dividends = matchDividends[0];
+                        }
+                        switch (quarter) {
+                            case 4:
+                            profit += profitArr[0];
+                            console.log(profit);
+                            console.log(equity);
+                            console.log(netValue);
+                            console.log(dividends);
+                            if (!latestQuarter) {
+                                latestQuarter = quarter;
+                                latestYear = year;
+                            }
+                            if (dividends === 0) {
+                                quarter = 3;
+                                needDividends = true;
+                                return recur_getTwseProfit();
+                            } else {
+                                return getStockPrice(type, index).then(price => final_stage(price));
+                            }
+                            break;
+                            case 3:
+                            case 2:
+                            if (needDividends) {
+                                console.log(profit);
+                                console.log(equity);
+                                console.log(netValue);
+                                console.log(dividends);
+                                return getStockPrice(type, index).then(price => final_stage(price));
+                            }
+                            profit += profitArr[2];
+                            profit -= profitArr[3];
+                            break;
+                            case 1:
+                            profit += profitArr[0];
+                            profit -= profitArr[1];
+                            break;
+                        }
+                        latestQuarter = quarter;
+                        latestYear = year;
+                        quarter = 4;
+                        year--;
+                        return recur_getTwseProfit();
+                    }
+                });
+            }
+            return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
+                if (items.length > 0) {
+                    id_db = items[0]._id;
+                    for (let i of items[0].tags) {
+                        if (items[0].stock_default) {
+                            if (!items[0].stock_default.includes(i)) {
+                                normal_tags.push(i);
+                            }
+                        } else {
+                            normal_tags.push(i);
+                        }
+                    }
+                }
+                return recur_getTwseProfit();
+            });
+        }
+    },
     getSingleStock: function(type, index, stage=0) {
         const date = new Date();
         let year = date.getFullYear();
@@ -2682,6 +2960,20 @@ export default {
                 return mkfolder(`/mnt/stock/${type}/${index}`).then(() => recur_getTwseXml());
             });
         }
+    },
+    getStockPERV2: function(id) {
+        return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
+            if (items.length < 1) {
+                return handleError(new HoError('can not find stock!!!'));
+            }
+            const start = (items[0].latestQuarter === 0) ? `${items[0].latestYear - 1912}12` : `${items[0].latestYear - 1911}${completeZero(items[0].latestQuarter*3, 2)}`;
+            return getStockPrice(items[0].type, items[0].index).then(price => {
+                const per = (items[0].profit === 0) ? 0 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
+                const pdr = (items[0].dividends === 0) ? 0 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
+                const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
+                return [per, pdr, pbr, items[0].index, start];
+            });
+        });
     },
     getStockPER: function(id) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
@@ -3308,6 +3600,137 @@ export default {
             return handleError(err);
         });
     },
+    stockFilterV2: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
+        const web = option ? true : false;
+        if (!option) {
+            option = STOCK_FILTER;
+        }
+        let last = false;
+        let queried = 0;
+        let filterList = [];
+        const clearName = () => StockTagTool.tagQuery(queried, option.name, false, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
+            const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
+                sendWs({
+                    type: 'stock',
+                    data: del_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${result.items[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
+            return delFilter(0);
+        });
+        const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
+            console.log(queried);
+            if (result.items.length < STOCK_FILTER_LIMIT) {
+                last = true;
+            }
+            queried += result.items.length;
+            if (result.items.length < 1) {
+                return filterList;
+            }
+            let first_stage = [];
+            result.items.forEach(i => {
+                const eok = option.per ? ((option.per[1] === '>' && i.per > option.per[2]) || (option.per[1] === '<' && i.per < option.per[2])) ? true : false : true;
+                const dok = option.pdr ? ((option.pdr[1] === '>' && i.pdr > option.pdr[2]) || (option.pdr[1] === '<' && i.pdr < option.pdr[2])) ? true : false : true;
+                const bok = option.pbr ? ((option.pbr[1] === '>' && i.pbr > option.pbr[2]) || (option.pbr[1] === '<' && i.pbr < option.pbr[2])) ? true : false : true;
+                if (eok && dok && bok) {
+                    first_stage.push(i);
+                }
+            });
+            if (first_stage.length < 1) {
+                return filterList;
+            }
+            const recur_per = index => {
+                const nextFilter = () => {
+                    index++;
+                    if (index < first_stage.length) {
+                        return recur_per(index);
+                    }
+                    if (!last) {
+                        return recur_query();
+                    }
+                    return filterList;
+                }
+                const addFilter = () => {
+                    filterList.push(first_stage[index]);
+                    if (filterList.length >= STOCK_FILTER_LIMIT) {
+                        return filterList;
+                    }
+                    return nextFilter();
+                };
+                return addFilter();
+            }
+            return recur_per(0);
+        });
+        return clearName().then(() => recur_query()).then(filterList => {
+            let filterList1 = [];
+            const stage2 = pIndex => (pIndex < filterList.length) ? this.getPredictPERWarp(filterList[pIndex]._id, session, true).then(([result, index]) => {
+                console.log(filterList[pIndex].name);
+                console.log(result);
+                const predictVal = result.match(/^-?\d+.?\d+/);
+                if (predictVal && (option.pre[1] === '>' && predictVal[0] > option.pre[2]) || (option.pre[1] === '<' && predictVal[0] < option.pre[2])) {
+                    filterList1.push(filterList[pIndex]);
+                }
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[pIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => stage2(pIndex + 1)) : Promise.resolve();
+            console.log('stage two');
+            return option.pre ? stage2(0).then(() => filterList1) : filterList;
+        }).then(filterList => {
+            let filterList1 = [];
+            const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
+                console.log(filterList[iIndex].name);
+                console.log(result);
+                const intervalVal = result.match(/(\d+) (\d+) (\d+)$/);
+                if (intervalVal) {
+                    const iok = option.interval ? ((option.interval[1] === '>' && intervalVal[1] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[1] < option.interval[2])) ? true : false : true;
+                    const vok = option.vol ? ((option.vol[1] === '>' && intervalVal[2] > option.vol[2]) || (option.vol[1] === '<' && intervalVal[2] < option.vol[2])) ? true : false : true;
+                    const cok = option.close ? ((option.close[1] === '>' && intervalVal[3] > option.close[2]) || (option.close[1] === '<' && intervalVal[3] < option.close[2])) ? true : false : true;
+                    if (iok && vok && cok) {
+                        filterList1.push(filterList[iIndex]);
+                    }
+                }
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => stage3(iIndex + 1)) : Promise.resolve();
+            console.log('stage three');
+            return (option.interval || option.vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
+        }).then(filterList => {
+            const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
+                sendWs({
+                    type: 'stock',
+                    data: add_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+            }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
+            return addFilter(0);
+        });
+    },
     stockFilter: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
         const web = option ? true : false;
         if (!option) {
@@ -3495,7 +3918,7 @@ export default {
             return handleError(new HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilter(option, user, session).then(list => {
+        return this.stockFilterV2(option, user, session).then(list => {
             stockFiltering = false;
             const number = list.length;
             console.log(`End: ${number}`);
@@ -3967,3 +4390,72 @@ export const stockShow = () => Mongo('find', TOTALDB, {}).then(items => {
     const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
+
+export const getStockListV2 = (type, year, month) => {
+    switch(type) {
+        case 'twse':
+        let quarter = 3;
+        if (month < 4) {
+            quarter = 4;
+        } else if (month < 7) {
+            quarter = 1;
+        } else if (month < 10) {
+            quarter = 2;
+        }
+        return Api('url', 'https://mops.twse.com.tw/mops/web/ajax_t78sb04', {post: {
+            encodeURIComponent: '1',
+            TYPEK: 'all',
+            step: '1',
+            run: 'Y',
+            firstin: 'true',
+            FUNTYPE: '02',
+            year: year - 1911,
+            season: completeZero(quarter, 2),
+            fund_no: '0',
+        }}).then(raw_data => {
+            const stock_list = [];
+            const tables = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table');
+            let tag = false;
+            tables.forEach(table => {
+                if (table.attribs.class === 'noBorder') {
+                    const name = findTag(findTag(findTag(table, 'tr')[0], 'td')[1])[0];
+                    tag = false;
+                    for (let i = 0; i < STOCK_INDEX[type].length; i++) {
+                        if (name === STOCK_INDEX[type][i].name) {
+                            tag = STOCK_INDEX[type][i].tag;
+                            break;
+                        }
+                    }
+                } else {
+                    if (tag) {
+                        findTag(table, 'tr').forEach(tr => {
+                            if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
+                                const index = findTag(findTag(tr, 'td')[0])[0];
+                                if (index) {
+                                    let exist = false;
+                                    for (let i = 0; i < stock_list.length; i++) {
+                                        if (stock_list[i].index === index) {
+                                            exist = true;
+                                            tag.forEach(v => stock_list[i].tag.push(v));
+                                            break;
+                                        }
+                                    }
+                                    if (!exist) {
+                                        stock_list.push({
+                                            index,
+                                            tag: tag.map(v => v),
+                                        });
+                                    }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+            console.log(stock_list);
+            return stock_list;
+        });
+        default:
+        return handleError(new HoError('stock type unknown!!!'));
+    }
+}

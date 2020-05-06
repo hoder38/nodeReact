@@ -1367,12 +1367,18 @@ function getStockQuerySql(user, tagList, exactly) {
             } else if (index.index === 31) {
                 if (index.index[1] === '') {
                     skip = Number(index.index[1]);
-                } else if (index.index[1] === 'profit') {
+                /*} else if (index.index[1] === 'profit') {
                     nosql['profitIndex'] = {$gte: Number(index.index[1])};
                 } else if (index.index[1] === 'safety') {
                     nosql['safetyIndex'] = {$gte: Number(index.index[1])};
                 } else if (index.index[1] === 'manag') {
-                    nosql['managementIndex'] = {$gte: Number(index.index[1])};
+                    nosql['managementIndex'] = {$gte: Number(index.index[1])};*/
+                } else if (index.index[1] === 'profit') {
+                    nosql['per'] = {$gte: Number(index.index[1])};
+                } else if (index.index[1] === 'safety') {
+                    nosql['pdr'] = {$gte: Number(index.index[1])};
+                } else if (index.index[1] === 'manag') {
+                    nosql['pbr'] = {$gte: Number(index.index[1])};
                 }
                 continue;
             } else if (index) {
@@ -1389,12 +1395,12 @@ function getStockQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, is_important ? {important: 1} : {}, {profitIndex: 1});
-    const ret = Object.assign({nosql, select: {
+    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, is_important ? {important: 1} : {}, {per: 1});
+    const ret = Object.assign({nosql}/*, select: {
         cash: 0,
         asset: 0,
         sales: 0,
-    }}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
+    }*/, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
     console.log(ret);
     console.log(ret.nosql);
     return ret;
@@ -1422,12 +1428,12 @@ function getStockQueryTag(user, tag, del=1) {
 function getStockSortName(sortName) {
     switch (sortName) {
         case 'count':
-        return 'managementIndex';
+        return 'pbr';
         case 'mtime':
-        return 'safetyIndex';
+        return 'pdr';
         case 'name':
         default:
-        return 'profitIndex';
+        return 'per';
     }
 }
 

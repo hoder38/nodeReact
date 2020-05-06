@@ -1691,12 +1691,18 @@ function getStockQuerySql(user, tagList, exactly) {
                 } else if (index.index === 31) {
                     if (index.index[1] === '') {
                         skip = Number(index.index[1]);
+                        /*} else if (index.index[1] === 'profit') {
+                            nosql['profitIndex'] = {$gte: Number(index.index[1])};
+                        } else if (index.index[1] === 'safety') {
+                            nosql['safetyIndex'] = {$gte: Number(index.index[1])};
+                        } else if (index.index[1] === 'manag') {
+                            nosql['managementIndex'] = {$gte: Number(index.index[1])};*/
                     } else if (index.index[1] === 'profit') {
-                        nosql['profitIndex'] = { $gte: Number(index.index[1]) };
+                        nosql['per'] = { $gte: Number(index.index[1]) };
                     } else if (index.index[1] === 'safety') {
-                        nosql['safetyIndex'] = { $gte: Number(index.index[1]) };
+                        nosql['pdr'] = { $gte: Number(index.index[1]) };
                     } else if (index.index[1] === 'manag') {
-                        nosql['managementIndex'] = { $gte: Number(index.index[1]) };
+                        nosql['pbr'] = { $gte: Number(index.index[1]) };
                     }
                     continue;
                 } else if (index) {} else {
@@ -1726,12 +1732,12 @@ function getStockQuerySql(user, tagList, exactly) {
     if (and.length > 0) {
         nosql.$and = and;
     }
-    var hint = (0, _assign2.default)({}, is_tags ? { tags: 1 } : {}, is_important ? { important: 1 } : {}, { profitIndex: 1 });
-    var ret = (0, _assign2.default)({ nosql: nosql, select: {
-            cash: 0,
-            asset: 0,
-            sales: 0
-        } }, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
+    var hint = (0, _assign2.default)({}, is_tags ? { tags: 1 } : {}, is_important ? { important: 1 } : {}, { per: 1 });
+    var ret = (0, _assign2.default)({ nosql: nosql } /*, select: {
+                                                     cash: 0,
+                                                     asset: 0,
+                                                     sales: 0,
+                                                     }*/, (0, _config.HINT)(_ver.ENV_TYPE) ? { hint: hint } : {}, skip ? { skip: skip } : {});
     console.log(ret);
     console.log(ret.nosql);
     return ret;
@@ -1761,12 +1767,12 @@ function getStockQueryTag(user, tag) {
 function getStockSortName(sortName) {
     switch (sortName) {
         case 'count':
-            return 'managementIndex';
+            return 'pbr';
         case 'mtime':
-            return 'safetyIndex';
+            return 'pdr';
         case 'name':
         default:
-            return 'profitIndex';
+            return 'per';
     }
 }
 

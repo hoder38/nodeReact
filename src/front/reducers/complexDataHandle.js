@@ -1,5 +1,5 @@
 import { arrayObject, arrayId } from '../utility'
-import { SET_STOCK, SET_LOTTERY, SET_BITFINEX } from '../constants'
+import { SET_LOTTERY, SET_BITFINEX } from '../constants'
 
 const rest_item = item => {
     if (item.utime) {
@@ -35,7 +35,7 @@ export default function complexDataHandle (push, pop, set) {
         item: {
             list: new Set(),
             sortName: 'name',
-            sortType: (set === SET_STOCK) ? 'desc' : 'asc',
+            sortType: 'asc',
             bookmark: '',
             page: 0,
             more: true,
