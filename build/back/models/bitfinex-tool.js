@@ -575,10 +575,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         var sum = keep_available + v.amount;
                         if (sum <= current.amountLimit * 1.2) {
                             keep_available = 0;
-                            v.amount = sum;
+                            v.newAmount = sum;
                         } else {
                             keep_available = sum - current.amountLimit * 1.2;
-                            v.amount = current.amountLimit * 1.2;
+                            v.newAmount = current.amountLimit * 1.2;
                         }
                         console.log(keep_available);
                         console.log(v.amount);
@@ -602,7 +602,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 }
                 needNew.push({
                     risk: risk,
-                    amount: v.amount,
+                    amount: v.newAmount ? v.newAmount : v.amount,
                     rate: current.miniRate > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
                 });
             });

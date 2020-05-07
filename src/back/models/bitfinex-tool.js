@@ -468,10 +468,10 @@ export const setWsOffer = (id, curArr=[]) => {
                         const sum = keep_available + v.amount;
                         if (sum <= (current.amountLimit * 1.2)) {
                             keep_available = 0;
-                            v.amount = sum;
+                            v.newAmount = sum;
                         } else {
                             keep_available = sum - (current.amountLimit * 1.2);
-                            v.amount = current.amountLimit * 1.2;
+                            v.newAmount = current.amountLimit * 1.2;
                         }
                         console.log(keep_available);
                         console.log(v.amount);
@@ -495,7 +495,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 }
                 needNew.push({
                     risk,
-                    amount: v.amount,
+                    amount: v.newAmount ? v.newAmount : v.amount,
                     rate: (current.miniRate > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
                 })
             });
