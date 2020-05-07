@@ -52,6 +52,8 @@ var finalRate = {};
 var maxRange = {};
 var currentRate = {};
 
+var extremRate = {};
+
 var btcDailyChange = 0;
 var ethDailyChange = 0;
 
@@ -82,6 +84,10 @@ var calRate = exports.calRate = function calRate(curArr) {
                             rate: curTicker.lastPrice * _constants.BITFINEX_EXP,
                             time: Math.round(new Date().getTime() / 1000)
                         };
+                        (0, _sendWs2.default)({
+                            type: 'bitfinex',
+                            data: index
+                        });
                         var hl = [];
                         var weight = [];
                         return rest.candles({ symbol: curType, timeframe: '1m', period: 'p2', query: { limit: 1440 } }).then(function (entries) {
@@ -236,6 +242,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         time: Math.round(new Date().getTime() / 1000),
                         total: wallet.balance
                     };
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: (i + 1) * 10000,
+                        user: id
+                    });
                     //console.log('available');
                     //console.log(available[id]);
                 }
@@ -263,6 +274,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     offer[id] = {};
                 }
                 offer[id][t] = temp;
+                (0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id
+                });
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferUpdate({ symbol: t }, function (fo) {
@@ -288,14 +304,25 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (!offer[id][t]) {
                     offer[id][t] = [];
                 }
-                offer[id][t].push({
-                    id: fo.id,
-                    time: Math.round(fo.mtsCreate / 1000),
-                    amount: fo.amount,
-                    rate: fo.rate,
-                    period: fo.period,
-                    status: fo.status
-                });
+                var isExist = false;
+                for (var _i = 0; _i < offer[id][t].length; _i++) {
+                    if (fo.id === offer[id][t][_i].id) {
+                        offer[id][t][_i].time = Math.round(fo.mtsCreate / 1000);
+                        offer[id][t][_i].status = fo.status;
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    offer[id][t].push({
+                        id: fo.id,
+                        time: Math.round(fo.mtsCreate / 1000),
+                        amount: fo.amount,
+                        rate: fo.rate,
+                        period: fo.period,
+                        status: fo.status
+                    });
+                }
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferClose({ symbol: t }, function (fo) {
@@ -313,29 +340,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     //console.log(offer[id][t].length);
                 }
             });
-            userWs[id].onFundingOfferSnapshot({ symbol: t }, function (fos) {
-                //console.log(`${t} offer`);
-                var risk = _constants.RISK_MAX;
-                var temp = [];
-                fos.forEach(function (v) {
-                    if (v.symbol === t) {
-                        temp.push({
-                            id: v.id,
-                            time: Math.round(v.mtsCreate / 1000),
-                            amount: v.amount,
-                            rate: v.rate,
-                            period: v.period,
-                            status: v.status,
-                            risk: risk > 0 ? risk-- : 0
-                        });
-                    }
-                });
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
-                offer[id][t] = temp;
-                //console.log(offer[id][t].length);
-            });
             userWs[id].onFundingCreditSnapshot({ symbol: t }, function (fcs) {
                 //console.log(`${t} credit`);
                 var temp = [];
@@ -348,7 +352,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             rate: v.rate,
                             period: v.period,
                             status: v.status,
-                            pair: v.positionPair
+                            pair: v.positionPair,
+                            side: v.side
                         });
                     }
                 });
@@ -356,6 +361,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     credit[id] = {};
                 }
                 credit[id][t] = temp;
+                (0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id
+                });
                 //console.log(credit[id][t].length);
             });
             userWs[id].onFundingCreditUpdate({ symbol: t }, function (fc) {
@@ -369,6 +379,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         credit[id][t][j].period = fc.period;
                         credit[id][t][j].pair = fc.positionPair;
                         credit[id][t][j].status = fc.status;
+                        credit[id][t][j].side = fc.side;
                         break;
                     }
                 }
@@ -389,7 +400,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     rate: fc.rate,
                     period: fc.period,
                     pair: fc.positionPair,
-                    status: fc.status
+                    status: fc.status,
+                    side: fc.side
+                });
+                (0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id
                 });
                 //console.log(credit[id][t].length);
             });
@@ -406,6 +423,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         }
                     }
                 }
+                (0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id
+                });
                 //console.log(credit[id][t].length);
             });
         });
@@ -436,9 +458,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
                 try {
                     for (var _iterator2 = (0, _getIterator3.default)(j), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var _i = _step2.value;
+                        var _i2 = _step2.value;
 
-                        if (risk === _i.risk) {
+                        if (risk === _i2.risk) {
                             return true;
                         }
                     }
@@ -482,7 +504,58 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         var needDelete = [];
         var MR = current.miniRate > 0 ? current.miniRate / 36500 * _constants.BITFINEX_EXP : 0;
         var DR = current.dynamic > 0 ? current.dynamic / 36500 * _constants.BITFINEX_EXP : 0;
+        var extremRateCheck = function extremRateCheck() {
+            if (!extremRate[id]) {
+                extremRate[id] = {};
+            }
+            if (DR > 0 && currentRate[current.type].rate > DR) {
+                if (!extremRate[id][current.type]) {
+                    extremRate[id][current.type] = {
+                        high: 1,
+                        low: 0
+                    };
+                } else {
+                    extremRate[id][current.type].high++;
+                    extremRate[id][current.type].low = 0;
+                    if (extremRate[id][current.type].high >= 15) {
+                        (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too high!!!', 0, 0, true);
+                        extremRate[id][current.type].high = 0;
+                    }
+                }
+            } else if (MR > 0 && currentRate[current.type].rate < MR) {
+                if (!extremRate[id][current.type]) {
+                    extremRate[id][current.type] = {
+                        high: 0,
+                        low: 1
+                    };
+                } else {
+                    extremRate[id][current.type].high = 0;
+                    extremRate[id][current.type].low++;
+                    if (extremRate[id][current.type].low >= 15) {
+                        (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too low!!!', 0, 0, true);
+                        extremRate[id][current.type].low = 0;
+                    }
+                }
+            } else {
+                extremRate[id][current.type] = {
+                    high: 0,
+                    low: 0
+                };
+            }
+        };
         // adjust offer & history
+        //keep cash
+        var calKeepCash = function calKeepCash(avail) {
+            var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
+            if (current.isKeep) {
+                if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
+                    var dailyChange = btcDailyChange < ethDailyChange ? btcDailyChange : ethDailyChange;
+                    kp = kp * (50 - (_constants.COIN_MAX - dailyChange) / (_constants.COIN_MAX - _constants.COIN_MAX_MAX) * 50) / 100;
+                }
+            }
+            return current.keepAmount ? kp - current.keepAmount : kp;
+        };
+        var keep_available = calKeepCash(available[id]);
         var adjustOffer = function adjustOffer() {
             console.log(id + ' ' + current.type);
             if (!offer[id]) {
@@ -492,7 +565,21 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 //console.log(offer[current.type]);
                 //produce retain delete
                 offer[id][current.type].forEach(function (v) {
-                    if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
+                    if (v.risk === undefined) {
+                        console.log('manual');
+                        return false;
+                    }
+                    if (keep_available > 0 && v.amount < current.amountLimit * 1.2) {
+                        var sum = keep_available + v.amount;
+                        if (sum <= current.amountLimit * 1.2) {
+                            keep_available = 0;
+                            v.amount = sum;
+                        } else {
+                            keep_available = sum - current.amountLimit * 1.2;
+                            v.amount = current.amountLimit * 1.2;
+                        }
+                        needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id, retain: true });
+                    } else if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                     } else {
                         var waitTime = DR > 0 && v.rate >= DR / _constants.BITFINEX_EXP ? current.waitTime / 2 : current.waitTime;
@@ -505,9 +592,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 });
             }
             needDelete.forEach(function (v) {
-                var risk = v.risk > 1 ? v.risk - 1 : 0;
-                while (checkRisk(risk, needRetain, needNew)) {
-                    risk--;
+                var risk = v.risk;
+                if (!v.retain) {
+                    risk = v.risk > 1 ? v.risk - 1 : 0;
+                    while (checkRisk(risk, needRetain, needNew)) {
+                        risk--;
+                    }
                 }
                 needNew.push({
                     risk: risk,
@@ -518,27 +608,15 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             //console.log('needdelete');
             //console.log(needDelete);
         };
-        //keep cash
-        var calKeepCash = function calKeepCash(avail) {
-            var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
-            if (current.isKeep) {
-                if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
-                    var dailyChange = btcDailyChange < ethDailyChange ? btcDailyChange : ethDailyChange;
-                    kp = kp * (50 - (_constants.COIN_MAX - dailyChange) / (_constants.COIN_MAX - _constants.COIN_MAX_MAX) * 50) / 100;
-                }
-            }
-            return current.keepAmount ? kp - current.keepAmount : kp;
-        };
         //produce new
         var newOffer = function newOffer(risk) {
-            var keep_available = calKeepCash(available[id]);
             //console.log('keep available');
             //console.log(keep_available);
             if (risk > _constants.RISK_MAX) {
                 risk = _constants.RISK_MAX;
             }
             var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
-            for (var _i2 = 0; _i2 < newLength; _i2++) {
+            for (var _i3 = 0; _i3 < newLength; _i3++) {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
@@ -563,9 +641,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         //merge new & delete
         var mergeOffer = function mergeOffer() {
             var checkDelete = function checkDelete(rate, amount) {
-                for (var _i3 = 0; _i3 < needDelete.length; _i3++) {
-                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i3].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i3].amount) {
-                        return _i3;
+                for (var _i4 = 0; _i4 < needDelete.length; _i4++) {
+                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i4].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i4].amount) {
+                        return _i4;
                     }
                 }
                 return -1;
@@ -573,10 +651,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             needNew.forEach(function (v) {
                 var notDelete = checkDelete(v.rate, v.amount);
                 if (notDelete !== -1) {
-                    for (var _i4 = 0; _i4 < offer[id][current.type].length; _i4++) {
-                        if (needDelete[notDelete].id === offer[id][current.type][_i4].id) {
-                            offer[id][current.type][_i4].time = Math.round(new Date().getTime() / 1000);
-                            offer[id][current.type][_i4].risk = v.risk;
+                    for (var _i5 = 0; _i5 < offer[id][current.type].length; _i5++) {
+                        if (needDelete[notDelete].id === offer[id][current.type][_i5].id) {
+                            offer[id][current.type][_i5].time = Math.round(new Date().getTime() / 1000);
+                            offer[id][current.type][_i5].risk = v.risk;
                             break;
                         }
                     }
@@ -592,6 +670,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             //console.log('final');
             //console.log(finalNew);
         };
+        extremRateCheck();
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
@@ -608,6 +687,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         };
         var submitOffer = function submitOffer(index) {
             if (index >= finalNew.length) {
+                if (finalNew.length + needDelete.length > 0) {
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id
+                    });
+                }
                 return _promise2.default.resolve();
             } else {
                 var _ret = function () {
@@ -625,12 +711,24 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     return resolve();
                                 }, 1000);
                             }).then(function () {
-                                for (var _i5 = 0; _i5 < offer[id][current.type].length; _i5++) {
-                                    if (fo.id === offer[id][current.type][_i5].id) {
-                                        offer[id][current.type][_i5].risk = finalNew[index].risk;
+                                var isExist = false;
+                                for (var _i6 = 0; _i6 < offer[id][current.type].length; _i6++) {
+                                    if (fo.id === offer[id][current.type][_i6].id) {
+                                        offer[id][current.type][_i6].risk = finalNew[index].risk;
                                         //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
+                                        isExist = true;
                                         break;
                                     }
+                                }
+                                if (!isExist) {
+                                    offer[id][current.type].push({
+                                        id: fo.id,
+                                        time: Math.round(new Date().getTime() / 1000),
+                                        amount: fo.amount,
+                                        rate: fo.rate,
+                                        period: fo.period,
+                                        risk: finalNew[index].risk
+                                    });
                                 }
                                 return submitOffer(index + 1);
                             });
@@ -673,6 +771,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     amount: Math.round(e.amount * 100) / 100,
                     rate: e.amount / e.balance
                 };
+            });
+            (0, _sendWs2.default)({
+                type: 'bitfinex',
+                data: -1,
+                user: id
             });
             console.log(ledger[id][current.type].length);
         });
@@ -846,6 +949,8 @@ exports.default = {
         });
     },
     query: function query(page, name, sortName, sortType, user, session) {
+        var uid = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : -1;
+
         var id = user.username;
         if (name) {
             name = (0, _utility.isValidString)(name, 'name');
@@ -898,42 +1003,75 @@ exports.default = {
                 break;
         }
         if (type === 0 || type === 1) {
-            _constants.SUPPORT_COIN.forEach(function (v, i) {
+            for (var i = 0; i < _constants.SUPPORT_COIN.length; i++) {
+                var v = _constants.SUPPORT_COIN[i];
                 if (coin !== 'all' && coin !== v) {
-                    return false;
+                    continue;
                 }
                 if (available[id] && available[id][v]) {
-                    itemList.push({
-                        name: '\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(available[id][v].avail * 100) / 100,
-                        id: (i + 1) * 10000,
-                        tags: [v.substr(1).toLowerCase(), 'wallet', '錢包'],
-                        rate: '$' + Math.round(available[id][v].total * 100) / 100,
-                        count: available[id][v].total,
-                        utime: available[id][v].time,
-                        type: 0
-                    });
+                    if (uid === (i + 1) * 10000) {
+                        return {
+                            item: [{
+                                name: '\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(available[id][v].avail * 100) / 100,
+                                id: (i + 1) * 10000,
+                                tags: [v.substr(1).toLowerCase(), 'wallet', '錢包'],
+                                rate: '$' + Math.round(available[id][v].total * 100) / 100,
+                                count: available[id][v].total,
+                                utime: available[id][v].time,
+                                type: 0
+                            }]
+                        };
+                    } else {
+                        itemList.push({
+                            name: '\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(available[id][v].avail * 100) / 100,
+                            id: (i + 1) * 10000,
+                            tags: [v.substr(1).toLowerCase(), 'wallet', '錢包'],
+                            rate: '$' + Math.round(available[id][v].total * 100) / 100,
+                            count: available[id][v].total,
+                            utime: available[id][v].time,
+                            type: 0
+                        });
+                    }
                 }
-            });
+            }
         }
         if (type === 0 || type === 2) {
-            _constants.SUPPORT_COIN.forEach(function (v, i) {
-                if (coin !== 'all' && coin !== v) {
-                    return false;
+            for (var _i7 = 0; _i7 < _constants.SUPPORT_COIN.length; _i7++) {
+                var _v = _constants.SUPPORT_COIN[_i7];
+                if (coin !== 'all' && coin !== _v) {
+                    continue;
                 }
-                if (currentRate[v]) {
-                    var rate = Math.round(currentRate[v].rate / 10) / 100000;
+                if (currentRate[_v]) {
+                    var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     var showRate = Math.round(rate * 36500) / 100;
-                    itemList.push({
-                        name: v.substr(1) + ' Rate',
-                        id: i,
-                        tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
-                        rate: rate + ' (' + showRate + '%)',
-                        count: rate,
-                        utime: currentRate[v].time,
-                        type: 1
-                    });
+                    if (uid === _i7) {
+                        return {
+                            item: [{
+                                name: _v.substr(1) + ' Rate',
+                                id: _i7,
+                                tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
+                                rate: rate + ' (' + showRate + '%)',
+                                count: rate,
+                                utime: currentRate[_v].time,
+                                type: 1
+                            }]
+                        };
+                    } else {
+                        itemList.push({
+                            name: _v.substr(1) + ' Rate',
+                            id: _i7,
+                            tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
+                            rate: rate + ' (' + showRate + '%)',
+                            count: rate,
+                            utime: currentRate[_v].time,
+                            type: 1
+                        });
+                    }
                 }
-            });
+            }
+        }
+        if (uid >= 0) {
+            return { empty: true };
         }
         if (type === 0 || type === 3) {
             _constants.SUPPORT_COIN.forEach(function (v, i) {
@@ -944,8 +1082,9 @@ exports.default = {
                     offer[id][v].forEach(function (o) {
                         var rate = Math.round(o.rate * 10000000) / 100000;
                         var showRate = Math.round(rate * 36500) / 100;
+                        var risk = o.risk === undefined ? '手動' : 'risk ' + o.risk;
                         itemList.push({
-                            name: '\u639B\u55AE ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' risk ' + o.risk,
+                            name: '\u639B\u55AE ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + (o.status ? o.status : '') + ' ' + risk,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
                             rate: rate + ' (' + showRate + '%)',
@@ -968,7 +1107,7 @@ exports.default = {
                         var rate = Math.round(o.rate * 10000000) / 100000;
                         var showRate = Math.round(rate * 36500) / 100;
                         itemList.push({
-                            name: '\u653E\u6B3E ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' ' + o.pair,
+                            name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' ' + o.pair,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate + ' (' + showRate + '%)',

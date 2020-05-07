@@ -68,6 +68,10 @@ const App = React.createClass({
                             case 'rank':
                             api(`/api/rank/single/${wsmsg.data}`).then(result => result.empty ? this.props.rankdel(wsmsg.data) : this.props.rankset(result.item)).catch(err => this.props.addalert(err))
                             break*/
+                            case 'bitfinex':
+                            const bituser = wsmsg.user ? `/${wsmsg.user}` : '';
+                            api(`${userInfo.main_url}/api/bitfinex/single/${this.props.bitSortName}/${this.props.bitSortType}/${wsmsg.data}${bituser}`).then(result => result.empty ? this.props.bitfinexdel(wsmsg.data) : (wsmsg.data === -1) ? this.props.bitfinexset(result.itemList, result.parentList, result.bookmarkID, result.latest, this.props.bitSortName, this.props.bitSortType) : this.props.bitfinexset(result.item)).catch(err => this.props.addalert(err))
+                            break
                             case 'sub':
                             this.props.sub.forEach(item => item())
                             break
@@ -140,6 +144,11 @@ const App = React.createClass({
             exactly: [],
             his: [],
         }, '', '', 'name', 'desc', '')*/
+        this.props.bitfinexset([], {
+            cur: [],
+            exactly: [],
+            his: [],
+        }, '', '', 'name', 'asc', '')
         this.props.dirsset([])
         this.props.resetmedia(2)
         this.props.resetmedia(3)

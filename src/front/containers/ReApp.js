@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush, setItem } from '../actions'
+import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush, bitfinexPush, bitfinexPop, setItem } from '../actions'
 import App from '../components/App'
 
 const mapStateToProps = state => ({
@@ -8,6 +8,8 @@ const mapStateToProps = state => ({
     pwCallback: state.glbPwHandle,
     cfCallback: state.glbCfHandle,
     media: state.itemDataHandle,
+    bitSortName: state.bitfinexDataHandle.item.sortName,
+    bitSortType: state.bitfinexDataHandle.item.sortType,
 })
 
 const mapDispatchToProps = dispatch => ({
@@ -29,6 +31,8 @@ const mapDispatchToProps = dispatch => ({
     //fitnessdel: id => dispatch(fitnessPop(id)),
     //rankset: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(rankPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
     //rankdel: id => dispatch(rankPop(id)),
+    bitfinexset: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(bitfinexPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
+    bitfinexdel: id => dispatch(bitfinexPop(id)),
     closeglbpw: () => dispatch(closeGlbPw()),
     resetmedia: type => dispatch(setItem(null, null, null, null, type)),
 })
