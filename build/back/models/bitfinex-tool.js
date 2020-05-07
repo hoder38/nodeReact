@@ -705,6 +705,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         period: DR > 0 && finalNew[index].rate >= DR ? 30 : 2,
                         type: 'LIMIT'
                     }, userRest);
+                    console.log(finalNew[index].amount);
+                    console.log(keep_available);
+                    console.log(available[id]);
                     return {
                         v: fo.submit().then(function () {
                             return new _promise2.default(function (resolve, reject) {

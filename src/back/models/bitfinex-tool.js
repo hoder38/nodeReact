@@ -587,6 +587,9 @@ export const setWsOffer = (id, curArr=[]) => {
                     period: (DR > 0 && finalNew[index].rate >= DR) ? 30 : 2,
                     type: 'LIMIT',
                 }, userRest);
+                console.log(finalNew[index].amount);
+                console.log(keep_available);
+                console.log(available[id]);
                 return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => {
                     let isExist = false;
                     for (let i = 0; i < offer[id][current.type].length; i++) {
