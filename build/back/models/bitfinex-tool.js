@@ -569,7 +569,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         console.log('manual');
                         return false;
                     }
-                    if (keep_available > 0 && v.amount < current.amountLimit * 1.2) {
+                    if (keep_available > 1 && v.amount < current.amountLimit * 1.2) {
+                        console.log(keep_available);
+                        console.log(v.amount);
                         var sum = keep_available + v.amount;
                         if (sum <= current.amountLimit * 1.2) {
                             keep_available = 0;
@@ -578,6 +580,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             keep_available = sum - current.amountLimit * 1.2;
                             v.amount = current.amountLimit * 1.2;
                         }
+                        console.log(keep_available);
+                        console.log(v.amount);
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id, retain: true });
                     } else if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
@@ -592,12 +596,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 });
             }
             needDelete.forEach(function (v) {
-                var risk = v.risk;
-                if (!v.retain) {
-                    risk = v.risk > 1 ? v.risk - 1 : 0;
-                    while (checkRisk(risk, needRetain, needNew)) {
-                        risk--;
-                    }
+                var risk = v.retain ? v.risk : v.risk > 1 ? v.risk - 1 : 0;
+                while (checkRisk(risk, needRetain, needNew)) {
+                    risk--;
                 }
                 needNew.push({
                     risk: risk,

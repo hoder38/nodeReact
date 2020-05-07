@@ -462,7 +462,9 @@ export const setWsOffer = (id, curArr=[]) => {
                         console.log('manual');
                         return false;
                     }
-                    if (keep_available > 0 && v.amount < (current.amountLimit * 1.2)) {
+                    if (keep_available > 1 && v.amount < (current.amountLimit * 1.2)) {
+                        console.log(keep_available);
+                        console.log(v.amount);
                         const sum = keep_available + v.amount;
                         if (sum <= (current.amountLimit * 1.2)) {
                             keep_available = 0;
@@ -471,6 +473,8 @@ export const setWsOffer = (id, curArr=[]) => {
                             keep_available = sum - (current.amountLimit * 1.2);
                             v.amount = current.amountLimit * 1.2;
                         }
+                        console.log(keep_available);
+                        console.log(v.amount);
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id, retain: true});
                     } else if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
@@ -485,12 +489,9 @@ export const setWsOffer = (id, curArr=[]) => {
                 });
             }
             needDelete.forEach(v => {
-                let risk = v.risk;
-                if (!v.retain) {
-                    risk = (v.risk > 1) ? v.risk - 1 : 0;
-                    while (checkRisk(risk, needRetain, needNew)) {
-                        risk--;
-                    }
+                let risk = v.retain ? v.risk : (v.risk > 1) ? (v.risk - 1) : 0;
+                while (checkRisk(risk, needRetain, needNew)) {
+                    risk--;
                 }
                 needNew.push({
                     risk,
