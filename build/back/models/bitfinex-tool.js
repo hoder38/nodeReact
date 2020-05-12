@@ -558,7 +558,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     extremRate[id][current.type].high++;
                     extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : extremRate[id][current.type].low - 1;
-                    if (extremRate[id][current.type].high >= 10) {
+                    if (extremRate[id][current.type].high >= 15) {
                         (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too high!!!', 0, 0, true);
                         extremRate[id][current.type].high = 0;
                     }
@@ -572,7 +572,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : extremRate[id][current.type].high - 1;
                     extremRate[id][current.type].low++;
-                    if (extremRate[id][current.type].low >= 10) {
+                    if (extremRate[id][current.type].low >= 15) {
                         (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too low!!!', 0, 0, true);
                         extremRate[id][current.type].low = 0;
                     }
@@ -620,7 +620,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         console.log('manual');
                         return false;
                     }
-                    if (keep_available > 1 && v.amount < current.amountLimit * 1.2) {
+                    if (keep_available > 1 && v.amount < current.amountLimit) {
                         console.log(keep_available);
                         console.log(v.amount);
                         var sum = keep_available + v.amount;

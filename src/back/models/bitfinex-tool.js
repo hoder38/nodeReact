@@ -451,7 +451,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 } else {
                     extremRate[id][current.type].high++;
                     extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : (extremRate[id][current.type].low - 1);
-                    if (extremRate[id][current.type].high >= 10) {
+                    if (extremRate[id][current.type].high >= 15) {
                         sendWs(`${id} ${current.type.substr(1)} rate too high!!!` , 0, 0, true);
                         extremRate[id][current.type].high = 0;
                     }
@@ -465,7 +465,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 } else {
                     extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
                     extremRate[id][current.type].low++;
-                    if (extremRate[id][current.type].low >= 10) {
+                    if (extremRate[id][current.type].low >= 15) {
                         sendWs(`${id} ${current.type.substr(1)} rate too low!!!` , 0, 0, true);
                         extremRate[id][current.type].low = 0;
                     }
@@ -513,7 +513,7 @@ export const setWsOffer = (id, curArr=[]) => {
                         console.log('manual');
                         return false;
                     }
-                    if (keep_available > 1 && v.amount < (current.amountLimit * 1.2)) {
+                    if (keep_available > 1 && v.amount < current.amountLimit) {
                         console.log(keep_available);
                         console.log(v.amount);
                         const sum = keep_available + v.amount;
