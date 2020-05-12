@@ -244,7 +244,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferNew({ symbol: t }, fo => {
-                //console.log(`${t} offer new`);
+                console.log(`${t} ${id} offer new`);
                 if (!offer[id]) {
                     offer[id] = {};
                 }
@@ -273,7 +273,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferClose({ symbol: t }, fo => {
-                //console.log(`${t} offer close`);
+                console.log(`${t} ${id} offer close`);
                 if (!offer[id]) {
                     offer[id] = {};
                 }
@@ -626,7 +626,7 @@ export const setWsOffer = (id, curArr=[]) => {
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
+        const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
         const submitOffer = index => {
             if (index >= finalNew.length) {
                 if ((finalNew.length + needDelete.length) > 0) {
@@ -650,7 +650,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 console.log(finalNew[index].amount);
                 console.log(keep_available);
                 console.log(available[id]);
-                return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => {
+                return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
                     let isExist = false;
                     for (let i = 0; i < offer[id][current.type].length; i++) {
                         if (fo.id === offer[id][current.type][i].id) {

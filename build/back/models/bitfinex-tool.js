@@ -305,7 +305,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferNew({ symbol: t }, function (fo) {
-                //console.log(`${t} offer new`);
+                console.log(t + ' ' + id + ' offer new');
                 if (!offer[id]) {
                     offer[id] = {};
                 }
@@ -334,7 +334,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 //console.log(offer[id][t].length);
             });
             userWs[id].onFundingOfferClose({ symbol: t }, function (fo) {
-                //console.log(`${t} offer close`);
+                console.log(t + ' ' + id + ' offer close');
                 if (!offer[id]) {
                     offer[id] = {};
                 }
@@ -738,7 +738,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 return new _promise2.default(function (resolve, reject) {
                     return setTimeout(function () {
                         return resolve();
-                    }, 1000);
+                    }, 3000);
                 }).then(function () {
                     return cancelOffer(index + 1);
                 });
@@ -773,7 +773,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             return new _promise2.default(function (resolve, reject) {
                                 return setTimeout(function () {
                                     return resolve();
-                                }, 1000);
+                                }, 3000);
                             }).then(function () {
                                 var isExist = false;
                                 for (var _i8 = 0; _i8 < offer[id][current.type].length; _i8++) {
