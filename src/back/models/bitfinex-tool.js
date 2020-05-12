@@ -625,8 +625,7 @@ export const setWsOffer = (id, curArr=[]) => {
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        //const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
-        const cancelOffer = () => Promise.resolve();
+        const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
         const submitOffer = index => {
             if (index >= finalNew.length) {
                 if ((finalNew.length + needDelete.length) > 0) {

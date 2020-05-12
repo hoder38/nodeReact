@@ -732,9 +732,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        //const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
-        var cancelOffer = function cancelOffer() {
-            return _promise2.default.resolve();
+        var cancelOffer = function cancelOffer(index) {
+            return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
+                return new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 1000);
+                }).then(function () {
+                    return cancelOffer(index + 1);
+                });
+            });
         };
         var submitOffer = function submitOffer(index) {
             if (index >= finalNew.length) {
