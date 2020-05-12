@@ -146,7 +146,8 @@ var calRate = exports.calRate = function calRate(curArr) {
                                     if (v[3] > 0) {
                                         if (rate.length === 0) {
                                             rate.push(v[0] * _constants.BITFINEX_EXP);
-                                        } else if (rate.length > 9) {
+                                        }
+                                        if (rate.length > 9) {
                                             rate[10] = v[0] * _constants.BITFINEX_EXP;
                                         } else {
                                             vol = vol + v[3];
@@ -179,11 +180,11 @@ var calRate = exports.calRate = function calRate(curArr) {
                             var tenthRate = calTenthRate(hl, weight);
                             maxRange[curType] = tenthRate[1] - tenthRate[9];
                             finalRate[curType] = tenthRate.map(function (v, k) {
-                                return v > OBRate[k] ? v - 1 : OBRate[k] - 1;
+                                return v > OBRate[k] || !OBRate[k] ? v - 1 : OBRate[k] - 1;
                             });
                             console.log(curType + ' RATE: ' + finalRate[curType]);
-                            //console.log(OBRate);
-                            //console.log(tenthRate);
+                            console.log(OBRate);
+                            console.log(tenthRate);
                             //console.log(currentRate[curType]);
                             //console.log(maxRange[curType]);
                         });
