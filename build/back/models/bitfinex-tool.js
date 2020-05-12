@@ -54,8 +54,8 @@ var currentRate = {};
 
 var extremRate = {};
 
-var btcDailyChange = 0;
-var ethDailyChange = 0;
+var btcData = null;
+var ethData = null;
 
 var available = {};
 var offer = {};
@@ -70,12 +70,18 @@ var ledger = {};
 var calRate = exports.calRate = function calRate(curArr) {
     return rest.ticker(_constants.TBTC_SYM).then(function (btcTicker) {
         return rest.ticker(_constants.TETH_SYM).then(function (ethTicker) {
-            btcDailyChange = btcTicker.dailyChangePerc * 100;
-            ethDailyChange = ethTicker.dailyChangePerc * 100;
-            //console.log(btcDailyChange);
-            //console.log(ethDailyChange);
-            if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
-                (0, _sendWs2.default)('Bitfinex Daily Change: ' + btcDailyChange + ' ' + ethDailyChange, 0, 0, true);
+            btcData = {
+                dailyChange: btcTicker.dailyChangePerc * 100,
+                lastPrice: btcTicker.lastPrice,
+                time: Math.round(new Date().getTime() / 1000)
+            };
+            ethData = {
+                dailyChange: ethTicker.dailyChangePerc * 100,
+                lastPrice: ethTicker.lastPrice,
+                time: Math.round(new Date().getTime() / 1000)
+            };
+            if (btcData.dailyChange < _constants.COIN_MAX || ethData.dailyChange < _constants.COIN_MAX) {
+                (0, _sendWs2.default)('Bitfinex Daily Change: ' + btcData.dailyChange + ' ' + ethData.dailyChange, 0, 0, true);
             }
             var singleCal = function singleCal(curType, index) {
                 return rest.ticker(curType).then(function (curTicker) {
@@ -84,10 +90,6 @@ var calRate = exports.calRate = function calRate(curArr) {
                             rate: curTicker.lastPrice * _constants.BITFINEX_EXP,
                             time: Math.round(new Date().getTime() / 1000)
                         };
-                        (0, _sendWs2.default)({
-                            type: 'bitfinex',
-                            data: index
-                        });
                         var hl = [];
                         var weight = [];
                         return rest.candles({ symbol: curType, timeframe: '1m', period: 'p2', query: { limit: 1440 } }).then(function (entries) {
@@ -130,30 +132,32 @@ var calRate = exports.calRate = function calRate(curArr) {
                             hl.push(calHL(320, 640, hl[6].high, hl[6].low, hl[6].vol));
                             hl.push(calHL(640, 1280, hl[7].high, hl[7].low, hl[7].vol));
                             hl.push(calHL(1280, 2560, hl[8].high, hl[8].low, hl[8].vol));
-                            var calOBRate = function calOBRate(hl, orderBooks) {
+                            var calOBRate = function calOBRate(orderBooks) {
+                                var volsum = 0;
                                 var vol = 0;
-                                var i = 0;
-                                var rate = [];
                                 var j = 0;
+                                var rate = [];
                                 orderBooks.forEach(function (v) {
                                     if (v[3] > 0) {
-                                        vol = vol + v[3];
-                                        if (i < hl.length && vol > hl[i].vol) {
-                                            rate.push(v[0] * _constants.BITFINEX_EXP);
-                                            i++;
-                                        } else if (j === 0) {
-                                            rate.push(v[0] * _constants.BITFINEX_EXP);
-                                        } else if (j === 99) {
-                                            rate.push(v[0] * _constants.BITFINEX_EXP);
-                                        }
-                                        j++;
+                                        volsum = volsum + v[3];
                                     }
                                 });
-                                rate.reverse();
-                                while (rate.length < 11) {
-                                    rate.push(rate[rate.length - 1]);
-                                }
-                                return rate;
+                                orderBooks.forEach(function (v) {
+                                    if (v[3] > 0) {
+                                        if (rate.length === 0) {
+                                            rate.push(v[0] * _constants.BITFINEX_EXP);
+                                        } else if (rate.length > 9) {
+                                            rate[10] = v[0] * _constants.BITFINEX_EXP;
+                                        } else {
+                                            vol = vol + v[3];
+                                            while (vol >= volsum / 100 * _constants.DISTRIBUTION[j] && j < 9) {
+                                                rate.push(v[0] * _constants.BITFINEX_EXP);
+                                                j++;
+                                            }
+                                        }
+                                    }
+                                });
+                                return rate.reverse();
                             };
                             var calTenthRate = function calTenthRate(hl, weight) {
                                 var rate = [hl[9].low];
@@ -162,7 +166,7 @@ var calRate = exports.calRate = function calRate(curArr) {
                                 weight.forEach(function (v, k) {
                                     if (weight[k]) {
                                         i = i + weight[k];
-                                        while (i > hl[9].vol / 100 * _constants.DISTRIBUTION[j] && j < 9) {
+                                        while (i >= hl[9].vol / 100 * _constants.DISTRIBUTION[j] && j < 9) {
                                             rate.push(k * 100);
                                             j++;
                                         }
@@ -171,7 +175,7 @@ var calRate = exports.calRate = function calRate(curArr) {
                                 rate.push(hl[9].high);
                                 return rate.reverse();
                             };
-                            var OBRate = calOBRate(hl, orderBooks);
+                            var OBRate = calOBRate(orderBooks);
                             var tenthRate = calTenthRate(hl, weight);
                             maxRange[curType] = tenthRate[1] - tenthRate[9];
                             finalRate[curType] = tenthRate.map(function (v, k) {
@@ -187,7 +191,10 @@ var calRate = exports.calRate = function calRate(curArr) {
                 });
             };
             var recurType = function recurType(index) {
-                return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_COIN.indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
+                return index >= curArr.length ? _promise2.default.resolve((0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: 0
+                })) : _constants.SUPPORT_COIN.indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
                     return recurType(index + 1);
                 }) : recurType(index + 1);
             };
@@ -503,12 +510,45 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         var finalNew = [];
         var needDelete = [];
         var MR = current.miniRate > 0 ? current.miniRate / 36500 * _constants.BITFINEX_EXP : 0;
-        var DR = current.dynamic > 0 ? current.dynamic / 36500 * _constants.BITFINEX_EXP : 0;
-        var extremRateCheck = function extremRateCheck() {
+        var DR = [];
+        var pushDR = function pushDR(rate, day) {
+            if (rate > 0) {
+                var DRT = {
+                    rate: rate / 36500 * _constants.BITFINEX_EXP,
+                    day: day,
+                    speed: (58 - day) / 56
+                };
+                for (var _i3 = DR.length; _i3 >= 0; _i3--) {
+                    if (_i3 === 0 || DRT.rate < DR[_i3 - 1].rate) {
+                        DR.splice(_i3, 0, DRT);
+                        break;
+                    }
+                }
+            }
+        };
+        var getDR = function getDR(rate) {
+            if (DR.length === 0) {
+                return false;
+            }
+            for (var _i4 = 0; _i4 < DR.length; _i4++) {
+                if (rate >= DR[_i4].rate) {
+                    return DR[_i4];
+                }
+            }
+            return false;
+        };
+        pushDR(current.dynamic, 30);
+        pushDR(current.dynamicRate1, current.dynamicDay1);
+        pushDR(current.dynamicRate2, current.dynamicDay2);
+        //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
+        var extremRateCheck = function extremRateCheck(auUser) {
+            if (id !== auUser) {
+                return false;
+            }
             if (!extremRate[id]) {
                 extremRate[id] = {};
             }
-            if (DR > 0 && currentRate[current.type].rate > DR) {
+            if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
                 if (!extremRate[id][current.type]) {
                     extremRate[id][current.type] = {
                         high: 1,
@@ -516,8 +556,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 } else {
                     extremRate[id][current.type].high++;
-                    extremRate[id][current.type].low = 0;
-                    if (extremRate[id][current.type].high >= 15) {
+                    extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : extremRate[id][current.type].low - 1;
+                    if (extremRate[id][current.type].high >= 10) {
                         (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too high!!!', 0, 0, true);
                         extremRate[id][current.type].high = 0;
                     }
@@ -529,18 +569,23 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         low: 1
                     };
                 } else {
-                    extremRate[id][current.type].high = 0;
+                    extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : extremRate[id][current.type].high - 1;
                     extremRate[id][current.type].low++;
-                    if (extremRate[id][current.type].low >= 15) {
+                    if (extremRate[id][current.type].low >= 10) {
                         (0, _sendWs2.default)(id + ' ' + current.type.substr(1) + ' rate too low!!!', 0, 0, true);
                         extremRate[id][current.type].low = 0;
                     }
                 }
             } else {
-                extremRate[id][current.type] = {
-                    high: 0,
-                    low: 0
-                };
+                if (!extremRate[id][current.type]) {
+                    extremRate[id][current.type] = {
+                        high: 0,
+                        low: 0
+                    };
+                } else {
+                    extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : extremRate[id][current.type].high - 1;
+                    extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : extremRate[id][current.type].low - 1;
+                }
             }
         };
         // adjust offer & history
@@ -548,12 +593,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         var calKeepCash = function calKeepCash(avail) {
             var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
             if (current.isKeep) {
-                if (btcDailyChange < _constants.COIN_MAX || ethDailyChange < _constants.COIN_MAX) {
-                    var dailyChange = btcDailyChange < ethDailyChange ? btcDailyChange : ethDailyChange;
+                if (btcData.dailyChange < _constants.COIN_MAX || ethData.dailyChange < _constants.COIN_MAX) {
+                    var dailyChange = btcData.dailyChange < ethData.dailyChange ? btcData.dailyChange : ethData.dailyChange;
                     kp = kp * (50 - (_constants.COIN_MAX - dailyChange) / (_constants.COIN_MAX - _constants.COIN_MAX_MAX) * 50) / 100;
                 }
             }
-            return current.keepAmount ? kp - current.keepAmount : kp;
+            if (current.keepAmountRate1 > 0 && currentRate[current.type].rate > current.keepAmountRate1 / 36500 * _constants.BITFINEX_EXP) {
+                return kp - current.keepAmountMoney1;
+            } else {
+                return current.keepAmount ? kp - current.keepAmount : kp;
+            }
         };
         var keep_available = calKeepCash(available[id]);
         var adjustOffer = function adjustOffer() {
@@ -578,8 +627,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             keep_available = 0;
                             newAmount = sum;
                         } else {
-                            keep_available = sum - current.amountLimit * 1.2;
-                            newAmount = current.amountLimit * 1.2;
+                            keep_available = sum - current.amountLimit;
+                            newAmount = current.amountLimit;
                         }
                         console.log(keep_available);
                         console.log(newAmount);
@@ -587,7 +636,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     } else if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                         needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                     } else {
-                        var waitTime = DR > 0 && v.rate >= DR / _constants.BITFINEX_EXP ? current.waitTime / 2 : current.waitTime;
+                        var DRT = getDR(v.rate * _constants.BITFINEX_EXP);
+                        console.log(DRT);
+                        var waitTime = DRT === false ? current.waitTime : DRT.speed * current.waitTime;
                         if (Math.round(new Date().getTime() / 1000) - v.time >= waitTime * 60) {
                             needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                         } else {
@@ -618,11 +669,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 risk = _constants.RISK_MAX;
             }
             var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
-            for (var _i3 = 0; _i3 < newLength; _i3++) {
+            for (var _i5 = 0; _i5 < newLength; _i5++) {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
+                    break;
+                }
+                if (risk < 0) {
                     break;
                 }
                 var amount = current.amountLimit;
@@ -635,7 +689,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     rate: current.miniRate > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
                 });
                 keep_available = keep_available - amount;
-                risk = risk < 1 ? 0 : risk - 1;
+                //risk = risk < 1 ? 0 : risk-1;
+                risk--;
             }
             //console.log('needNew');
             //console.log(needNew);
@@ -643,9 +698,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         //merge new & delete
         var mergeOffer = function mergeOffer() {
             var checkDelete = function checkDelete(rate, amount) {
-                for (var _i4 = 0; _i4 < needDelete.length; _i4++) {
-                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i4].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i4].amount) {
-                        return _i4;
+                for (var _i6 = 0; _i6 < needDelete.length; _i6++) {
+                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i6].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i6].amount) {
+                        return _i6;
                     }
                 }
                 return -1;
@@ -653,10 +708,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             needNew.forEach(function (v) {
                 var notDelete = checkDelete(v.rate, v.amount);
                 if (notDelete !== -1) {
-                    for (var _i5 = 0; _i5 < offer[id][current.type].length; _i5++) {
-                        if (needDelete[notDelete].id === offer[id][current.type][_i5].id) {
-                            offer[id][current.type][_i5].time = Math.round(new Date().getTime() / 1000);
-                            offer[id][current.type][_i5].risk = v.risk;
+                    for (var _i7 = 0; _i7 < offer[id][current.type].length; _i7++) {
+                        if (needDelete[notDelete].id === offer[id][current.type][_i7].id) {
+                            offer[id][current.type][_i7].time = Math.round(new Date().getTime() / 1000);
+                            offer[id][current.type][_i7].risk = v.risk;
                             break;
                         }
                     }
@@ -672,20 +727,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             //console.log('final');
             //console.log(finalNew);
         };
-        extremRateCheck();
+        extremRateCheck('hoder');
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        var cancelOffer = function cancelOffer(index) {
-            return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
-                return new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve();
-                    }, 1000);
-                }).then(function () {
-                    return cancelOffer(index + 1);
-                });
-            });
+        //const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
+        var cancelOffer = function cancelOffer() {
+            return _promise2.default.resolve();
         };
         var submitOffer = function submitOffer(index) {
             if (index >= finalNew.length) {
@@ -699,11 +747,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 return _promise2.default.resolve();
             } else {
                 var _ret = function () {
+                    var DRT = getDR(finalNew[index].rate);
+                    console.log(DRT);
                     var fo = new _bfxApiNodeModels.FundingOffer({
                         symbol: current.type,
                         amount: finalNew[index].amount,
                         rate: finalNew[index].rate / _constants.BITFINEX_EXP,
-                        period: DR > 0 && finalNew[index].rate >= DR ? 30 : 2,
+                        period: DRT === false ? 2 : DRT.day,
                         type: 'LIMIT'
                     }, userRest);
                     console.log(finalNew[index].amount);
@@ -717,9 +767,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 }, 1000);
                             }).then(function () {
                                 var isExist = false;
-                                for (var _i6 = 0; _i6 < offer[id][current.type].length; _i6++) {
-                                    if (fo.id === offer[id][current.type][_i6].id) {
-                                        offer[id][current.type][_i6].risk = finalNew[index].risk;
+                                for (var _i8 = 0; _i8 < offer[id][current.type].length; _i8++) {
+                                    if (fo.id === offer[id][current.type][_i8].id) {
+                                        offer[id][current.type][_i8].risk = finalNew[index].risk;
                                         //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
                                         isExist = true;
                                         break;
@@ -890,7 +940,7 @@ exports.default = {
         if (set.keepAmount) {
             var keepAmount = (0, _utility.isValidString)(set.keepAmount, 'zeroint');
             if (keepAmount === false) {
-                return (0, _utility.handleError)(new _utility.HoError('API secret is not valid'));
+                return (0, _utility.handleError)(new _utility.HoError('Keep Amount is not valid'));
             }
             data['keepAmount'] = keepAmount;
         }
@@ -899,6 +949,49 @@ exports.default = {
         }
         if (set.hasOwnProperty('active')) {
             data['isActive'] = set.active;
+        }
+        if (set.keepAmountRate1) {
+            var keepAmountRate1 = (0, _utility.isValidString)(set.keepAmountRate1, 'zeroint');
+            if (keepAmountRate1 === false) {
+                return (0, _utility.handleError)(new _utility.HoError('Keep Amount 1 is not valid'));
+            }
+            if (keepAmountRate1 > 0 && set.keepAmountMoney1) {
+                var keepAmountMoney1 = (0, _utility.isValidString)(set.keepAmountMoney1, 'zeroint');
+                if (keepAmountMoney1 === false) {
+                    return (0, _utility.handleError)(new _utility.HoError('Keep Amount 1 is not valid'));
+                }
+                data['keepAmountRate1'] = keepAmountRate1;
+                data['keepAmountMoney1'] = keepAmountMoney1;
+            }
+        }
+        //dynamic1 > dynamic2 做排序?
+        if (set.dynamicRate1) {
+            var dynamicRate1 = (0, _utility.isValidString)(set.dynamicRate1, 'zeroint');
+            if (dynamicRate1 === false) {
+                return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 1 is not valid'));
+            }
+            if (dynamicRate1 > 0 && set.dynamicDay1) {
+                var dynamicDay1 = (0, _utility.isValidString)(set.dynamicDay1, 'zeroint');
+                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 30) {
+                    return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 1 is not valid'));
+                }
+                data['dynamicRate1'] = dynamicRate1;
+                data['dynamicDay1'] = Math.floor(dynamicDay1);
+            }
+        }
+        if (set.dynamicRate2) {
+            var dynamicRate2 = (0, _utility.isValidString)(set.dynamicRate2, 'zeroint');
+            if (dynamicRate2 === false) {
+                return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 2 is not valid'));
+            }
+            if (dynamicRate2 > 0 && set.dynamicDay2) {
+                var dynamicDay2 = (0, _utility.isValidString)(set.dynamicDay2, 'zeroint');
+                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 30) {
+                    return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 2 is not valid'));
+                }
+                data['dynamicRate2'] = dynamicRate2;
+                data['dynamicDay2'] = Math.floor(dynamicDay2);
+            }
         }
         data['type'] = set.type;
         return (0, _mongoTool2.default)('find', _constants.USERDB, { _id: id }, { limit: 1 }).then(function (items) {
@@ -968,6 +1061,7 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError('page is not valid'));
         }
         var itemList = [];
+        var rateList = [];
         if (!session['bitfinex']) {
             session['bitfinex'] = 'all';
         }
@@ -1041,41 +1135,52 @@ exports.default = {
             }
         }
         if (type === 0 || type === 2) {
-            for (var _i7 = 0; _i7 < _constants.SUPPORT_COIN.length; _i7++) {
-                var _v = _constants.SUPPORT_COIN[_i7];
+            var tempList = uid === 0 ? rateList : itemList;
+            for (var _i9 = 0; _i9 < _constants.SUPPORT_COIN.length; _i9++) {
+                var _v = _constants.SUPPORT_COIN[_i9];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
                 if (currentRate[_v]) {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     var showRate = Math.round(rate * 36500) / 100;
-                    if (uid === _i7) {
-                        return {
-                            item: [{
-                                name: _v.substr(1) + ' Rate',
-                                id: _i7,
-                                tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
-                                rate: rate + ' (' + showRate + '%)',
-                                count: rate,
-                                utime: currentRate[_v].time,
-                                type: 1
-                            }]
-                        };
-                    } else {
-                        itemList.push({
-                            name: _v.substr(1) + ' Rate',
-                            id: _i7,
-                            tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
-                            rate: rate + ' (' + showRate + '%)',
-                            count: rate,
-                            utime: currentRate[_v].time,
-                            type: 1
-                        });
-                    }
+                    tempList.push({
+                        name: _v.substr(1) + ' Rate',
+                        id: _i9,
+                        tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
+                        rate: rate + ' (' + showRate + '%)',
+                        count: rate,
+                        utime: currentRate[_v].time,
+                        type: 1
+                    });
                 }
             }
+            if (btcData) {
+                tempList.push({
+                    name: 'Bitcoin $' + Math.floor(btcData.lastPrice * 100) / 100,
+                    id: _constants.SUPPORT_COIN.length,
+                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
+                    rate: Math.floor(btcData.dailyChange * 100) / 100 + '%',
+                    count: btcData.dilyChange,
+                    utime: btcData.time,
+                    type: 1
+                });
+            }
+            if (ethData) {
+                tempList.push({
+                    name: 'Ethereum $' + Math.floor(ethData.lastPrice * 100) / 100,
+                    id: _constants.SUPPORT_COIN.length + 1,
+                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
+                    rate: Math.floor(ethData.dailyChange * 100) / 100 + '%',
+                    count: ethData.dailyChange,
+                    utime: ethData.time,
+                    type: 1
+                });
+            }
         }
-        if (uid >= 0) {
+        if (uid === 0) {
+            return { item: rateList };
+        } else if (uid > 0) {
             return { empty: true };
         }
         if (type === 0 || type === 3) {

@@ -17,8 +17,8 @@ let currentRate = {};
 
 let extremRate = {};
 
-let btcDailyChange = 0;
-let ethDailyChange = 0;
+let btcData = null;
+let ethData = null;
 
 let available = {};
 let offer = {};
@@ -31,22 +31,24 @@ let ledger = {};
 //5m candle x
 
 export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ticker(TETH_SYM).then(ethTicker => {
-    btcDailyChange = btcTicker.dailyChangePerc * 100;
-    ethDailyChange = ethTicker.dailyChangePerc * 100;
-    //console.log(btcDailyChange);
-    //console.log(ethDailyChange);
-    if (btcDailyChange < COIN_MAX || ethDailyChange < COIN_MAX) {
-        sendWs(`Bitfinex Daily Change: ${btcDailyChange} ${ethDailyChange}` , 0, 0, true);
+    btcData = {
+        dailyChange: btcTicker.dailyChangePerc * 100,
+        lastPrice: btcTicker.lastPrice,
+        time: Math.round(new Date().getTime() / 1000),
+    }
+    ethData = {
+        dailyChange: ethTicker.dailyChangePerc * 100,
+        lastPrice: ethTicker.lastPrice,
+        time: Math.round(new Date().getTime() / 1000),
+    }
+    if (btcData.dailyChange < COIN_MAX || ethData.dailyChange < COIN_MAX) {
+        sendWs(`Bitfinex Daily Change: ${btcData.dailyChange} ${ethData.dailyChange}` , 0, 0, true);
     }
     const singleCal = (curType, index) => rest.ticker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
         currentRate[curType] = {
             rate: curTicker.lastPrice * BITFINEX_EXP,
             time: Math.round(new Date().getTime() / 1000),
         };
-        sendWs({
-            type: 'bitfinex',
-            data: index,
-        });
         const hl = [];
         const weight = [];
         return rest.candles({symbol: curType, timeframe: '1m', period: 'p2', query: {limit: 1440}}).then(entries => {
@@ -85,30 +87,32 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
             hl.push(calHL(320, 640, hl[6].high, hl[6].low, hl[6].vol));
             hl.push(calHL(640, 1280, hl[7].high, hl[7].low, hl[7].vol));
             hl.push(calHL(1280, 2560, hl[8].high, hl[8].low, hl[8].vol));
-            const calOBRate = (hl, orderBooks) => {
+            const calOBRate = orderBooks => {
+                let volsum = 0;
                 let vol = 0;
-                let i = 0;
-                const rate = [];
                 let j = 0;
+                const rate = [];
                 orderBooks.forEach(v => {
                     if(v[3] > 0) {
-                        vol = vol + v[3];
-                        if (i < hl.length && vol > hl[i].vol) {
-                            rate.push(v[0] * BITFINEX_EXP);
-                            i++;
-                        } else if (j === 0) {
-                            rate.push(v[0] * BITFINEX_EXP);
-                        } else if (j === 99) {
-                            rate.push(v[0] * BITFINEX_EXP);
-                        }
-                        j++;
+                        volsum = volsum + v[3];
                     }
                 });
-                rate.reverse();
-                while (rate.length < 11) {
-                    rate.push(rate[rate.length - 1]);
-                }
-                return rate;
+                orderBooks.forEach(v => {
+                    if(v[3] > 0) {
+                        if (rate.length === 0) {
+                            rate.push(v[0] * BITFINEX_EXP);
+                        } else if (rate.length > 9) {
+                            rate[10] = v[0] * BITFINEX_EXP;
+                        } else {
+                            vol = vol + v[3];
+                            while (vol >= (volsum / 100 * DISTRIBUTION[j]) && j < 9) {
+                                rate.push(v[0] * BITFINEX_EXP);
+                                j++;
+                            }
+                        }
+                    }
+                });
+                return rate.reverse();
             }
             const calTenthRate = (hl, weight) => {
                 const rate = [hl[9].low];
@@ -117,7 +121,7 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
                 weight.forEach((v, k) => {
                     if (weight[k]) {
                         i = i + weight[k];
-                        while (i > (hl[9].vol / 100 * DISTRIBUTION[j]) && j < 9) {
+                        while (i >= (hl[9].vol / 100 * DISTRIBUTION[j]) && j < 9) {
                             rate.push(k * 100);
                             j++;
                         }
@@ -126,7 +130,7 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
                 rate.push(hl[9].high);
                 return rate.reverse();
             }
-            const OBRate = calOBRate(hl, orderBooks);
+            const OBRate = calOBRate(orderBooks);
             const tenthRate = calTenthRate(hl, weight);
             maxRange[curType] = tenthRate[1] - tenthRate[9];
             finalRate[curType] = tenthRate.map((v, k) => (v > OBRate[k]) ? (v - 1) : (OBRate[k] - 1));
@@ -137,7 +141,10 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
             //console.log(maxRange[curType]);
         });
     }));
-    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
+    const recurType = index => (index >= curArr.length) ? Promise.resolve(sendWs({
+            type: 'bitfinex',
+            data: 0,
+        })) : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
     return recurType(0);
 }));
 
@@ -396,12 +403,45 @@ export const setWsOffer = (id, curArr=[]) => {
         const finalNew = [];
         const needDelete = [];
         const MR = (current.miniRate > 0) ? current.miniRate/36500*BITFINEX_EXP : 0;
-        const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
-        const extremRateCheck = () => {
+        const DR = [];
+        const pushDR = (rate, day) => {
+            if (rate > 0) {
+                const DRT = {
+                    rate: rate/36500*BITFINEX_EXP,
+                    day: day,
+                    speed: (58 - day) / 56,
+                };
+                for (let i = DR.length; i >= 0; i--) {
+                    if (i === 0 || DRT.rate < DR[i - 1].rate) {
+                        DR.splice(i, 0, DRT);
+                        break;
+                    }
+                }
+            }
+        }
+        const getDR = rate => {
+            if (DR.length === 0) {
+                return false;
+            }
+            for (let i = 0; i < DR.length; i++) {
+                if (rate >= DR[i].rate) {
+                    return DR[i];
+                }
+            }
+            return false;
+        }
+        pushDR(current.dynamic, 30);
+        pushDR(current.dynamicRate1, current.dynamicDay1);
+        pushDR(current.dynamicRate2, current.dynamicDay2);
+        //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
+        const extremRateCheck = (auUser) => {
+            if (id !== auUser) {
+                return false;
+            }
             if (!extremRate[id]) {
                 extremRate[id] = {}
             }
-            if (DR > 0 && currentRate[current.type].rate > DR) {
+            if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
                 if (!extremRate[id][current.type]) {
                     extremRate[id][current.type] = {
                         high: 1,
@@ -409,8 +449,8 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 } else {
                     extremRate[id][current.type].high++;
-                    extremRate[id][current.type].low = 0;
-                    if (extremRate[id][current.type].high >= 15) {
+                    extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : (extremRate[id][current.type].low - 1);
+                    if (extremRate[id][current.type].high >= 10) {
                         sendWs(`${id} ${current.type.substr(1)} rate too high!!!` , 0, 0, true);
                         extremRate[id][current.type].high = 0;
                     }
@@ -422,17 +462,22 @@ export const setWsOffer = (id, curArr=[]) => {
                         low: 1,
                     }
                 } else {
-                    extremRate[id][current.type].high = 0;
+                    extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
                     extremRate[id][current.type].low++;
-                    if (extremRate[id][current.type].low >= 15) {
+                    if (extremRate[id][current.type].low >= 10) {
                         sendWs(`${id} ${current.type.substr(1)} rate too low!!!` , 0, 0, true);
                         extremRate[id][current.type].low = 0;
                     }
                 }
             } else {
-                extremRate[id][current.type] = {
-                    high: 0,
-                    low: 0,
+                if (!extremRate[id][current.type]) {
+                    extremRate[id][current.type] = {
+                        high: 0,
+                        low: 0,
+                    }
+                } else {
+                    extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
+                    extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : (extremRate[id][current.type].low - 1);
                 }
             }
         }
@@ -441,12 +486,16 @@ export const setWsOffer = (id, curArr=[]) => {
         const calKeepCash = avail => {
             let kp = avail ? (avail[current.type] ? avail[current.type].avail : 0) : 0;
             if (current.isKeep) {
-                if (btcDailyChange < COIN_MAX || ethDailyChange < COIN_MAX) {
-                    const dailyChange = (btcDailyChange < ethDailyChange) ? btcDailyChange : ethDailyChange;
+                if (btcData.dailyChange < COIN_MAX || ethData.dailyChange < COIN_MAX) {
+                    const dailyChange = (btcData.dailyChange < ethData.dailyChange) ? btcData.dailyChange : ethData.dailyChange;
                     kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
             }
-            return current.keepAmount ? kp - current.keepAmount : kp;
+            if (current.keepAmountRate1 > 0 && currentRate[current.type].rate > (current.keepAmountRate1 / 36500 * BITFINEX_EXP)) {
+                return kp - current.keepAmountMoney1;
+            } else {
+                return current.keepAmount ? kp - current.keepAmount : kp;
+            }
         }
         let keep_available = calKeepCash(available[id]);
         const adjustOffer = () => {
@@ -471,8 +520,8 @@ export const setWsOffer = (id, curArr=[]) => {
                             keep_available = 0;
                             newAmount = sum;
                         } else {
-                            keep_available = sum - (current.amountLimit * 1.2);
-                            newAmount = current.amountLimit * 1.2;
+                            keep_available = sum - current.amountLimit;
+                            newAmount = current.amountLimit;
                         }
                         console.log(keep_available);
                         console.log(newAmount);
@@ -480,7 +529,9 @@ export const setWsOffer = (id, curArr=[]) => {
                     } else if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                         needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                     } else {
-                        const waitTime = (DR > 0 && v.rate >= (DR / BITFINEX_EXP)) ? current.waitTime / 2 : current.waitTime;
+                        const DRT = getDR(v.rate * BITFINEX_EXP);
+                        console.log(DRT);
+                        const waitTime = (DRT === false) ? current.waitTime : (DRT.speed * current.waitTime);
                         if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                         } else {
@@ -518,6 +569,9 @@ export const setWsOffer = (id, curArr=[]) => {
                 if (finalRate[current.type].length <= 0 || keep_available < 50) {
                     break;
                 }
+                if (risk < 0) {
+                    break;
+                }
                 let amount = current.amountLimit;
                 if (keep_available <= current.amountLimit * 1.2) {
                     amount = keep_available;
@@ -528,7 +582,8 @@ export const setWsOffer = (id, curArr=[]) => {
                     rate: (current.miniRate > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
                 });
                 keep_available = keep_available - amount;
-                risk = risk < 1 ? 0 : risk-1;
+                //risk = risk < 1 ? 0 : risk-1;
+                risk--;
             }
             //console.log('needNew');
             //console.log(needNew);
@@ -565,11 +620,12 @@ export const setWsOffer = (id, curArr=[]) => {
             //console.log('final');
             //console.log(finalNew);
         }
-        extremRateCheck();
+        extremRateCheck('hoder');
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
-        const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
+        //const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 1000)).then(() => cancelOffer(index + 1)));
+        const cancelOffer = () => Promise.resolve();
         const submitOffer = index => {
             if (index >= finalNew.length) {
                 if ((finalNew.length + needDelete.length) > 0) {
@@ -581,11 +637,13 @@ export const setWsOffer = (id, curArr=[]) => {
                 }
                 return Promise.resolve();
             } else {
+                const DRT = getDR(finalNew[index].rate);
+                console.log(DRT);
                 const fo = new FundingOffer({
                     symbol: current.type,
                     amount: finalNew[index].amount,
                     rate: finalNew[index].rate / BITFINEX_EXP,
-                    period: (DR > 0 && finalNew[index].rate >= DR) ? 30 : 2,
+                    period: (DRT === false) ? 2 : DRT.day,
                     type: 'LIMIT',
                 }, userRest);
                 console.log(finalNew[index].amount);
@@ -729,7 +787,7 @@ export default {
         if (set.keepAmount) {
             const keepAmount = isValidString(set.keepAmount, 'zeroint');
             if (keepAmount === false) {
-                return handleError(new HoError('API secret is not valid'));
+                return handleError(new HoError('Keep Amount is not valid'));
             }
             data['keepAmount'] = keepAmount;
         }
@@ -738,6 +796,49 @@ export default {
         }
         if (set.hasOwnProperty('active')) {
             data['isActive'] = set.active;
+        }
+        if (set.keepAmountRate1) {
+            const keepAmountRate1 = isValidString(set.keepAmountRate1, 'zeroint');
+            if (keepAmountRate1 === false) {
+                return handleError(new HoError('Keep Amount 1 is not valid'));
+            }
+            if (keepAmountRate1 > 0 && set.keepAmountMoney1) {
+                const keepAmountMoney1 = isValidString(set.keepAmountMoney1, 'zeroint');
+                if (keepAmountMoney1 === false) {
+                    return handleError(new HoError('Keep Amount 1 is not valid'));
+                }
+                data['keepAmountRate1'] = keepAmountRate1;
+                data['keepAmountMoney1'] = keepAmountMoney1;
+            }
+        }
+        //dynamic1 > dynamic2 做排序?
+        if (set.dynamicRate1) {
+            const dynamicRate1 = isValidString(set.dynamicRate1, 'zeroint');
+            if (dynamicRate1 === false) {
+                return handleError(new HoError('Dynamic Rate 1 is not valid'));
+            }
+            if (dynamicRate1 > 0 && set.dynamicDay1) {
+                const dynamicDay1 = isValidString(set.dynamicDay1, 'zeroint');
+                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 30) {
+                    return handleError(new HoError('Dynamic Rate 1 is not valid'));
+                }
+                data['dynamicRate1'] = dynamicRate1;
+                data['dynamicDay1'] = Math.floor(dynamicDay1);
+            }
+        }
+        if (set.dynamicRate2) {
+            const dynamicRate2 = isValidString(set.dynamicRate2, 'zeroint');
+            if (dynamicRate2 === false) {
+                return handleError(new HoError('Dynamic Rate 2 is not valid'));
+            }
+            if (dynamicRate2 > 0 && set.dynamicDay2) {
+                const dynamicDay2 = isValidString(set.dynamicDay2, 'zeroint');
+                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 30) {
+                    return handleError(new HoError('Dynamic Rate 2 is not valid'));
+                }
+                data['dynamicRate2'] = dynamicRate2;
+                data['dynamicDay2'] = Math.floor(dynamicDay2);
+            }
         }
         data['type'] = set.type;
         return Mongo('find', USERDB, {_id: id}, {limit: 1}).then(items => {
@@ -797,6 +898,7 @@ export default {
             return handleError(new HoError('page is not valid'));
         }
         const itemList = [];
+        const rateList = [];
         if (!session['bitfinex']) {
             session['bitfinex'] = 'all';
         }
@@ -872,6 +974,7 @@ export default {
             }
         }
         if (type === 0 || type === 2) {
+            const tempList = (uid === 0) ? rateList : itemList;
             for (let i = 0; i < SUPPORT_COIN.length; i++) {
                 const v = SUPPORT_COIN[i];
                 if (coin !== 'all' && coin !== v) {
@@ -880,35 +983,43 @@ export default {
                 if (currentRate[v]) {
                     const rate = Math.round(currentRate[v].rate / 10) / 100000;
                     const showRate = Math.round(rate * 36500) / 100;
-                    if (uid === i) {
-                        return {
-                            item: [
-                                {
-                                    name: `${v.substr(1)} Rate`,
-                                    id: i,
-                                    tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
-                                    rate: `${rate} (${showRate}%)`,
-                                    count: rate,
-                                    utime: currentRate[v].time,
-                                    type: 1,
-                                }
-                            ],
-                        }
-                    } else {
-                        itemList.push({
-                            name: `${v.substr(1)} Rate`,
-                            id: i,
-                            tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
-                            rate: `${rate} (${showRate}%)`,
-                            count: rate,
-                            utime: currentRate[v].time,
-                            type: 1,
-                        })
-                    }
+                    tempList.push({
+                        name: `${v.substr(1)} Rate`,
+                        id: i,
+                        tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
+                        rate: `${rate} (${showRate}%)`,
+                        count: rate,
+                        utime: currentRate[v].time,
+                        type: 1,
+                    });
                 }
             }
+            if (btcData) {
+                tempList.push({
+                    name: `Bitcoin $${Math.floor(btcData.lastPrice * 100) / 100}`,
+                    id: SUPPORT_COIN.length,
+                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
+                    rate: `${Math.floor(btcData.dailyChange * 100) / 100}%`,
+                    count: btcData.dilyChange,
+                    utime: btcData.time,
+                    type: 1,
+                })
+            }
+            if (ethData) {
+                tempList.push({
+                    name: `Ethereum $${Math.floor(ethData.lastPrice * 100) / 100}`,
+                    id: SUPPORT_COIN.length + 1,
+                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
+                    rate: `${Math.floor(ethData.dailyChange * 100) / 100}%`,
+                    count: ethData.dailyChange,
+                    utime: ethData.time,
+                    type: 1,
+                })
+            }
         }
-        if (uid >= 0) {
+        if (uid === 0) {
+            return {item: rateList};
+        } else if (uid > 0) {
             return {empty: true};
         }
         if (type === 0 || type === 3) {

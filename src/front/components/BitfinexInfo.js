@@ -6,14 +6,16 @@ import { FILE_ZINDEX } from '../constants'
 
 const BitfinexInfo = React.createClass({
     getInitialState: function() {
-        this._input = new UserInput.Input(['key', 'secret', 'amountLimit', 'riskLimit', 'waitTime', 'miniRate', 'keepAmount', 'dynamic'], this._handleSubmit, this._handleChange);
+        this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2'], this._handleSubmit, this._handleChange);
         this._keep = null;
         this._active = null;
+        this._advanced = null;
         return Object.assign({
             list: [],
             current: -1,
             keep: false,
             active: false,
+            advanced: false,
         }, this._input.initValue());
     },
     componentWillMount: function() {
@@ -32,6 +34,12 @@ const BitfinexInfo = React.createClass({
             checkInput('miniRate', this.state, this.props.addalert, item.miniRate, 'zeroint'),
             checkInput('dynamic', this.state, this.props.addalert, item.dynamic, 'zeroint'),
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
+            checkInput('keepAmountRate1', this.state, this.props.addalert, item.keepAmountRate1, 'zeroint'),
+            checkInput('keepAmountMoney1', this.state, this.props.addalert, item.keepAmountMoney1, 'zeroint'),
+            checkInput('dynamicRate1', this.state, this.props.addalert, item.dynamicRate1, 'zeroint'),
+            checkInput('dynamicDay1', this.state, this.props.addalert, item.dynamicDay1, 'zeroint'),
+            checkInput('dynamicRate2', this.state, this.props.addalert, item.dynamicRate2, 'zeroint'),
+            checkInput('dynamicDay2', this.state, this.props.addalert, item.dynamicDay2, 'zeroint'),
             keep, active);
         if (Object.keys(set_obj).length > 0) {
             this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot`, Object.assign({}, set_obj, {type: item.type}), 'PUT').then(result => {
@@ -44,6 +52,7 @@ const BitfinexInfo = React.createClass({
         this.setState(Object.assign({}, this.state, this._input.getValue(), {
             keep: this._keep.checked,
             active: this._active.checked,
+            advanced: this._advanced.checked,
         }));
     },
     _setList: function(list, type=null) {
@@ -65,6 +74,7 @@ const BitfinexInfo = React.createClass({
             current,
             keep: item.isKeep,
             active: item.isActive,
+            advanced: (item.keepAmountRate1 || item.dynamicRate1 || item.dynamicRate2) ? true: false,
         }, this._input.initValue(item)));
     },
     _delBot: function() {
@@ -72,6 +82,7 @@ const BitfinexInfo = React.createClass({
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot/del/${type}`).then(result => this._setList(result, type)).catch(err => this.props.addalert(err)), `Would you sure to delete ${this.state.list[this.state.current].type.substr(1)} Bot?`);
     },
     render: function() {
+        const advancedDisplay = this.state.advanced ? {} : {display: 'none'};
         const list = this.state.list.map((v, i) => {
             const active = (this.state.current === i) ? 'btn-lg' : '';
             const item = this.state.list[i];
@@ -80,6 +91,7 @@ const BitfinexInfo = React.createClass({
                     current: i,
                     keep: item.isKeep,
                     active: item.isActive,
+                    advanced: (item.keepAmountRate1 || item.dynamicRate1 || item.dynamicRate2) ? true: false,
                 }, this._input.initValue(item))))}>
                     {v.type.substr(1)}
                 </button>
@@ -164,7 +176,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('miniRate')}
                                         placeholder="5">
                                         <tr>
-                                            <td key={0}><Tooltip tip="掛出最小利率" place="right" />Mini Rate:</td>
+                                            <td key={0}><Tooltip tip="掛出最小年利率" place="right" />Mini Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -173,7 +185,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('dynamic')}
                                         placeholder="20">
                                         <tr>
-                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此利率日期變30天，金額上限兩倍，時間間隔減半" place="right" />Boost Rate:</td>
+                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此年利率日期變30天，時間間隔減半" place="right" />Boost Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -206,6 +218,62 @@ const BitfinexInfo = React.createClass({
                                                 checked={this.state.active}
                                                 ref={ref => this._active = ref}
                                                 onChange={this._handleChange} />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Advanced Settings:</td>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                className="form-control"
+                                                checked={this.state.advanced}
+                                                ref={ref => this._advanced = ref}
+                                                onChange={this._handleChange} />
+                                        </td>
+                                    </tr>
+                                    <tr style={advancedDisplay}>
+                                        <td>Reserved Amount 1:</td>
+                                        <td>
+                                            <div className="input-group double-input" style={{display: 'block'}}>
+                                                <UserInput
+                                                    val={this.state.keepAmountRate1}
+                                                    getinput={this._input.getInput('keepAmountRate1')}
+                                                    placeholder="Rate" />
+                                                <UserInput
+                                                    val={this.state.keepAmountMoney1}
+                                                    getinput={this._input.getInput('keepAmountMoney1')}
+                                                    placeholder="Money" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr style={advancedDisplay}>
+                                        <td>Boost Rate 1:</td>
+                                        <td>
+                                            <div className="input-group double-input" style={{display: 'block'}}>
+                                                <UserInput
+                                                    val={this.state.dynamicRate1}
+                                                    getinput={this._input.getInput('dynamicRate1')}
+                                                    placeholder="Rate" />
+                                                <UserInput
+                                                    val={this.state.dynamicDay1}
+                                                    getinput={this._input.getInput('dynamicDay1')}
+                                                    placeholder="Day" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr style={advancedDisplay}>
+                                        <td>Boost Rate 2:</td>
+                                        <td>
+                                            <div className="input-group double-input" style={{display: 'block'}}>
+                                                <UserInput
+                                                    val={this.state.dynamicRate2}
+                                                    getinput={this._input.getInput('dynamicRate2')}
+                                                    placeholder="Rate" />
+                                                <UserInput
+                                                    val={this.state.dynamicDay2}
+                                                    getinput={this._input.getInput('dynamicDay2')}
+                                                    placeholder="Day" />
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
