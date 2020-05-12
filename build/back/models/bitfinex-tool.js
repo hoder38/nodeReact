@@ -605,6 +605,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         };
         var keep_available = calKeepCash(available[id]);
+        console.log(keep_available);
         var adjustOffer = function adjustOffer() {
             console.log(id + ' ' + current.type);
             if (!offer[id]) {
@@ -720,12 +721,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     finalNew.push(v);
                 }
             });
-            //console.log('retain');
-            //console.log(needRetain);
-            //console.log('delete');
-            //console.log(needDelete);
-            //console.log('final');
-            //console.log(finalNew);
+            console.log('retain');
+            console.log(needRetain);
+            console.log('delete');
+            console.log(needDelete);
+            console.log('final');
+            console.log(finalNew);
         };
         extremRateCheck('hoder');
         adjustOffer();

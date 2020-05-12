@@ -498,6 +498,7 @@ export const setWsOffer = (id, curArr=[]) => {
             }
         }
         let keep_available = calKeepCash(available[id]);
+        console.log(keep_available);
         const adjustOffer = () => {
             console.log(`${id} ${current.type}`);
             if (!offer[id]) {
@@ -613,12 +614,12 @@ export const setWsOffer = (id, curArr=[]) => {
                     finalNew.push(v);
                 }
             });
-            //console.log('retain');
-            //console.log(needRetain);
-            //console.log('delete');
-            //console.log(needDelete);
-            //console.log('final');
-            //console.log(finalNew);
+            console.log('retain');
+            console.log(needRetain);
+            console.log('delete');
+            console.log(needDelete);
+            console.log('final');
+            console.log(finalNew);
         }
         extremRateCheck('hoder');
         adjustOffer();
