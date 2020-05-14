@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
@@ -403,12 +403,14 @@ export const setWsOffer = (id, curArr=[]) => {
         const needRetain = [];
         const finalNew = [];
         const needDelete = [];
-        const MR = (current.miniRate > 0) ? current.miniRate/36500*BITFINEX_EXP : 0;
+        console.log(currentRate[current.type].rate);
+        const MR = (current.miniRate > 0) ? current.miniRate / 100 * BITFINEX_EXP : 0;
+        console.log(MR);
         const DR = [];
         const pushDR = (rate, day) => {
-            if (rate > 0) {
+            if (rate > 0 && day >= 2 && day <= 30) {
                 const DRT = {
-                    rate: rate/36500*BITFINEX_EXP,
+                    rate: rate / 100 * BITFINEX_EXP,
                     day: day,
                     speed: (58 - day) / 56,
                 };
@@ -492,7 +494,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
             }
-            if (current.keepAmountRate1 > 0 && currentRate[current.type].rate > (current.keepAmountRate1 / 36500 * BITFINEX_EXP)) {
+            if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < (current.keepAmountRate1 / 100 * BITFINEX_EXP)) {
                 return kp - current.keepAmountMoney1;
             } else {
                 return current.keepAmount ? kp - current.keepAmount : kp;
@@ -550,7 +552,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 needNew.push({
                     risk,
                     amount: v.newAmount ? v.newAmount : v.amount,
-                    rate: (current.miniRate > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                    rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
                 })
             });
             //console.log('needdelete');
@@ -581,7 +583,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 needNew.push({
                     risk,
                     amount,
-                    rate: (current.miniRate > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                    rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
                 });
                 keep_available = keep_available - amount;
                 //risk = risk < 1 ? 0 : risk-1;
@@ -812,7 +814,6 @@ export default {
                 data['keepAmountMoney1'] = keepAmountMoney1;
             }
         }
-        //dynamic1 > dynamic2 做排序?
         if (set.dynamicRate1) {
             const dynamicRate1 = isValidString(set.dynamicRate1, 'zeroint');
             if (dynamicRate1 === false) {
@@ -918,6 +919,14 @@ export default {
             case 'UST':
             coin = FUSDT_SYM;
             break;
+            case 'eth':
+            case 'ETH':
+            coin = FETH_SYM;
+            break;
+            case 'btc':
+            case 'BTC':
+            coin = FBTC_SYM;
+            break;
             case 'wallet':
             case '錢包':
             type = 1;
@@ -988,7 +997,7 @@ export default {
                         name: `${v.substr(1)} Rate`,
                         id: i,
                         tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
-                        rate: `${rate} (${showRate}%)`,
+                        rate: `${rate}%`,
                         count: rate,
                         utime: currentRate[v].time,
                         type: 1,
@@ -1034,10 +1043,10 @@ export default {
                         const showRate = Math.round(rate * 36500) / 100;
                         const risk = o.risk === undefined ? '手動' : `risk ${o.risk}`;
                         itemList.push({
-                            name: `掛單 ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.status ? o.status : ''} ${risk}`,
+                            name: `掛單 ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${risk}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
-                            rate: `${rate} (${showRate}%)`,
+                            rate: `${rate}%`,
                             boost: (o.period === 30) ? true : false,
                             count: rate,
                             utime: o.time,
@@ -1057,10 +1066,10 @@ export default {
                         const rate = Math.round(o.rate * 10000000) / 100000;
                         const showRate = Math.round(rate * 36500) / 100;
                         itemList.push({
-                            name: `${(o.side === 1) ? '放款' : '借款'} ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.status} ${o.pair}`,
+                            name: `${(o.side === 1) ? '放款' : '借款'} ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.pair}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
-                            rate: `${rate} (${showRate}%)`,
+                            rate: `${rate}%`,
                             count: rate,
                             boost: (o.period === 30) ? true : false,
                             utime: o.time + o.period * 86400,
@@ -1083,7 +1092,7 @@ export default {
                             name: `利息收入 ${v.substr(1)} $${o.amount}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
-                            rate: `${rate} (${showRate}%)`,
+                            rate: `${rate}%`,
                             count: rate,
                             utime: o.time,
                             type: 4,

@@ -2157,7 +2157,7 @@ exports.default = {
                                     console.log(driveName);
                                     return {
                                         v: mkFolder((0, _path.dirname)(filePath)).then(function () {
-                                            return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                            return (0, _apiTool2.default)('url', encodeURI(url), { filePath: filePath }).then(function () {
                                                 return (0, _apiToolGoogle2.default)('upload', {
                                                     type: 'auto',
                                                     name: driveName,
@@ -2187,7 +2187,7 @@ exports.default = {
                                         console.log(driveName);
                                         return {
                                             v: mkFolder((0, _path.dirname)(filePath)).then(function () {
-                                                return (0, _apiTool2.default)('url', url, { filePath: filePath }).then(function () {
+                                                return (0, _apiTool2.default)('url', encodeURI(url), { filePath: filePath }).then(function () {
                                                     return (0, _apiToolGoogle2.default)('upload', {
                                                         type: 'auto',
                                                         name: driveName,

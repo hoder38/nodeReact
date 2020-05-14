@@ -25,6 +25,39 @@ const BitfinexInfo = React.createClass({
         const item = this.state.list[this.state.current];
         const keep = this.state.keep !== item.isKeep ? {keep: this.state.keep} : {};
         const active = this.state.active !== item.isActive ? {active: this.state.active} : {}
+        let ka1 = {};
+        let dr1 = {};
+        let dr2 = {};
+        if (this.state['keepAmountRate1'].toString() !== item.keepAmountRate1.toString() || this.state['keepAmountMoney1'].toString() !== item.keepAmountMoney1.toString()) {
+            if (isValidString(this.state['keepAmountRate1'], 'zeroint') && isValidString(this.state['keepAmountMoney1'], 'zeroint')) {
+                ka1 = {
+                    keepAmountRate1: this.state['keepAmountRate1'],
+                    keepAmountMoney1: this.state['keepAmountMoney1'],
+                }
+            } else {
+                this.props.addalert('Reserved Amount 1 not vaild!!!')
+            }
+        }
+        if (this.state['dynamicRate1'].toString() !== item.dynamicRate1.toString() || this.state['dynamicDay1'].toString() !== item.dynamicDay1.toString()) {
+            if (isValidString(this.state['dynamicRate1'], 'zeroint') && isValidString(this.state['dynamicDay1'], 'zeroint')) {
+                dr1 = {
+                    dynamicRate1: this.state['dynamicRate1'],
+                    dynamicDay1: this.state['dynamicDay1'],
+                }
+            } else {
+                this.props.addalert('Boost Rate 1 not vaild!!!')
+            }
+        }
+        if (this.state['dynamicRate2'].toString() !== item.dynamicRate2.toString() || this.state['dynamicDay2'].toString() !== item.dynamicDay2.toString()) {
+            if (isValidString(this.state['dynamicRate2'], 'zeroint') && isValidString(this.state['dynamicDay2'], 'zeroint')) {
+                dr2 = {
+                    dynamicRate2: this.state['dynamicRate2'],
+                    dynamicDay2: this.state['dynamicDay2'],
+                }
+            } else {
+                this.props.addalert('Boost Rate 2 not vaild!!!')
+            }
+        }
         const set_obj = Object.assign({},
             checkInput('key', this.state, this.props.addalert, item.key, 'name'),
             checkInput('secret', this.state, this.props.addalert, item.secret, 'name'),
@@ -34,13 +67,7 @@ const BitfinexInfo = React.createClass({
             checkInput('miniRate', this.state, this.props.addalert, item.miniRate, 'zeroint'),
             checkInput('dynamic', this.state, this.props.addalert, item.dynamic, 'zeroint'),
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
-            checkInput('keepAmountRate1', this.state, this.props.addalert, item.keepAmountRate1, 'zeroint'),
-            checkInput('keepAmountMoney1', this.state, this.props.addalert, item.keepAmountMoney1, 'zeroint'),
-            checkInput('dynamicRate1', this.state, this.props.addalert, item.dynamicRate1, 'zeroint'),
-            checkInput('dynamicDay1', this.state, this.props.addalert, item.dynamicDay1, 'zeroint'),
-            checkInput('dynamicRate2', this.state, this.props.addalert, item.dynamicRate2, 'zeroint'),
-            checkInput('dynamicDay2', this.state, this.props.addalert, item.dynamicDay2, 'zeroint'),
-            keep, active);
+            ka1, dr1, dr2, keep, active);
         if (Object.keys(set_obj).length > 0) {
             this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot`, Object.assign({}, set_obj, {type: item.type}), 'PUT').then(result => {
                 this._setList(result, item.type);
@@ -111,13 +138,18 @@ const BitfinexInfo = React.createClass({
                     </div>
                     <form onSubmit={e => killEvent(e, this._handleSubmit)}>
                         <div className="panel-body">
-                            <button className="btn btn-success" type="submit">
-                                <i className="glyphicon glyphicon-ok"></i>
-                            </button>
-                            <button className="btn btn-danger" type="button" onClick={e => killEvent(e, this._delBot)}>
-                                <i className="glyphicon glyphicon-remove"></i>
-                            </button>
-                            {list}
+                            <div>設定網址：
+                                <span><a href="https://www.bitfinex.com/api#createkey" className="item-point" target="_blank">https://www.bitfinex.com/api#createkey</a></span> & <a className="item-point" href="/public/bitfinex_api_setting.png" target="_blank">權限設定</a>
+                            </div>
+                            <div>
+                                <button className="btn btn-success" type="submit">
+                                    <i className="glyphicon glyphicon-ok"></i>
+                                </button>
+                                <button className="btn btn-danger" type="button" onClick={e => killEvent(e, this._delBot)}>
+                                    <i className="glyphicon glyphicon-remove"></i>
+                                </button>
+                                {list}
+                            </div>
                         </div>
                         <div className="panel-footer"  style={{
                             overflowY: 'scroll',
@@ -176,7 +208,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('miniRate')}
                                         placeholder="5">
                                         <tr>
-                                            <td key={0}><Tooltip tip="掛出最小年利率" place="right" />Mini Rate:</td>
+                                            <td key={0}><Tooltip tip="掛出最小利率" place="right" />Mini Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>
@@ -185,7 +217,7 @@ const BitfinexInfo = React.createClass({
                                         getinput={this._input.getInput('dynamic')}
                                         placeholder="20">
                                         <tr>
-                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此年利率日期變30天，時間間隔減半" place="right" />Boost Rate:</td>
+                                            <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此利率日期變30天，時間間隔減半" place="right" />Boost Rate:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>

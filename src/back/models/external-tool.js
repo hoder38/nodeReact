@@ -1533,7 +1533,7 @@ export default {
                         const url = addPre(findTag(findTag(findTag(findTag(p, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
-                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                        return mkFolder(PathDirname(filePath)).then(() => Api('url', encodeURI(url), {filePath}).then(() => GoogleApi('upload', {
                             type: 'auto',
                             name: driveName,
                             filePath,
@@ -1549,7 +1549,7 @@ export default {
                             const url = a ? addPre(a.attribs.href, 'https://www.mof.gov.tw') : addPre(findTag(findTag(findTag(findTag(sp, 'span')[0], 'strong')[0], 'span')[0], 'a')[0].attribs.href, 'https://www.mof.gov.tw');
                             driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                             console.log(driveName);
-                            return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                            return mkFolder(PathDirname(filePath)).then(() => Api('url', encodeURI(url), {filePath}).then(() => GoogleApi('upload', {
                                 type: 'auto',
                                 name: driveName,
                                 filePath,

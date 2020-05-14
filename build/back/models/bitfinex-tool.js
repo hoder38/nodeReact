@@ -510,12 +510,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         var needRetain = [];
         var finalNew = [];
         var needDelete = [];
-        var MR = current.miniRate > 0 ? current.miniRate / 36500 * _constants.BITFINEX_EXP : 0;
+        console.log(currentRate[current.type].rate);
+        var MR = current.miniRate > 0 ? current.miniRate / 100 * _constants.BITFINEX_EXP : 0;
+        console.log(MR);
         var DR = [];
         var pushDR = function pushDR(rate, day) {
-            if (rate > 0) {
+            if (rate > 0 && day >= 2 && day <= 30) {
                 var DRT = {
-                    rate: rate / 36500 * _constants.BITFINEX_EXP,
+                    rate: rate / 100 * _constants.BITFINEX_EXP,
                     day: day,
                     speed: (58 - day) / 56
                 };
@@ -599,7 +601,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     kp = kp * (50 - (_constants.COIN_MAX - dailyChange) / (_constants.COIN_MAX - _constants.COIN_MAX_MAX) * 50) / 100;
                 }
             }
-            if (current.keepAmountRate1 > 0 && currentRate[current.type].rate > current.keepAmountRate1 / 36500 * _constants.BITFINEX_EXP) {
+            if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < current.keepAmountRate1 / 100 * _constants.BITFINEX_EXP) {
                 return kp - current.keepAmountMoney1;
             } else {
                 return current.keepAmount ? kp - current.keepAmount : kp;
@@ -657,7 +659,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 needNew.push({
                     risk: risk,
                     amount: v.newAmount ? v.newAmount : v.amount,
-                    rate: current.miniRate > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
+                    rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
                 });
             });
             //console.log('needdelete');
@@ -688,7 +690,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 needNew.push({
                     risk: risk,
                     amount: amount,
-                    rate: current.miniRate > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
+                    rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
                 });
                 keep_available = keep_available - amount;
                 //risk = risk < 1 ? 0 : risk-1;
@@ -973,7 +975,6 @@ exports.default = {
                 data['keepAmountMoney1'] = keepAmountMoney1;
             }
         }
-        //dynamic1 > dynamic2 做排序?
         if (set.dynamicRate1) {
             var dynamicRate1 = (0, _utility.isValidString)(set.dynamicRate1, 'zeroint');
             if (dynamicRate1 === false) {
@@ -1089,6 +1090,14 @@ exports.default = {
             case 'UST':
                 coin = _constants.FUSDT_SYM;
                 break;
+            case 'eth':
+            case 'ETH':
+                coin = _constants.FETH_SYM;
+                break;
+            case 'btc':
+            case 'BTC':
+                coin = _constants.FBTC_SYM;
+                break;
             case 'wallet':
             case '錢包':
                 type = 1;
@@ -1157,7 +1166,7 @@ exports.default = {
                         name: _v.substr(1) + ' Rate',
                         id: _i9,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
-                        rate: rate + ' (' + showRate + '%)',
+                        rate: rate + '%',
                         count: rate,
                         utime: currentRate[_v].time,
                         type: 1
@@ -1203,10 +1212,10 @@ exports.default = {
                         var showRate = Math.round(rate * 36500) / 100;
                         var risk = o.risk === undefined ? '手動' : 'risk ' + o.risk;
                         itemList.push({
-                            name: '\u639B\u55AE ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + (o.status ? o.status : '') + ' ' + risk,
+                            name: '\u639B\u55AE ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + risk,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
-                            rate: rate + ' (' + showRate + '%)',
+                            rate: rate + '%',
                             boost: o.period === 30 ? true : false,
                             count: rate,
                             utime: o.time,
@@ -1226,10 +1235,10 @@ exports.default = {
                         var rate = Math.round(o.rate * 10000000) / 100000;
                         var showRate = Math.round(rate * 36500) / 100;
                         itemList.push({
-                            name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.status + ' ' + o.pair,
+                            name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.pair,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
-                            rate: rate + ' (' + showRate + '%)',
+                            rate: rate + '%',
                             count: rate,
                             boost: o.period === 30 ? true : false,
                             utime: o.time + o.period * 86400,
@@ -1252,7 +1261,7 @@ exports.default = {
                             name: '\u5229\u606F\u6536\u5165 ' + v.substr(1) + ' $' + o.amount,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
-                            rate: rate + ' (' + showRate + '%)',
+                            rate: rate + '%',
                             count: rate,
                             utime: o.time,
                             type: 4

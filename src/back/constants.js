@@ -826,6 +826,8 @@ export const BACKUP_COLLECTION = [
 export const BITFINEX = 'bitfinex'
 export const FUSD_SYM = 'fUSD'
 export const FUSDT_SYM = 'fUST'
+export const FBTC_SYM = 'fBTC'
+export const FETH_SYM = 'fETH'
 export const TBTC_SYM = 'tBTCUSD'
 export const TETH_SYM = 'tETHUSD';
 export const BITFINEX_EXP = 100000000;
@@ -835,7 +837,7 @@ export const RISK_MAX = 10;
 export const OFFER_MAX = 10;
 export const COIN_MAX = -30;
 export const COIN_MAX_MAX = -60;
-export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM];
+export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM];
 export const BITNIFEX_PARENT = [
     {
         name: 'all',
@@ -848,6 +850,14 @@ export const BITNIFEX_PARENT = [
     {
         name: 'ust',
         show: 'UST',
+    },
+    {
+        name: 'btc',
+        show: 'BTC',
+    },
+    {
+        name: 'eth',
+        show: 'ETH',
     },
     {
         name: 'wallet',
