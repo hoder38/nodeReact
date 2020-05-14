@@ -28,7 +28,7 @@ const BitfinexInfo = React.createClass({
         let ka1 = {};
         let dr1 = {};
         let dr2 = {};
-        if (this.state['keepAmountRate1'].toString() !== item.keepAmountRate1.toString() || this.state['keepAmountMoney1'].toString() !== item.keepAmountMoney1.toString()) {
+        if (item.keepAmountRate1 && item.keepAmountMoney1 && (this.state['keepAmountRate1'].toString() !== item.keepAmountRate1.toString() || this.state['keepAmountMoney1'].toString() !== item.keepAmountMoney1.toString())) {
             if (isValidString(this.state['keepAmountRate1'], 'zeroint') && isValidString(this.state['keepAmountMoney1'], 'zeroint')) {
                 ka1 = {
                     keepAmountRate1: this.state['keepAmountRate1'],
@@ -38,7 +38,7 @@ const BitfinexInfo = React.createClass({
                 this.props.addalert('Reserved Amount 1 not vaild!!!')
             }
         }
-        if (this.state['dynamicRate1'].toString() !== item.dynamicRate1.toString() || this.state['dynamicDay1'].toString() !== item.dynamicDay1.toString()) {
+        if (item.dynamicRate1 && item.dynamicDay1 && (this.state['dynamicRate1'].toString() !== item.dynamicRate1.toString() || this.state['dynamicDay1'].toString() !== item.dynamicDay1.toString())) {
             if (isValidString(this.state['dynamicRate1'], 'zeroint') && isValidString(this.state['dynamicDay1'], 'zeroint')) {
                 dr1 = {
                     dynamicRate1: this.state['dynamicRate1'],
@@ -48,7 +48,7 @@ const BitfinexInfo = React.createClass({
                 this.props.addalert('Boost Rate 1 not vaild!!!')
             }
         }
-        if (this.state['dynamicRate2'].toString() !== item.dynamicRate2.toString() || this.state['dynamicDay2'].toString() !== item.dynamicDay2.toString()) {
+        if (item.dynamicRate2 && item.dynamicDay2 && (this.state['dynamicRate2'].toString() !== item.dynamicRate2.toString() || this.state['dynamicDay2'].toString() !== item.dynamicDay2.toString())) {
             if (isValidString(this.state['dynamicRate2'], 'zeroint') && isValidString(this.state['dynamicDay2'], 'zeroint')) {
                 dr2 = {
                     dynamicRate2: this.state['dynamicRate2'],
