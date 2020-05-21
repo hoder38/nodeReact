@@ -279,9 +279,9 @@ var updateStock = exports.updateStock = function updateStock() {
                             var annualList = [];
                             var year = new Date().getFullYear();
                             items.forEach(function (i) {
-                                if (use_stock_list.indexOf(i.index) === -1) {
+                                /*if (use_stock_list.indexOf(i.index) === -1) {
                                     use_stock_list.push(i.index);
-                                }
+                                }*/
                                 if (annualList.indexOf(i.index) === -1) {
                                     annualList.push(i.index);
                                 }

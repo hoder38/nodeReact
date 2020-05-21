@@ -138,9 +138,9 @@ export const updateStock = () => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
-                    if (use_stock_list.indexOf(i.index) === -1) {
+                    /*if (use_stock_list.indexOf(i.index) === -1) {
                         use_stock_list.push(i.index);
-                    }
+                    }*/
                     if (annualList.indexOf(i.index) === -1) {
                         annualList.push(i.index);
                     }
