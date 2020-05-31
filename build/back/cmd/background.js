@@ -465,7 +465,7 @@ var rateCalculator = exports.rateCalculator = function rateCalculator() {
     if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
         var _ret9 = function () {
             var calR = function calR() {
-                return (0, _bitfinexTool.calRate)([_constants.FUSD_SYM, _constants.FUSDT_SYM, _constants.FBTC_SYM, _constants.FETH_SYM]).catch(function (err) {
+                return (0, _bitfinexTool.calRate)([_constants.FUSD_SYM, _constants.FUSDT_SYM, _constants.FBTC_SYM, _constants.FETH_SYM, _constants.FOMG_SYM]).catch(function (err) {
                     return bgError(err, 'Loop rate calculator');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
