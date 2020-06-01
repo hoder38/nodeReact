@@ -152,6 +152,9 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
 export const setWsOffer = (id, curArr=[]) => {
     //檢查跟設定active
     curArr = curArr.filter(v => (v.isActive && v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) ? true : false);
+    if (curArr.length < 1) {
+        return Promise.resolve();
+    }
     let userKey  = null;
     let userSecret = null;
     for (let i = 0; i < curArr.length; i++) {

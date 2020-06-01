@@ -211,6 +211,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     curArr = curArr.filter(function (v) {
         return v.isActive && v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0 ? true : false;
     });
+    if (curArr.length < 1) {
+        return _promise2.default.resolve();
+    }
     var userKey = null;
     var userSecret = null;
     for (var i = 0; i < curArr.length; i++) {
