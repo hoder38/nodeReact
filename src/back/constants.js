@@ -837,7 +837,10 @@ export const DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
 export const RISK_MAX = 10;
 export const OFFER_MAX = 10;
 export const COIN_MAX = -30;
+export const EXTREM_RATE_NUMBER = 15;
 export const COIN_MAX_MAX = -60;
+export const EXTREM_DURATION = 1800;
+export const UPDATE_BOOK = 21600;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const BITNIFEX_PARENT = [
     {
@@ -859,6 +862,10 @@ export const BITNIFEX_PARENT = [
     {
         name: 'eth',
         show: 'ETH',
+    },
+    {
+        name: 'omg',
+        show: 'OMG',
     },
     {
         name: 'wallet',

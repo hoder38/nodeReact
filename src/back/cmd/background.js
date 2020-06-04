@@ -6,7 +6,7 @@ import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../mode
 import MediaHandleTool from '../models/mediaHandle-tool'
 import { completeMimeTag } from '../models/tag-tool'
 import External from '../models/external-tool'
-import { calRate, setWsOffer } from '../models/bitfinex-tool'
+import { calRate, setWsOffer, resetBFX } from '../models/bitfinex-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
 import { dbDump } from './cmd'
@@ -225,7 +225,13 @@ export const rateCalculator = () => {
 export const setUserOffer = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex).then(() => checkUser(index + 1, userlist));
-        const setO = () => Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => bgError(err, 'Loop set offer'))).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+        const setO = () => Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
+            if ((err.message && err.message.includes('Maximum call stack size exceeded')) || (err.msg && err.msg.includes('Maximum call stack size exceeded'))) {
+                return resetBFX();
+            } else {
+                return bgError(err, 'Loop set offer')
+            }
+        })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 90000)).then(() => setO());
     }
 }

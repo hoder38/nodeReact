@@ -1,15 +1,16 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK } from '../constants'
 import BFX from 'bitfinex-api-node'
-import { FundingOffer } from 'bfx-api-node-models'
+import { FundingOffer, Order } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
 import { handleError, HoError, isValidString } from '../util/utility'
 import sendWs from '../util/sendWs'
 
 const bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
 const rest = bfx.rest(2, { transform: true });
-const userWs = {};
-const userOk = {};
+let userWs = {};
+let userOk = {};
+let updateTime = 0;
 
 let finalRate = {};
 let maxRange = {};
@@ -21,7 +22,9 @@ let btcData = null;
 let ethData = null;
 
 let available = {};
+let margin = {};
 let offer = {};
+let order = {};
 
 let credit = {};
 let ledger = {};
@@ -169,6 +172,22 @@ export const setWsOffer = (id, curArr=[]) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
+    const cancelOrder = (symbol, index, amount, time, type, is_close) => {
+        if (index >= order[id][symbol].length || is_close) {
+            return Promise.resolve();
+        } else {
+            console.log(amount);
+            console.log(time);
+            console.log(type);
+            console.log(order[id][symbol][index]);
+            console.log(is_close);
+            if (order[id][symbol][index].amount === amount && Math.abs(order[id][symbol][index].time - time) < 60 && order[id][symbol][index].type !== type && !is_close) {
+                return userRest.cancelOrder(order[id][symbol][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(symbol, index + 1, amount, time, type, true)));
+            } else {
+                return cancelOrder(symbol, index + 1, amount, time, type, is_close);
+            }
+        }
+    }
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         userWs[id] = userBfx.ws(2,{ transform: true });
@@ -183,88 +202,74 @@ export const setWsOffer = (id, curArr=[]) => {
         });
         userWs[id].onWalletUpdate ({}, wallet => {
             SUPPORT_COIN.forEach((t, i) => {
-                if (wallet.type === 'funding' && wallet.currency === t.substr(1)) {
-                    if (!available[id]) {
-                        available[id] = {}
+                if (wallet.currency === t.substr(1)) {
+                    if (wallet.type === 'funding') {
+                        if (!available[id]) {
+                            available[id] = {}
+                        }
+                        available[id][t] = {
+                            avail: wallet.balanceAvailable,
+                            time: Math.round(new Date().getTime() / 1000),
+                            total: wallet.balance,
+                        }
+                        sendWs({
+                            type: 'bitfinex',
+                            data: (i+1) * 10000,
+                            user: id,
+                        });
+                        //console.log('available');
+                        //console.log(available[id]);
+                    } else if (wallet.type === 'margin') {
+                        if (!margin[id]) {
+                            margin[id] = {}
+                        }
+                        margin[id][t] = {
+                            avail: wallet.balanceAvailable,
+                            time: Math.round(new Date().getTime() / 1000),
+                            total: wallet.balance,
+                        }
+                        //console.log('margin');
+                        //console.log(margin[id]);
                     }
-                    available[id][t] = {
-                        avail: wallet.balanceAvailable,
-                        time: Math.round(new Date().getTime() / 1000),
-                        total: wallet.balance,
-                    }
-                    sendWs({
-                        type: 'bitfinex',
-                        data: (i+1) * 10000,
-                        user: id,
-                    });
-                    //console.log('available');
-                    //console.log(available[id]);
                 }
             });
         });
-        SUPPORT_COIN.forEach(t => {
-            userWs[id].onFundingOfferSnapshot({ symbol: t }, fos => {
-                //console.log(`${t} offer`);
-                let risk = RISK_MAX;
-                const temp = [];
-                fos.forEach(v => {
-                    if (v.symbol === t) {
-                        temp.push({
-                            id: v.id,
-                            time: Math.round(v.mtsCreate / 1000),
-                            amount: v.amount,
-                            rate: v.rate,
-                            period: v.period,
-                            status: v.status,
-                            risk: risk > 0 ? risk-- : 0,
-                        });
-                    }
-                });
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
-                offer[id][t] = temp;
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-                //console.log(offer[id][t].length);
-            });
-            userWs[id].onFundingOfferUpdate({ symbol: t }, fo => {
-                //console.log(`${t} offer update`);
-                for (let j = 0; j < offer[id][t].length; j++) {
-                    if (offer[id][t][j].id === fo.id) {
-                        offer[id][t][j].id = fo.id;
-                        //offer[id][t][j].time = fo.mtsCreate;
-                        offer[id][t][j].amount = fo.amount;
-                        offer[id][t][j].rate = fo.rate;
-                        offer[id][t][j].period = fo.period;
-                        offer[id][t][j].status = fo.status;
+        userWs[id].onFundingOfferUpdate({ }, fo => {
+            //console.log(`${t} offer update`);
+            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
+                for (let j = 0; j < offer[id][fo.symbol].length; j++) {
+                    if (offer[id][fo.symbol][j].id === fo.id) {
+                        //offer[id][fo.symbol][j].time = fo.mtsCreate;
+                        offer[id][fo.symbol][j].amount = fo.amount;
+                        offer[id][fo.symbol][j].rate = fo.rate;
+                        offer[id][fo.symbol][j].period = fo.period;
+                        offer[id][fo.symbol][j].status = fo.status;
                         break;
                     }
                 }
-                //console.log(offer[id][t].length);
-            });
-            userWs[id].onFundingOfferNew({ symbol: t }, fo => {
-                console.log(`${t} ${id} offer new`);
+            }
+            //console.log(offer[id][t].length);
+        });
+        userWs[id].onFundingOfferNew({ }, fo => {
+            console.log(`${fo.symbol} ${id} offer new`);
+            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
                 if (!offer[id]) {
                     offer[id] = {};
                 }
-                if (!offer[id][t]) {
-                    offer[id][t] = [];
+                if (!offer[id][fo.symbol]) {
+                    offer[id][fo.symbol] = [];
                 }
                 let isExist = false;
-                for (let i = 0; i < offer[id][t].length; i++) {
-                    if (fo.id === offer[id][t][i].id) {
-                        offer[id][t][i].time = Math.round(fo.mtsCreate / 1000);
-                        offer[id][t][i].status = fo.status;
+                for (let i = 0; i < offer[id][fo.symbol].length; i++) {
+                    if (fo.id === offer[id][fo.symbol][i].id) {
+                        offer[id][fo.symbol][i].time = Math.round(fo.mtsCreate / 1000);
+                        offer[id][fo.symbol][i].status = fo.status;
                         isExist = true;
                         break;
                     }
                 }
                 if (!isExist) {
-                    offer[id][t].push({
+                    offer[id][fo.symbol].push({
                         id: fo.id,
                         time: Math.round(fo.mtsCreate / 1000),
                         amount: fo.amount,
@@ -273,77 +278,54 @@ export const setWsOffer = (id, curArr=[]) => {
                         status: fo.status,
                     });
                 }
-                //console.log(offer[id][t].length);
-            });
-            userWs[id].onFundingOfferClose({ symbol: t }, fo => {
-                console.log(`${t} ${id} offer close`);
+            }
+            //console.log(offer[id][t].length);
+        });
+        userWs[id].onFundingOfferClose({ }, fo => {
+            console.log(`${fo.symbol} ${id} offer close`);
+            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
                 if (!offer[id]) {
                     offer[id] = {};
                 }
-                if (offer[id][t]) {
-                    for (let j = 0; j < offer[id][t].length; j++) {
-                        if (offer[id][t][j].id === fo.id) {
-                            offer[id][t].splice(j, 1);
+                if (offer[id][fo.symbol]) {
+                    for (let j = 0; j < offer[id][fo.symbol].length; j++) {
+                        if (offer[id][fo.symbol][j].id === fo.id) {
+                            offer[id][fo.symbol].splice(j, 1);
                             break;
                         }
                     }
                     //console.log(offer[id][t].length);
                 }
-            });
-            userWs[id].onFundingCreditSnapshot({ symbol: t }, fcs => {
-                //console.log(`${t} credit`);
-                const temp = [];
-                fcs.forEach(v => {
-                    if (v.symbol === t) {
-                        temp.push({
-                            id: v.id,
-                            time: Math.round(v.mtsOpening / 1000),
-                            amount: v.amount,
-                            rate: v.rate,
-                            period: v.period,
-                            status: v.status,
-                            pair: v.positionPair,
-                            side: v.side,
-                        });
-                    }
-                });
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
-                credit[id][t] = temp;
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-                //console.log(credit[id][t].length);
-            });
-            userWs[id].onFundingCreditUpdate({ symbol: t }, fc => {
-                //console.log(`${t} credit update`);
-                for (let j = 0; j < credit[id][t].length; j++) {
-                    if (credit[id][t][j].id === fc.id) {
-                        credit[id][t][j].id = fc.id;
-                        credit[id][t][j].time = Math.round(fc.mtsOpening / 1000);
-                        credit[id][t][j].amount = fc.amount;
-                        credit[id][t][j].rate = fc.rate;
-                        credit[id][t][j].period = fc.period;
-                        credit[id][t][j].pair = fc.positionPair;
-                        credit[id][t][j].status = fc.status;
-                        credit[id][t][j].side = fc.side;
+            }
+        });
+        userWs[id].onFundingCreditUpdate({ }, fc => {
+            //console.log(`${t} credit update`);
+            if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
+                for (let j = 0; j < credit[id][fc.symbol].length; j++) {
+                    if (credit[id][fc.symbol][j].id === fc.id) {
+                        credit[id][fc.symbol][j].time = Math.round(fc.mtsOpening / 1000);
+                        credit[id][fc.symbol][j].amount = fc.amount;
+                        credit[id][fc.symbol][j].rate = fc.rate;
+                        credit[id][fc.symbol][j].period = fc.period;
+                        credit[id][fc.symbol][j].pair = fc.positionPair;
+                        credit[id][fc.symbol][j].status = fc.status;
+                        credit[id][fc.symbol][j].side = fc.side;
                         break;
                     }
                 }
-                //console.log(credit[id][t].length);
-            });
-            userWs[id].onFundingCreditNew({ symbol: t }, fc => {
-                //console.log(`${t} credit new`);
+            }
+            //console.log(credit[id][t].length);
+        });
+        userWs[id].onFundingCreditNew({ }, fc => {
+            //console.log(`${t} credit new`);
+            if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
                 if (!credit[id]) {
                     credit[id] = {};
                 }
-                if (!credit[id][t]) {
-                    credit[id][t] = [];
+                if (!credit[id][fc.symbol]) {
+                    credit[id][fc.symbol] = [];
                 }
-                credit[id][t].push({
+                credit[id][fc.symbol].push({
                     id: fc.id,
                     time: Math.round(fc.mtsOpening / 1000),
                     amount: fc.amount,
@@ -359,16 +341,18 @@ export const setWsOffer = (id, curArr=[]) => {
                     user: id,
                 });
                 //console.log(credit[id][t].length);
-            });
-            userWs[id].onFundingCreditClose({ symbol: t }, fc => {
-                //console.log(`${t} credit close`);
+            }
+        });
+        userWs[id].onFundingCreditClose({ }, fc => {
+            //console.log(`${t} credit close`);
+            if (SUPPORT_COIN.indexOf(fc.symbol)) {
                 if (!credit[id]) {
                     credit[id] = {};
                 }
-                if (credit[id][t]) {
-                    for (let j = 0; j < credit[id][t].length; j++) {
-                        if (credit[id][t][j].id === fc.id) {
-                            credit[id][t].splice(j, 1);
+                if (credit[id][fc.symbol]) {
+                    for (let j = 0; j < credit[id][fc.symbol].length; j++) {
+                        if (credit[id][fc.symbol][j].id === fc.id) {
+                            credit[id][fc.symbol].splice(j, 1);
                             break;
                         }
                     }
@@ -379,12 +363,228 @@ export const setWsOffer = (id, curArr=[]) => {
                     user: id,
                 });
                 //console.log(credit[id][t].length);
-            });
+            }
+        });
+        userWs[id].onOrderUpdate({}, os => {
+            const symbol = `f${os.symbol.substr(-3)}`;
+            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                for (let j = 0; j < order[id][symbol].length; j++) {
+                    if (order[id][symbol][j].id === os.id) {
+                        order[id][symbol][j].time = Math.round(os.mtsCreate / 1000);
+                        order[id][symbol][j].amount = os.amountOrig;
+                        order[id][symbol][j].type = os.type;
+                        order[id][symbol][j].symbol = os.symbol;
+                        order[id][symbol][j].price = os.price;
+                        order[id][symbol][j].trailing = os.priceTrailing;
+                        order[id][symbol][j].flags = os.flags;
+                        break;
+                    }
+                }
+            }
+        });
+        userWs[id].onOrderNew({}, os => {
+            const symbol = `f${os.symbol.substr(-3)}`;
+            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                if (!order[id]) {
+                    order[id] = {};
+                }
+                if (!order[id][symbol]) {
+                    order[id][symbol] = [];
+                }
+                order[id][symbol].push({
+                    id: os.id,
+                    time: Math.round(os.mtsCreate / 1000),
+                    amount: os.amountOrig,
+                    type: os.type,
+                    symbol: os.symbol,
+                    price: os.price,
+                    trailing: os.priceTrailing,
+                    flags: os.flags,
+                });
+            }
+        });
+        userWs[id].onOrderClose({}, os => {
+            const symbol = `f${os.symbol.substr(-3)}`;
+            if (SUPPORT_COIN.indexOf(symbol)) {
+                console.log('close')
+                console.log(os);
+                if (!order[id]) {
+                    order[id] = {};
+                }
+                if (order[id][symbol]) {
+                    for (let j = 0; j < order[id][symbol].length; j++) {
+                        if (order[id][symbol][j].id === os.id) {
+                            order[id][symbol].splice(j, 1);
+                            break;
+                        }
+                    }
+                }
+                const transMargin = () => setTimeout(() => {
+                    if (margin[id] && margin[id][symbol] && margin[id][symbol].avail > 1) {
+                        return userRest.transfer({
+                            from: 'margin',
+                            to: 'funding',
+                            amount: margin[id][symbol].avail.toString(),
+                            currency: symbol.substr(1),
+                        });
+                    }
+                }, 5000);
+                for (let i = 0; i < curArr.length; i++) {
+                    if (curArr[i].type === symbol && curArr[i].is_trade) {
+                        if (os.amountOrig > 0) {
+                            if (os.status.includes('EXECUTED')) {
+                                //set oco trail priceTrailing
+                                const or = new Order({
+                                    cid: Date.now(),
+                                    type: 'LIMIT',
+                                    symbol: os.symbol,
+                                    amount: -os.amountOrig / 2,
+                                    price: os.price * (101 + curArr[i].gain_stop) / 100,
+                                    priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
+                                    flags: 17408,
+                                }, userRest);
+                                or.submit().then(() => {
+                                    console.log(or);
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
+                                }).then(() => {
+                                    const or1 = new Order({
+                                        cid: Date.now(),
+                                        type: 'LIMIT',
+                                        symbol: os.symbol,
+                                        amount: -os.amountOrig / 2,
+                                        price: os.price * (101 + curArr[i].gain_stop * 2) / 100,
+                                        priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
+                                        flags: 17408,
+                                    }, userRest);
+                                    return or1.submit().then(() => console.log(or1));
+                                });
+                            } else if (os.status.includes('CANCELED')) {
+                                transMargin();
+                            }
+                        } else if (os.status.includes('EXECUTED')) {
+                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false).then(() => transMargin());
+                        } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
+                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
+                        }
+                        break;
+                    }
+                }
+            }
         });
         userWs[id].open();
     } else if (!userWs[id].isOpen()) {
         console.log('reconnect ws');
         userWs[id].reconnect();
+    }
+
+    const initialBook = () => {
+        const now = Math.round(new Date().getTime() / 1000);
+        if ((now - updateTime) > UPDATE_BOOK) {
+            updateTime = now;
+            console.log(updateTime);
+            return userRest.wallets().then(wallet => {
+                if (!available[id]) {
+                    available[id] = {}
+                }
+                if (!margin[id]) {
+                    margin[id] = {}
+                }
+                wallet.forEach(w => {
+                    const symbol = `f${w.currency}`;
+                    if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                        if (w.type === 'funding') {
+                            available[id][symbol] = {
+                                avail: w.balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: w.balance,
+                            }
+                        } else if (w.type === 'margin') {
+                            margin[id][symbol] = {
+                                avail: w.balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: w.balance,
+                            }
+                        }
+                    }
+                });
+                console.log(available);
+                console.log(margin);
+            }).then(() => userRest.fundingOffers('')).then(fos => {
+                //console.log(`${t} offer`);
+                let risk = RISK_MAX;
+                const temp = {};
+                fos.forEach(v => {
+                    if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
+                        if (!temp[v.symbol]) {
+                            temp[v.symbol] = [];
+                        }
+                        temp[v.symbol].push({
+                            id: v.id,
+                            time: Math.round(v.mtsCreate / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            risk: risk > 0 ? risk-- : 0,
+                        })
+                    }
+                });
+                offer[id] = temp;
+                //console.log(offer[id][t].length);
+            }).then(() => userRest.fundingCredits('')).then(fcs => {
+                //console.log(`${t} credit`);
+                const temp = {};
+                fcs.forEach(v => {
+                    if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
+                        if (!temp[v.symbol]) {
+                            temp[v.symbol] = [];
+                        }
+                        temp[v.symbol].push({
+                            id: v.id,
+                            time: Math.round(v.mtsOpening / 1000),
+                            amount: v.amount,
+                            rate: v.rate,
+                            period: v.period,
+                            status: v.status,
+                            pair: v.positionPair,
+                            side: v.side,
+                        });
+                    }
+                });
+                credit[id] = temp;
+                //console.log(credit[id][t].length);
+            }).then(() => userRest.activeOrders()).then(os => {
+                const temp = {};
+                os.forEach(v => {
+                    const symbol = `f${v.symbol.substr(-3)}`;
+                    if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                        if (!temp[symbol]) {
+                            temp[symbol] = [];
+                        }
+                        temp[symbol].push({
+                            id: v.id,
+                            time: Math.round(v.mtsCreate / 1000),
+                            amount: v.amountOrig,
+                            symbol: v.symbol,
+                            type: v.type,
+                            price: v.price,
+                            trailing: v.priceTrailing,
+                            flags: v.flags,
+                        });
+                    }
+                });
+                order[id] = temp;
+                sendWs({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id,
+                });
+                console.log(order);
+            });
+        } else {
+            console.log('no new');
+            return Promise.resolve();
+        }
     }
 
     const checkRisk = (risk, ...arr) => {
@@ -440,8 +640,8 @@ export const setWsOffer = (id, curArr=[]) => {
         pushDR(current.dynamicRate1, current.dynamicDay1);
         pushDR(current.dynamicRate2, current.dynamicDay2);
         //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
-        const extremRateCheck = (auUser) => {
-            if (id !== auUser) {
+        const extremRateCheck = () => {
+            if (!current.is_trade) {
                 return false;
             }
             if (!extremRate[id]) {
@@ -456,8 +656,9 @@ export const setWsOffer = (id, curArr=[]) => {
                 } else {
                     extremRate[id][current.type].high++;
                     extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : (extremRate[id][current.type].low - 1);
-                    if (extremRate[id][current.type].high >= 15) {
+                    if (extremRate[id][current.type].high >= EXTREM_RATE_NUMBER) {
                         sendWs(`${id} ${current.type.substr(1)} rate too high!!!` , 0, 0, true);
+                        current.is_high = Math.round(new Date().getTime() / 1000);
                         extremRate[id][current.type].high = 0;
                     }
                 }
@@ -470,8 +671,9 @@ export const setWsOffer = (id, curArr=[]) => {
                 } else {
                     extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
                     extremRate[id][current.type].low++;
-                    if (extremRate[id][current.type].low >= 15) {
+                    if (extremRate[id][current.type].low >= EXTREM_RATE_NUMBER) {
                         sendWs(`${id} ${current.type.substr(1)} rate too low!!!` , 0, 0, true);
+                        current.is_low = Math.round(new Date().getTime() / 1000);
                         extremRate[id][current.type].low = 0;
                     }
                 }
@@ -627,7 +829,7 @@ export const setWsOffer = (id, curArr=[]) => {
             console.log('final');
             console.log(finalNew);
         }
-        extremRateCheck('hoder');
+        extremRateCheck();
         adjustOffer();
         newOffer(current.riskLimit);
         mergeOffer();
@@ -681,6 +883,260 @@ export const setWsOffer = (id, curArr=[]) => {
         }
         return cancelOffer(0).then(() => submitOffer(0));
     }
+
+    const singleTrade = current => {
+        if (!current.is_trade) {
+            return Promise.resolve();
+        }
+        console.log(current);
+        //set stop
+        if (!current.is_low || (Math.round(new Date().getTime() / 1000) - current.is_low) > EXTREM_DURATION || current.is_high > current.is_low) {
+            let is_high = false;
+            if (current.is_high && ((Math.round(new Date().getTime() / 1000) - current.is_high) <= EXTREM_DURATION)) {
+                is_high = true;
+            }
+            console.log(is_high);
+            const gain_stage = [];
+            const getStage = os => {
+                for (let i of gain_stage) {
+                    console.log('stage');
+                    console.log(os);
+                    console.log(i);
+                    if (i.amount === os.amount && (Math.abs(os.time - i.time) < 60)) {
+                        return 1;
+                    }
+                }
+                return 2;
+            }
+            const processing = [];
+            const checkOrder = index => {
+                if (!order[id] || !order[id][current.type] || index >= order[id][current.type].length) {
+                    return Promise.resolve();
+                } else {
+                    if (order[id][index][current.type].amount > 0) {
+                        processing.push({
+                            type: 1,
+                            os: order[id][current.type][index],
+                        });
+                        return checkOrder(index + 1);
+                    } else if (order[id][current.type][index].type === 'STOP') {
+                        processing.push({
+                            type: 2,
+                            os: order[id][current.type][index],
+                        });
+                        return checkOrder(index + 1);
+                    } else {
+                        if (order[id][current.type][index].type === 'TRAILING STOP' && is_high) {
+                            processing.push({
+                                type: 3,
+                                os: order[id][current.type][index],
+                            });
+                            return checkOrder(index + 1);
+                        } else {
+                            return checkOrder(index + 1);
+                        }
+                    }
+                }
+            }
+            const processOrder = index => {
+                console.log(processing)
+                if (index >= processing.length) {
+                    return Promise.resolve();
+                } else {
+                    let last_price = processing[index].os.price * 100 / (100.01 - current.loss_stop);
+                    if (processing[index].os.symbol === TBTC_SYM) {
+                        last_price = btcData.lastPrice;
+                    } else if (processing[index].os.symbol === TETH_SYM) {
+                        last_price = ethData.lastPrice;
+                    }
+                    switch(processing[index].type) {
+                        case 1:
+                        const amount = processing[index].os.amount;
+                        return userRest.cancelOrder(processing[index].os.id).then(() => {
+                            current.used -= amount;
+                            console.log(current.used);
+                            return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => processOrder(index + 1))
+                        });
+                        case 2:
+                        //close & new trail & new limit
+                        const trail = last_price * current.loss_stop / 100 / (is_high ? 2 : 1);
+                        const limit = last_price * (101 + getStage(processing[index].os) * current.gain_stop) / 100;
+                        if ((last_price - trail) < processing[index].os.price) {
+                            return processOrder(index + 1);
+                        } else {
+                            const pre_os = {
+                                amount: processing[index].os.amount,
+                                time: processing[index].os.time,
+                            };
+                            return userRest.cancelOrder(processing[index].os.id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                const or = new Order({
+                                    cid: Date.now(),
+                                    type: 'TRAILING STOP',
+                                    symbol: processing[index].os.symbol,
+                                    amount: pre_os.amount,
+                                    priceTrailing: trail,
+                                    flags: 1024,
+                                }, userRest);
+                                return or.submit().then(() => {
+                                    console.log(or);
+                                    gain_stage.push(pre_os);
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
+                                });
+                            }).then(() => {
+                                if (is_high) {
+                                    return Promise.resolve();
+                                } else {
+                                    const or1 = new Order({
+                                        cid: Date.now(),
+                                        type: 'LIMIT',
+                                        symbol: processing[index].os.symbol,
+                                        amount: pre_os.amount,
+                                        price: limit,
+                                        flags: 1024,
+                                    }, userRest);
+                                    return or1.submit().then(() => {
+                                        console.log(or1);
+                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
+                                    });
+                                }
+                            }).then(() => processOrder(index + 1));
+                        }
+                        case 3:
+                        //update
+                        const trail2 = last_price * current.loss_stop / 200;
+                        if (trail2 * 1.5 > processing[index].os.trailing || (last_price - trail2) < processing[index].os.price) {
+                            return processOrder(index + 1);
+                        } else {
+                            return cancelOrder(current.type, 0, processing[index].os.amount, processing[index].os.time, processing[index].os.type, false).then(() => userRest.updateOrder({
+                                id: processing[index].os.id,
+                                price_trailing: trail2.toString(),
+                            }).then(os => {
+                                console.log(os);
+                                return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))
+                            }).then(() => processOrder(index + 1)));
+                        }
+                        default:
+                        return processOrder(index + 1);
+                    }
+                }
+            }
+            return checkOrder(0).then(() => processOrder(0));
+        }
+        if ((Math.round(new Date().getTime() / 1000) - current.last_trade) > current.interval) {
+            current.used = 0;
+        }
+        const needAmount = current.amount - current.used;
+        let needTrans = needAmount;
+        //check need amount
+        if (margin[id] && margin[id][current.type]) {
+            needTrans = needTrans - margin[id][current.type].avail;
+        }
+        const getAM = () => {
+            let availableMargin = 0;
+            if (needTrans > 1) {
+                if (available[id] && available[id][current.type] && available[id][current.type].avail > 0) {
+                    availableMargin = available[id][current.type].avail;
+                }
+                if (availableMargin >= needTrans) {
+                    availableMargin = needTrans;
+                } else {
+                    //close offer
+                    if (offer[id] && offer[id][current.type]) {
+                        const cancelOffer = index => {
+                            if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
+                                return Promise.resolve(availableMargin);
+                            } else {
+                                if (offer[id][current.type][index].risk === undefined) {
+                                    return cancelOffer(index + 1);
+                                }
+                                availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                if (availableMargin >= needTrans) {
+                                    availableMargin = needTrans;
+                                }
+                                return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+                            }
+                        }
+                        return cancelOffer(0);
+                    }
+                }
+            }
+            return Promise.resolve(availableMargin);
+        }
+        return getAM().then(availableMargin => {
+            console.log(needAmount);
+            console.log(needTrans);
+            console.log(availableMargin);
+            console.log(available);
+            //transform wallet
+            if (availableMargin < 1) {
+                return Promise.resolve();
+            } else {
+                return userRest.transfer({
+                    from: 'funding',
+                    to: 'margin',
+                    amount: availableMargin.toString(),
+                    currency: current.type.substr(1),
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)));
+            }
+        }).then(() => {
+            if (!margin[id] || !margin[id][current.type] || margin[id][current.type].avail < 1) {
+                return Promise.resolve();
+            }
+            console.log(margin[id][current.type].avail);
+            //order
+            const marginOrderAmount = (margin[id][current.type].avail > needAmount) ? needAmount : margin[id][current.type].avail;
+            if (marginOrderAmount >= 10) {
+                const getLowpoint = (index = 0, final_low_point = 0, final_last_price = 1, symbol = '') => {
+                    if (index >= current.pair.length) {
+                        return Promise.resolve([final_low_point, symbol]);
+                    } else {
+                        return userRest.candles({symbol: current.pair[index], timeframe: '30m', query: {limit: 120}}).then(entries => {
+                            let low_point = 0;
+                            const range = (entries.length > (current.low_point / 30)) ? (current.low_point / 30) : entries.length;
+                            for (let i = 0; i < range; i++) {
+                                if (!low_point || entries[i].low < low_point) {
+                                    low_point = entries[i].low;
+                                }
+                            }
+                            let last_price = 1;
+                            if (current.pair[index] === TBTC_SYM) {
+                                last_price = btcData.lastPrice;
+                            } else if (current.pair[index] === TETH_SYM) {
+                                last_price = ethData.lastPrice;
+                            }
+                            low_point = (low_point * 1.005 < last_price) ? low_point * 1.005 : last_price;
+                            console.log(low_point);
+                            console.log(last_price);
+                            return (final_low_point === 0 || (final_last_price / final_low_point > last_price / low_point)) ? getLowpoint(index + 1, low_point, last_price, current.pair[index]) : getLowpoint(index + 1, final_low_point, final_last_price, symbol);
+                        });
+                    }
+                }
+                return getLowpoint(0).then(([low_point, symbol]) => {
+                    console.log(low_point);
+                    if (low_point <= 0) {
+                        return Promise.resolve();
+                    }
+                    const orderAmount = (marginOrderAmount * current.leverage * 0.999) / low_point;
+                    console.log(orderAmount);
+                    const or = new Order({
+                        cid: Date.now(),
+                        type: 'LIMIT',
+                        symbol,
+                        amount: orderAmount,
+                        price: low_point,
+                        flags: 0,
+                        lev: current.leverage,
+                    }, userRest);
+                    return or.submit().then(() => {
+                        current.used += marginOrderAmount;
+                        current.last_trade = Math.round(new Date().getTime() / 1000);
+                        console.log(or);
+                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
+                    });
+                });
+            }
+        });
+    }
     const getLegder = current => {
         if (!ledger[id]) {
             ledger[id] = {};
@@ -716,8 +1172,23 @@ export const setWsOffer = (id, curArr=[]) => {
             console.log(ledger[id][current.type].length);
         });
     }
-    const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => recurLoan(index + 1))) : recurLoan(index + 1);
-    return recurLoan(0);
+    const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => singleTrade(curArr[index]).then(() => recurLoan(index + 1)))) : recurLoan(index + 1);
+    return initialBook().then(() => recurLoan(0));
+}
+
+export const resetBFX = () => {
+    console.log('BFX reset');
+    const closeWs = index => {
+        if (index >= Object.keys(userWs).length) {
+            userWs = {};
+            userOk = {};
+            return Promise.resolve();
+        } else {
+            userWs[Object.keys(userWs)[index]].close();
+            return closeWs(index + 1);
+        }
+    }
+    return closeWs(0);
 }
 
 export default {
@@ -929,6 +1400,10 @@ export default {
             case 'btc':
             case 'BTC':
             coin = FBTC_SYM;
+            break;
+            case 'omg':
+            case 'OMG':
+            coin = FOMG_SYM;
             break;
             case 'wallet':
             case '錢包':

@@ -107,7 +107,7 @@ sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
 記得update db token
 
 
-make p12
+/*make p12
 
 1. Validations Wizard: domain
 
@@ -117,7 +117,17 @@ make p12
 
 4. creat pfx: openssl pkcs12 -export -out anomopi.pfx -inkey anomopi.key -in 2_www.anomopi.com.crt
 
-5. PFX: anomopi.pfx CA: 1_Intermediate.crt
+5. PFX: anomopi.pfx CA: 1_Intermediate.crt*/
+
+新版ssl
+
+1. anomopi.key 自己做 沿用舊的
+
+2. anomopi.crt 到godaddy下載"其他"的憑證 更名裡面的"亂數.crt"
+
+3. gd_bundle-g2-g1.crt 同上用裡面的 gd_bundle-g2-g1.crt
+
+4. nginx.crt 合併anomopi.crt和gd_bundle-g2-g1.crt，anomopi.crt在前
 
 
 遊戲: 請在pacjage.json加入     "redux-saga": ">=0.15.4",

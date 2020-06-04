@@ -655,7 +655,7 @@ export default {
                 const docDate = `${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}/${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'table', 'main-content-table')[0], 'tr')[0], 'td', 'main-content-td')[0], 'div', 'bodytext')[0], 'div', 'bls')[0], 'ul')[0], 'li').forEach(l => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'section')[0], 'div', 'wrapper-outer')[0], 'div', 'wrapper')[0], 'div', 'container')[0], 'div', 'main-content-full-width')[0], 'div', 'bodytext')[0], 'div', 'bls')[0], 'ul')[0], 'li').forEach(l => {
                     if (findTag(l)[0] === docDate) {
                         const a = findTag(l, 'a')[0];
                         list.push({
@@ -1184,8 +1184,8 @@ export default {
                 console.log(docDate);
                 let list = [];
                 findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper')[0],'div', 'center')[0], 'div', 'container')[0], 'section', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li').forEach(l => {
-                    const a = findTag(l, 'a')[0];
-                    if (findTag(findTag(a, 'time')[0])[0] === docDate) {
+                    if (findTag(findTag(l, 'time')[0])[0] === docDate) {
+                        const a = findTag(l, 'a')[0];
                         list.push({
                             url: addPre(a.attribs.href, 'https://www.cbc.gov.tw/tw'),
                             name: toValidName(a.attribs.title),
