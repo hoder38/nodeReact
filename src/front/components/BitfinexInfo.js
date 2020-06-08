@@ -6,7 +6,7 @@ import { FILE_ZINDEX } from '../constants'
 
 const BitfinexInfo = React.createClass({
     getInitialState: function() {
-        this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2'], this._handleSubmit, this._handleChange);
+        this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2', 'low_point', 'amount', 'interval', 'loss_stop', 'gain_stop', 'pair', 'leverage'], this._handleSubmit, this._handleChange);
         this._keep = null;
         this._active = null;
         this._advanced = null;
@@ -16,6 +16,8 @@ const BitfinexInfo = React.createClass({
             keep: false,
             active: false,
             advanced: false,
+            trade: false,
+            tradable: false,
         }, this._input.initValue());
     },
     componentWillMount: function() {
@@ -25,6 +27,7 @@ const BitfinexInfo = React.createClass({
         const item = this.state.list[this.state.current];
         const keep = this.state.keep !== item.isKeep ? {keep: this.state.keep} : {};
         const active = this.state.active !== item.isActive ? {active: this.state.active} : {}
+        const trade = this.state.trade !== item.isTrade ? {trade: this.state.trade} : {}
         let ka1 = {};
         let dr1 = {};
         let dr2 = {};
@@ -67,7 +70,14 @@ const BitfinexInfo = React.createClass({
             checkInput('miniRate', this.state, this.props.addalert, item.miniRate, 'zeroint'),
             checkInput('dynamic', this.state, this.props.addalert, item.dynamic, 'zeroint'),
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
-            ka1, dr1, dr2, keep, active);
+            checkInput('low_point', this.state, this.props.addalert, item.low_point, 'int'),
+            checkInput('amount', this.state, this.props.addalert, item.amount, 'int'),
+            checkInput('interval', this.state, this.props.addalert, item.interval, 'int'),
+            checkInput('loss_stop', this.state, this.props.addalert, item.loss_stop, 'int'),
+            checkInput('gain_stop', this.state, this.props.addalert, item.gain_stop, 'zeroint'),
+            checkInput('pair', this.state, this.props.addalert, item.pair, 'name'),
+            checkInput('leverage', this.state, this.props.addalert, item.leverage, 'zeroint'),
+            ka1, dr1, dr2, keep, active, trade);
         if (Object.keys(set_obj).length > 0) {
             this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot`, Object.assign({}, set_obj, {type: item.type}), 'PUT').then(result => {
                 this._setList(result, item.type);
@@ -80,6 +90,7 @@ const BitfinexInfo = React.createClass({
             keep: this._keep.checked,
             active: this._active.checked,
             advanced: this._advanced.checked,
+            trade: this._trade.checked,
         }));
     },
     _setList: function(list, type=null) {
@@ -102,6 +113,8 @@ const BitfinexInfo = React.createClass({
             keep: item.isKeep,
             active: item.isActive,
             advanced: (item.keepAmountRate1 || item.dynamicRate1 || item.dynamicRate2) ? true: false,
+            tradable: item.tradable,
+            trade: item.isTrade,
         }, this._input.initValue(item)));
     },
     _delBot: function() {
@@ -110,6 +123,8 @@ const BitfinexInfo = React.createClass({
     },
     render: function() {
         const advancedDisplay = this.state.advanced ? {} : {display: 'none'};
+        const tradableDisplay = this.state.tradable ? {} : {display: 'none'};
+        const tradeDisplay = (this.state.tradable && this.state.trade) ? {} : {display: 'none'};
         const list = this.state.list.map((v, i) => {
             const active = (this.state.current === i) ? 'btn-lg' : '';
             const item = this.state.list[i];
@@ -118,7 +133,9 @@ const BitfinexInfo = React.createClass({
                     current: i,
                     keep: item.isKeep,
                     active: item.isActive,
+                    trade: item.isTrade,
                     advanced: (item.keepAmountRate1 || item.dynamicRate1 || item.dynamicRate2) ? true: false,
+                    tradable: item.tradable,
                 }, this._input.initValue(item))))}>
                     {v.type.substr(1)}
                 </button>
@@ -308,6 +325,80 @@ const BitfinexInfo = React.createClass({
                                             </div>
                                         </td>
                                     </tr>
+                                    <tr style={tradableDisplay}>
+                                        <td>Trade Settings (Beta):</td>
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                className="form-control"
+                                                checked={this.state.trade}
+                                                ref={ref => this._trade = ref}
+                                                onChange={this._handleChange} />
+                                        </td>
+                                    </tr>
+                                    <UserInput
+                                        val={this.state.low_point}
+                                        getinput={this._input.getInput('low_point')}
+                                        placeholder="取低點的時間區間(分鐘)">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Low Interval:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.amount}
+                                        getinput={this._input.getInput('amount')}
+                                        placeholder="單次交易金額">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Trade Amount:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.interval}
+                                        getinput={this._input.getInput('interval')}
+                                        placeholder="每次交易間隔 (分鐘)">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Trade Interval:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.loss_stop}
+                                        getinput={this._input.getInput('loss_stop')}
+                                        placeholder="停損趴數">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Lost Stop:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.gain_stop}
+                                        getinput={this._input.getInput('gain_stop')}
+                                        placeholder="停利趴數，如果0為不停利">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Gain Stop:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.pair}
+                                        getinput={this._input.getInput('pair')}
+                                        placeholder="交易對，用','分隔 例: tBTCUSD,tETHUSD">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Trade Pair:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
+                                    <UserInput
+                                        val={this.state.leverage}
+                                        getinput={this._input.getInput('leverage')}
+                                        placeholder="槓桿倍數，0為不開">
+                                        <tr style={tradeDisplay}>
+                                            <td key={0}>Leverage:</td>
+                                            <td key={1} />
+                                        </tr>
+                                    </UserInput>
                                 </tbody>
                             </table>
                         </div>
