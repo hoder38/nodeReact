@@ -2158,6 +2158,20 @@ exports.default = {
                 if (coin !== 'all' && coin !== v) {
                     return false;
                 }
+                if (order[id] && order[id][v]) {
+                    order[id][v].forEach(function (o) {
+                        itemList.push({
+                            name: '\u4EA4\u6613\u639B\u55AE ' + o.symbol.substr(1) + ' ' + Math.floor(o.amount * 10000) / 10000 + '\u679A ' + o.type,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'order', '交易掛單'],
+                            rate: '$' + o.price,
+                            count: o.price,
+                            utime: o.time,
+                            boost: o.amount < 0 ? true : false,
+                            type: 2
+                        });
+                    });
+                }
                 if (offer[id] && offer[id][v]) {
                     offer[id][v].forEach(function (o) {
                         var rate = Math.round(o.rate * 10000000) / 100000;
@@ -2174,41 +2188,12 @@ exports.default = {
                         });
                     });
                 }
-                if (order[id] && order[id][v]) {
-                    order[id][v].forEach(function (o) {
-                        itemList.push({
-                            name: '\u4EA4\u6613\u639B\u55AE ' + o.symbol.substr(1) + ' ' + Math.floor(o.amount * 10000) / 10000 + '\u679A ' + o.type,
-                            id: o.id,
-                            tags: [v.substr(1).toLowerCase(), 'order', '交易掛單'],
-                            rate: '$' + o.price,
-                            count: o.price,
-                            utime: o.time,
-                            boost: o.amount < 0 ? true : false,
-                            type: 2
-                        });
-                    });
-                }
             });
         }
         if (type === 0 || type === 4) {
             _constants.SUPPORT_COIN.forEach(function (v, i) {
                 if (coin !== 'all' && coin !== v) {
                     return false;
-                }
-                if (credit[id] && credit[id][v]) {
-                    credit[id][v].forEach(function (o) {
-                        var rate = Math.round(o.rate * 10000000) / 100000;
-                        itemList.push({
-                            name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.pair,
-                            id: o.id,
-                            tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
-                            rate: rate + '%',
-                            count: rate,
-                            boost: o.period === 30 ? true : false,
-                            utime: o.time + o.period * 86400,
-                            type: 3
-                        });
-                    });
                 }
                 if (position[id] && position[id][v]) {
                     position[id][v].forEach(function (o) {
@@ -2223,6 +2208,21 @@ exports.default = {
                             utime: o.time,
                             type: 3,
                             boost: o.pl < 0 ? true : false
+                        });
+                    });
+                }
+                if (credit[id] && credit[id][v]) {
+                    credit[id][v].forEach(function (o) {
+                        var rate = Math.round(o.rate * 10000000) / 100000;
+                        itemList.push({
+                            name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.pair,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
+                            rate: rate + '%',
+                            count: rate,
+                            boost: o.period === 30 ? true : false,
+                            utime: o.time + o.period * 86400,
+                            type: 3
                         });
                     });
                 }
