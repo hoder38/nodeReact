@@ -521,6 +521,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 }
                 const transMargin = () => setTimeout(() => {
+                    console.log(margin[id]);
                     if (margin[id] && margin[id][symbol] && margin[id][symbol].avail > 1) {
                         return userRest.transfer({
                             from: 'margin',
@@ -533,7 +534,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 for (let i = 0; i < curArr.length; i++) {
                     if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].interval && curArr[i].amount && curArr[i].low_point && curArr[i].loss_stop && curArr[i].pair && curArr[i].pair.length > 0) {
                         if (os.amountOrig > 0) {
-                            if (os.status.includes('EXECUTED')) {
+                            if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                 //set oco trail priceTrailing
                                 if (curArr[i].gain_stop) {
                                     const or = new Order({
@@ -587,7 +588,7 @@ export const setWsOffer = (id, curArr=[]) => {
                             } else if (os.status.includes('CANCELED')) {
                                 transMargin();
                             }
-                        } else if (os.status.includes('EXECUTED')) {
+                        } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                             cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false).then(() => transMargin());
                         } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
                             cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);

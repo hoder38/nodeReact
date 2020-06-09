@@ -600,6 +600,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     }
                     var transMargin = function transMargin() {
                         return setTimeout(function () {
+                            console.log(margin[id]);
                             if (margin[id] && margin[id][symbol] && margin[id][symbol].avail > 1) {
                                 return userRest.transfer({
                                     from: 'margin',
@@ -614,7 +615,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     var _loop = function _loop(_i2) {
                         if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].interval && curArr[_i2].amount && curArr[_i2].low_point && curArr[_i2].loss_stop && curArr[_i2].pair && curArr[_i2].pair.length > 0) {
                             if (os.amountOrig > 0) {
-                                if (os.status.includes('EXECUTED')) {
+                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                     //set oco trail priceTrailing
                                     if (curArr[_i2].gain_stop) {
                                         (function () {
@@ -684,7 +685,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 } else if (os.status.includes('CANCELED')) {
                                     transMargin();
                                 }
-                            } else if (os.status.includes('EXECUTED')) {
+                            } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                 cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false).then(function () {
                                     return transMargin();
                                 });
