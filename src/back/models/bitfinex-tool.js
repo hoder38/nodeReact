@@ -15,15 +15,17 @@ let finalRate = {};
 let maxRange = {};
 let currentRate = {};
 let extremRate = {};
+let updateTime = {};
 
 let btcData = null;
 let ethData = null;
-let updateTime = 0;
 
 let available = {};
 let margin = {};
+
 let offer = {};
 let order = {};
+
 let credit = {};
 let ledger = {};
 let position = {};
@@ -606,9 +608,12 @@ export const setWsOffer = (id, curArr=[]) => {
 
     const initialBook = () => {
         const now = Math.round(new Date().getTime() / 1000);
-        if ((now - updateTime) > UPDATE_BOOK) {
-            updateTime = now;
-            console.log(updateTime);
+        if (!updateTime[id]) {
+            updateTime[id] = 0;
+        }
+        if ((now - updateTime[id]) > UPDATE_BOOK) {
+            updateTime[id] = now;
+            console.log(updateTime[id]);
             return userRest.wallets().then(wallet => {
                 if (!available[id]) {
                     available[id] = {}

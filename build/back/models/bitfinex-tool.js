@@ -60,15 +60,17 @@ var finalRate = {};
 var maxRange = {};
 var currentRate = {};
 var extremRate = {};
+var updateTime = {};
 
 var btcData = null;
 var ethData = null;
-var updateTime = 0;
 
 var available = {};
 var margin = {};
+
 var offer = {};
 var order = {};
+
 var credit = {};
 var ledger = {};
 var position = {};
@@ -712,9 +714,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
     var initialBook = function initialBook() {
         var now = Math.round(new Date().getTime() / 1000);
-        if (now - updateTime > _constants.UPDATE_BOOK) {
-            updateTime = now;
-            console.log(updateTime);
+        if (!updateTime[id]) {
+            updateTime[id] = 0;
+        }
+        if (now - updateTime[id] > _constants.UPDATE_BOOK) {
+            updateTime[id] = now;
+            console.log(updateTime[id]);
             return userRest.wallets().then(function (wallet) {
                 if (!available[id]) {
                     available[id] = {};
