@@ -1746,10 +1746,10 @@ export default {
             let vid = SUPPORT_COIN.length;
             for (let i in priceData) {
                 tempList.push({
-                    name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 100) / 100}`,
+                    name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 10000) / 10000}`,
                     id: vid++,
                     tags: [i.substr(1, 4), i.substr(-3), 'rate', '利率'],
-                    rate: `${Math.floor(priceData[i].dailyChange * 10000) / 10000}%`,
+                    rate: `${Math.floor(priceData[i].dailyChange * 100) / 100}%`,
                     count: priceData[i].dilyChange,
                     utime: priceData[i].time,
                     type: 1,

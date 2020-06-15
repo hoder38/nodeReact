@@ -2110,10 +2110,10 @@ exports.default = {
             var vid = _constants.SUPPORT_COIN.length;
             for (var _i13 in priceData) {
                 tempList.push({
-                    name: _i13.substr(1) + ' $' + Math.floor(priceData[_i13].lastPrice * 100) / 100,
+                    name: _i13.substr(1) + ' $' + Math.floor(priceData[_i13].lastPrice * 10000) / 10000,
                     id: vid++,
                     tags: [_i13.substr(1, 4), _i13.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i13].dailyChange * 10000) / 10000 + '%',
+                    rate: Math.floor(priceData[_i13].dailyChange * 100) / 100 + '%',
                     count: priceData[_i13].dilyChange,
                     utime: priceData[_i13].time,
                     type: 1
