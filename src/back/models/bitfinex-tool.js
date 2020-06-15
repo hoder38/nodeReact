@@ -1,24 +1,25 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, SUPPORT_PAIR } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
 import { handleError, HoError, isValidString } from '../util/utility'
 import sendWs from '../util/sendWs'
 
+//system
 const bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
 const rest = bfx.rest(2, { transform: true });
-let userWs = {};
-let userOk = {};
-
 let finalRate = {};
 let maxRange = {};
 let currentRate = {};
-let extremRate = {};
-let updateTime = {};
-
 let btcData = null;
 let ethData = null;
+
+//user
+let userWs = {};
+let userOk = {};
+let updateTime = {};
+let extremRate = {};
 
 let available = {};
 let margin = {};
@@ -174,7 +175,7 @@ export const setWsOffer = (id, curArr=[]) => {
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
     const cancelOrder = (symbol, index, amount, time, type, is_close) => {
-        if (!order[id] || !order[id][symbol] || index >= order[id][symbol].length || is_close) {
+        if (!order[id][symbol] || index >= order[id][symbol].length || is_close) {
             return Promise.resolve();
         } else {
             console.log(amount);
@@ -191,10 +192,44 @@ export const setWsOffer = (id, curArr=[]) => {
     }
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
+        if (!updateTime[id]) {
+            updateTime[id] = {};
+            updateTime[id]['book'] = 0;
+            updateTime[id]['offer'] = 0;
+            updateTime[id]['credit'] = 0;
+            updateTime[id]['position'] = 0;
+            updateTime[id]['order'] = 0;
+        }
+        if (!available[id]) {
+            available[id] = {}
+        }
+        if (!margin[id]) {
+            margin[id] = {}
+        }
+        if (!offer[id]) {
+            offer[id] = {};
+        }
+        if (!order[id]) {
+            order[id] = {};
+        }
+        if (!credit[id]) {
+            credit[id] = {};
+        }
+        if (!ledger[id]) {
+            ledger[id] = {};
+        }
+        if (!position[id]) {
+            position[id] = {};
+        }
+        if (!extremRate[id]) {
+            extremRate[id] = {}
+        }
         userWs[id] = userBfx.ws(2,{ transform: true });
         userWs[id].on('error', err => {
-            sendWs(`${id} Bitfinex Ws Error: ${err.message||err.msg}`, 0, 0, true);
-            handleError(err, `${id} Bitfinex Ws Error`);
+            if (!(err.message||err.msg).includes('auth: dup')) {
+                sendWs(`${id} Bitfinex Ws Error: ${err.message||err.msg}`, 0, 0, true);
+                handleError(err, `${id} Bitfinex Ws Error`);
+            }
         });
         userWs[id].on('open', () => userWs[id].auth());
         userWs[id].once('auth', () => {
@@ -205,9 +240,6 @@ export const setWsOffer = (id, curArr=[]) => {
             SUPPORT_COIN.forEach((t, i) => {
                 if (wallet.currency === t.substr(1)) {
                     if (wallet.type === 'funding') {
-                        if (!available[id]) {
-                            available[id] = {}
-                        }
                         available[id][t] = {
                             avail: wallet.balanceAvailable,
                             time: Math.round(new Date().getTime() / 1000),
@@ -218,29 +250,18 @@ export const setWsOffer = (id, curArr=[]) => {
                             data: (i+1) * 10000,
                             user: id,
                         });
-                        //console.log('available');
-                        //console.log(available[id]);
                     } else if (wallet.type === 'margin') {
-                        if (!margin[id]) {
-                            margin[id] = {}
-                        }
                         margin[id][t] = {
                             avail: wallet.balanceAvailable,
                             time: Math.round(new Date().getTime() / 1000),
                             total: wallet.balance,
                         }
-                        //console.log('margin');
-                        //console.log(margin[id]);
                     }
                 }
             });
         });
         userWs[id].onFundingOfferUpdate({ }, fo => {
-            //console.log(`${t} offer update`);
             if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
                 if (!offer[id][fo.symbol]) {
                     offer[id][fo.symbol] = [];
                 }
@@ -254,15 +275,20 @@ export const setWsOffer = (id, curArr=[]) => {
                         break;
                     }
                 }
+                const now = Math.round(new Date().getTime() / 1000);
+                if ((now - updateTime[id]['offer']) > UPDATE_ORDER) {
+                    updateTime[id]['offer'] = now;
+                    sendWs({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id,
+                    });
+                }
             }
-            //console.log(offer[id][t].length);
         });
         userWs[id].onFundingOfferNew({ }, fo => {
-            console.log(`${fo.symbol} ${id} offer new`);
             if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
+                console.log(`${fo.symbol} ${id} offer new`);
                 if (!offer[id][fo.symbol]) {
                     offer[id][fo.symbol] = [];
                 }
@@ -285,15 +311,16 @@ export const setWsOffer = (id, curArr=[]) => {
                         status: fo.status,
                     });
                 }
+                sendWs({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id,
+                });
             }
-            //console.log(offer[id][t].length);
         });
         userWs[id].onFundingOfferClose({ }, fo => {
-            console.log(`${fo.symbol} ${id} offer close`);
             if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
+                console.log(`${fo.symbol} ${id} offer close`);
                 if (offer[id][fo.symbol]) {
                     for (let j = 0; j < offer[id][fo.symbol].length; j++) {
                         if (offer[id][fo.symbol][j].id === fo.id) {
@@ -301,16 +328,11 @@ export const setWsOffer = (id, curArr=[]) => {
                             break;
                         }
                     }
-                    //console.log(offer[id][t].length);
                 }
             }
         });
         userWs[id].onFundingCreditUpdate({ }, fc => {
-            //console.log(`${t} credit update`);
             if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (!credit[id][fc.symbol]) {
                     credit[id][fc.symbol] = [];
                 }
@@ -326,15 +348,19 @@ export const setWsOffer = (id, curArr=[]) => {
                         break;
                     }
                 }
+                const now = Math.round(new Date().getTime() / 1000);
+                if ((now - updateTime[id]['credit']) > UPDATE_ORDER) {
+                    updateTime[id]['credit'] = now;
+                    sendWs({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id,
+                    });
+                }
             }
-            //console.log(credit[id][t].length);
         });
         userWs[id].onFundingCreditNew({ }, fc => {
-            //console.log(`${t} credit new`);
             if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (!credit[id][fc.symbol]) {
                     credit[id][fc.symbol] = [];
                 }
@@ -353,15 +379,10 @@ export const setWsOffer = (id, curArr=[]) => {
                     data: -1,
                     user: id,
                 });
-                //console.log(credit[id][t].length);
             }
         });
         userWs[id].onFundingCreditClose({ }, fc => {
-            //console.log(`${t} credit close`);
             if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (credit[id][fc.symbol]) {
                     for (let j = 0; j < credit[id][fc.symbol].length; j++) {
                         if (credit[id][fc.symbol][j].id === fc.id) {
@@ -375,15 +396,11 @@ export const setWsOffer = (id, curArr=[]) => {
                     data: -1,
                     user: id,
                 });
-                //console.log(credit[id][t].length);
             }
         });
         userWs[id].onPositionUpdate({ }, fc => {
             const symbol = `f${fc.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (!position[id][symbol]) {
                     position[id][symbol] = [];
                 }
@@ -398,19 +415,20 @@ export const setWsOffer = (id, curArr=[]) => {
                         break;
                     }
                 }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
+                const now = Math.round(new Date().getTime() / 1000);
+                if ((now - updateTime[id]['position']) > UPDATE_ORDER) {
+                    updateTime[id]['position'] = now;
+                    sendWs({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id,
+                    });
+                }
             }
         });
         userWs[id].onPositionNew({ }, fc => {
             const symbol = `f${fc.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (!position[id][symbol]) {
                     position[id][symbol] = [];
                 }
@@ -433,9 +451,6 @@ export const setWsOffer = (id, curArr=[]) => {
         userWs[id].onPositionClose({ }, fc => {
             const symbol = `f${fc.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (position[id][symbol]) {
                     for (let j = 0; j < position[id][symbol].length; j++) {
                         if (position[id][symbol][j].id === fc.id) {
@@ -454,9 +469,6 @@ export const setWsOffer = (id, curArr=[]) => {
         userWs[id].onOrderUpdate({}, os => {
             const symbol = `f${os.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!order[id]) {
-                    order[id] = {};
-                }
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
@@ -472,19 +484,22 @@ export const setWsOffer = (id, curArr=[]) => {
                         break;
                     }
                 }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
+                const now = Math.round(new Date().getTime() / 1000);
+                if ((now - updateTime[id]['order']) > UPDATE_ORDER) {
+                    updateTime[id]['order'] = now;
+                    sendWs({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id,
+                    });
+                }
             }
         });
         userWs[id].onOrderNew({}, os => {
             const symbol = `f${os.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!order[id]) {
-                    order[id] = {};
-                }
+                console.log(`${symbol} ${id} order new`);
+                console.log(os);
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
@@ -507,13 +522,9 @@ export const setWsOffer = (id, curArr=[]) => {
         });
         userWs[id].onOrderClose({}, os => {
             const symbol = `f${os.symbol.substr(-3)}`;
-            console.log(symbol);
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                console.log('close')
+                console.log(`${symbol} ${id} order close`);
                 console.log(os);
-                if (!order[id]) {
-                    order[id] = {};
-                }
                 if (order[id][symbol]) {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
@@ -548,10 +559,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                         priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
                                         flags: 17408,
                                     }, userRest);
-                                    or.submit().then(() => {
-                                        console.log(or);
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
-                                    }).then(() => {
+                                    or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         const or1 = new Order({
                                             cid: Date.now(),
                                             type: 'LIMIT',
@@ -561,7 +569,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                             priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
                                             flags: 17408,
                                         }, userRest);
-                                        return or1.submit().then(() => console.log(or1));
+                                        return or1.submit();
                                     });
                                 } else {
                                     const or = new Order({
@@ -572,10 +580,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                         price: os.price * (100 - curArr[i].loss_stop) / 100,
                                         flags: 1024,
                                     }, userRest);
-                                    or.submit().then(() => {
-                                        console.log(or);
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
-                                    }).then(() => {
+                                    or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         const or1 = new Order({
                                             cid: Date.now(),
                                             type: 'STOP',
@@ -584,7 +589,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                             price: os.price * (100 - curArr[i].loss_stop) / 100,
                                             flags: 17408,
                                         }, userRest);
-                                        return or1.submit().then(() => console.log(or1));
+                                        return or1.submit();
                                     });
                                 }
                             } else if (os.status.includes('CANCELED')) {
@@ -608,19 +613,10 @@ export const setWsOffer = (id, curArr=[]) => {
 
     const initialBook = () => {
         const now = Math.round(new Date().getTime() / 1000);
-        if (!updateTime[id]) {
-            updateTime[id] = 0;
-        }
-        if ((now - updateTime[id]) > UPDATE_BOOK) {
-            updateTime[id] = now;
-            console.log(updateTime[id]);
+        if ((now - updateTime[id]['book']) > UPDATE_BOOK) {
+            updateTime[id]['book'] = now;
+            console.log(updateTime[id]['book']);
             return userRest.wallets().then(wallet => {
-                if (!available[id]) {
-                    available[id] = {}
-                }
-                if (!margin[id]) {
-                    margin[id] = {}
-                }
                 wallet.forEach(w => {
                     const symbol = `f${w.currency}`;
                     if (SUPPORT_COIN.indexOf(symbol) !== -1) {
@@ -639,10 +635,7 @@ export const setWsOffer = (id, curArr=[]) => {
                         }
                     }
                 });
-                console.log(available);
-                console.log(margin);
             }).then(() => userRest.fundingOffers('')).then(fos => {
-                //console.log(`${t} offer`);
                 let risk = RISK_MAX;
                 const temp = {};
                 fos.forEach(v => {
@@ -662,9 +655,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 });
                 offer[id] = temp;
-                //console.log(offer[id][t].length);
             }).then(() => userRest.fundingCredits('')).then(fcs => {
-                //console.log(`${t} credit`);
                 const temp = {};
                 fcs.forEach(v => {
                     if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
@@ -684,7 +675,6 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 });
                 credit[id] = temp;
-                //console.log(credit[id][t].length);
             }).then(() => userRest.activeOrders()).then(os => {
                 const temp = {};
                 os.forEach(v => {
@@ -795,9 +785,6 @@ export const setWsOffer = (id, curArr=[]) => {
             if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
                 return false;
             }
-            if (!extremRate[id]) {
-                extremRate[id] = {}
-            }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
                 if (!extremRate[id][current.type]) {
                     extremRate[id][current.type] = {
@@ -866,9 +853,6 @@ export const setWsOffer = (id, curArr=[]) => {
         console.log(keep_available);
         const adjustOffer = () => {
             console.log(`${id} ${current.type}`);
-            if (!offer[id]) {
-                offer[id] = {};
-            }
             if (offer[id][current.type]) {
                 //console.log(offer[current.type]);
                 //produce retain delete
@@ -932,7 +916,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < 50) {
+                if (finalRate[current.type].length <= 0 || keep_available < MINIMAL_OFFER) {
                     break;
                 }
                 if (risk < 0) {
@@ -1064,7 +1048,7 @@ export const setWsOffer = (id, curArr=[]) => {
             }
             const processing = [];
             const checkOrder = index => {
-                if (!order[id] || !order[id][current.type] || index >= order[id][current.type].length) {
+                if (!order[id][current.type] || index >= order[id][current.type].length) {
                     return Promise.resolve();
                 } else {
                     if (order[id][current.type][index].amount > 0) {
@@ -1135,7 +1119,6 @@ export const setWsOffer = (id, curArr=[]) => {
                                     flags: 1024,
                                 }, userRest);
                                 return or.submit().then(() => {
-                                    console.log(or);
                                     gain_stage.push(pre_os);
                                     return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
                                 });
@@ -1151,10 +1134,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                         price: limit,
                                         flags: 1024,
                                     }, userRest);
-                                    return or1.submit().then(() => {
-                                        console.log(or1);
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
-                                    });
+                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)));
                                 }
                             }).then(() => processOrder(index + 1));
                         }
@@ -1240,7 +1220,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(needAmount), 3000)));
             }
         }).then(needAmount => {
-            if (!margin[id] || !margin[id][current.type] || margin[id][current.type].avail < 1) {
+            if (!margin[id][current.type] || margin[id][current.type].avail < 1) {
                 return Promise.resolve();
             }
             console.log(margin[id][current.type].avail);
@@ -1295,7 +1275,6 @@ export const setWsOffer = (id, curArr=[]) => {
                     return or.submit().then(() => {
                         current.used = current.used? current.used + marginOrderAmount : marginOrderAmount;
                         current.last_trade = Math.round(new Date().getTime() / 1000);
-                        console.log(or);
                         return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used, "bitfinex.$.last_trade": current.last_trade}}).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)));
                     });
                 });
@@ -1303,9 +1282,6 @@ export const setWsOffer = (id, curArr=[]) => {
         });
     }
     const getLegder = current => {
-        if (!ledger[id]) {
-            ledger[id] = {};
-        }
         if (ledger[id][current.type] && ledger[id][current.type].length > 0) {
             const now = new Date();
             now.setHours(0);
@@ -1385,7 +1361,7 @@ export const setWsOffer = (id, curArr=[]) => {
     return initialBook().then(() => recurLoan(0));
 }
 
-export const resetBFX = () => {
+export const resetBFX = (update=false) => {
     console.log('BFX reset');
     const closeWs = index => {
         if (index >= Object.keys(userWs).length) {
@@ -1397,7 +1373,18 @@ export const resetBFX = () => {
             return closeWs(index + 1);
         }
     }
-    return closeWs(0);
+    if (update) {
+        for (let i in updateTime) {
+            updateTime[i] = {};
+            updateTime[i]['book'] = 0;
+            updateTime[i]['offer'] = 0;
+            updateTime[i]['credit'] = 0;
+            updateTime[i]['position'] = 0;
+            updateTime[i]['order'] = 0;
+        }
+    } else {
+        return closeWs(0);
+    }
 }
 
 export default {
@@ -1440,7 +1427,7 @@ export default {
             if (!amountLimit) {
                 return handleError(new HoError('Amount Limit is not valid'));
             }
-            data['amountLimit'] = amountLimit > 50 ? amountLimit : 50;
+            data['amountLimit'] = amountLimit > MINIMAL_OFFER ? amountLimit : MINIMAL_OFFER;
         }
         if (set.riskLimit) {
             const riskLimit = isValidString(set.riskLimit, 'int')

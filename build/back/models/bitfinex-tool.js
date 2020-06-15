@@ -51,19 +51,20 @@ var _sendWs2 = _interopRequireDefault(_sendWs);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+//system
 var bfx = new _bitfinexApiNode2.default({ apiKey: _ver.BITFINEX_KEY, apiSecret: _ver.BITFINEX_SECRET });
 var rest = bfx.rest(2, { transform: true });
-var userWs = {};
-var userOk = {};
-
 var finalRate = {};
 var maxRange = {};
 var currentRate = {};
-var extremRate = {};
-var updateTime = {};
-
 var btcData = null;
 var ethData = null;
+
+//user
+var userWs = {};
+var userOk = {};
+var updateTime = {};
+var extremRate = {};
 
 var available = {};
 var margin = {};
@@ -241,7 +242,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     var userBfx = new _bitfinexApiNode2.default({ apiKey: userKey, apiSecret: userSecret });
     var userRest = userBfx.rest(2, { transform: true });
     var cancelOrder = function cancelOrder(symbol, index, amount, time, type, is_close) {
-        if (!order[id] || !order[id][symbol] || index >= order[id][symbol].length || is_close) {
+        if (!order[id][symbol] || index >= order[id][symbol].length || is_close) {
             return _promise2.default.resolve();
         } else {
             console.log(amount);
@@ -266,10 +267,44 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     };
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
+        if (!updateTime[id]) {
+            updateTime[id] = {};
+            updateTime[id]['book'] = 0;
+            updateTime[id]['offer'] = 0;
+            updateTime[id]['credit'] = 0;
+            updateTime[id]['position'] = 0;
+            updateTime[id]['order'] = 0;
+        }
+        if (!available[id]) {
+            available[id] = {};
+        }
+        if (!margin[id]) {
+            margin[id] = {};
+        }
+        if (!offer[id]) {
+            offer[id] = {};
+        }
+        if (!order[id]) {
+            order[id] = {};
+        }
+        if (!credit[id]) {
+            credit[id] = {};
+        }
+        if (!ledger[id]) {
+            ledger[id] = {};
+        }
+        if (!position[id]) {
+            position[id] = {};
+        }
+        if (!extremRate[id]) {
+            extremRate[id] = {};
+        }
         userWs[id] = userBfx.ws(2, { transform: true });
         userWs[id].on('error', function (err) {
-            (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + (err.message || err.msg), 0, 0, true);
-            (0, _utility.handleError)(err, id + ' Bitfinex Ws Error');
+            if (!(err.message || err.msg).includes('auth: dup')) {
+                (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + (err.message || err.msg), 0, 0, true);
+                (0, _utility.handleError)(err, id + ' Bitfinex Ws Error');
+            }
         });
         userWs[id].on('open', function () {
             return userWs[id].auth();
@@ -282,9 +317,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             _constants.SUPPORT_COIN.forEach(function (t, i) {
                 if (wallet.currency === t.substr(1)) {
                     if (wallet.type === 'funding') {
-                        if (!available[id]) {
-                            available[id] = {};
-                        }
                         available[id][t] = {
                             avail: wallet.balanceAvailable,
                             time: Math.round(new Date().getTime() / 1000),
@@ -295,29 +327,18 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             data: (i + 1) * 10000,
                             user: id
                         });
-                        //console.log('available');
-                        //console.log(available[id]);
                     } else if (wallet.type === 'margin') {
-                        if (!margin[id]) {
-                            margin[id] = {};
-                        }
                         margin[id][t] = {
                             avail: wallet.balanceAvailable,
                             time: Math.round(new Date().getTime() / 1000),
                             total: wallet.balance
                         };
-                        //console.log('margin');
-                        //console.log(margin[id]);
                     }
                 }
             });
         });
         userWs[id].onFundingOfferUpdate({}, function (fo) {
-            //console.log(`${t} offer update`);
             if (_constants.SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
                 if (!offer[id][fo.symbol]) {
                     offer[id][fo.symbol] = [];
                 }
@@ -331,15 +352,20 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         break;
                     }
                 }
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - updateTime[id]['offer'] > _constants.UPDATE_ORDER) {
+                    updateTime[id]['offer'] = now;
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id
+                    });
+                }
             }
-            //console.log(offer[id][t].length);
         });
         userWs[id].onFundingOfferNew({}, function (fo) {
-            console.log(fo.symbol + ' ' + id + ' offer new');
             if (_constants.SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
+                console.log(fo.symbol + ' ' + id + ' offer new');
                 if (!offer[id][fo.symbol]) {
                     offer[id][fo.symbol] = [];
                 }
@@ -362,15 +388,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         status: fo.status
                     });
                 }
+                (0, _sendWs2.default)({
+                    type: 'bitfinex',
+                    data: -1,
+                    user: id
+                });
             }
-            //console.log(offer[id][t].length);
         });
         userWs[id].onFundingOfferClose({}, function (fo) {
-            console.log(fo.symbol + ' ' + id + ' offer close');
             if (_constants.SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id]) {
-                    offer[id] = {};
-                }
+                console.log(fo.symbol + ' ' + id + ' offer close');
                 if (offer[id][fo.symbol]) {
                     for (var j = 0; j < offer[id][fo.symbol].length; j++) {
                         if (offer[id][fo.symbol][j].id === fo.id) {
@@ -378,16 +405,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             break;
                         }
                     }
-                    //console.log(offer[id][t].length);
                 }
             }
         });
         userWs[id].onFundingCreditUpdate({}, function (fc) {
-            //console.log(`${t} credit update`);
             if (_constants.SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (!credit[id][fc.symbol]) {
                     credit[id][fc.symbol] = [];
                 }
@@ -403,15 +425,19 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         break;
                     }
                 }
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - updateTime[id]['credit'] > _constants.UPDATE_ORDER) {
+                    updateTime[id]['credit'] = now;
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id
+                    });
+                }
             }
-            //console.log(credit[id][t].length);
         });
         userWs[id].onFundingCreditNew({}, function (fc) {
-            //console.log(`${t} credit new`);
             if (_constants.SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (!credit[id][fc.symbol]) {
                     credit[id][fc.symbol] = [];
                 }
@@ -430,15 +456,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     data: -1,
                     user: id
                 });
-                //console.log(credit[id][t].length);
             }
         });
         userWs[id].onFundingCreditClose({}, function (fc) {
-            //console.log(`${t} credit close`);
             if (_constants.SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id]) {
-                    credit[id] = {};
-                }
                 if (credit[id][fc.symbol]) {
                     for (var j = 0; j < credit[id][fc.symbol].length; j++) {
                         if (credit[id][fc.symbol][j].id === fc.id) {
@@ -452,15 +473,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     data: -1,
                     user: id
                 });
-                //console.log(credit[id][t].length);
             }
         });
         userWs[id].onPositionUpdate({}, function (fc) {
             var symbol = 'f' + fc.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (!position[id][symbol]) {
                     position[id][symbol] = [];
                 }
@@ -475,19 +492,20 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         break;
                     }
                 }
-                (0, _sendWs2.default)({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id
-                });
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - updateTime[id]['position'] > _constants.UPDATE_ORDER) {
+                    updateTime[id]['position'] = now;
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id
+                    });
+                }
             }
         });
         userWs[id].onPositionNew({}, function (fc) {
             var symbol = 'f' + fc.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (!position[id][symbol]) {
                     position[id][symbol] = [];
                 }
@@ -510,9 +528,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         userWs[id].onPositionClose({}, function (fc) {
             var symbol = 'f' + fc.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id]) {
-                    position[id] = {};
-                }
                 if (position[id][symbol]) {
                     for (var j = 0; j < position[id][symbol].length; j++) {
                         if (position[id][symbol][j].id === fc.id) {
@@ -531,9 +546,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         userWs[id].onOrderUpdate({}, function (os) {
             var symbol = 'f' + os.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!order[id]) {
-                    order[id] = {};
-                }
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
@@ -549,19 +561,22 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         break;
                     }
                 }
-                (0, _sendWs2.default)({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id
-                });
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - updateTime[id]['order'] > _constants.UPDATE_ORDER) {
+                    updateTime[id]['order'] = now;
+                    (0, _sendWs2.default)({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id
+                    });
+                }
             }
         });
         userWs[id].onOrderNew({}, function (os) {
             var symbol = 'f' + os.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!order[id]) {
-                    order[id] = {};
-                }
+                console.log(symbol + ' ' + id + ' order new');
+                console.log(os);
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
@@ -584,14 +599,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         });
         userWs[id].onOrderClose({}, function (os) {
             var symbol = 'f' + os.symbol.substr(-3);
-            console.log(symbol);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
                 (function () {
-                    console.log('close');
+                    console.log(symbol + ' ' + id + ' order close');
                     console.log(os);
-                    if (!order[id]) {
-                        order[id] = {};
-                    }
                     if (order[id][symbol]) {
                         for (var j = 0; j < order[id][symbol].length; j++) {
                             if (order[id][symbol][j].id === os.id) {
@@ -620,69 +631,59 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                     //set oco trail priceTrailing
                                     if (curArr[_i2].gain_stop) {
-                                        (function () {
-                                            var or = new _bfxApiNodeModels.Order({
+                                        var or = new _bfxApiNodeModels.Order({
+                                            cid: Date.now(),
+                                            type: 'LIMIT',
+                                            symbol: os.symbol,
+                                            amount: -os.amountOrig / 2,
+                                            price: os.price * (101 + curArr[_i2].gain_stop) / 100,
+                                            priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
+                                            flags: 17408
+                                        }, userRest);
+                                        or.submit().then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            var or1 = new _bfxApiNodeModels.Order({
                                                 cid: Date.now(),
                                                 type: 'LIMIT',
                                                 symbol: os.symbol,
                                                 amount: -os.amountOrig / 2,
-                                                price: os.price * (101 + curArr[_i2].gain_stop) / 100,
+                                                price: os.price * (101 + curArr[_i2].gain_stop * 2) / 100,
                                                 priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
                                                 flags: 17408
                                             }, userRest);
-                                            or.submit().then(function () {
-                                                console.log(or);
-                                                return new _promise2.default(function (resolve, reject) {
-                                                    return setTimeout(function () {
-                                                        return resolve();
-                                                    }, 3000);
-                                                });
-                                            }).then(function () {
-                                                var or1 = new _bfxApiNodeModels.Order({
-                                                    cid: Date.now(),
-                                                    type: 'LIMIT',
-                                                    symbol: os.symbol,
-                                                    amount: -os.amountOrig / 2,
-                                                    price: os.price * (101 + curArr[_i2].gain_stop * 2) / 100,
-                                                    priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                                    flags: 17408
-                                                }, userRest);
-                                                return or1.submit().then(function () {
-                                                    return console.log(or1);
-                                                });
-                                            });
-                                        })();
+                                            return or1.submit();
+                                        });
                                     } else {
-                                        (function () {
-                                            var or = new _bfxApiNodeModels.Order({
+                                        var _or = new _bfxApiNodeModels.Order({
+                                            cid: Date.now(),
+                                            type: 'STOP',
+                                            symbol: os.symbol,
+                                            amount: -os.amountOrig / 2,
+                                            price: os.price * (100 - curArr[_i2].loss_stop) / 100,
+                                            flags: 1024
+                                        }, userRest);
+                                        _or.submit().then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            var or1 = new _bfxApiNodeModels.Order({
                                                 cid: Date.now(),
                                                 type: 'STOP',
                                                 symbol: os.symbol,
                                                 amount: -os.amountOrig / 2,
                                                 price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                                flags: 1024
+                                                flags: 17408
                                             }, userRest);
-                                            or.submit().then(function () {
-                                                console.log(or);
-                                                return new _promise2.default(function (resolve, reject) {
-                                                    return setTimeout(function () {
-                                                        return resolve();
-                                                    }, 3000);
-                                                });
-                                            }).then(function () {
-                                                var or1 = new _bfxApiNodeModels.Order({
-                                                    cid: Date.now(),
-                                                    type: 'STOP',
-                                                    symbol: os.symbol,
-                                                    amount: -os.amountOrig / 2,
-                                                    price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                                    flags: 17408
-                                                }, userRest);
-                                                return or1.submit().then(function () {
-                                                    return console.log(or1);
-                                                });
-                                            });
-                                        })();
+                                            return or1.submit();
+                                        });
                                     }
                                 } else if (os.status.includes('CANCELED')) {
                                     transMargin();
@@ -714,19 +715,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
     var initialBook = function initialBook() {
         var now = Math.round(new Date().getTime() / 1000);
-        if (!updateTime[id]) {
-            updateTime[id] = 0;
-        }
-        if (now - updateTime[id] > _constants.UPDATE_BOOK) {
-            updateTime[id] = now;
-            console.log(updateTime[id]);
+        if (now - updateTime[id]['book'] > _constants.UPDATE_BOOK) {
+            updateTime[id]['book'] = now;
+            console.log(updateTime[id]['book']);
             return userRest.wallets().then(function (wallet) {
-                if (!available[id]) {
-                    available[id] = {};
-                }
-                if (!margin[id]) {
-                    margin[id] = {};
-                }
                 wallet.forEach(function (w) {
                     var symbol = 'f' + w.currency;
                     if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
@@ -745,12 +737,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         }
                     }
                 });
-                console.log(available);
-                console.log(margin);
             }).then(function () {
                 return userRest.fundingOffers('');
             }).then(function (fos) {
-                //console.log(`${t} offer`);
                 var risk = _constants.RISK_MAX;
                 var temp = {};
                 fos.forEach(function (v) {
@@ -770,11 +759,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     }
                 });
                 offer[id] = temp;
-                //console.log(offer[id][t].length);
             }).then(function () {
                 return userRest.fundingCredits('');
             }).then(function (fcs) {
-                //console.log(`${t} credit`);
                 var temp = {};
                 fcs.forEach(function (v) {
                     if (_constants.SUPPORT_COIN.indexOf(v.symbol) !== -1) {
@@ -794,7 +781,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     }
                 });
                 credit[id] = temp;
-                //console.log(credit[id][t].length);
             }).then(function () {
                 return userRest.activeOrders();
             }).then(function (os) {
@@ -955,9 +941,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
                 return false;
             }
-            if (!extremRate[id]) {
-                extremRate[id] = {};
-            }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
                 if (!extremRate[id][current.type]) {
                     extremRate[id][current.type] = {
@@ -1026,9 +1009,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         console.log(keep_available);
         var adjustOffer = function adjustOffer() {
             console.log(id + ' ' + current.type);
-            if (!offer[id]) {
-                offer[id] = {};
-            }
             if (offer[id][current.type]) {
                 //console.log(offer[current.type]);
                 //produce retain delete
@@ -1092,7 +1072,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < 50) {
+                if (finalRate[current.type].length <= 0 || keep_available < _constants.MINIMAL_OFFER) {
                     break;
                 }
                 if (risk < 0) {
@@ -1172,7 +1152,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 }
                 return _promise2.default.resolve();
             } else {
-                var _ret5 = function () {
+                var _ret3 = function () {
                     var DRT = getDR(finalNew[index].rate);
                     console.log(DRT);
                     var fo = new _bfxApiNodeModels.FundingOffer({
@@ -1217,7 +1197,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
             }
         };
         return cancelOffer(0).then(function () {
@@ -1231,7 +1211,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
         //set stop
         if (!extremRate[id][current.type].is_low || Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low > _constants.EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            var _ret6 = function () {
+            var _ret4 = function () {
                 var is_high = false;
                 if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION) {
                     is_high = true;
@@ -1271,7 +1251,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 };
                 var processing = [];
                 var checkOrder = function checkOrder(index) {
-                    if (!order[id] || !order[id][current.type] || index >= order[id][current.type].length) {
+                    if (!order[id][current.type] || index >= order[id][current.type].length) {
                         return _promise2.default.resolve();
                     } else {
                         if (order[id][current.type][index].amount > 0) {
@@ -1311,7 +1291,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             last_price = ethData.lastPrice;
                         }
 
-                        var _ret7 = function () {
+                        var _ret5 = function () {
                             switch (processing[index].type) {
                                 case 1:
                                     var amount = processing[index].os.amount * processing[index].os.price / current.leverage;
@@ -1342,7 +1322,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             v: processOrder(index + 1)
                                         };
                                     } else {
-                                        var _ret8 = function () {
+                                        var _ret6 = function () {
                                             var pre_os = {
                                                 amount: processing[index].os.amount,
                                                 time: processing[index].os.time
@@ -1365,7 +1345,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                             flags: 1024
                                                         }, userRest);
                                                         return or.submit().then(function () {
-                                                            console.log(or);
                                                             gain_stage.push(pre_os);
                                                             return new _promise2.default(function (resolve, reject) {
                                                                 return setTimeout(function () {
@@ -1377,28 +1356,21 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                         if (is_high || !current.gain_stop) {
                                                             return _promise2.default.resolve();
                                                         } else {
-                                                            var _ret9 = function () {
-                                                                var or1 = new _bfxApiNodeModels.Order({
-                                                                    cid: Date.now(),
-                                                                    type: 'LIMIT',
-                                                                    symbol: processing[index].os.symbol,
-                                                                    amount: pre_os.amount,
-                                                                    price: limit,
-                                                                    flags: 1024
-                                                                }, userRest);
-                                                                return {
-                                                                    v: or1.submit().then(function () {
-                                                                        console.log(or1);
-                                                                        return new _promise2.default(function (resolve, reject) {
-                                                                            return setTimeout(function () {
-                                                                                return resolve();
-                                                                            }, 3000);
-                                                                        });
-                                                                    })
-                                                                };
-                                                            }();
-
-                                                            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                                            var or1 = new _bfxApiNodeModels.Order({
+                                                                cid: Date.now(),
+                                                                type: 'LIMIT',
+                                                                symbol: processing[index].os.symbol,
+                                                                amount: pre_os.amount,
+                                                                price: limit,
+                                                                flags: 1024
+                                                            }, userRest);
+                                                            return or1.submit().then(function () {
+                                                                return new _promise2.default(function (resolve, reject) {
+                                                                    return setTimeout(function () {
+                                                                        return resolve();
+                                                                    }, 3000);
+                                                                });
+                                                            });
                                                         }
                                                     }).then(function () {
                                                         return processOrder(index + 1);
@@ -1407,7 +1379,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             };
                                         }();
 
-                                        if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                                     }
                                 case 3:
                                     //update
@@ -1442,7 +1414,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             }
                         }();
 
-                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                     }
                 };
                 return {
@@ -1452,7 +1424,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 };
             }();
 
-            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
         }
         var checkExpire = function checkExpire() {
             if (Math.round(new Date().getTime() / 1000) - current.last_trade > current.interval) {
@@ -1479,7 +1451,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     //close offer
                     if (offer[id] && offer[id][current.type]) {
-                        var _ret10 = function () {
+                        var _ret7 = function () {
                             var cancelOffer = function cancelOffer(index) {
                                 if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
                                     return _promise2.default.resolve(availableMargin);
@@ -1507,7 +1479,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             };
                         }();
 
-                        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                     }
                 }
             }
@@ -1541,14 +1513,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 });
             }
         }).then(function (needAmount) {
-            if (!margin[id] || !margin[id][current.type] || margin[id][current.type].avail < 1) {
+            if (!margin[id][current.type] || margin[id][current.type].avail < 1) {
                 return _promise2.default.resolve();
             }
             console.log(margin[id][current.type].avail);
             //order
             var marginOrderAmount = margin[id][current.type].avail > needAmount ? needAmount : margin[id][current.type].avail;
             if (marginOrderAmount >= 10) {
-                var _ret11 = function () {
+                var _ret8 = function () {
                     var getLowpoint = function getLowpoint() {
                         var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
                         var final_low_point = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -1607,7 +1579,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             return or.submit().then(function () {
                                 current.used = current.used ? current.used + marginOrderAmount : marginOrderAmount;
                                 current.last_trade = Math.round(new Date().getTime() / 1000);
-                                console.log(or);
                                 return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used, "bitfinex.$.last_trade": current.last_trade } }).then(function () {
                                     return new _promise2.default(function (resolve, reject) {
                                         return setTimeout(function () {
@@ -1620,14 +1591,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
             }
         });
     };
     var getLegder = function getLegder(current) {
-        if (!ledger[id]) {
-            ledger[id] = {};
-        }
         if (ledger[id][current.type] && ledger[id][current.type].length > 0) {
             var now = new Date();
             now.setHours(0);
@@ -1722,6 +1690,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 };
 
 var resetBFX = exports.resetBFX = function resetBFX() {
+    var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
     console.log('BFX reset');
     var closeWs = function closeWs(index) {
         if (index >= (0, _keys2.default)(userWs).length) {
@@ -1733,7 +1703,18 @@ var resetBFX = exports.resetBFX = function resetBFX() {
             return closeWs(index + 1);
         }
     };
-    return closeWs(0);
+    if (update) {
+        for (var i in updateTime) {
+            updateTime[i] = {};
+            updateTime[i]['book'] = 0;
+            updateTime[i]['offer'] = 0;
+            updateTime[i]['credit'] = 0;
+            updateTime[i]['position'] = 0;
+            updateTime[i]['order'] = 0;
+        }
+    } else {
+        return closeWs(0);
+    }
 };
 
 exports.default = {
@@ -1798,7 +1779,7 @@ exports.default = {
             if (!amountLimit) {
                 return (0, _utility.handleError)(new _utility.HoError('Amount Limit is not valid'));
             }
-            data['amountLimit'] = amountLimit > 50 ? amountLimit : 50;
+            data['amountLimit'] = amountLimit > _constants.MINIMAL_OFFER ? amountLimit : _constants.MINIMAL_OFFER;
         }
         if (set.riskLimit) {
             var riskLimit = (0, _utility.isValidString)(set.riskLimit, 'int');
@@ -1930,7 +1911,7 @@ exports.default = {
                 data['leverage'] = leverage;
             }
             if (set.pair) {
-                var _ret12 = function () {
+                var _ret9 = function () {
                     var pair = (0, _utility.isValidString)(set.pair, 'name');
                     if (pair === false) {
                         return {
@@ -1949,7 +1930,7 @@ exports.default = {
                     }
                 }();
 
-                if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
             }
         }
         data['type'] = set.type;
@@ -1986,7 +1967,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret13 = function () {
+                var _ret10 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -1999,7 +1980,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
             } else {
                 return returnSupport();
             }

@@ -503,9 +503,10 @@ var setUserOffer = exports.setUserOffer = function setUserOffer() {
             var setO = function setO() {
                 return (0, _mongoTool2.default)('find', _constants.USERDB, { bitfinex: { $exists: true } }).then(function (userlist) {
                     return checkUser(0, userlist).catch(function (err) {
-                        if (err.message && err.message.includes('Maximum call stack size exceeded') || err.msg && err.msg.includes('Maximum call stack size exceeded')) {
+                        if ((err.message || err.msg).includes('Maximum call stack size exceeded')) {
                             return (0, _bitfinexTool.resetBFX)();
                         } else {
+                            (0, _bitfinexTool.resetBFX)(true);
                             return bgError(err, 'Loop set offer');
                         }
                     });

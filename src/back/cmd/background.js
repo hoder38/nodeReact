@@ -226,9 +226,10 @@ export const setUserOffer = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex).then(() => checkUser(index + 1, userlist));
         const setO = () => Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
-            if ((err.message && err.message.includes('Maximum call stack size exceeded')) || (err.msg && err.msg.includes('Maximum call stack size exceeded'))) {
+            if ((err.message||err.msg).includes('Maximum call stack size exceeded')) {
                 return resetBFX();
             } else {
+                resetBFX(true);
                 return bgError(err, 'Loop set offer')
             }
         })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());

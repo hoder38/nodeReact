@@ -841,6 +841,8 @@ export const EXTREM_RATE_NUMBER = 15;
 export const COIN_MAX_MAX = -60;
 export const EXTREM_DURATION = 1800;
 export const UPDATE_BOOK = 21600;
+export const UPDATE_ORDER = 60;
+export const MINIMAL_OFFER = 0.001;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PAIR = {
     fUSD: [TBTC_SYM, TETH_SYM],
