@@ -831,6 +831,8 @@ export const FETH_SYM = 'fETH'
 export const FOMG_SYM = 'fOMG'
 export const TBTC_SYM = 'tBTCUSD'
 export const TETH_SYM = 'tETHUSD';
+export const TUSDT_SYM = 'tUSTUSD';
+export const TOMG_SYM = 'tOMGUSD';
 export const BITFINEX_EXP = 100000000;
 export const BITFINEX_MIN = 100;
 export const DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
@@ -842,8 +844,9 @@ export const COIN_MAX_MAX = -60;
 export const EXTREM_DURATION = 1800;
 export const UPDATE_BOOK = 21600;
 export const UPDATE_ORDER = 60;
-export const MINIMAL_OFFER = 0.001;
+export const MINIMAL_OFFER = 50;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
+export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 export const SUPPORT_PAIR = {
     fUSD: [TBTC_SYM, TETH_SYM],
 }

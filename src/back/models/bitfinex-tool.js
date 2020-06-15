@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
@@ -12,8 +12,7 @@ const rest = bfx.rest(2, { transform: true });
 let finalRate = {};
 let maxRange = {};
 let currentRate = {};
-let btcData = null;
-let ethData = null;
+let priceData = {};
 
 //user
 let userWs = {};
@@ -35,19 +34,23 @@ let position = {};
 //credit history
 //5m candle x
 
-export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ticker(TETH_SYM).then(ethTicker => {
-    btcData = {
-        dailyChange: btcTicker.dailyChangePerc * 100,
-        lastPrice: btcTicker.lastPrice,
-        time: Math.round(new Date().getTime() / 1000),
-    }
-    ethData = {
-        dailyChange: ethTicker.dailyChangePerc * 100,
-        lastPrice: ethTicker.lastPrice,
-        time: Math.round(new Date().getTime() / 1000),
-    }
-    if (btcData.dailyChange < COIN_MAX || ethData.dailyChange < COIN_MAX) {
-        sendWs(`Bitfinex Daily Change: ${btcData.dailyChange} ${ethData.dailyChange}` , 0, 0, true);
+export const calRate = curArr => {
+    const recurPrice = index => {
+        if (index >= SUPPORT_PRICE.length) {
+            if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
+                sendWs(`Bitfinex Daily Change: ${priceData[TBTC_SYM].dailyChange} ${priceData[TETH_SYM].dailyChange}` , 0, 0, true);
+            }
+            return Promise.resolve();
+        } else {
+            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
+                priceData[SUPPORT_PRICE[index]] = {
+                    dailyChange: ticker.dailyChangePerc * 100,
+                    lastPrice: ticker.lastPrice,
+                    time: Math.round(new Date().getTime() / 1000),
+                }
+                return recurPrice(index + 1);
+            });
+        }
     }
     const singleCal = (curType, index) => rest.ticker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
         currentRate[curType] = {
@@ -151,8 +154,8 @@ export const calRate = curArr => rest.ticker(TBTC_SYM).then(btcTicker => rest.ti
             type: 'bitfinex',
             data: 0,
         })) : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    return recurType(0);
-}));
+    return recurPrice(0).then(() => recurType(0));
+}
 
 export const setWsOffer = (id, curArr=[]) => {
     //檢查跟設定active
@@ -838,8 +841,8 @@ export const setWsOffer = (id, curArr=[]) => {
         const calKeepCash = avail => {
             let kp = avail ? (avail[current.type] ? avail[current.type].avail : 0) : 0;
             if (current.isKeep) {
-                if (btcData.dailyChange < COIN_MAX || ethData.dailyChange < COIN_MAX) {
-                    const dailyChange = (btcData.dailyChange < ethData.dailyChange) ? btcData.dailyChange : ethData.dailyChange;
+                if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
+                    const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
                     kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
             }
@@ -916,7 +919,11 @@ export const setWsOffer = (id, curArr=[]) => {
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
                 }
-                if (finalRate[current.type].length <= 0 || keep_available < MINIMAL_OFFER) {
+                let miniOffer = MINIMAL_OFFER;
+                if (priceData[`t${current.type.substr(1)}USD`]) {
+                    miniOffer = MINIMAL_OFFER / priceData[`t${current.type.substr(1)}USD`].lastPrice;
+                }
+                if (finalRate[current.type].length <= 0 || keep_available < miniOffer) {
                     break;
                 }
                 if (risk < 0) {
@@ -1082,10 +1089,8 @@ export const setWsOffer = (id, curArr=[]) => {
                     return Promise.resolve();
                 } else {
                     let last_price = processing[index].os.price * 100 / (100.01 - current.loss_stop);
-                    if (processing[index].os.symbol === TBTC_SYM) {
-                        last_price = btcData.lastPrice;
-                    } else if (processing[index].os.symbol === TETH_SYM) {
-                        last_price = ethData.lastPrice;
+                    if (SUPPORT_PRICE.indexOf(processing[index].os.symbol) !== -1) {
+                        last_price = priceData[processing[index].os.symbol].lastPrice;
                     }
                     switch(processing[index].type) {
                         case 1:
@@ -1241,10 +1246,8 @@ export const setWsOffer = (id, curArr=[]) => {
                                     }
                                 }
                                 let last_price = 1;
-                                if (current.pair[index] === TBTC_SYM) {
-                                    last_price = btcData.lastPrice;
-                                } else if (current.pair[index] === TETH_SYM) {
-                                    last_price = ethData.lastPrice;
+                                if (SUPPORT_PRICE.indexOf(current.pair[index]) !== -1) {
+                                    last_price = priceData[current.pair[index]].lastPrice;
                                 }
                                 low_point = (low_point * 1.005 < last_price) ? low_point * 1.005 : last_price;
                                 console.log(low_point);
@@ -1427,7 +1430,7 @@ export default {
             if (!amountLimit) {
                 return handleError(new HoError('Amount Limit is not valid'));
             }
-            data['amountLimit'] = amountLimit > MINIMAL_OFFER ? amountLimit : MINIMAL_OFFER;
+            //data['amountLimit'] = amountLimit > MINIMAL_OFFER ? amountLimit : MINIMAL_OFFER;
         }
         if (set.riskLimit) {
             const riskLimit = isValidString(set.riskLimit, 'int')
@@ -1740,25 +1743,15 @@ export default {
                     });
                 }
             }
-            if (btcData) {
+            let vid = SUPPORT_COIN.length;
+            for (let i in priceData) {
                 tempList.push({
-                    name: `Bitcoin $${Math.floor(btcData.lastPrice * 100) / 100}`,
-                    id: SUPPORT_COIN.length,
-                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
-                    rate: `${Math.floor(btcData.dailyChange * 100) / 100}%`,
-                    count: btcData.dilyChange,
-                    utime: btcData.time,
-                    type: 1,
-                })
-            }
-            if (ethData) {
-                tempList.push({
-                    name: `Ethereum $${Math.floor(ethData.lastPrice * 100) / 100}`,
-                    id: SUPPORT_COIN.length + 1,
-                    tags: ['bitcoin', '比特幣', 'rate', '利率'],
-                    rate: `${Math.floor(ethData.dailyChange * 100) / 100}%`,
-                    count: ethData.dailyChange,
-                    utime: ethData.time,
+                    name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 100) / 100}`,
+                    id: vid++,
+                    tags: [i.substr(1, 4), i.substr(-3), 'rate', '利率'],
+                    rate: `${Math.floor(priceData[i].dailyChange * 10000) / 10000}%`,
+                    count: priceData[i].dilyChange,
+                    utime: priceData[i].time,
                     type: 1,
                 })
             }
