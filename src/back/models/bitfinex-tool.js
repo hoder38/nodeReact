@@ -1096,7 +1096,7 @@ export const setWsOffer = (id, curArr=[]) => {
                         case 1:
                         const amount = processing[index].os.amount * processing[index].os.price / current.leverage;
                         return userRest.cancelOrder(processing[index].os.id).then(() => {
-                            current.used = current.used ? current.used - amount : -amount;
+                            current.used = (current.used > amount) ? (current.used - amount) : 0;
                             console.log(current.used);
                             return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}}).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => processOrder(index + 1)));
                         });
@@ -1173,7 +1173,8 @@ export const setWsOffer = (id, curArr=[]) => {
             }
         }
         const getAM = () => {
-            const needAmount = current.used ? (current.amount - current.used) : current.amount;
+            console.log(current);
+            const needAmount = (current.used > 0) ? (current.amount - current.used) : current.amount;
             let needTrans = needAmount;
             //check need amount
             if (margin[id] && margin[id][current.type]) {

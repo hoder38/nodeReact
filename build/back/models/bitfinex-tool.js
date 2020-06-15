@@ -1300,7 +1300,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     var amount = processing[index].os.amount * processing[index].os.price / current.leverage;
                                     return {
                                         v: userRest.cancelOrder(processing[index].os.id).then(function () {
-                                            current.used = current.used ? current.used - amount : -amount;
+                                            current.used = current.used > amount ? current.used - amount : 0;
                                             console.log(current.used);
                                             return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } }).then(function () {
                                                 return new _promise2.default(function (resolve, reject) {
@@ -1438,7 +1438,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         };
         var getAM = function getAM() {
-            var needAmount = current.used ? current.amount - current.used : current.amount;
+            console.log(current);
+            var needAmount = current.used > 0 ? current.amount - current.used : current.amount;
             var needTrans = needAmount;
             //check need amount
             if (margin[id] && margin[id][current.type]) {
