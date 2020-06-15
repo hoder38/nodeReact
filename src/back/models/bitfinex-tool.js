@@ -1173,7 +1173,7 @@ export const setWsOffer = (id, curArr=[]) => {
             }
         }
         const getAM = () => {
-            const needAmount = current.amount - current.used;
+            const needAmount = current.used ? (current.amount - current.used) : current.amount;
             let needTrans = needAmount;
             //check need amount
             if (margin[id] && margin[id][current.type]) {
@@ -1191,7 +1191,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     if (offer[id] && offer[id][current.type]) {
                         const cancelOffer = index => {
                             if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
-                                return Promise.resolve(availableMargin);
+                                return Promise.resolve([availableMargin, needAmount]);
                             } else {
                                 if (offer[id][current.type][index].risk === undefined) {
                                     return cancelOffer(index + 1);

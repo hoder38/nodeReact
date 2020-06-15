@@ -1438,7 +1438,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         };
         var getAM = function getAM() {
-            var needAmount = current.amount - current.used;
+            var needAmount = current.used ? current.amount - current.used : current.amount;
             var needTrans = needAmount;
             //check need amount
             if (margin[id] && margin[id][current.type]) {
@@ -1457,7 +1457,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         var _ret7 = function () {
                             var cancelOffer = function cancelOffer(index) {
                                 if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
-                                    return _promise2.default.resolve(availableMargin);
+                                    return _promise2.default.resolve([availableMargin, needAmount]);
                                 } else {
                                     if (offer[id][current.type][index].risk === undefined) {
                                         return cancelOffer(index + 1);
