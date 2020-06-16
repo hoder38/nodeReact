@@ -260,6 +260,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     }).then(function () {
                         return cancelOrder(symbol, index + 1, amount, time, type, true);
                     });
+                }).catch(function (err) {
+                    (0, _sendWs2.default)(id + ' Bitfinex Close Order Error: ' + (err.message || err.msg), 0, 0, true);
+                    (0, _utility.handleError)(err, id + ' Bitfinex Close Order Error');
                 });
             } else {
                 return cancelOrder(symbol, index + 1, amount, time, type, is_close);
@@ -601,111 +604,98 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         userWs[id].onOrderClose({}, function (os) {
             var symbol = 'f' + os.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
-                (function () {
-                    console.log(symbol + ' ' + id + ' order close');
-                    console.log(os);
-                    if (order[id][symbol]) {
-                        for (var j = 0; j < order[id][symbol].length; j++) {
-                            if (order[id][symbol][j].id === os.id) {
-                                order[id][symbol].splice(j, 1);
-                                break;
-                            }
+                console.log(symbol + ' ' + id + ' order close');
+                console.log(os);
+                if (order[id][symbol]) {
+                    for (var j = 0; j < order[id][symbol].length; j++) {
+                        if (order[id][symbol][j].id === os.id) {
+                            order[id][symbol].splice(j, 1);
+                            break;
                         }
                     }
-                    var transMargin = function transMargin() {
-                        return setTimeout(function () {
-                            console.log(margin[id]);
-                            if (margin[id] && margin[id][symbol] && margin[id][symbol].avail > 1) {
-                                return userRest.transfer({
-                                    from: 'margin',
-                                    to: 'funding',
-                                    amount: margin[id][symbol].avail.toString(),
-                                    currency: symbol.substr(1)
-                                });
-                            }
-                        }, 5000);
-                    };
+                }
 
-                    var _loop = function _loop(_i2) {
-                        if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].interval && curArr[_i2].amount && curArr[_i2].low_point && curArr[_i2].loss_stop && curArr[_i2].pair && curArr[_i2].pair.length > 0) {
-                            if (os.amountOrig > 0) {
-                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                    //set oco trail priceTrailing
-                                    if (curArr[_i2].gain_stop) {
-                                        var or = new _bfxApiNodeModels.Order({
+                var _loop = function _loop(_i2) {
+                    if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].interval && curArr[_i2].amount && curArr[_i2].low_point && curArr[_i2].loss_stop && curArr[_i2].pair && curArr[_i2].pair.length > 0) {
+                        if (os.amountOrig > 0) {
+                            if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
+                                //set oco trail priceTrailing
+                                if (curArr[_i2].gain_stop) {
+                                    var or = new _bfxApiNodeModels.Order({
+                                        cid: Date.now(),
+                                        type: 'LIMIT',
+                                        symbol: os.symbol,
+                                        amount: -os.amountOrig / 2,
+                                        price: os.price * (101 + curArr[_i2].gain_stop) / 100,
+                                        priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
+                                        flags: 17408
+                                    }, userRest);
+                                    or.submit().then(function () {
+                                        return new _promise2.default(function (resolve, reject) {
+                                            return setTimeout(function () {
+                                                return resolve();
+                                            }, 3000);
+                                        });
+                                    }).then(function () {
+                                        var or1 = new _bfxApiNodeModels.Order({
                                             cid: Date.now(),
                                             type: 'LIMIT',
                                             symbol: os.symbol,
-                                            amount: -os.amountOrig / 2,
-                                            price: os.price * (101 + curArr[_i2].gain_stop) / 100,
+                                            amount: -os.amountOrig / 2 * 1.005,
+                                            price: os.price * (101 + curArr[_i2].gain_stop * 2) / 100,
                                             priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
                                             flags: 17408
                                         }, userRest);
-                                        or.submit().then(function () {
-                                            return new _promise2.default(function (resolve, reject) {
-                                                return setTimeout(function () {
-                                                    return resolve();
-                                                }, 3000);
-                                            });
-                                        }).then(function () {
-                                            var or1 = new _bfxApiNodeModels.Order({
-                                                cid: Date.now(),
-                                                type: 'LIMIT',
-                                                symbol: os.symbol,
-                                                amount: -os.amountOrig / 2,
-                                                price: os.price * (101 + curArr[_i2].gain_stop * 2) / 100,
-                                                priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                                flags: 17408
-                                            }, userRest);
-                                            return or1.submit();
+                                        return or1.submit();
+                                    }).catch(function (err) {
+                                        (0, _sendWs2.default)(id + ' Bitfinex Order Error: ' + (err.message || err.msg), 0, 0, true);
+                                        (0, _utility.handleError)(err, id + ' Bitfinex Order Error');
+                                    });
+                                } else {
+                                    var _or = new _bfxApiNodeModels.Order({
+                                        cid: Date.now(),
+                                        type: 'STOP',
+                                        symbol: os.symbol,
+                                        amount: -os.amountOrig / 2,
+                                        price: os.price * (100 - curArr[_i2].loss_stop) / 100,
+                                        flags: 1024
+                                    }, userRest);
+                                    _or.submit().then(function () {
+                                        return new _promise2.default(function (resolve, reject) {
+                                            return setTimeout(function () {
+                                                return resolve();
+                                            }, 3000);
                                         });
-                                    } else {
-                                        var _or = new _bfxApiNodeModels.Order({
+                                    }).then(function () {
+                                        var or1 = new _bfxApiNodeModels.Order({
                                             cid: Date.now(),
                                             type: 'STOP',
                                             symbol: os.symbol,
-                                            amount: -os.amountOrig / 2,
+                                            amount: -os.amountOrig / 2 * 1.005,
                                             price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                            flags: 1024
+                                            flags: 17408
                                         }, userRest);
-                                        _or.submit().then(function () {
-                                            return new _promise2.default(function (resolve, reject) {
-                                                return setTimeout(function () {
-                                                    return resolve();
-                                                }, 3000);
-                                            });
-                                        }).then(function () {
-                                            var or1 = new _bfxApiNodeModels.Order({
-                                                cid: Date.now(),
-                                                type: 'STOP',
-                                                symbol: os.symbol,
-                                                amount: -os.amountOrig / 2,
-                                                price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                                flags: 17408
-                                            }, userRest);
-                                            return or1.submit();
-                                        });
-                                    }
-                                } else if (os.status.includes('CANCELED')) {
-                                    transMargin();
+                                        return or1.submit();
+                                    }).catch(function (err) {
+                                        (0, _sendWs2.default)(id + ' Bitfinex Order Error: ' + (err.message || err.msg), 0, 0, true);
+                                        (0, _utility.handleError)(err, id + ' Bitfinex Order Error');
+                                    });
                                 }
-                            } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false).then(function () {
-                                    return transMargin();
-                                });
-                            } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
-                                cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                             }
-                            return 'break';
+                        } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
+                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
+                        } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
+                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                         }
-                    };
-
-                    for (var _i2 = 0; _i2 < curArr.length; _i2++) {
-                        var _ret2 = _loop(_i2);
-
-                        if (_ret2 === 'break') break;
+                        return 'break';
                     }
-                })();
+                };
+
+                for (var _i2 = 0; _i2 < curArr.length; _i2++) {
+                    var _ret = _loop(_i2);
+
+                    if (_ret === 'break') break;
+                }
             }
         });
         userWs[id].open();
@@ -1157,7 +1147,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 }
                 return _promise2.default.resolve();
             } else {
-                var _ret3 = function () {
+                var _ret2 = function () {
                     var DRT = getDR(finalNew[index].rate);
                     console.log(DRT);
                     var fo = new _bfxApiNodeModels.FundingOffer({
@@ -1202,7 +1192,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
             }
         };
         return cancelOffer(0).then(function () {
@@ -1216,7 +1206,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
         //set stop
         if (!extremRate[id][current.type].is_low || Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low > _constants.EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            var _ret4 = function () {
+            var _ret3 = function () {
                 var is_high = false;
                 if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION) {
                     is_high = true;
@@ -1253,6 +1243,19 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     }
 
                     return 2;
+                };
+                var transMargin = function transMargin() {
+                    console.log(margin[id]);
+                    if ((!order[id][current.type] || order[id][current.type].length < 1) && margin[id][current.type] && margin[id][current.type].avail > 1) {
+                        return userRest.transfer({
+                            from: 'margin',
+                            to: 'funding',
+                            amount: margin[id][current.type].avail.toString(),
+                            currency: current.type.substr(1)
+                        });
+                    } else {
+                        return _promise2.default.resolve();
+                    }
                 };
                 var processing = [];
                 var checkOrder = function checkOrder(index) {
@@ -1294,7 +1297,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             last_price = priceData[processing[index].os.symbol].lastPrice;
                         }
 
-                        var _ret5 = function () {
+                        var _ret4 = function () {
                             switch (processing[index].type) {
                                 case 1:
                                     var amount = processing[index].os.amount * processing[index].os.price / current.leverage;
@@ -1325,7 +1328,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             v: processOrder(index + 1)
                                         };
                                     } else {
-                                        var _ret6 = function () {
+                                        var _ret5 = function () {
                                             var pre_os = {
                                                 amount: processing[index].os.amount,
                                                 time: processing[index].os.time
@@ -1382,7 +1385,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             };
                                         }();
 
-                                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                                     }
                                 case 3:
                                     //update
@@ -1417,17 +1420,19 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             }
                         }();
 
-                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                     }
                 };
                 return {
-                    v: checkOrder(0).then(function () {
+                    v: transMargin().then(function () {
+                        return checkOrder(0);
+                    }).then(function () {
                         return processOrder(0);
                     })
                 };
             }();
 
-            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
         }
         var checkExpire = function checkExpire() {
             if (Math.round(new Date().getTime() / 1000) - current.last_trade > current.interval) {
@@ -1439,10 +1444,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         };
         var getAM = function getAM() {
             console.log(current);
-            var needAmount = current.used > 0 ? current.amount - current.used : current.amount;
+            var needAmount = current.used > 0 ? current.used > current.amount ? 0 : current.amount - current.used : current.amount;
             var needTrans = needAmount;
             //check need amount
-            if (margin[id] && margin[id][current.type]) {
+            if (margin[id][current.type]) {
                 needTrans = needTrans - margin[id][current.type].avail;
             }
             var availableMargin = 0;
@@ -1455,7 +1460,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     //close offer
                     if (offer[id] && offer[id][current.type]) {
-                        var _ret7 = function () {
+                        var _ret6 = function () {
                             var cancelOffer = function cancelOffer(index) {
                                 if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
                                     return _promise2.default.resolve([availableMargin, needAmount]);
@@ -1483,7 +1488,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             };
                         }();
 
-                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                     }
                 }
             }
@@ -1496,9 +1501,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 availableMargin = _ref2[0],
                 needAmount = _ref2[1];
 
-            console.log(needAmount);
             console.log(availableMargin);
-            console.log(available);
+            console.log(needAmount);
+            console.log(available[id]);
             //transform wallet
             if (availableMargin < 1) {
                 return _promise2.default.resolve(needAmount);
@@ -1524,7 +1529,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             //order
             var marginOrderAmount = margin[id][current.type].avail > needAmount ? needAmount : margin[id][current.type].avail;
             if (marginOrderAmount >= 10) {
-                var _ret8 = function () {
+                var _ret7 = function () {
                     var getLowpoint = function getLowpoint() {
                         var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
                         var final_low_point = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -1593,7 +1598,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
             }
         });
     };
@@ -1913,7 +1918,7 @@ exports.default = {
                 data['leverage'] = leverage;
             }
             if (set.pair) {
-                var _ret9 = function () {
+                var _ret8 = function () {
                     var pair = (0, _utility.isValidString)(set.pair, 'name');
                     if (pair === false) {
                         return {
@@ -1932,7 +1937,7 @@ exports.default = {
                     }
                 }();
 
-                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
             }
         }
         data['type'] = set.type;
@@ -1969,7 +1974,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret10 = function () {
+                var _ret9 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -1982,7 +1987,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
             } else {
                 return returnSupport();
             }

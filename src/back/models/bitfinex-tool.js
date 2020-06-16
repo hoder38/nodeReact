@@ -187,7 +187,10 @@ export const setWsOffer = (id, curArr=[]) => {
             console.log(order[id][symbol][index]);
             console.log(is_close);
             if (order[id][symbol][index].amount === amount && Math.abs(order[id][symbol][index].time - time) < 60 && ((type !== 'LIMIT' && order[id][symbol][index].type == 'LIMIT') || (type === 'LIMIT' && order[id][symbol][index].type !== 'LIMIT')) && !is_close) {
-                return userRest.cancelOrder(order[id][symbol][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(symbol, index + 1, amount, time, type, true)));
+                return userRest.cancelOrder(order[id][symbol][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(symbol, index + 1, amount, time, type, true))).catch(err => {
+                    sendWs(`${id} Bitfinex Close Order Error: ${err.message||err.msg}`, 0, 0, true);
+                    handleError(err, `${id} Bitfinex Close Order Error`);
+                });
             } else {
                 return cancelOrder(symbol, index + 1, amount, time, type, is_close);
             }
@@ -536,17 +539,6 @@ export const setWsOffer = (id, curArr=[]) => {
                         }
                     }
                 }
-                const transMargin = () => setTimeout(() => {
-                    console.log(margin[id]);
-                    if (margin[id] && margin[id][symbol] && margin[id][symbol].avail > 1) {
-                        return userRest.transfer({
-                            from: 'margin',
-                            to: 'funding',
-                            amount: margin[id][symbol].avail.toString(),
-                            currency: symbol.substr(1),
-                        });
-                    }
-                }, 5000);
                 for (let i = 0; i < curArr.length; i++) {
                     if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].interval && curArr[i].amount && curArr[i].low_point && curArr[i].loss_stop && curArr[i].pair && curArr[i].pair.length > 0) {
                         if (os.amountOrig > 0) {
@@ -567,12 +559,15 @@ export const setWsOffer = (id, curArr=[]) => {
                                             cid: Date.now(),
                                             type: 'LIMIT',
                                             symbol: os.symbol,
-                                            amount: -os.amountOrig / 2,
+                                            amount: -os.amountOrig / 2 * 1.005,
                                             price: os.price * (101 + curArr[i].gain_stop * 2) / 100,
                                             priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
                                             flags: 17408,
                                         }, userRest);
                                         return or1.submit();
+                                    }).catch(err => {
+                                        sendWs(`${id} Bitfinex Order Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} Bitfinex Order Error`);
                                     });
                                 } else {
                                     const or = new Order({
@@ -588,18 +583,19 @@ export const setWsOffer = (id, curArr=[]) => {
                                             cid: Date.now(),
                                             type: 'STOP',
                                             symbol: os.symbol,
-                                            amount: -os.amountOrig / 2,
+                                            amount: -os.amountOrig / 2 * 1.005,
                                             price: os.price * (100 - curArr[i].loss_stop) / 100,
                                             flags: 17408,
                                         }, userRest);
                                         return or1.submit();
+                                    }).catch(err => {
+                                        sendWs(`${id} Bitfinex Order Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} Bitfinex Order Error`);
                                     });
                                 }
-                            } else if (os.status.includes('CANCELED')) {
-                                transMargin();
                             }
                         } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false).then(() => transMargin());
+                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                         } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
                             cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                         }
@@ -1053,6 +1049,19 @@ export const setWsOffer = (id, curArr=[]) => {
                 }
                 return 2;
             }
+            const transMargin = () => {
+                console.log(margin[id]);
+                if ((!order[id][current.type] || order[id][current.type].length < 1) && margin[id][current.type] && margin[id][current.type].avail > 1) {
+                    return userRest.transfer({
+                        from: 'margin',
+                        to: 'funding',
+                        amount: margin[id][current.type].avail.toString(),
+                        currency: current.type.substr(1),
+                    });
+                } else {
+                    return Promise.resolve();
+                }
+            }
             const processing = [];
             const checkOrder = index => {
                 if (!order[id][current.type] || index >= order[id][current.type].length) {
@@ -1162,7 +1171,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 }
             }
-            return checkOrder(0).then(() => processOrder(0));
+            return transMargin().then(() => checkOrder(0)).then(() => processOrder(0));
         }
         const checkExpire = () => {
             if ((Math.round(new Date().getTime() / 1000) - current.last_trade) > current.interval) {
@@ -1174,10 +1183,10 @@ export const setWsOffer = (id, curArr=[]) => {
         }
         const getAM = () => {
             console.log(current);
-            const needAmount = (current.used > 0) ? (current.amount - current.used) : current.amount;
+            const needAmount = (current.used > 0) ? (current.used > current.amount) ? 0 : (current.amount - current.used) : current.amount;
             let needTrans = needAmount;
             //check need amount
-            if (margin[id] && margin[id][current.type]) {
+            if (margin[id][current.type]) {
                 needTrans = needTrans - margin[id][current.type].avail;
             }
             let availableMargin = 0;
@@ -1211,9 +1220,9 @@ export const setWsOffer = (id, curArr=[]) => {
             return Promise.resolve([availableMargin, needAmount]);
         }
         return checkExpire().then(() => getAM()).then(([availableMargin, needAmount]) => {
-            console.log(needAmount);
             console.log(availableMargin);
-            console.log(available);
+            console.log(needAmount);
+            console.log(available[id]);
             //transform wallet
             if (availableMargin < 1) {
                 return Promise.resolve(needAmount);
