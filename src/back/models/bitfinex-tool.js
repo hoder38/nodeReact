@@ -541,6 +541,7 @@ export const setWsOffer = (id, curArr=[]) => {
                 }
                 for (let i = 0; i < curArr.length; i++) {
                     if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].interval && curArr[i].amount && curArr[i].low_point && curArr[i].loss_stop && curArr[i].pair && curArr[i].pair.length > 0) {
+                        console.log(curArr[i]);
                         if (os.amountOrig > 0) {
                             if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                 //set oco trail priceTrailing
@@ -549,7 +550,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                         cid: Date.now(),
                                         type: 'LIMIT',
                                         symbol: os.symbol,
-                                        amount: -os.amountOrig / 2,
+                                        amount: -os.amountOrig / 2 * 1.005,
                                         price: os.price * (101 + curArr[i].gain_stop) / 100,
                                         priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
                                         flags: 17408,
@@ -574,7 +575,7 @@ export const setWsOffer = (id, curArr=[]) => {
                                         cid: Date.now(),
                                         type: 'STOP',
                                         symbol: os.symbol,
-                                        amount: -os.amountOrig / 2,
+                                        amount: -os.amountOrig / 2 * 1.005,
                                         price: os.price * (100 - curArr[i].loss_stop) / 100,
                                         flags: 1024,
                                     }, userRest);
@@ -1032,6 +1033,7 @@ export const setWsOffer = (id, curArr=[]) => {
         if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
             return Promise.resolve();
         }
+        console.log(current);
         //set stop
         if (!extremRate[id][current.type].is_low || (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) > EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
             let is_high = false;

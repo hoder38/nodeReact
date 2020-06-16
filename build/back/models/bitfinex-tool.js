@@ -617,6 +617,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
                 var _loop = function _loop(_i2) {
                     if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].interval && curArr[_i2].amount && curArr[_i2].low_point && curArr[_i2].loss_stop && curArr[_i2].pair && curArr[_i2].pair.length > 0) {
+                        console.log(curArr[_i2]);
                         if (os.amountOrig > 0) {
                             if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
                                 //set oco trail priceTrailing
@@ -625,7 +626,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         cid: Date.now(),
                                         type: 'LIMIT',
                                         symbol: os.symbol,
-                                        amount: -os.amountOrig / 2,
+                                        amount: -os.amountOrig / 2 * 1.005,
                                         price: os.price * (101 + curArr[_i2].gain_stop) / 100,
                                         priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
                                         flags: 17408
@@ -656,7 +657,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         cid: Date.now(),
                                         type: 'STOP',
                                         symbol: os.symbol,
-                                        amount: -os.amountOrig / 2,
+                                        amount: -os.amountOrig / 2 * 1.005,
                                         price: os.price * (100 - curArr[_i2].loss_stop) / 100,
                                         flags: 1024
                                     }, userRest);
@@ -1204,6 +1205,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
             return _promise2.default.resolve();
         }
+        console.log(current);
         //set stop
         if (!extremRate[id][current.type].is_low || Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low > _constants.EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
             var _ret3 = function () {
