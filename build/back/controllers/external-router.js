@@ -360,7 +360,7 @@ router.get('/getSingle/:uid', function (req, res, next) {
             url = 'http://www.58b.tv/168player/youtube.php?' + idsub[1];
             break;
         case 'kur':
-            url = 'http://www.58b.tv' + new Buffer(id[2], 'base64').toString();
+            url = 'http://www.iwatchme2u.com' + new Buffer(id[2], 'base64').toString();
             break;
         case 'bil':
             idsub = id[2].match(/^([^_]+)_(\d+)$/);
@@ -1004,7 +1004,7 @@ router.post('/upload/url', function (req, res, next) {
                                 }];
                             });
                         });
-                    } else if (decodeUrl.match(/^(https|http):\/\/www\.58b\.tv\//)) {
+                    } else if (decodeUrl.match(/^(https|http):\/\/www\.iwatchme2u\.com\//)) {
                         return (0, _mongoTool2.default)('find', _constants.STORAGEDB, {
                             owner: 'kubo',
                             url: encodeURIComponent(decodeUrl)

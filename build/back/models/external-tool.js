@@ -560,21 +560,20 @@ exports.default = {
                     });
                 }
             case 'kubo':
-                return (0, _apiTool2.default)('url', url, { referer: 'http://www.58b.tv/' }).then(function (raw_data) {
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.iwatchme2u.com/' }).then(function (raw_data) {
                     var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
-                    var main = (0, _utility.findTag)(body, 'div', 'main')[0];
-                    if (main) {
+                    if (body.attribs.class === 'vod-type') {
                         var _ret3 = function () {
-                            var type_id = url.match(/vod-search-id-(\d+)/);
+                            var type_id = url.match(/list-select-id-(\d+)/);
                             if (!type_id) {
                                 return {
                                     v: (0, _utility.handleError)(new _utility.HoError('unknown kubo type'))
                                 };
                             }
                             return {
-                                v: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(function (l) {
-                                    var a = (0, _utility.findTag)(l, 'a')[0];
-                                    var img = (0, _utility.findTag)(a, 'img')[0];
+                                v: (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'container ff-bg')[1], 'ul')[0], 'li').map(function (l) {
+                                    var a = (0, _utility.findTag)((0, _utility.findTag)(l, 'h2')[0], 'a')[0];
+                                    var img = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'p')[0], 'a')[0], 'img')[0];
                                     var tags = new _set2.default();
                                     if (type_id[1] === '1') {
                                         tags = new _set2.default(['電影', 'movie']);
@@ -588,33 +587,14 @@ exports.default = {
                                     }
                                     var count = 0;
                                     var date = '1970-01-01';
-                                    (0, _utility.findTag)(l, 'p').forEach(function (p) {
-                                        var t = (0, _utility.findTag)(p)[0];
-                                        if (t) {
-                                            if (t === '主演：') {
-                                                (0, _utility.findTag)(p, 'a').forEach(function (b) {
-                                                    return tags.add((0, _utility.findTag)(b)[0]);
-                                                });
-                                            } else {
-                                                var match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
-                                                if (match) {
-                                                    tags.add(match[1]).add(match[2]);
-                                                } else {
-                                                    match = t.match(/^月熱度：(\d+)/);
-                                                    if (match) {
-                                                        count = Number(match[1]);
-                                                    } else {
-                                                        match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
-                                                        if (match) {
-                                                            date = match[1];
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                    (0, _utility.findTag)((0, _utility.findTag)(l, 'h4')[0], 'a').forEach(function (a) {
+                                        var tag = (0, _utility.findTag)(a)[0];
+                                        if (tag !== '內詳') {
+                                            tags.add(tag);
                                         }
                                     });
                                     return {
-                                        name: img.attribs.alt,
+                                        name: (0, _utility.findTag)(a)[0],
                                         id: a.attribs.href.match(/\d+/)[0],
                                         thumb: img.attribs['data-original'],
                                         tags: tags,
@@ -627,127 +607,37 @@ exports.default = {
 
                         if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
                     } else {
-                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[0], 'div', 'wrapper_wrapper')[0], 'div', 'container')[0], 'div', 'content_left')[0], 'div', 'ires')[0], 'ol')[0], 'li', 'g').map(function (g) {
-                            var tr = (0, _utility.findTag)((0, _utility.findTag)(g, 'table')[0], 'tr')[0];
-                            var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'div')[0], 'a')[0];
-                            var td = (0, _utility.findTag)(tr, 'td')[1];
-                            var a1 = (0, _utility.findTag)((0, _utility.findTag)(td, 'h3')[0], 'a')[0];
-                            var name = '';
-                            a1.children.forEach(function (c) {
-                                if (c.data) {
-                                    name = '' + name + c.data;
-                                } else {
-                                    var t = (0, _utility.findTag)(c)[0];
-                                    name = t ? '' + name + t : '' + name + (0, _utility.findTag)((0, _utility.findTag)(c, 'b')[0])[0];
-                                }
-                            });
-                            name = name.match(/^(.*)-([^\-]+)$/);
-                            var tags = new _set2.default([(0, _tagTool.normalize)(name[2])]);
+                        return (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'container ff-bg')[0], 'div', 'row ff-row')[0], 'div', 'col-md-10')[0], 'ul')[0], 'li').map(function (l) {
+                            var img = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'dl')[0], 'dt')[0], 'p', 'image')[0], 'a')[0], 'img')[0];
+                            var dd = (0, _utility.findTag)((0, _utility.findTag)(l, 'dl')[0], 'dd')[0];
+                            var a = (0, _utility.findTag)((0, _utility.findTag)(dd, 'h3')[0], 'a')[0];
                             var count = 0;
                             var date = '1970-01-01';
-                            for (var i in _constants.KUBO_TYPE) {
-                                var index = _constants.KUBO_TYPE[i].indexOf(name[2]);
-                                if (index !== -1) {
-                                    if (i === '0') {
-                                        tags.add('movie').add('電影');
-                                        switch (index) {
-                                            case 0:
-                                                tags.add('action').add('動作');
-                                                break;
-                                            case 1:
-                                                tags.add('comedy').add('喜劇');
-                                                break;
-                                            case 2:
-                                                tags.add('romance').add('浪漫');
-                                                break;
-                                            case 3:
-                                                tags.add('sci-fi').add('科幻');
-                                                break;
-                                            case 4:
-                                                tags.add('horror').add('恐怖');
-                                                break;
-                                            case 5:
-                                                tags.add('drama').add('劇情');
-                                                break;
-                                            case 6:
-                                                tags.add('war').add('戰爭');
-                                                break;
-                                            case 7:
-                                                tags.add('animation').add('動畫');
-                                                break;
+                            var tags = new _set2.default();
+                            (0, _utility.findTag)(dd, 'p').forEach(function (p) {
+                                (0, _utility.findTag)(p).forEach(function (g, i) {
+                                    if (g.includes('地區/年份')) {
+                                        (0, _utility.findTag)((0, _utility.findTag)(p, 'span')[i])[0].split('/').forEach(function (t) {
+                                            return tags.add(t);
+                                        });
+                                    } else if (g.includes('演員') || g.includes('導演')) {
+                                        (0, _utility.findTag)((0, _utility.findTag)(p, 'span')[i], 'a').forEach(function (t) {
+                                            if ((0, _utility.findTag)(t)[0]) {
+                                                tags.add((0, _utility.findTag)(t)[0]);
+                                            }
+                                        });
+                                    } else if (g.includes('更新時間')) {
+                                        var match = (0, _utility.findTag)((0, _utility.findTag)(p, 'span')[i])[0].match(/^\d\d\d\d\/\d\d\/\d\d/);
+                                        if (match) {
+                                            date = match[0];
                                         }
-                                    } else if (i === '1') {
-                                        tags.add('tv show').add('電視劇');
-                                    } else if (i === '2') {
-                                        tags.add('tv show').add('電視劇').add('綜藝節目');
-                                    } else if (i === '3') {
-                                        tags.add('animation').add('動畫');
-                                    }
-                                    break;
-                                }
-                            }
-                            var div = (0, _utility.findTag)(td, 'div')[0];
-                            var span = (0, _utility.findTag)((0, _utility.findTag)(div, 'div', 'kv')[0], 'span')[0];
-                            var _iteratorNormalCompletion = true;
-                            var _didIteratorError = false;
-                            var _iteratorError = undefined;
-
-                            try {
-                                for (var _iterator = (0, _getIterator3.default)((0, _utility.findTag)(span)), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                                    var t = _step.value;
-
-                                    var match = t.match(/月熱度:(\d+)/);
-                                    if (match) {
-                                        count = Number(match[1]);
-                                        break;
-                                    }
-                                }
-                            } catch (err) {
-                                _didIteratorError = true;
-                                _iteratorError = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion && _iterator.return) {
-                                        _iterator.return();
-                                    }
-                                } finally {
-                                    if (_didIteratorError) {
-                                        throw _iteratorError;
-                                    }
-                                }
-                            }
-
-                            (0, _utility.findTag)(span, 'a').forEach(function (s) {
-                                if ((0, _utility.findTag)(s)[0]) {
-                                    tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
-                                }
-                            });
-                            (0, _utility.findTag)(div, 'div', 'osl').forEach(function (o) {
-                                var ot = (0, _utility.findTag)(o)[0];
-                                if (ot) {
-                                    var matcho = ot.match(/别名:(.*)/);
-                                    if (matcho) {
-                                        tags.add((0, _tagTool.normalize)(matcho[1]));
-                                    }
-                                }
-                                (0, _utility.findTag)(o, 'a').forEach(function (s) {
-                                    var st = (0, _utility.findTag)(s)[0];
-                                    if (st) {
-                                        tags.add((0, _tagTool.normalize)((0, _utility.findTag)(s)[0]));
                                     }
                                 });
                             });
-                            var cite = (0, _utility.findTag)(span, 'cite')[0];
-                            if (cite) {
-                                var matchDate = (0, _utility.findTag)(cite)[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
-                                if (matchDate) {
-                                    date = matchDate[1] + '-' + matchDate[2] + '-' + matchDate[3];
-                                }
-                            }
                             return {
                                 id: a.attribs.href.match(/\d+/)[0],
-                                name: name[1],
-                                thumb: (0, _utility.findTag)(a, 'img')[0].attribs.src,
+                                name: (0, _utility.findTag)(a)[0],
+                                thumb: img.attribs['data-original'],
                                 date: date,
                                 tags: tags,
                                 count: count
@@ -840,13 +730,13 @@ exports.default = {
                     console.log(docDate);
                     var list = [];
                     var trs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                    var _iteratorNormalCompletion2 = true;
-                    var _didIteratorError2 = false;
-                    var _iteratorError2 = undefined;
+                    var _iteratorNormalCompletion = true;
+                    var _didIteratorError = false;
+                    var _iteratorError = undefined;
 
                     try {
-                        for (var _iterator2 = (0, _getIterator3.default)(trs), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                            var tr = _step2.value;
+                        for (var _iterator = (0, _getIterator3.default)(trs), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                            var tr = _step.value;
 
                             if ((0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[1])[0].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
                                 var a = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0], 'a')[0];
@@ -858,16 +748,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError2 = true;
-                        _iteratorError2 = err;
+                        _didIteratorError = true;
+                        _iteratorError = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                _iterator2.return();
+                            if (!_iteratorNormalCompletion && _iterator.return) {
+                                _iterator.return();
                             }
                         } finally {
-                            if (_didIteratorError2) {
-                                throw _iteratorError2;
+                            if (_didIteratorError) {
+                                throw _iteratorError;
                             }
                         }
                     }
@@ -1073,13 +963,13 @@ exports.default = {
                         var content = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0];
                         if ((0, _utility.findTag)((0, _utility.findTag)(content, 'div', 'dates')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                             var as = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(content, 'h3')[0], 'span')[0], 'a');
-                            var _iteratorNormalCompletion3 = true;
-                            var _didIteratorError3 = false;
-                            var _iteratorError3 = undefined;
+                            var _iteratorNormalCompletion2 = true;
+                            var _didIteratorError2 = false;
+                            var _iteratorError2 = undefined;
 
                             try {
-                                for (var _iterator3 = (0, _getIterator3.default)(as), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                                    var i = _step3.value;
+                                for (var _iterator2 = (0, _getIterator3.default)(as), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                    var i = _step2.value;
 
                                     if ((0, _utility.findTag)(i)[0].match(/pdf/i)) {
                                         list.push({
@@ -1090,16 +980,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError3 = true;
-                                _iteratorError3 = err;
+                                _didIteratorError2 = true;
+                                _iteratorError2 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                        _iterator3.return();
+                                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                        _iterator2.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError3) {
-                                        throw _iteratorError3;
+                                    if (_didIteratorError2) {
+                                        throw _iteratorError2;
                                     }
                                 }
                             }
@@ -1175,24 +1065,24 @@ exports.default = {
                     if (json_data === false) {
                         return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'));
                     }
-                    var _iteratorNormalCompletion4 = true;
-                    var _didIteratorError4 = false;
-                    var _iteratorError4 = undefined;
+                    var _iteratorNormalCompletion3 = true;
+                    var _didIteratorError3 = false;
+                    var _iteratorError3 = undefined;
 
                     try {
-                        for (var _iterator4 = (0, _getIterator3.default)(json_data), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                            var i = _step4.value;
+                        for (var _iterator3 = (0, _getIterator3.default)(json_data), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                            var i = _step3.value;
 
                             if (i.date === docDate) {
                                 var list_match = i.content.match(/href="([^"]+pdf)".*?title="(.*?\d\d\d\d?年\d\d?月[^"]+)/g);
                                 if (list_match) {
-                                    var _iteratorNormalCompletion5 = true;
-                                    var _didIteratorError5 = false;
-                                    var _iteratorError5 = undefined;
+                                    var _iteratorNormalCompletion4 = true;
+                                    var _didIteratorError4 = false;
+                                    var _iteratorError4 = undefined;
 
                                     try {
-                                        for (var _iterator5 = (0, _getIterator3.default)(list_match), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                                            var j = _step5.value;
+                                        for (var _iterator4 = (0, _getIterator3.default)(list_match), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                                            var j = _step4.value;
 
                                             var item_match = j.match(/href="([^"]+pdf)".*?title="(.*?\d\d\d\d?年\d\d?月[^"]+)/);
                                             if (item_match) {
@@ -1204,16 +1094,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError5 = true;
-                                        _iteratorError5 = err;
+                                        _didIteratorError4 = true;
+                                        _iteratorError4 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                                                _iterator5.return();
+                                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                                _iterator4.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError5) {
-                                                throw _iteratorError5;
+                                            if (_didIteratorError4) {
+                                                throw _iteratorError4;
                                             }
                                         }
                                     }
@@ -1221,16 +1111,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError4 = true;
-                        _iteratorError4 = err;
+                        _didIteratorError3 = true;
+                        _iteratorError3 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                                _iterator4.return();
+                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                _iterator3.return();
                             }
                         } finally {
-                            if (_didIteratorError4) {
-                                throw _iteratorError4;
+                            if (_didIteratorError3) {
+                                throw _iteratorError3;
                             }
                         }
                     }
@@ -1276,13 +1166,13 @@ exports.default = {
                                 var html2 = (0, _utility.findTag)(html, 'html')[0];
                                 var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                                 var link = null;
-                                var _iteratorNormalCompletion6 = true;
-                                var _didIteratorError6 = false;
-                                var _iteratorError6 = undefined;
+                                var _iteratorNormalCompletion5 = true;
+                                var _didIteratorError5 = false;
+                                var _iteratorError5 = undefined;
 
                                 try {
-                                    for (var _iterator6 = (0, _getIterator3.default)(lis), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                                        var l = _step6.value;
+                                    for (var _iterator5 = (0, _getIterator3.default)(lis), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                                        var l = _step5.value;
 
                                         var a = (0, _utility.findTag)(l, 'a')[0];
                                         var dateMatch = (0, _utility.findTag)(a)[0].match(/^\d\d\d年\d\d?月/);
@@ -1292,16 +1182,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError6 = true;
-                                    _iteratorError6 = err;
+                                    _didIteratorError5 = true;
+                                    _iteratorError5 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                            _iterator6.return();
+                                        if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                            _iterator5.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError6) {
-                                            throw _iteratorError6;
+                                        if (_didIteratorError5) {
+                                            throw _iteratorError5;
                                         }
                                     }
                                 }
@@ -1333,13 +1223,13 @@ exports.default = {
                     var list = [];
                     var application = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0];
                     if (application) {
-                        var _iteratorNormalCompletion7 = true;
-                        var _didIteratorError7 = false;
-                        var _iteratorError7 = undefined;
+                        var _iteratorNormalCompletion6 = true;
+                        var _didIteratorError6 = false;
+                        var _iteratorError6 = undefined;
 
                         try {
-                            for (var _iterator7 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(application, 'table')[0], 'tbody')[0], 'tr')), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                                var l = _step7.value;
+                            for (var _iterator6 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(application, 'table')[0], 'tbody')[0], 'tr')), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                                var l = _step6.value;
 
                                 if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[2], 'span')[0])[0] === docDate) {
                                     var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(l, 'td')[1], 'span')[0], 'a')[0];
@@ -1355,16 +1245,16 @@ exports.default = {
                                 }
                             }
                         } catch (err) {
-                            _didIteratorError7 = true;
-                            _iteratorError7 = err;
+                            _didIteratorError6 = true;
+                            _iteratorError6 = err;
                         } finally {
                             try {
-                                if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                                    _iterator7.return();
+                                if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                    _iterator6.return();
                                 }
                             } finally {
-                                if (_didIteratorError7) {
-                                    throw _iteratorError7;
+                                if (_didIteratorError6) {
+                                    throw _iteratorError6;
                                 }
                             }
                         }
@@ -1392,13 +1282,13 @@ exports.default = {
                     var html2 = (0, _utility.findTag)(html, 'html')[0];
                     var lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                     var dUrl = false;
-                    var _iteratorNormalCompletion8 = true;
-                    var _didIteratorError8 = false;
-                    var _iteratorError8 = undefined;
+                    var _iteratorNormalCompletion7 = true;
+                    var _didIteratorError7 = false;
+                    var _iteratorError7 = undefined;
 
                     try {
-                        for (var _iterator8 = (0, _getIterator3.default)(lis), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                            var l = _step8.value;
+                        for (var _iterator7 = (0, _getIterator3.default)(lis), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                            var l = _step7.value;
 
                             var a = (0, _utility.findTag)(l, 'a')[0];
                             var aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
@@ -1408,16 +1298,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError8 = true;
-                        _iteratorError8 = err;
+                        _didIteratorError7 = true;
+                        _iteratorError7 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                                _iterator8.return();
+                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                _iterator7.return();
                             }
                         } finally {
-                            if (_didIteratorError8) {
-                                throw _iteratorError8;
+                            if (_didIteratorError7) {
+                                throw _iteratorError7;
                             }
                         }
                     }
@@ -1446,13 +1336,13 @@ exports.default = {
                             var html2 = (0, _utility.findTag)(html, 'html')[0];
                             lis = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
                             dUrl = false;
-                            var _iteratorNormalCompletion9 = true;
-                            var _didIteratorError9 = false;
-                            var _iteratorError9 = undefined;
+                            var _iteratorNormalCompletion8 = true;
+                            var _didIteratorError8 = false;
+                            var _iteratorError8 = undefined;
 
                             try {
-                                for (var _iterator9 = (0, _getIterator3.default)(lis), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                                    var l = _step9.value;
+                                for (var _iterator8 = (0, _getIterator3.default)(lis), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                                    var l = _step8.value;
 
                                     var a = (0, _utility.findTag)(l, 'a')[0];
                                     var aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
@@ -1462,16 +1352,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError9 = true;
-                                _iteratorError9 = err;
+                                _didIteratorError8 = true;
+                                _iteratorError8 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion9 && _iterator9.return) {
-                                        _iterator9.return();
+                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                        _iterator8.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError9) {
-                                        throw _iteratorError9;
+                                    if (_didIteratorError8) {
+                                        throw _iteratorError8;
                                     }
                                 }
                             }
@@ -1606,13 +1496,13 @@ exports.default = {
                 }
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var hs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'div', 'test')[0], 'div', 'region region-content')[0], 'article')[0], 'div', 'row')[0], 'div', 'container')[0], 'div', 'tab-content')[0], 'div', 'menu1')[0], 'div', 'row')[0], 'div')[0], 'h3');
-                    var _iteratorNormalCompletion10 = true;
-                    var _didIteratorError10 = false;
-                    var _iteratorError10 = undefined;
+                    var _iteratorNormalCompletion9 = true;
+                    var _didIteratorError9 = false;
+                    var _iteratorError9 = undefined;
 
                     try {
-                        for (var _iterator10 = (0, _getIterator3.default)(hs), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                            var h = _step10.value;
+                        for (var _iterator9 = (0, _getIterator3.default)(hs), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                            var h = _step9.value;
 
                             var a = (0, _utility.findTag)(h, 'a')[0];
                             if ((0, _utility.findTag)(a)[0].match(/^Full Release/)) {
@@ -1644,16 +1534,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError10 = true;
-                        _iteratorError10 = err;
+                        _didIteratorError9 = true;
+                        _iteratorError9 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion10 && _iterator10.return) {
-                                _iterator10.return();
+                            if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                                _iterator9.return();
                             }
                         } finally {
-                            if (_didIteratorError10) {
-                                throw _iteratorError10;
+                            if (_didIteratorError9) {
+                                throw _iteratorError9;
                             }
                         }
                     }
@@ -1709,13 +1599,13 @@ exports.default = {
             case 'oec':
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
-                    var _iteratorNormalCompletion11 = true;
-                    var _didIteratorError11 = false;
-                    var _iteratorError11 = undefined;
+                    var _iteratorNormalCompletion10 = true;
+                    var _didIteratorError10 = false;
+                    var _iteratorError10 = undefined;
 
                     try {
-                        for (var _iterator11 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'doc-type-container')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                            var p = _step11.value;
+                        for (var _iterator10 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'doc-type-container')[0], 'div', 'block')[0], 'div', 'webEditContent')[0], 'p')), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                            var p = _step10.value;
 
                             var s = (0, _utility.findTag)(p, 'strong')[0];
                             if (s) {
@@ -1758,16 +1648,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError11 = true;
-                        _iteratorError11 = err;
+                        _didIteratorError10 = true;
+                        _iteratorError10 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion11 && _iterator11.return) {
-                                _iterator11.return();
+                            if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                                _iterator10.return();
                             }
                         } finally {
-                            if (_didIteratorError11) {
-                                throw _iteratorError11;
+                            if (_didIteratorError10) {
+                                throw _iteratorError10;
                             }
                         }
                     }
@@ -1996,13 +1886,13 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(function (p) {
                         var as = (0, _utility.findTag)(p, 'a');
                         if (as.length > 0) {
-                            var _iteratorNormalCompletion12 = true;
-                            var _didIteratorError12 = false;
-                            var _iteratorError12 = undefined;
+                            var _iteratorNormalCompletion11 = true;
+                            var _didIteratorError11 = false;
+                            var _iteratorError11 = undefined;
 
                             try {
-                                for (var _iterator12 = (0, _getIterator3.default)(as), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                                    var a = _step12.value;
+                                for (var _iterator11 = (0, _getIterator3.default)(as), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                                    var a = _step11.value;
 
                                     if (a.attribs.href.match(/\.pdf$/i)) {
                                         var _ret8 = function () {
@@ -2042,39 +1932,39 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError12 = true;
-                                _iteratorError12 = err;
+                                _didIteratorError11 = true;
+                                _iteratorError11 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                                        _iterator12.return();
+                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                                        _iterator11.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError12) {
-                                        throw _iteratorError12;
+                                    if (_didIteratorError11) {
+                                        throw _iteratorError11;
                                     }
                                 }
                             }
                         }
                         var bs = (0, _utility.findTag)(p, 'b');
                         if (bs.length > 0) {
-                            var _iteratorNormalCompletion13 = true;
-                            var _didIteratorError13 = false;
-                            var _iteratorError13 = undefined;
+                            var _iteratorNormalCompletion12 = true;
+                            var _didIteratorError12 = false;
+                            var _iteratorError12 = undefined;
 
                             try {
-                                for (var _iterator13 = (0, _getIterator3.default)(bs), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                    var b = _step13.value;
+                                for (var _iterator12 = (0, _getIterator3.default)(bs), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                                    var b = _step12.value;
 
                                     as = (0, _utility.findTag)(b, 'a');
                                     if (as.length > 0) {
-                                        var _iteratorNormalCompletion14 = true;
-                                        var _didIteratorError14 = false;
-                                        var _iteratorError14 = undefined;
+                                        var _iteratorNormalCompletion13 = true;
+                                        var _didIteratorError13 = false;
+                                        var _iteratorError13 = undefined;
 
                                         try {
-                                            for (var _iterator14 = (0, _getIterator3.default)(as), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                                                var _a = _step14.value;
+                                            for (var _iterator13 = (0, _getIterator3.default)(as), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                                                var _a = _step13.value;
 
                                                 if (_a.attribs.href.match(/\.pdf$/i)) {
                                                     var _ret9 = function () {
@@ -2105,32 +1995,32 @@ exports.default = {
                                                 }
                                             }
                                         } catch (err) {
-                                            _didIteratorError14 = true;
-                                            _iteratorError14 = err;
+                                            _didIteratorError13 = true;
+                                            _iteratorError13 = err;
                                         } finally {
                                             try {
-                                                if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                                                    _iterator14.return();
+                                                if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                                                    _iterator13.return();
                                                 }
                                             } finally {
-                                                if (_didIteratorError14) {
-                                                    throw _iteratorError14;
+                                                if (_didIteratorError13) {
+                                                    throw _iteratorError13;
                                                 }
                                             }
                                         }
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError13 = true;
-                                _iteratorError13 = err;
+                                _didIteratorError12 = true;
+                                _iteratorError12 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                                        _iterator13.return();
+                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                        _iterator12.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError13) {
-                                        throw _iteratorError13;
+                                    if (_didIteratorError12) {
+                                        throw _iteratorError12;
                                     }
                                 }
                             }
@@ -2141,13 +2031,13 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url, { referer: 'https://www.mof.gov.tw/' }).then(function (raw_data) {
                     var ps = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div')[1], 'article')[0], 'p');
-                    var _iteratorNormalCompletion15 = true;
-                    var _didIteratorError15 = false;
-                    var _iteratorError15 = undefined;
+                    var _iteratorNormalCompletion14 = true;
+                    var _didIteratorError14 = false;
+                    var _iteratorError14 = undefined;
 
                     try {
-                        for (var _iterator15 = (0, _getIterator3.default)(ps), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-                            var p = _step15.value;
+                        for (var _iterator14 = (0, _getIterator3.default)(ps), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                            var p = _step14.value;
 
                             var pc = (0, _utility.findTag)(p)[0];
                             if (pc && pc.match(/本文及附表/)) {
@@ -2210,16 +2100,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError15 = true;
-                        _iteratorError15 = err;
+                        _didIteratorError14 = true;
+                        _iteratorError14 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion15 && _iterator15.return) {
-                                _iterator15.return();
+                            if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                                _iterator14.return();
                             }
                         } finally {
-                            if (_didIteratorError15) {
-                                throw _iteratorError15;
+                            if (_didIteratorError14) {
+                                throw _iteratorError14;
                             }
                         }
                     }
@@ -2230,13 +2120,13 @@ exports.default = {
                 console.log(obj);
                 return (0, _apiTool2.default)('url', obj.url).then(function (raw_data) {
                     var files = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div')[0], 'div');
-                    var _iteratorNormalCompletion16 = true;
-                    var _didIteratorError16 = false;
-                    var _iteratorError16 = undefined;
+                    var _iteratorNormalCompletion15 = true;
+                    var _didIteratorError15 = false;
+                    var _iteratorError15 = undefined;
 
                     try {
-                        for (var _iterator16 = (0, _getIterator3.default)(files), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-                            var f = _step16.value;
+                        for (var _iterator15 = (0, _getIterator3.default)(files), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                            var f = _step15.value;
 
                             var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(f, 'div')[1], 'div')[0], 'div')[0], 'a')[0];
                             if (a.attribs.title.match(/新聞稿及全部附表.*pdf/)) {
@@ -2269,16 +2159,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError16 = true;
-                        _iteratorError16 = err;
+                        _didIteratorError15 = true;
+                        _iteratorError15 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
-                                _iterator16.return();
+                            if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                                _iterator15.return();
                             }
                         } finally {
-                            if (_didIteratorError16) {
-                                throw _iteratorError16;
+                            if (_didIteratorError15) {
+                                throw _iteratorError15;
                             }
                         }
                     }
@@ -2375,13 +2265,13 @@ exports.default = {
                             taglist.add((0, _utility.findTag)((0, _utility.findTag)(cast[1], 'a')[0])[0]);
                         }
                     });
-                    var _iteratorNormalCompletion17 = true;
-                    var _didIteratorError17 = false;
-                    var _iteratorError17 = undefined;
+                    var _iteratorNormalCompletion16 = true;
+                    var _didIteratorError16 = false;
+                    var _iteratorError16 = undefined;
 
                     try {
-                        for (var _iterator17 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-                            var t = _step17.value;
+                        for (var _iterator16 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                            var t = _step16.value;
 
                             if ((0, _utility.findTag)((0, _utility.findTag)(t, 'h4')[0])[0] === 'Genres:') {
                                 (0, _utility.findTag)(t, 'a').forEach(function (a) {
@@ -2391,6 +2281,36 @@ exports.default = {
                                     if (index !== -1) {
                                         taglist.add(_constants.GENRE_LIST_CH[index]);
                                     }
+                                });
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError16 = true;
+                        _iteratorError16 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                                _iterator16.return();
+                            }
+                        } finally {
+                            if (_didIteratorError16) {
+                                throw _iteratorError16;
+                            }
+                        }
+                    }
+
+                    var _iteratorNormalCompletion17 = true;
+                    var _didIteratorError17 = false;
+                    var _iteratorError17 = undefined;
+
+                    try {
+                        for (var _iterator17 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                            var _t = _step17.value;
+
+                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
+                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
+                                    return taglist.add((0, _utility.findTag)(a)[0]);
                                 });
                                 break;
                             }
@@ -2406,36 +2326,6 @@ exports.default = {
                         } finally {
                             if (_didIteratorError17) {
                                 throw _iteratorError17;
-                            }
-                        }
-                    }
-
-                    var _iteratorNormalCompletion18 = true;
-                    var _didIteratorError18 = false;
-                    var _iteratorError18 = undefined;
-
-                    try {
-                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-                            var _t = _step18.value;
-
-                            if ((0, _utility.findTag)((0, _utility.findTag)(_t, 'h4')[0])[0] === 'Country:') {
-                                (0, _utility.findTag)(_t, 'a').forEach(function (a) {
-                                    return taglist.add((0, _utility.findTag)(a)[0]);
-                                });
-                                break;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError18 = true;
-                        _iteratorError18 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion18 && _iterator18.return) {
-                                _iterator18.return();
-                            }
-                        } finally {
-                            if (_didIteratorError18) {
-                                throw _iteratorError18;
                             }
                         }
                     }
@@ -2505,13 +2395,13 @@ exports.default = {
             case 'dc':
                 return (0, _apiTool2.default)('url', url).then(function (raw_data) {
                     taglist.add('歐美').add('漫畫').add('comic').add(type);
-                    var _iteratorNormalCompletion19 = true;
-                    var _didIteratorError19 = false;
-                    var _iteratorError19 = undefined;
+                    var _iteratorNormalCompletion18 = true;
+                    var _didIteratorError18 = false;
+                    var _iteratorError18 = undefined;
 
                     try {
-                        for (var _iterator19 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-                            var div = _step19.value;
+                        for (var _iterator18 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'WikiaSiteWrapper')[0], 'section', 'WikiaPage')[0], 'div', 'WikiaPageContentWrapper')[0], 'article', 'WikiaMainContent')[0], 'div', 'WikiaMainContentContainer')[0], 'div', 'WikiaArticle')[0], 'div', 'mw-content-text')[0], 'div')), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+                            var div = _step18.value;
 
                             if (div.attribs.class !== 'center') {
                                 (0, _utility.findTag)(div, 'div').forEach(function (d, i) {
@@ -2520,13 +2410,13 @@ exports.default = {
                                         if (name.length > 0) {
                                             taglist.add(name[0]);
                                         } else {
-                                            var _iteratorNormalCompletion20 = true;
-                                            var _didIteratorError20 = false;
-                                            var _iteratorError20 = undefined;
+                                            var _iteratorNormalCompletion19 = true;
+                                            var _didIteratorError19 = false;
+                                            var _iteratorError19 = undefined;
 
                                             try {
-                                                for (var _iterator20 = (0, _getIterator3.default)(d.children), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
-                                                    var c = _step20.value;
+                                                for (var _iterator19 = (0, _getIterator3.default)(d.children), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+                                                    var c = _step19.value;
 
                                                     name = (0, _utility.findTag)(c);
                                                     if (c.type === 'tag' && name.length > 0) {
@@ -2535,16 +2425,16 @@ exports.default = {
                                                     }
                                                 }
                                             } catch (err) {
-                                                _didIteratorError20 = true;
-                                                _iteratorError20 = err;
+                                                _didIteratorError19 = true;
+                                                _iteratorError19 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion20 && _iterator20.return) {
-                                                        _iterator20.return();
+                                                    if (!_iteratorNormalCompletion19 && _iterator19.return) {
+                                                        _iterator19.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError20) {
-                                                        throw _iteratorError20;
+                                                    if (_didIteratorError19) {
+                                                        throw _iteratorError19;
                                                     }
                                                 }
                                             }
@@ -2575,16 +2465,16 @@ exports.default = {
                             }
                         }
                     } catch (err) {
-                        _didIteratorError19 = true;
-                        _iteratorError19 = err;
+                        _didIteratorError18 = true;
+                        _iteratorError18 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion19 && _iterator19.return) {
-                                _iterator19.return();
+                            if (!_iteratorNormalCompletion18 && _iterator18.return) {
+                                _iterator18.return();
                             }
                         } finally {
-                            if (_didIteratorError19) {
-                                throw _iteratorError19;
+                            if (_didIteratorError18) {
+                                throw _iteratorError18;
                             }
                         }
                     }
@@ -2655,13 +2545,13 @@ exports.default = {
             if (index === 1) {
                 is_new = false;
             } else {
-                var _iteratorNormalCompletion21 = true;
-                var _didIteratorError21 = false;
-                var _iteratorError21 = undefined;
+                var _iteratorNormalCompletion20 = true;
+                var _didIteratorError20 = false;
+                var _iteratorError20 = undefined;
 
                 try {
-                    for (var _iterator21 = (0, _getIterator3.default)(vId_arr), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-                        var i = _step21.value;
+                    for (var _iterator20 = (0, _getIterator3.default)(vId_arr), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+                        var i = _step20.value;
 
                         if (i.id === index) {
                             ret_obj = i;
@@ -2670,16 +2560,16 @@ exports.default = {
                         }
                     }
                 } catch (err) {
-                    _didIteratorError21 = true;
-                    _iteratorError21 = err;
+                    _didIteratorError20 = true;
+                    _iteratorError20 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion21 && _iterator21.return) {
-                            _iterator21.return();
+                        if (!_iteratorNormalCompletion20 && _iterator20.return) {
+                            _iterator20.return();
                         }
                     } finally {
-                        if (_didIteratorError21) {
-                            throw _iteratorError21;
+                        if (_didIteratorError20) {
+                            throw _iteratorError20;
                         }
                     }
                 }
@@ -2771,13 +2661,13 @@ exports.default = {
                                         }
                                     });
                                 } else {
-                                    var _iteratorNormalCompletion22 = true;
-                                    var _didIteratorError22 = false;
-                                    var _iteratorError22 = undefined;
+                                    var _iteratorNormalCompletion21 = true;
+                                    var _didIteratorError21 = false;
+                                    var _iteratorError21 = undefined;
 
                                     try {
-                                        for (var _iterator22 = (0, _getIterator3.default)(outer), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-                                            var o = _step22.value;
+                                        for (var _iterator21 = (0, _getIterator3.default)(outer), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+                                            var o = _step21.value;
 
                                             var a = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(o, 'div', 'date-posts')[0], 'div', 'post-outer')[0], 'div')[0], 'h3')[0], 'a')[0];
                                             var name = (0, _utility.findTag)(a)[0];
@@ -2794,16 +2684,16 @@ exports.default = {
                                             }
                                         }
                                     } catch (err) {
-                                        _didIteratorError22 = true;
-                                        _iteratorError22 = err;
+                                        _didIteratorError21 = true;
+                                        _iteratorError21 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion22 && _iterator22.return) {
-                                                _iterator22.return();
+                                            if (!_iteratorNormalCompletion21 && _iterator21.return) {
+                                                _iterator21.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError22) {
-                                                throw _iteratorError22;
+                                            if (_didIteratorError21) {
+                                                throw _iteratorError21;
                                             }
                                         }
                                     }
@@ -2824,13 +2714,13 @@ exports.default = {
                                 });
                             }
                             var is_end = false;
-                            var _iteratorNormalCompletion23 = true;
-                            var _didIteratorError23 = false;
-                            var _iteratorError23 = undefined;
+                            var _iteratorNormalCompletion22 = true;
+                            var _didIteratorError22 = false;
+                            var _iteratorError22 = undefined;
 
                             try {
-                                for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-                                    var _i = _step23.value;
+                                for (var _iterator22 = (0, _getIterator3.default)(list), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                                    var _i = _step22.value;
 
                                     if (_i.name.match(/大結局/)) {
                                         is_end = true;
@@ -2838,16 +2728,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError23 = true;
-                                _iteratorError23 = err;
+                                _didIteratorError22 = true;
+                                _iteratorError22 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion23 && _iterator23.return) {
-                                        _iterator23.return();
+                                    if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                                        _iterator22.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError23) {
-                                        throw _iteratorError23;
+                                    if (_didIteratorError22) {
+                                        throw _iteratorError22;
                                     }
                                 }
                             }
@@ -2860,13 +2750,13 @@ exports.default = {
                                     return (0, _utility.handleError)(new _utility.HoError('cannot find lovetv url'));
                                 }
                                 var nextLove = function nextLove(index, dramaIndex, list) {
-                                    var _iteratorNormalCompletion24 = true;
-                                    var _didIteratorError24 = false;
-                                    var _iteratorError24 = undefined;
+                                    var _iteratorNormalCompletion23 = true;
+                                    var _didIteratorError23 = false;
+                                    var _iteratorError23 = undefined;
 
                                     try {
                                         var _loop = function _loop() {
-                                            var i = _step24.value;
+                                            var i = _step23.value;
 
                                             if (i.name === items[0].name) {
                                                 var validUrl = (0, _utility.isValidString)(i.url, 'url');
@@ -2884,22 +2774,22 @@ exports.default = {
                                             }
                                         };
 
-                                        for (var _iterator24 = (0, _getIterator3.default)(list), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+                                        for (var _iterator23 = (0, _getIterator3.default)(list), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
                                             var _ret15 = _loop();
 
                                             if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
                                         }
                                     } catch (err) {
-                                        _didIteratorError24 = true;
-                                        _iteratorError24 = err;
+                                        _didIteratorError23 = true;
+                                        _iteratorError23 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion24 && _iterator24.return) {
-                                                _iterator24.return();
+                                            if (!_iteratorNormalCompletion23 && _iterator23.return) {
+                                                _iterator23.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError24) {
-                                                throw _iteratorError24;
+                                            if (_didIteratorError23) {
+                                                throw _iteratorError23;
                                             }
                                         }
                                     }
@@ -3067,13 +2957,13 @@ exports.default = {
                                 var trLength = tr.length;
                                 console.log(trLength);
                                 var is_end = false;
-                                var _iteratorNormalCompletion25 = true;
-                                var _didIteratorError25 = false;
-                                var _iteratorError25 = undefined;
+                                var _iteratorNormalCompletion24 = true;
+                                var _didIteratorError24 = false;
+                                var _iteratorError24 = undefined;
 
                                 try {
-                                    for (var _iterator25 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                                        var _i4 = _step25.value;
+                                    for (var _iterator24 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(center, 'table')[0], 'tr')[4], 'td')[0], 'b')), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+                                        var _i4 = _step24.value;
 
                                         if ((0, _utility.findTag)(_i4)[0] === 'Ended') {
                                             is_end = true;
@@ -3081,16 +2971,16 @@ exports.default = {
                                         }
                                     }
                                 } catch (err) {
-                                    _didIteratorError25 = true;
-                                    _iteratorError25 = err;
+                                    _didIteratorError24 = true;
+                                    _iteratorError24 = err;
                                 } finally {
                                     try {
-                                        if (!_iteratorNormalCompletion25 && _iterator25.return) {
-                                            _iterator25.return();
+                                        if (!_iteratorNormalCompletion24 && _iterator24.return) {
+                                            _iterator24.return();
                                         }
                                     } finally {
-                                        if (_didIteratorError25) {
-                                            throw _iteratorError25;
+                                        if (_didIteratorError24) {
+                                            throw _iteratorError24;
                                         }
                                     }
                                 }
@@ -3180,29 +3070,29 @@ exports.default = {
                                 return (0, _utility.handleError)(new _utility.HoError('yify api fail'));
                             }
                             var magnet = null;
-                            var _iteratorNormalCompletion26 = true;
-                            var _didIteratorError26 = false;
-                            var _iteratorError26 = undefined;
+                            var _iteratorNormalCompletion25 = true;
+                            var _didIteratorError25 = false;
+                            var _iteratorError25 = undefined;
 
                             try {
-                                for (var _iterator26 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-                                    var _i5 = _step26.value;
+                                for (var _iterator25 = (0, _getIterator3.default)(json_data['data']['movie']['torrents']), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+                                    var _i5 = _step25.value;
 
                                     if (_i5['quality'] === '1080p' || !magnet && _i5['quality'] === '720p') {
                                         magnet = 'magnet:?xt=urn:btih:' + _i5['hash'] + '&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969';
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError26 = true;
-                                _iteratorError26 = err;
+                                _didIteratorError25 = true;
+                                _iteratorError25 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion26 && _iterator26.return) {
-                                        _iterator26.return();
+                                    if (!_iteratorNormalCompletion25 && _iterator25.return) {
+                                        _iterator25.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError26) {
-                                        throw _iteratorError26;
+                                    if (_didIteratorError25) {
+                                        throw _iteratorError25;
                                     }
                                 }
                             }
@@ -3323,162 +3213,18 @@ exports.default = {
                     var kuboGetlist = function kuboGetlist() {
                         return (0, _apiTool2.default)('url', url).then(function (raw_data) {
                             var list = [];
-                            var is_end = false;
-                            var main = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
-                            var _iteratorNormalCompletion27 = true;
-                            var _didIteratorError27 = false;
-                            var _iteratorError27 = undefined;
-
-                            try {
-                                for (var _iterator27 = (0, _getIterator3.default)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
-                                    var p = _step27.value;
-                                    var _iteratorNormalCompletion29 = true;
-                                    var _didIteratorError29 = false;
-                                    var _iteratorError29 = undefined;
-
-                                    try {
-                                        for (var _iterator29 = (0, _getIterator3.default)((0, _utility.findTag)(p)), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-                                            var pt = _step29.value;
-
-                                            if (pt.match(/完結/)) {
-                                                is_end = true;
-                                                break;
-                                            }
-                                        }
-                                    } catch (err) {
-                                        _didIteratorError29 = true;
-                                        _iteratorError29 = err;
-                                    } finally {
-                                        try {
-                                            if (!_iteratorNormalCompletion29 && _iterator29.return) {
-                                                _iterator29.return();
-                                            }
-                                        } finally {
-                                            if (_didIteratorError29) {
-                                                throw _iteratorError29;
-                                            }
-                                        }
-                                    }
-
-                                    if (is_end) {
-                                        break;
-                                    }
-                                }
-                            } catch (err) {
-                                _didIteratorError27 = true;
-                                _iteratorError27 = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion27 && _iterator27.return) {
-                                        _iterator27.return();
-                                    }
-                                } finally {
-                                    if (_didIteratorError27) {
-                                        throw _iteratorError27;
-                                    }
-                                }
-                            }
-
-                            var flvUrl = null;
-                            var listY = [];
-                            (0, _utility.findTag)((0, _utility.findTag)(main, 'div', 'topRow')[0], 'div', 'hideCont').forEach(function (h) {
-                                var ul = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(h, 'ul')[0], 'div', 'vmain')[0], 'div', 'vpl')[0], 'ul')[0];
-                                var div = (0, _utility.findTag)(ul, 'div')[0];
-                                if (div) {
-                                    ul = div;
-                                }
-                                var _iteratorNormalCompletion28 = true;
-                                var _didIteratorError28 = false;
-                                var _iteratorError28 = undefined;
-
-                                try {
-                                    for (var _iterator28 = (0, _getIterator3.default)((0, _utility.findTag)(ul, 'li')), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-                                        var l = _step28.value;
-
-                                        var a = (0, _utility.findTag)(l, 'a')[0];
-                                        var urlMatch = (0, _utility.addPre)(a.attribs.href, 'http://www.58b.tv').match(/youtube\.php\?(.*)$/);
-                                        if (urlMatch) {
-                                            listY.push({
-                                                name: (0, _utility.findTag)(a)[0],
-                                                id: 'kdy_' + urlMatch[1]
-                                            });
-                                        } else {
-                                            if (a.attribs.href.match(/vod\-play\-id\-/)) {
-                                                flvUrl = (0, _utility.addPre)(a.attribs.href, 'http://www.58b.tv');
-                                                break;
-                                            }
-                                        }
-                                    }
-                                } catch (err) {
-                                    _didIteratorError28 = true;
-                                    _iteratorError28 = err;
-                                } finally {
-                                    try {
-                                        if (!_iteratorNormalCompletion28 && _iterator28.return) {
-                                            _iterator28.return();
-                                        }
-                                    } finally {
-                                        if (_didIteratorError28) {
-                                            throw _iteratorError28;
-                                        }
-                                    }
-                                }
-                            });
-                            return flvUrl ? (0, _apiTool2.default)('url', flvUrl).then(function (raw_data) {
-                                var ff_urls = '';
-                                var jM = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
-                                if (jM) {
-                                    ff_urls = (0, _utility.getJson)(jM[1].replace(/\\\"/g, '"'));
-                                }
-                                var list1 = [];
-                                var list2 = [];
-                                var lists = [];
-                                var listO = [];
-                                ff_urls.Data.forEach(function (f) {
-                                    if (f.playname === 'bj58') {
-                                        list = f.playurls.map(function (p) {
-                                            return {
-                                                name: p[0],
-                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
-                                            };
-                                        });
-                                    } else if (f.playname === 'bj') {
-                                        list1 = f.playurls.map(function (p) {
-                                            return {
-                                                name: p[0],
-                                                id: 'kyu_' + p[1].match(/^(.*)_wd1$/)[1]
-                                            };
-                                        });
-                                    } else if (f.playname === 'bj2') {
-                                        list2 = f.playurls.map(function (p) {
-                                            return {
-                                                name: p[0],
-                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
-                                            };
-                                        });
-                                    } else if (f.playname.match(/^bj/)) {
-                                        lists = f.playurls.map(function (p) {
-                                            return {
-                                                name: p[0],
-                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
-                                            };
-                                        });
-                                    } else {
-                                        listO = f.playurls.map(function (p) {
-                                            return {
-                                                name: p[0],
-                                                id: 'kur_' + new Buffer(p[2]).toString('base64')
-                                            };
-                                        });
-                                    }
+                            var container = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container ff-bg')[1];
+                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(container, 'div', 'row')[0], 'div', 'col-md-8 col-xs-12')[0], 'div', 'media')[0], 'div', 'media-body')[0], 'h4')[0], 'small', 'text-red')[0])[0].includes('全') ? true : false;
+                            (0, _utility.findTag)((0, _utility.findTag)(container, 'div', 'tab-content ff-playurl-tab')[0], 'ul').forEach(function (u) {
+                                return (0, _utility.findTag)(u, 'li').forEach(function (l) {
+                                    var a = (0, _utility.findTag)(l, 'a')[0];
+                                    list.push({
+                                        name: (0, _utility.findTag)(a)[0],
+                                        id: 'kur_' + new Buffer(a.attribs.href).toString('base64') + '}'
+                                    });
                                 });
-                                list = list.concat(listY);
-                                list = list.concat(list1);
-                                list = list.concat(list2);
-                                list = list.concat(lists);
-                                list = list.concat(listO);
-                                return [list, is_end];
-                            }) : [listY, is_end];
+                            });
+                            return [list, is_end];
                         });
                     };
                     return {
@@ -3518,7 +3264,38 @@ exports.default = {
                         }).then(function (raw_data) {
                             var list = [];
                             var body = (0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0];
-                            var is_end = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结' ? true : false;
+                            var divs = (0, _utility.findTag)(body, 'div');
+                            var is_end = false;
+                            var _iteratorNormalCompletion26 = true;
+                            var _didIteratorError26 = false;
+                            var _iteratorError26 = undefined;
+
+                            try {
+                                for (var _iterator26 = (0, _getIterator3.default)(divs), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
+                                    var d = _step26.value;
+
+                                    if ((0, _utility.findTag)(d, 'section', 'banner_detail').length > 0) {
+                                        if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(d, 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0], 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[0], 'span')[0])[0] === '已完结') {
+                                            is_end = true;
+                                        }
+                                        break;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError26 = true;
+                                _iteratorError26 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion26 && _iterator26.return) {
+                                        _iterator26.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError26) {
+                                        throw _iteratorError26;
+                                    }
+                                }
+                            }
+
                             (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(body, 'div', 'view-comment')[0], 'div', 'container')[0], 'div', 'left-bar')[0], 'div', 'tempc')[0], 'div', 'chapterlistload')[0], 'ul').forEach(function (u) {
                                 var li = (0, _utility.findTag)(u, 'li');
                                 var more = (0, _utility.findTag)(u, 'ul');
@@ -3616,83 +3393,69 @@ exports.default = {
                     });
                 });
             case 'kubo':
-                url = 'http://www.58b.tv/vod-read-id-' + id + '.html';
-                return (0, _apiTool2.default)('url', url, { referer: 'http://www.58b.tv/' }).then(function (raw_data) {
-                    var vmain = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
-                    var img = (0, _utility.findTag)((0, _utility.findTag)(vmain, 'div', 'vpic')[0], 'img')[0];
-                    var name = img.attribs.alt;
-                    var thumb = img.attribs.src;
+                url = 'http://www.iwatchme2u.com/vod-read-id-' + id + '.html';
+                return (0, _apiTool2.default)('url', url, { referer: 'http://www.iwatchme2u.com/' }).then(function (raw_data) {
+                    var media = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container ff-bg')[1], 'div', 'row')[0], 'div', 'col-md-8 col-xs-12')[0], 'div', 'media')[0];
+                    var img = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(media, 'div', 'media-left')[0], 'a')[0], 'img')[0];
+                    var mediaBody = (0, _utility.findTag)(media, 'div', 'media-body')[0];
+                    var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(mediaBody, 'h4')[0], 'a')[0])[0];
                     var tags = new _set2.default(['kubo', '酷播', '影片', 'video']);
-                    (0, _utility.findTag)((0, _utility.findTag)(vmain, 'div', 'vshow')[0], 'p').forEach(function (p) {
-                        var t = (0, _utility.findTag)(p)[0];
-                        if (t) {
-                            var match = (0, _utility.findTag)(p)[0].match(/^別名:(.*)$/);
-                            if (match) {
-                                match[1].split('/').forEach(function (m) {
-                                    return tags.add(m);
-                                });
-                            } else {
-                                if (t === '類型：') {
-                                    (0, _utility.findTag)(p, 'a').forEach(function (a) {
-                                        return tags.add((0, _utility.findTag)(a)[0]);
-                                    });
-                                } else if (t === '分類：') {
-                                    (0, _utility.findTag)(p, 'font').forEach(function (a) {
-                                        return tags.add((0, _utility.findTag)(a)[0]);
-                                    });
-                                    var _type = (0, _utility.findTag)((0, _utility.findTag)(p, 'a')[0])[0];
-                                    tags.add(_type);
-                                    for (var _i6 in _constants.KUBO_TYPE) {
-                                        var index = _constants.KUBO_TYPE[_i6].indexOf(_type);
-                                        if (index !== -1) {
-                                            if (_i6 === '0') {
-                                                tags.add('movie').add('電影');
-                                                switch (index) {
-                                                    case 0:
-                                                        tags.add('action').add('動作');
-                                                        break;
-                                                    case 1:
-                                                        tags.add('comedy').add('喜劇');
-                                                        break;
-                                                    case 2:
-                                                        tags.add('romance').add('浪漫');
-                                                        break;
-                                                    case 3:
-                                                        tags.add('sci-fi').add('科幻');
-                                                        break;
-                                                    case 4:
-                                                        tags.add('horror').add('恐怖');
-                                                        break;
-                                                    case 5:
-                                                        tags.add('drama').add('劇情');
-                                                        break;
-                                                    case 6:
-                                                        tags.add('war').add('戰爭');
-                                                        break;
-                                                    case 7:
-                                                        tags.add('animation').add('動畫');
-                                                        break;
-                                                }
-                                            } else if (_i6 === '1') {
-                                                tags.add('tv show').add('電視劇');
-                                            } else if (_i6 === '2') {
-                                                tags.add('tv show').add('電視劇').add('綜藝節目');
-                                            } else if (_i6 === '3') {
-                                                tags.add('animation').add('動畫');
+                    (0, _utility.findTag)((0, _utility.findTag)(mediaBody, 'dl')[0], 'dd').forEach(function (d) {
+                        return (0, _utility.findTag)(d, 'a').forEach(function (a) {
+                            var tag = (0, _utility.findTag)(a)[0];
+                            if (tag && !tag.includes('完整演員表')) {
+                                tags.add(tag);
+                                console.log(tag);
+                                for (var _i6 in _constants.KUBO_TYPE) {
+                                    var index = _constants.KUBO_TYPE[_i6].indexOf(tag);
+                                    if (index !== -1) {
+                                        if (_i6 === '0') {
+                                            tags.add('movie').add('電影');
+                                            switch (index) {
+                                                case 0:
+                                                    tags.add('action').add('動作');
+                                                    break;
+                                                case 1:
+                                                    tags.add('comedy').add('喜劇');
+                                                    break;
+                                                case 2:
+                                                    tags.add('romance').add('浪漫');
+                                                    break;
+                                                case 3:
+                                                    tags.add('sci-fi').add('科幻');
+                                                    break;
+                                                case 4:
+                                                    tags.add('horror').add('恐怖');
+                                                    break;
+                                                case 5:
+                                                    tags.add('drama').add('劇情');
+                                                    break;
+                                                case 6:
+                                                    tags.add('war').add('戰爭');
+                                                    break;
+                                                case 7:
+                                                    tags.add('animation').add('動畫');
+                                                    break;
                                             }
-                                            break;
+                                        } else if (_i6 === '1') {
+                                            tags.add('tv show').add('電視劇');
+                                        } else if (_i6 === '2') {
+                                            tags.add('tv show').add('電視劇').add('綜藝節目');
+                                        } else if (_i6 === '3') {
+                                            tags.add('animation').add('動畫');
                                         }
+                                        break;
                                     }
                                 }
                             }
-                        }
+                        });
                     });
                     var newTag = new _set2.default();
                     tags.forEach(function (t) {
                         var index = _constants.DM5_ORI_LIST.indexOf(t);
                         newTag.add(index !== -1 ? _constants.DM5_CH_LIST[index] : t);
                     });
-                    return [img.attribs.alt, newTag, new _set2.default(), 'kubo', img.attribs.src, url];
+                    return [name, newTag, new _set2.default(), 'kubo', img.attribs['data-original'], url];
                 });
             case 'dm5':
                 url = 'http://www.dm5.com/' + id + '/';
