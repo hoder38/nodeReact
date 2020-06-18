@@ -3403,7 +3403,7 @@ exports.default = {
                     (0, _utility.findTag)((0, _utility.findTag)(mediaBody, 'dl')[0], 'dd').forEach(function (d) {
                         return (0, _utility.findTag)(d, 'a').forEach(function (a) {
                             var tag = (0, _utility.findTag)(a)[0];
-                            if (tag && !tag.includes('完整演員表')) {
+                            if (tag && !tag.includes('完整演員表') && !tag.includes('未知')) {
                                 tags.add(tag);
                                 console.log(tag);
                                 for (var _i6 in _constants.KUBO_TYPE) {

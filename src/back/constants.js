@@ -799,7 +799,7 @@ export const RANDOM_EMAIL = [
 export const STOCK_FILTER = {
     name: '檢驗',//changing to filter after fixed to reading DB
     sortName: 'name',
-    sortType: 'desc',
+    sortType: 'asc',
     per: [1, '<', 15],
     pdr: [1, '<', 50],
     pbr: [1, '<', 20],

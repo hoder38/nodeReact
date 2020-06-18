@@ -1789,6 +1789,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('Amount Limit is not valid'));
             }
             //data['amountLimit'] = amountLimit > MINIMAL_OFFER ? amountLimit : MINIMAL_OFFER;
+            data['amountLimit'] = amountLimit;
         }
         if (set.riskLimit) {
             var riskLimit = (0, _utility.isValidString)(set.riskLimit, 'int');

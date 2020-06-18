@@ -223,7 +223,7 @@ const BitfinexInfo = React.createClass({
                                     <UserInput
                                         val={this.state.miniRate}
                                         getinput={this._input.getInput('miniRate')}
-                                        placeholder="5">
+                                        placeholder="0.02">
                                         <tr>
                                             <td key={0}><Tooltip tip="掛出最小利率" place="right" />Mini Rate:</td>
                                             <td key={1} />
@@ -232,7 +232,7 @@ const BitfinexInfo = React.createClass({
                                     <UserInput
                                         val={this.state.dynamic}
                                         getinput={this._input.getInput('dynamic')}
-                                        placeholder="20">
+                                        placeholder="0.05">
                                         <tr>
                                             <td key={0}><Tooltip style={{maxWidth: '400px'}} tip="超過此利率日期變30天，時間間隔減半" place="right" />Boost Rate:</td>
                                             <td key={1} />

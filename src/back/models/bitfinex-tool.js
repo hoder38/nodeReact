@@ -1443,6 +1443,7 @@ export default {
                 return handleError(new HoError('Amount Limit is not valid'));
             }
             //data['amountLimit'] = amountLimit > MINIMAL_OFFER ? amountLimit : MINIMAL_OFFER;
+            data['amountLimit'] = amountLimit;
         }
         if (set.riskLimit) {
             const riskLimit = isValidString(set.riskLimit, 'int')

@@ -2320,7 +2320,7 @@ export default {
                 let tags = new Set(['kubo', '酷播', '影片', 'video']);
                 findTag(findTag(mediaBody, 'dl')[0], 'dd').forEach(d => findTag(d, 'a').forEach(a => {
                     const tag = findTag(a)[0];
-                    if (tag && !tag.includes('完整演員表')) {
+                    if (tag && !tag.includes('完整演員表') && !tag.includes('未知')) {
                         tags.add(tag);
                         console.log(tag);
                         for (let i in KUBO_TYPE) {
