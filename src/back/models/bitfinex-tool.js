@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import Mongo from '../models/mongo-tool'
@@ -143,6 +143,7 @@ export const calRate = curArr => {
             const tenthRate = calTenthRate(hl, weight);
             maxRange[curType] = tenthRate[1] - tenthRate[9];
             finalRate[curType] = tenthRate.map((v, k) => (v > OBRate[k] || !OBRate[k]) ? (v - 1) : (OBRate[k] - 1));
+            finalRate[curType] = finalRate[curType].map(v => (v >= MAX_RATE) ? MAX_RATE - 1 : v);
             console.log(`${curType} RATE: ${finalRate[curType]}`);
             console.log(OBRate);
             console.log(tenthRate);

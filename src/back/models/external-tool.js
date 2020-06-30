@@ -613,13 +613,18 @@ export default {
                 let list = [];
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 for (let tr of trs) {
-                    if (findTag(findTag(tr, 'td')[1])[0].match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/)[0] === docDate) {
-                        const a = findTag(findTag(tr, 'td')[0], 'a')[0];
-                        list.push({
-                            url: addPre(a.attribs.href, 'http://www.bea.gov'),
-                            name: toValidName(findTag(a)[0]),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
+                    const vs = findTag(findTag(tr, 'td')[1]);
+                    for (let v of vs) {
+                        const mv = v.match(/^[a-zA-Z]+ \d\d?, \d\d\d\d/);
+                        if (mv && mv[0] === docDate) {
+                            const a = findTag(findTag(tr, 'td')[0], 'a')[0];
+                            list.push({
+                                url: addPre(a.attribs.href, 'http://www.bea.gov'),
+                                name: toValidName(findTag(a)[0]),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                            break;
+                        }
                     }
                 }
                 return list;
@@ -765,7 +770,7 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'field_search_query_content_list')[0], 'div').forEach(d => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'main')[0], 'div', 'content-push push')[0], 'div', 'layout-constrain')[0], 'div', 'region-content')[0], 'div', 'layout-content-aside has-aside')[0], 'div', 'secondary-content')[0], 'div', 'pane-node-field-below-paragraph pane pane--nodefield-below-paragraph')[0], 'div', 'pane__content')[0], 'div', 'field field--below-paragraph')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div')[0], 'div', 'layout--flex-grid layout--fg-9-3')[0], 'div', 'flex-column')[0], 'div')[0], 'div', 'field field--search-query')[0], 'div', 'field-items')[0], 'div', 'field-item even')[0], 'div', 'field_search_query_content_list')[0], 'div').forEach(d => {
                     const content =  findTag(findTag(d, 'article')[0], 'div', 'card-view__content')[0];
                     if (findTag(findTag(findTag(findTag(content, 'div', 'card-view__footer')[0], 'div', 'node__date')[0], 'span')[0])[0] === docDate) {
                         const a = findTag(findTag(findTag(content, 'div', 'card-view__header')[0], 'h3', 'card-view__title')[0], 'a')[0];

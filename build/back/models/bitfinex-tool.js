@@ -196,6 +196,9 @@ var calRate = exports.calRate = function calRate(curArr) {
                     finalRate[curType] = tenthRate.map(function (v, k) {
                         return v > OBRate[k] || !OBRate[k] ? v - 1 : OBRate[k] - 1;
                     });
+                    finalRate[curType] = finalRate[curType].map(function (v) {
+                        return v >= _constants.MAX_RATE ? _constants.MAX_RATE - 1 : v;
+                    });
                     console.log(curType + ' RATE: ' + finalRate[curType]);
                     console.log(OBRate);
                     console.log(tenthRate);

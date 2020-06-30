@@ -850,6 +850,7 @@ export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 export const SUPPORT_PAIR = {
     fUSD: [TBTC_SYM, TETH_SYM],
 }
+export const MAX_RATE = 7000000;
 export const BITNIFEX_PARENT = [
     {
         name: 'all',
