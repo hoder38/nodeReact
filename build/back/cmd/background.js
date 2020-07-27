@@ -275,46 +275,36 @@ var updateStock = exports.updateStock = function updateStock() {
                 var use_stock_list = [];
                 var parseStockList = function parseStockList() {
                     return sDay === -1 ? _promise2.default.resolve() : (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
-                        return (0, _mongoTool2.default)('find', _constants.STOCKDB, { important: 1 }).then(function (items) {
-                            var annualList = [];
-                            var year = new Date().getFullYear();
-                            items.forEach(function (i) {
-                                /*if (use_stock_list.indexOf(i.index) === -1) {
-                                    use_stock_list.push(i.index);
-                                }*/
-                                if (annualList.indexOf(i.index) === -1) {
-                                    annualList.push(i.index);
-                                }
-                            });
-                            stocklist.forEach(function (i) {
-                                if (use_stock_list.indexOf(i) === -1) {
-                                    use_stock_list.push(i);
-                                }
-                            });
-                            var folderList = [];
-                            var recur_find = function recur_find(userlist, index) {
-                                return index < userlist.length ? (0, _apiToolGoogle2.default)('list folder', {
-                                    folderId: userlist[index].auto,
-                                    name: 'downloaded'
-                                }).then(function (downloadedList) {
-                                    if (downloadedList.length > 0) {
-                                        folderList.push(downloadedList[0].id);
-                                    }
-                                    return recur_find(userlist, index + 1);
-                                }) : folderList.length > 0 ? updateStockAnnual(year, folderList, annualList, 0, 0) : _promise2.default.resolve();
-                            };
-                            var nextUpdate = function nextUpdate() {
-                                return annualList.length > 0 ? (0, _mongoTool2.default)('find', _constants.USERDB, {
-                                    auto: { $exists: true },
-                                    perm: 1
-                                }).then(function (userlist) {
-                                    return recur_find(userlist, 0);
-                                }) : _promise2.default.resolve();
-                            };
-                            return nextUpdate().then(function () {
-                                return updateStockList(use_stock_list, 'twse');
-                            });
+                        /*Mongo('find', STOCKDB, {important: 1}).then(items => {
+                        let annualList = [];
+                        const year = new Date().getFullYear();
+                        items.forEach(i => {
+                        if (annualList.indexOf(i.index) === -1) {
+                        annualList.push(i.index);
+                        }
+                        });*/
+                        stocklist.forEach(function (i) {
+                            if (use_stock_list.indexOf(i) === -1) {
+                                use_stock_list.push(i);
+                            }
                         });
+                        /*let folderList = [];
+                        const recur_find = (userlist, index) => (index < userlist.length) ? GoogleApi('list folder', {
+                            folderId: userlist[index].auto,
+                            name: 'downloaded',
+                        }).then(downloadedList => {
+                            if (downloadedList.length > 0) {
+                                folderList.push(downloadedList[0].id);
+                            }
+                            return recur_find(userlist, index + 1);
+                        }) : (folderList.length > 0) ? updateStockAnnual(year, folderList, annualList, 0, 0): Promise.resolve();
+                        const nextUpdate = () => (annualList.length > 0) ? Mongo('find', USERDB, {
+                            auto: {$exists: true},
+                            perm: 1,
+                        }).then(userlist => recur_find(userlist, 0)) : Promise.resolve();
+                        return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
+                        }));*/
+                        return updateStockList(use_stock_list, 'twse');
                     });
                 };
                 return parseStockList().catch(function (err) {
@@ -376,6 +366,7 @@ var filterStock = exports.filterStock = function filterStock() {
                     return loopStockFilter();
                 })
             };
+            //return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => loopStockFilter());
         }();
 
         if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
@@ -434,7 +425,8 @@ var checkStock = exports.checkStock = function checkStock() {
     if ((0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
         var _ret8 = function () {
             var checkS = function checkS() {
-                return (0, _stockTool.stockStatus)().catch(function (err) {
+                var newStr = new Date().getHours() >= 16 ? true : false;
+                return (0, _stockTool.stockStatus)(newStr).catch(function (err) {
                     return bgError(err, 'Loop checkStock');
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {

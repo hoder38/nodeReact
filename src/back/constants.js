@@ -800,16 +800,20 @@ export const STOCK_FILTER = {
     name: '檢驗',//changing to filter after fixed to reading DB
     sortName: 'name',
     sortType: 'asc',
-    per: [1, '<', 15],
-    pdr: [1, '<', 50],
-    pbr: [1, '<', 20],
+    per: [1, '<', 35],
+    pdr: [1, '<', 70],
+    pbr: [1, '<', 10],
+    times: [1, '>', 12],
+    stop: [1, '<', 3],
+    //gap: [1, '>', 0],
+    profit: [1, '>', 20],
     //pp: [1, '>', 100],
     //ss: [1, '>', -500],
     //mm: [1, '>', 3],
-    pre: [1, '>', 10],
-    interval: [1, '>', 700],
-    vol: [1, '>', 10],
-    close: [1, '<', 15],
+    //pre: [1, '>', 10],
+    interval: [1, '>', 750],
+    vol: [1, '>', 200],
+    close: [1, '<', 0],
 }
 
 export const BACKUP_COLLECTION = [
@@ -836,6 +840,8 @@ export const TOMG_SYM = 'tOMGUSD';
 export const BITFINEX_EXP = 100000000;
 export const BITFINEX_MIN = 100;
 export const DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
+export const NORMAL_DISTRIBUTION = [1, 3, 17, 50, 83, 97, 99];
+export const GAIN_LOSS = 5;
 export const RISK_MAX = 10;
 export const OFFER_MAX = 10;
 export const COIN_MAX = -30;
@@ -845,6 +851,9 @@ export const EXTREM_DURATION = 1800;
 export const UPDATE_BOOK = 21600;
 export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
+export const TRADE_FEE = 0.005;
+export const TRADE_INTERVAL = 86400;
+//export const MINIMAL_DS_RATE = 0.05;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 export const SUPPORT_PAIR = {

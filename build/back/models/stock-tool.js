@@ -2792,7 +2792,12 @@ exports.default = {
                                         if (!netValue) {
                                             netValue = getParameterV2(raw_data, 39999, '權益總計');
                                             if (!netValue) {
-                                                return (0, _utility.handleError)(new _utility.HoError('cannot find stock net value'));
+                                                netValue = getParameterV2(raw_data, '3XXX', '權益總額');
+                                                if (!netValue) {
+                                                    return (0, _utility.handleError)(new _utility.HoError('cannot find stock net value'));
+                                                } else {
+                                                    netValue = netValue[0];
+                                                }
                                             } else {
                                                 netValue = netValue[0];
                                             }
@@ -3637,7 +3642,7 @@ exports.default = {
             });
         });
     },*/
-    getInterval: function getInterval(id, session) {
+    getIntervalV2: function getIntervalV2(id, session) {
         var date = new Date();
         var year = date.getFullYear();
         var month = date.getMonth() + 1;
@@ -3672,128 +3677,6 @@ exports.default = {
                         var max = 0;
                         var min = 0;
                         var raw_arr = [];
-                        var group_interval = function group_interval(level, gap, final_arr, sort_arr) {
-                            var group = [];
-                            var start = 0;
-                            var ig = 0;
-                            level = level * 5;
-                            for (var i in final_arr) {
-                                if (final_arr[i] >= sort_arr[level]) {
-                                    if (!start) {
-                                        start = i;
-                                    }
-                                    ig = 0;
-                                } else {
-                                    if (start) {
-                                        if (ig < gap) {
-                                            ig++;
-                                        } else {
-                                            group.push({
-                                                start: Number(start),
-                                                end: i - 1 - ig
-                                            });
-                                            start = 0;
-                                            ig = 0;
-                                        }
-                                    }
-                                }
-                            }
-                            if (start) {
-                                group.push({
-                                    start: Number(start),
-                                    end: 99 - ig
-                                });
-                            }
-                            var group_num = 0;
-                            var final_group = [];
-                            var _iteratorNormalCompletion6 = true;
-                            var _didIteratorError6 = false;
-                            var _iteratorError6 = undefined;
-
-                            try {
-                                for (var _iterator6 = (0, _getIterator3.default)(group), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                                    var _i25 = _step6.value;
-
-                                    if (_i25.end - _i25.start > 33) {
-                                        var _iteratorNormalCompletion7 = true;
-                                        var _didIteratorError7 = false;
-                                        var _iteratorError7 = undefined;
-
-                                        try {
-                                            for (var _iterator7 = (0, _getIterator3.default)(group), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                                                var j = _step7.value;
-
-                                                if (j.end - j.start > 13) {
-                                                    final_group.push(j);
-                                                }
-                                            }
-                                        } catch (err) {
-                                            _didIteratorError7 = true;
-                                            _iteratorError7 = err;
-                                        } finally {
-                                            try {
-                                                if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                                                    _iterator7.return();
-                                                }
-                                            } finally {
-                                                if (_didIteratorError7) {
-                                                    throw _iteratorError7;
-                                                }
-                                            }
-                                        }
-
-                                        return final_group;
-                                    } else if (_i25.end - _i25.start > 13) {
-                                        group_num++;
-                                        if (group_num > 2) {
-                                            var _iteratorNormalCompletion8 = true;
-                                            var _didIteratorError8 = false;
-                                            var _iteratorError8 = undefined;
-
-                                            try {
-                                                for (var _iterator8 = (0, _getIterator3.default)(group), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                                                    var _j2 = _step8.value;
-
-                                                    if (_j2.end - _j2.start > 13) {
-                                                        final_group.push(_j2);
-                                                    }
-                                                }
-                                            } catch (err) {
-                                                _didIteratorError8 = true;
-                                                _iteratorError8 = err;
-                                            } finally {
-                                                try {
-                                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                                                        _iterator8.return();
-                                                    }
-                                                } finally {
-                                                    if (_didIteratorError8) {
-                                                        throw _iteratorError8;
-                                                    }
-                                                }
-                                            }
-
-                                            return final_group;
-                                        }
-                                    }
-                                }
-                            } catch (err) {
-                                _didIteratorError6 = true;
-                                _iteratorError6 = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                        _iterator6.return();
-                                    }
-                                } finally {
-                                    if (_didIteratorError6) {
-                                        throw _iteratorError6;
-                                    }
-                                }
-                            }
-
-                            return false;
-                        };
                         var rest_interval = function rest_interval(type, index) {
                             var is_stop = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
@@ -3828,66 +3711,535 @@ exports.default = {
                                 }
                             }
                             console.log(min_vol);
-                            var final_arr = [];
-                            for (var _i26 = 0; _i26 < 100; _i26++) {
-                                final_arr[_i26] = 0;
-                            }
-                            var diff = (max - min) / 100;
-                            var _iteratorNormalCompletion9 = true;
-                            var _didIteratorError9 = false;
-                            var _iteratorError9 = undefined;
+                            var loga = logArray(max, min);
+                            //console.log(loga);
+                            var calStair = function calStair() {
+                                var stair_start = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
 
-                            try {
-                                for (var _iterator9 = (0, _getIterator3.default)(raw_arr), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                                    var _i29 = _step9.value;
-
-                                    var e = Math.ceil((_i29.h - min) / diff);
-                                    var s = Math.floor((_i29.l - min) / diff);
-                                    for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i29.v;
+                                var single_arr = [];
+                                var final_arr = [];
+                                for (var _i25 = 0; _i25 < 100; _i25++) {
+                                    final_arr[_i25] = 0;
+                                }
+                                var volsum = 0;
+                                for (var _i26 = stair_start; _i26 < raw_arr.length; _i26++) {
+                                    var s = 0;
+                                    var e = 100;
+                                    for (var _j2 = 0; _j2 < 100; _j2++) {
+                                        if (raw_arr[_i26].l >= loga.arr[_j2]) {
+                                            s = _j2;
+                                        }
+                                        if (raw_arr[_i26].h <= loga.arr[_j2]) {
+                                            e = _j2;
+                                            break;
+                                        }
+                                    }
+                                    volsum += raw_arr[_i26].v;
+                                    single_arr.push((raw_arr[_i26].h - raw_arr[_i26].l) / raw_arr[_i26].h * 100);
+                                    if (e - s === 0) {
+                                        final_arr[s] += raw_arr[_i26].v;
+                                    } else {
+                                        var v = raw_arr[_i26].v / (e - s);
+                                        for (var _j3 = s; _j3 < e; _j3++) {
+                                            final_arr[_j3] += v;
+                                        }
                                     }
                                 }
-                            } catch (err) {
-                                _didIteratorError9 = true;
-                                _iteratorError9 = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion9 && _iterator9.return) {
-                                        _iterator9.return();
+                                var vol = 0;
+                                var j = 0;
+                                var nd = [];
+                                final_arr.forEach(function (v, i) {
+                                    vol += v;
+                                    while (vol >= volsum / 100 * _constants.NORMAL_DISTRIBUTION[j] && j < _constants.NORMAL_DISTRIBUTION.length) {
+                                        //console.log(i);
+                                        nd.push(i);
+                                        //nd.push(Math.pow(1 + loga.diff, i) * min);
+                                        j++;
                                     }
-                                } finally {
-                                    if (_didIteratorError9) {
-                                        throw _iteratorError9;
+                                });
+                                var sort_arr = [].concat(single_arr).sort(function (a, b) {
+                                    return a - b;
+                                });
+                                //console.log(final_arr);
+                                var web = {
+                                    mid: Math.pow(1 + loga.diff, nd[3]) * min,
+                                    up: nd[4] - nd[3],
+                                    down: nd[3] - nd[2],
+                                    extrem: sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
+                                    single: loga.diff
+                                };
+                                if (1 + web.extrem < (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE)) {
+                                    web.extrem = sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
+                                    web.ds = 2;
+                                    if (1 + web.extrem < (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE)) {
+                                        return false;
                                     }
                                 }
-                            }
+                                var calWeb = function calWeb() {
+                                    var stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
+                                    var upArray = [];
+                                    var up = stair;
+                                    while (up < web.up) {
+                                        upArray.push(up);
+                                        up += stair;
+                                    }
+                                    if (up - web.up < stair / 2) {
+                                        upArray.push(web.up);
+                                    } else {
+                                        if (upArray.length > 0) {
+                                            upArray[upArray.length - 1] = web.up;
+                                        } else {
+                                            upArray.push(web.up);
+                                        }
+                                    }
+                                    console.log(upArray);
+                                    var downArray = [];
+                                    var down = stair;
+                                    while (down < web.down) {
+                                        downArray.push(down);
+                                        down += stair;
+                                    }
+                                    if (down - web.down < stair / 2) {
+                                        downArray.push(web.down);
+                                    } else {
+                                        if (downArray.length > 0) {
+                                            downArray[downArray.length - 1] = web.down;
+                                        } else {
+                                            downArray.push(web.down);
+                                        }
+                                    }
+                                    console.log(downArray);
+                                    var result = [-web.mid];
+                                    var temp = web.mid;
+                                    upArray.forEach(function (v) {
+                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+                                    });
+                                    temp = result[0];
+                                    result[0] = -result[0];
+                                    upArray.forEach(function (v) {
+                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+                                    });
+                                    temp = result[0];
+                                    result[0] = -result[0];
+                                    upArray.forEach(function (v) {
+                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+                                    });
+                                    result[0] = -result[0];
+                                    temp = web.mid;
+                                    downArray.forEach(function (v) {
+                                        return result.push(temp / Math.pow(1 + web.single, v));
+                                    });
+                                    temp = result[result.length - 1];
+                                    result[result.length - 1] = -result[result.length - 1];
+                                    downArray.forEach(function (v) {
+                                        return result.push(temp / Math.pow(1 + web.single, v));
+                                    });
+                                    temp = result[result.length - 1];
+                                    result[result.length - 1] = -result[result.length - 1];
+                                    downArray.forEach(function (v) {
+                                        return result.push(temp / Math.pow(1 + web.single, v));
+                                    });
+                                    result[result.length - 1] = -result[result.length - 1];
+                                    return result;
+                                };
+                                web.arr = calWeb();
+                                console.log(web);
+                                return web;
+                            };
+                            var web = calStair();
+                            return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id }, { $set: { web: web } }).then(function (item) {
+                                console.log(item);
+                                if (!web) {
+                                    return [interval_data, 'no profit'];
+                                }
+                                //update total
+                                var restTest = function restTest() {
+                                    var web1 = null;
+                                    if (raw_arr.length >= 250) {
+                                        web1 = calStair(250);
+                                    }
+                                    var web2 = null;
+                                    if (raw_arr.length >= 500) {
+                                        web2 = calStair(500);
+                                    }
+                                    var web3 = null;
+                                    if (raw_arr.length >= 750) {
+                                        web3 = calStair(750);
+                                    }
+                                    return getStockPrice('twse', items[0].index).then(function (price) {
+                                        var ret_str = '';
+                                        var best_rate = 0;
+                                        var lastest_type = 4;
+                                        var lastest_rate = 0;
+                                        var ret_str1 = '';
+                                        var ret_str2 = '';
+                                        var ret_str3 = '';
+                                        var ret_str4 = '';
+                                        var ret_str5 = '';
+                                        var testResult1 = null;
+                                        if (web1) {
+                                            testResult1 = stockTest(raw_arr, web1, 4);
+                                        }
+                                        var testResult2 = null;
+                                        if (web2) {
+                                            testResult2 = stockTest(raw_arr, web2, 4, testResult1.start + 1);
+                                        }
+                                        var testResult3 = null;
+                                        if (web3) {
+                                            testResult3 = stockTest(raw_arr, web3, 4, testResult2.start + 1);
+                                        }
+                                        var testResult4 = null;
+                                        if (web1) {
+                                            testResult4 = stockTest(raw_arr, web1, 3);
+                                        }
+                                        var testResult5 = null;
+                                        if (web2) {
+                                            testResult5 = stockTest(raw_arr, web2, 3, testResult4.start + 1);
+                                        }
+                                        var testResult6 = null;
+                                        if (web3) {
+                                            testResult6 = stockTest(raw_arr, web3, 3, testResult5.start + 1);
+                                        }
+                                        var testResult7 = null;
+                                        if (web1) {
+                                            testResult7 = stockTest(raw_arr, web1, 2);
+                                        }
+                                        var testResult8 = null;
+                                        if (web2) {
+                                            testResult8 = stockTest(raw_arr, web2, 2, testResult7.start + 1);
+                                        }
+                                        var testResult9 = null;
+                                        if (web3) {
+                                            testResult9 = stockTest(raw_arr, web3, 2, testResult8.start + 1);
+                                        }
+                                        var testResult10 = null;
+                                        if (web1) {
+                                            testResult10 = stockTest(raw_arr, web1, 1);
+                                        }
+                                        var testResult11 = null;
+                                        if (web2) {
+                                            testResult11 = stockTest(raw_arr, web2, 1, testResult10.start + 1);
+                                        }
+                                        var testResult12 = null;
+                                        if (web3) {
+                                            testResult12 = stockTest(raw_arr, web3, 1, testResult11.start + 1);
+                                        }
+                                        var testResult13 = null;
+                                        if (web1) {
+                                            testResult13 = stockTest(raw_arr, web1, 5);
+                                        }
+                                        var testResult14 = null;
+                                        if (web2) {
+                                            testResult14 = stockTest(raw_arr, web2, 5, testResult13.start + 1);
+                                        }
+                                        var testResult15 = null;
+                                        if (web3) {
+                                            testResult15 = stockTest(raw_arr, web3, 5, testResult14.start + 1);
+                                        }
+                                        if (testResult1) {
+                                            console.log('year1');
+                                            console.log(testResult1.str);
+                                            console.log(testResult4.str);
+                                            console.log(testResult7.str);
+                                            console.log(testResult10.str);
+                                            console.log(testResult13.str);
+                                        }
+                                        if (testResult2) {
+                                            console.log('year2');
+                                            console.log(testResult2.str);
+                                            console.log(testResult5.str);
+                                            console.log(testResult8.str);
+                                            console.log(testResult11.str);
+                                            console.log(testResult14.str);
+                                        }
+                                        if (testResult3) {
+                                            console.log('year3');
+                                            console.log(testResult3.str);
+                                            console.log(testResult6.str);
+                                            console.log(testResult9.str);
+                                            console.log(testResult12.str);
+                                            console.log(testResult15.str);
+                                        }
+                                        if (testResult1) {
+                                            var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            var match1 = null;
+                                            var match2 = null;
+                                            if (testResult2) {
+                                                match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            if (testResult3) {
+                                                match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            var rate = 1;
+                                            var real = 1;
+                                            var count = 0;
+                                            if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                                                rate = rate * (Number(match[3]) + 100) / 100;
+                                                lastest_rate = rate;
+                                                real = real * (Number(match[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                                                rate = rate * (Number(match1[3]) + 100) / 100;
+                                                real = real * (Number(match1[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                                                rate = rate * (Number(match2[3]) + 100) / 100;
+                                                real = real * (Number(match2[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            ret_str1 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                            if (count !== 0) {
+                                                rate = Math.round(rate * 10000 - 10000) / 100;
+                                                real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                                best_rate = rate;
+                                                var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                                                var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                                                ret_str1 += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                                            } else {
+                                                ret_str1 += ' no less than mid point';
+                                            }
+                                        } else {
+                                            ret_str1 = 'less than a year';
+                                        }
+                                        ret_str = ret_str1;
+                                        console.log(ret_str1);
+                                        if (testResult4) {
+                                            var _match = testResult4.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            var _match2 = null;
+                                            var _match3 = null;
+                                            if (testResult5) {
+                                                _match2 = testResult5.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            if (testResult6) {
+                                                _match3 = testResult6.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            var _rate = 1;
+                                            var _real = 1;
+                                            var _count = 0;
+                                            if (_match && (_match[3] !== '0' || _match[5] !== '0' || _match[6] !== '0')) {
+                                                _rate = _rate * (Number(_match[3]) + 100) / 100;
+                                                if (_rate > lastest_rate) {
+                                                    lastest_rate = _rate;
+                                                    lastest_type = 3;
+                                                }
+                                                _real = _real * (Number(_match[4]) + 100) / 100;
+                                                _count++;
+                                            }
+                                            if (_match2 && (_match2[3] !== '0' || _match2[5] !== '0' || _match2[6] !== '0')) {
+                                                _rate = _rate * (Number(_match2[3]) + 100) / 100;
+                                                _real = _real * (Number(_match2[4]) + 100) / 100;
+                                                _count++;
+                                            }
+                                            if (_match3 && (_match3[3] !== '0' || _match3[5] !== '0' || _match3[6] !== '0')) {
+                                                _rate = _rate * (Number(_match3[3]) + 100) / 100;
+                                                _real = _real * (Number(_match3[4]) + 100) / 100;
+                                                _count++;
+                                            }
+                                            ret_str2 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                            if (_count !== 0) {
+                                                _rate = Math.round(_rate * 10000 - 10000) / 100;
+                                                _real = Math.round(_rate * 100 - _real * 10000 + 10000) / 100;
+                                                var _times = Math.round((Number(_match ? _match[5] : 0) + Number(_match2 ? _match2[5] : 0) + Number(_match3 ? _match3[5] : 0)) / _count * 100) / 100;
+                                                var _stoploss = Number(_match ? _match[6] : 0) + Number(_match2 ? _match2[6] : 0) + Number(_match3 ? _match3[6] : 0);
+                                                ret_str2 += ' ' + _rate + '% ' + _real + '% ' + _times + ' ' + _stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                                                if (_rate > best_rate) {
+                                                    best_rate = _rate;
+                                                    ret_str = ret_str2;
+                                                }
+                                            } else {
+                                                ret_str2 += ' no less than mid point';
+                                            }
+                                        } else {
+                                            ret_str2 = 'less than a year';
+                                        }
+                                        console.log(ret_str2);
+                                        if (testResult7) {
+                                            var _match4 = testResult7.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            var _match5 = null;
+                                            var _match6 = null;
+                                            if (testResult8) {
+                                                _match5 = testResult8.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            if (testResult9) {
+                                                _match6 = testResult9.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            var _rate2 = 1;
+                                            var _real2 = 1;
+                                            var _count2 = 0;
+                                            if (_match4 && (_match4[3] !== '0' || _match4[5] !== '0' || _match4[6] !== '0')) {
+                                                _rate2 = _rate2 * (Number(_match4[3]) + 100) / 100;
+                                                if (_rate2 > lastest_rate) {
+                                                    lastest_rate = _rate2;
+                                                    lastest_type = 2;
+                                                }
+                                                _real2 = _real2 * (Number(_match4[4]) + 100) / 100;
+                                                _count2++;
+                                            }
+                                            if (_match5 && (_match5[3] !== '0' || _match5[5] !== '0' || _match5[6] !== '0')) {
+                                                _rate2 = _rate2 * (Number(_match5[3]) + 100) / 100;
+                                                _real2 = _real2 * (Number(_match5[4]) + 100) / 100;
+                                                _count2++;
+                                            }
+                                            if (_match6 && (_match6[3] !== '0' || _match6[5] !== '0' || _match6[6] !== '0')) {
+                                                _rate2 = _rate2 * (Number(_match6[3]) + 100) / 100;
+                                                _real2 = _real2 * (Number(_match6[4]) + 100) / 100;
+                                                _count2++;
+                                            }
+                                            ret_str3 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                            if (_count2 !== 0) {
+                                                _rate2 = Math.round(_rate2 * 10000 - 10000) / 100;
+                                                _real2 = Math.round(_rate2 * 100 - _real2 * 10000 + 10000) / 100;
+                                                var _times2 = Math.round((Number(_match4 ? _match4[5] : 0) + Number(_match5 ? _match5[5] : 0) + Number(_match6 ? _match6[5] : 0)) / _count2 * 100) / 100;
+                                                var _stoploss2 = Number(_match4 ? _match4[6] : 0) + Number(_match5 ? _match5[6] : 0) + Number(_match6 ? _match6[6] : 0);
+                                                ret_str3 += ' ' + _rate2 + '% ' + _real2 + '% ' + _times2 + ' ' + _stoploss2 + ' ' + raw_arr.length + ' ' + min_vol;
+                                                if (_rate2 > best_rate) {
+                                                    best_rate = _rate2;
+                                                    ret_str = ret_str3;
+                                                }
+                                            } else {
+                                                ret_str3 += ' no less than mid point';
+                                            }
+                                        } else {
+                                            ret_str3 = 'less than a year';
+                                        }
+                                        console.log(ret_str3);
+                                        if (testResult10) {
+                                            var _match7 = testResult10.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            var _match8 = null;
+                                            var _match9 = null;
+                                            if (testResult11) {
+                                                _match8 = testResult11.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            if (testResult12) {
+                                                _match9 = testResult12.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            var _rate3 = 1;
+                                            var _real3 = 1;
+                                            var _count3 = 0;
+                                            if (_match7 && (_match7[3] !== '0' || _match7[5] !== '0' || _match7[6] !== '0')) {
+                                                _rate3 = _rate3 * (Number(_match7[3]) + 100) / 100;
+                                                _real3 = _real3 * (Number(_match7[4]) + 100) / 100;
+                                                if (_rate3 > lastest_rate) {
+                                                    lastest_rate = _rate3;
+                                                    lastest_type = 1;
+                                                }
+                                                _count3++;
+                                            }
+                                            if (_match8 && (_match8[3] !== '0' || _match8[5] !== '0' || _match8[6] !== '0')) {
+                                                _rate3 = _rate3 * (Number(_match8[3]) + 100) / 100;
+                                                _real3 = _real3 * (Number(_match8[4]) + 100) / 100;
+                                                _count3++;
+                                            }
+                                            if (_match9 && (_match9[3] !== '0' || _match9[5] !== '0' || _match9[6] !== '0')) {
+                                                _rate3 = _rate3 * (Number(_match9[3]) + 100) / 100;
+                                                _real3 = _real3 * (Number(_match9[4]) + 100) / 100;
+                                                _count3++;
+                                            }
+                                            ret_str4 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                            if (_count3 !== 0) {
+                                                _rate3 = Math.round(_rate3 * 10000 - 10000) / 100;
+                                                _real3 = Math.round(_rate3 * 100 - _real3 * 10000 + 10000) / 100;
+                                                var _times3 = Math.round((Number(_match7 ? _match7[5] : 0) + Number(_match8 ? _match8[5] : 0) + Number(_match9 ? _match9[5] : 0)) / _count3 * 100) / 100;
+                                                var _stoploss3 = Number(_match7 ? _match7[6] : 0) + Number(_match8 ? _match8[6] : 0) + Number(_match9 ? _match9[6] : 0);
+                                                ret_str4 += ' ' + _rate3 + '% ' + _real3 + '% ' + _times3 + ' ' + _stoploss3 + ' ' + raw_arr.length + ' ' + min_vol;
+                                                if (_rate3 > best_rate) {
+                                                    best_rate = _rate3;
+                                                    ret_str = ret_str4;
+                                                }
+                                            } else {
+                                                ret_str4 += ' no less than mid point';
+                                            }
+                                        } else {
+                                            ret_str4 = 'less than a year';
+                                        }
+                                        console.log(ret_str4);
+                                        if (testResult13) {
+                                            var _match10 = testResult13.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            var _match11 = null;
+                                            var _match12 = null;
+                                            if (testResult14) {
+                                                _match11 = testResult14.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            if (testResult15) {
+                                                _match12 = testResult15.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            var _rate4 = 1;
+                                            var _real4 = 1;
+                                            var _count4 = 0;
+                                            if (_match10 && (_match10[3] !== '0' || _match10[5] !== '0' || _match10[6] !== '0')) {
+                                                _rate4 = _rate4 * (Number(_match10[3]) + 100) / 100;
+                                                if (_rate4 > lastest_rate) {
+                                                    lastest_rate = _rate4;
+                                                    lastest_type = 5;
+                                                }
+                                                _real4 = _real4 * (Number(_match10[4]) + 100) / 100;
+                                                _count4++;
+                                            }
+                                            if (_match11 && (_match11[3] !== '0' || _match11[5] !== '0' || _match11[6] !== '0')) {
+                                                _rate4 = _rate4 * (Number(_match11[3]) + 100) / 100;
+                                                _real4 = _real4 * (Number(_match11[4]) + 100) / 100;
+                                                _count4++;
+                                            }
+                                            if (_match12 && (_match12[3] !== '0' || _match12[5] !== '0' || _match12[6] !== '0')) {
+                                                _rate4 = _rate4 * (Number(_match12[3]) + 100) / 100;
+                                                _real4 = _real4 * (Number(_match12[4]) + 100) / 100;
+                                                _count4++;
+                                            }
+                                            ret_str5 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                            if (_count4 !== 0) {
+                                                _rate4 = Math.round(_rate4 * 10000 - 10000) / 100;
+                                                _real4 = Math.round(_rate4 * 100 - _real4 * 10000 + 10000) / 100;
+                                                var _times4 = Math.round((Number(_match10 ? _match10[5] : 0) + Number(_match11 ? _match11[5] : 0) + Number(_match12 ? _match12[5] : 0)) / _count4 * 100) / 100;
+                                                var _stoploss4 = Number(_match10 ? _match10[6] : 0) + Number(_match11 ? _match11[6] : 0) + Number(_match12 ? _match12[6] : 0);
+                                                ret_str5 += ' ' + _rate4 + '% ' + _real4 + '% ' + _times4 + ' ' + _stoploss4 + ' ' + raw_arr.length + ' ' + min_vol;
+                                                if (_rate4 > best_rate) {
+                                                    best_rate = _rate4;
+                                                    ret_str = ret_str5;
+                                                }
+                                            } else {
+                                                ret_str5 += ' no less than mid point';
+                                            }
+                                        } else {
+                                            ret_str5 = 'less than a year';
+                                        }
+                                        console.log(ret_str5);
+                                        //amount real strategy times stoploss (no less than mid point)
+                                        console.log('done');
+                                        return [interval_data, ret_str, lastest_type];
+                                    });
+                                };
+                                return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: items[0].index }).then(function (item) {
+                                    var recur_web = function recur_web(index, type) {
+                                        if (index >= item.length) {
+                                            return _promise2.default.resolve();
+                                        } else {
+                                            var newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
+                                            return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
+                                                    web: newWeb.arr,
+                                                    mid: newWeb.mid,
+                                                    times: newWeb.times,
+                                                    wType: type
+                                                } }).then(function () {
+                                                return recur_web(index + 1);
+                                            });
+                                        }
+                                    };
+                                    return restTest().then(function (_ref13) {
+                                        var _ref14 = (0, _slicedToArray3.default)(_ref13, 3),
+                                            result = _ref14[0],
+                                            index = _ref14[1],
+                                            type = _ref14[2];
 
-                            var sort_arr = [].concat(final_arr).sort(function (a, b) {
-                                return a - b;
-                            });
-                            var interval = null;
-                            for (var _i27 = 19; _i27 > 0; _i27--) {
-                                interval = group_interval(_i27, 5, final_arr, sort_arr);
-                                if (interval) {
-                                    console.log(interval);
-                                    console.log(_i27);
-                                    break;
-                                }
-                            }
-                            return getStockPrice('twse', items[0].index).then(function (price) {
-                                var llow = Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100;
-                                var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
-                                var fint = lint;
-                                var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                                for (var _i28 = 1; _i28 < interval.length; _i28++) {
-                                    llow = Math.ceil(((interval[_i28].start - 1) * diff + min) * 100) / 100;
-                                    lint = Math.abs(Math.ceil(llow / price * 100) - 100);
-                                    fint = lint < fint ? lint : fint;
-                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i28].end * diff + min) * 100) / 100;
-                                }
-                                ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
-                                console.log('done');
-                                return [interval_data, ret_str];
+                                        web.type = type;
+                                        return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id }, { $set: { web: web } }).then(function (item) {
+                                            return recur_web(0, type).then(function () {
+                                                return [result, index];
+                                            });
+                                        });
+                                    });
+                                });
                             });
                         };
                         var getTpexList = function getTpexList() {
@@ -3900,29 +4252,29 @@ exports.default = {
                                 var low = [];
                                 var vol = [];
                                 if (json_data && json_data['iTotalRecords'] > 0) {
-                                    var _iteratorNormalCompletion10 = true;
-                                    var _didIteratorError10 = false;
-                                    var _iteratorError10 = undefined;
+                                    var _iteratorNormalCompletion6 = true;
+                                    var _didIteratorError6 = false;
+                                    var _iteratorError6 = undefined;
 
                                     try {
-                                        for (var _iterator10 = (0, _getIterator3.default)(json_data['aaData']), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                            var i = _step10.value;
+                                        for (var _iterator6 = (0, _getIterator3.default)(json_data['aaData']), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                                            var i = _step6.value;
 
                                             high.push(Number(i[4].replace(/,/g, '')));
                                             low.push(Number(i[5].replace(/,/g, '')));
                                             vol.push(Number(i[8].replace(/,/g, '')));
                                         }
                                     } catch (err) {
-                                        _didIteratorError10 = true;
-                                        _iteratorError10 = err;
+                                        _didIteratorError6 = true;
+                                        _iteratorError6 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion10 && _iterator10.return) {
-                                                _iterator10.return();
+                                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                                _iterator6.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError10) {
-                                                throw _iteratorError10;
+                                            if (_didIteratorError6) {
+                                                throw _iteratorError6;
                                             }
                                         }
                                     }
@@ -3944,16 +4296,15 @@ exports.default = {
                                         var year_str = year - 1911;
                                         var data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
                                         if (data_list && data_list.length > 0) {
-                                            console.log(data_list.length);
                                             var tmp_index = -1;
                                             var tmp_number = '';
-                                            var _iteratorNormalCompletion11 = true;
-                                            var _didIteratorError11 = false;
-                                            var _iteratorError11 = undefined;
+                                            var _iteratorNormalCompletion7 = true;
+                                            var _didIteratorError7 = false;
+                                            var _iteratorError7 = undefined;
 
                                             try {
-                                                for (var _iterator11 = (0, _getIterator3.default)(data_list), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                                                    var i = _step11.value;
+                                                for (var _iterator7 = (0, _getIterator3.default)(data_list), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                                                    var i = _step7.value;
 
                                                     var tmp_list_1 = [];
                                                     var tmp_list = i.split(',');
@@ -3965,7 +4316,7 @@ exports.default = {
                                                             tmp_list[j] = tmp_list[j].replace(/"/g, '');
                                                         } else if (tmp_list[j].match(/"$/)) {
                                                             tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                                            for (var k = tmp_index; k <= j; k++) {
+                                                            for (var k = +tmp_index; k <= j; k++) {
                                                                 tmp_number = '' + tmp_number + tmp_list[k];
                                                             }
                                                             tmp_list_1.push(tmp_number);
@@ -3982,16 +4333,16 @@ exports.default = {
                                                     vol.push(Number(tmp_list_1[8]));
                                                 }
                                             } catch (err) {
-                                                _didIteratorError11 = true;
-                                                _iteratorError11 = err;
+                                                _didIteratorError7 = true;
+                                                _iteratorError7 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
-                                                        _iterator11.return();
+                                                    if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                                        _iterator7.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError11) {
-                                                        throw _iteratorError11;
+                                                    if (_didIteratorError7) {
+                                                        throw _iteratorError7;
                                                     }
                                                 }
                                             }
@@ -4011,15 +4362,15 @@ exports.default = {
                                     return getTwseList();
                                 } else {
                                     var getType = function getType() {
-                                        return getTpexList().then(function (_ref13) {
-                                            var _ref14 = (0, _slicedToArray3.default)(_ref13, 2),
-                                                type = _ref14[0],
-                                                list = _ref14[1];
+                                        return getTpexList().then(function (_ref15) {
+                                            var _ref16 = (0, _slicedToArray3.default)(_ref15, 2),
+                                                type = _ref16[0],
+                                                list = _ref16[1];
 
-                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref15) {
-                                                var _ref16 = (0, _slicedToArray3.default)(_ref15, 2),
-                                                    type = _ref16[0],
-                                                    list = _ref16[1];
+                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref17) {
+                                                var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
+                                                    type = _ref18[0],
+                                                    list = _ref18[1];
 
                                                 return list.high.length > 0 ? [type, list] : [1, list];
                                             });
@@ -4049,11 +4400,11 @@ exports.default = {
                                 };
                                 return rest_interval(type, index);
                             } else {
-                                return getList().then(function (_ref17) {
-                                    var _ref18 = (0, _slicedToArray3.default)(_ref17, 3),
-                                        type = _ref18[0],
-                                        list = _ref18[1],
-                                        is_stop = _ref18[2];
+                                return getList().then(function (_ref19) {
+                                    var _ref20 = (0, _slicedToArray3.default)(_ref19, 3),
+                                        type = _ref20[0],
+                                        list = _ref20[1],
+                                        is_stop = _ref20[2];
 
                                     if (list.high.length > 0) {
                                         if (!start_month) {
@@ -4101,10 +4452,496 @@ exports.default = {
                         var exGet = function exGet() {
                             return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
                         };
-                        return exGet().then(function (_ref19) {
-                            var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
-                                raw_list = _ref20[0],
-                                ret_obj = _ref20[1];
+                        return exGet().then(function (_ref21) {
+                            var _ref22 = (0, _slicedToArray3.default)(_ref21, 2),
+                                raw_list = _ref22[0],
+                                ret_obj = _ref22[1];
+
+                            if (raw_list) {
+                                (0, _redisTool2.default)('hmset', 'interval: ' + items[0].type + items[0].index, {
+                                    raw_list: (0, _stringify2.default)(raw_list),
+                                    ret_obj: ret_obj,
+                                    etime: Math.round(new Date().getTime() / 1000 + _constants.CACHE_EXPIRE)
+                                }).catch(function (err) {
+                                    return (0, _utility.handleError)(err, 'Redis');
+                                });
+                            }
+                            return [ret_obj, items[0].index];
+                        });
+                    });
+                default:
+                    return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
+            }
+        });
+    },
+    getInterval: function getInterval(id, session) {
+        var date = new Date();
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var month_str = (0, _utility.completeZero)(month.toString(), 2);
+        var vol_year = year;
+        var vol_month = month;
+        var vol_month_str = month_str;
+        console.log(year);
+        console.log(month_str);
+        return (0, _mongoTool2.default)('find', _constants.STOCKDB, { _id: id }, { limit: 1 }).then(function (items) {
+            if (items.length < 1) {
+                return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
+            }
+            switch (items[0].type) {
+                case 'twse':
+                    StockTagTool.setLatest(items[0]._id, session).catch(function (err) {
+                        return (0, _utility.handleError)(err, 'Set latest');
+                    });
+                    return (0, _redisTool2.default)('hgetall', 'interval: ' + items[0].type + items[0].index).then(function (item) {
+                        var getInit = function getInit() {
+                            return item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
+                        };
+                        return getInit();
+                    }).then(function (_ref23) {
+                        var _ref24 = (0, _slicedToArray3.default)(_ref23, 3),
+                            raw_list = _ref24[0],
+                            ret_obj = _ref24[1],
+                            etime = _ref24[2];
+
+                        var interval_data = null;
+                        var start_month = '';
+                        var max = 0;
+                        var min = 0;
+                        var raw_arr = [];
+                        var group_interval = function group_interval(level, gap, final_arr, sort_arr) {
+                            var group = [];
+                            var start = 0;
+                            var ig = 0;
+                            level = level * 5;
+                            for (var i in final_arr) {
+                                if (final_arr[i] >= sort_arr[level]) {
+                                    if (!start) {
+                                        start = i;
+                                    }
+                                    ig = 0;
+                                } else {
+                                    if (start) {
+                                        if (ig < gap) {
+                                            ig++;
+                                        } else {
+                                            group.push({
+                                                start: Number(start),
+                                                end: i - 1 - ig
+                                            });
+                                            start = 0;
+                                            ig = 0;
+                                        }
+                                    }
+                                }
+                            }
+                            if (start) {
+                                group.push({
+                                    start: Number(start),
+                                    end: 99 - ig
+                                });
+                            }
+                            var group_num = 0;
+                            var final_group = [];
+                            var _iteratorNormalCompletion8 = true;
+                            var _didIteratorError8 = false;
+                            var _iteratorError8 = undefined;
+
+                            try {
+                                for (var _iterator8 = (0, _getIterator3.default)(group), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                                    var _i27 = _step8.value;
+
+                                    if (_i27.end - _i27.start > 33) {
+                                        var _iteratorNormalCompletion9 = true;
+                                        var _didIteratorError9 = false;
+                                        var _iteratorError9 = undefined;
+
+                                        try {
+                                            for (var _iterator9 = (0, _getIterator3.default)(group), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                                                var j = _step9.value;
+
+                                                if (j.end - j.start > 13) {
+                                                    final_group.push(j);
+                                                }
+                                            }
+                                        } catch (err) {
+                                            _didIteratorError9 = true;
+                                            _iteratorError9 = err;
+                                        } finally {
+                                            try {
+                                                if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                                                    _iterator9.return();
+                                                }
+                                            } finally {
+                                                if (_didIteratorError9) {
+                                                    throw _iteratorError9;
+                                                }
+                                            }
+                                        }
+
+                                        return final_group;
+                                    } else if (_i27.end - _i27.start > 13) {
+                                        group_num++;
+                                        if (group_num > 2) {
+                                            var _iteratorNormalCompletion10 = true;
+                                            var _didIteratorError10 = false;
+                                            var _iteratorError10 = undefined;
+
+                                            try {
+                                                for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                                                    var _j4 = _step10.value;
+
+                                                    if (_j4.end - _j4.start > 13) {
+                                                        final_group.push(_j4);
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                _didIteratorError10 = true;
+                                                _iteratorError10 = err;
+                                            } finally {
+                                                try {
+                                                    if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                                                        _iterator10.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError10) {
+                                                        throw _iteratorError10;
+                                                    }
+                                                }
+                                            }
+
+                                            return final_group;
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError8 = true;
+                                _iteratorError8 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                        _iterator8.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError8) {
+                                        throw _iteratorError8;
+                                    }
+                                }
+                            }
+
+                            return false;
+                        };
+                        var rest_interval = function rest_interval(type, index) {
+                            var is_stop = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+                            index++;
+                            if (month === 1) {
+                                year--;
+                                month = 12;
+                                month_str = (0, _utility.completeZero)(month.toString(), 2);
+                            } else {
+                                month--;
+                                month_str = (0, _utility.completeZero)(month.toString(), 2);
+                            }
+                            console.log(year);
+                            console.log(month_str);
+                            if (!is_stop && index < 70 && raw_arr.length <= 1150) {
+                                return recur_mi(type, index);
+                            }
+                            console.log(max);
+                            console.log(min);
+                            var min_vol = 0;
+                            for (var i = 12; i > 0 && interval_data[vol_year][vol_month_str]; i--) {
+                                min_vol = interval_data[vol_year][vol_month_str].raw.reduce(function (a, v) {
+                                    return a && v.v > a ? a : v.v;
+                                }, min_vol);
+                                if (vol_month === 1) {
+                                    vol_month = 12;
+                                    vol_year--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                } else {
+                                    vol_month--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                }
+                            }
+                            console.log(min_vol);
+                            var final_arr = [];
+                            for (var _i28 = 0; _i28 < 100; _i28++) {
+                                final_arr[_i28] = 0;
+                            }
+                            var diff = (max - min) / 100;
+                            var _iteratorNormalCompletion11 = true;
+                            var _didIteratorError11 = false;
+                            var _iteratorError11 = undefined;
+
+                            try {
+                                for (var _iterator11 = (0, _getIterator3.default)(raw_arr), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                                    var _i31 = _step11.value;
+
+                                    var e = Math.ceil((_i31.h - min) / diff);
+                                    var s = Math.floor((_i31.l - min) / diff);
+                                    for (var j = s; j < e; j++) {
+                                        final_arr[j] += _i31.v;
+                                    }
+                                }
+                            } catch (err) {
+                                _didIteratorError11 = true;
+                                _iteratorError11 = err;
+                            } finally {
+                                try {
+                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                                        _iterator11.return();
+                                    }
+                                } finally {
+                                    if (_didIteratorError11) {
+                                        throw _iteratorError11;
+                                    }
+                                }
+                            }
+
+                            var sort_arr = [].concat(final_arr).sort(function (a, b) {
+                                return a - b;
+                            });
+                            var interval = null;
+                            for (var _i29 = 19; _i29 > 0; _i29--) {
+                                interval = group_interval(_i29, 5, final_arr, sort_arr);
+                                if (interval) {
+                                    console.log(interval);
+                                    console.log(_i29);
+                                    break;
+                                }
+                            }
+                            return getStockPrice('twse', items[0].index).then(function (price) {
+                                var llow = Math.ceil(((interval[0].start - 1) * diff + min) * 100) / 100;
+                                var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                                var fint = lint;
+                                var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
+                                for (var _i30 = 1; _i30 < interval.length; _i30++) {
+                                    llow = Math.ceil(((interval[_i30].start - 1) * diff + min) * 100) / 100;
+                                    lint = Math.abs(Math.ceil(llow / price * 100) - 100);
+                                    fint = lint < fint ? lint : fint;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i30].end * diff + min) * 100) / 100;
+                                }
+                                ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
+                                console.log('done');
+                                return [interval_data, ret_str];
+                            });
+                        };
+                        var getTpexList = function getTpexList() {
+                            return (0, _apiTool2.default)('url', 'https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=' + (year - 1911) + '/' + month_str + '&stkno=' + items[0].index + '&_=' + new Date().getTime()).then(function (raw_data) {
+                                var json_data = (0, _utility.getJson)(raw_data);
+                                if (json_data === false) {
+                                    return (0, _utility.handleError)(new _utility.HoError('json parse error!!!'));
+                                }
+                                var high = [];
+                                var low = [];
+                                var vol = [];
+                                if (json_data && json_data['iTotalRecords'] > 0) {
+                                    var _iteratorNormalCompletion12 = true;
+                                    var _didIteratorError12 = false;
+                                    var _iteratorError12 = undefined;
+
+                                    try {
+                                        for (var _iterator12 = (0, _getIterator3.default)(json_data['aaData']), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                                            var i = _step12.value;
+
+                                            high.push(Number(i[4].replace(/,/g, '')));
+                                            low.push(Number(i[5].replace(/,/g, '')));
+                                            vol.push(Number(i[8].replace(/,/g, '')));
+                                        }
+                                    } catch (err) {
+                                        _didIteratorError12 = true;
+                                        _iteratorError12 = err;
+                                    } finally {
+                                        try {
+                                            if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                                _iterator12.return();
+                                            }
+                                        } finally {
+                                            if (_didIteratorError12) {
+                                                throw _iteratorError12;
+                                            }
+                                        }
+                                    }
+                                }
+                                return [2, { high: high, low: low, vol: vol }];
+                            });
+                        };
+                        var getTwseList = function getTwseList() {
+                            return new _promise2.default(function (resolve, reject) {
+                                return setTimeout(function () {
+                                    return resolve();
+                                }, 5000);
+                            }).then(function () {
+                                return (0, _apiTool2.default)('url', 'https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=' + year + month_str + '01&stockNo=' + items[0].index).then(function (raw_data) {
+                                    var high = [];
+                                    var low = [];
+                                    var vol = [];
+                                    if (raw_data.length > 200) {
+                                        var year_str = year - 1911;
+                                        var data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
+                                        if (data_list && data_list.length > 0) {
+                                            console.log(data_list.length);
+                                            var tmp_index = -1;
+                                            var tmp_number = '';
+                                            var _iteratorNormalCompletion13 = true;
+                                            var _didIteratorError13 = false;
+                                            var _iteratorError13 = undefined;
+
+                                            try {
+                                                for (var _iterator13 = (0, _getIterator3.default)(data_list), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                                                    var i = _step13.value;
+
+                                                    var tmp_list_1 = [];
+                                                    var tmp_list = i.split(',');
+                                                    for (var j in tmp_list) {
+                                                        if (tmp_list[j].match(/^".*"$/)) {
+                                                            tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
+                                                        } else if (tmp_list[j].match(/^"/)) {
+                                                            tmp_index = j;
+                                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                                        } else if (tmp_list[j].match(/"$/)) {
+                                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                                            for (var k = tmp_index; k <= j; k++) {
+                                                                tmp_number = '' + tmp_number + tmp_list[k];
+                                                            }
+                                                            tmp_list_1.push(tmp_number);
+                                                            tmp_index = -1;
+                                                            tmp_number = '';
+                                                        } else {
+                                                            if (tmp_index === -1) {
+                                                                tmp_list_1.push(tmp_list[j]);
+                                                            }
+                                                        }
+                                                    }
+                                                    high.push(Number(tmp_list_1[4]));
+                                                    low.push(Number(tmp_list_1[5]));
+                                                    vol.push(Number(tmp_list_1[8]));
+                                                }
+                                            } catch (err) {
+                                                _didIteratorError13 = true;
+                                                _iteratorError13 = err;
+                                            } finally {
+                                                try {
+                                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                                                        _iterator13.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError13) {
+                                                        throw _iteratorError13;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        return [3, { high: high, low: low, vol: vol }];
+                                    } else {
+                                        return [3, { high: high, low: low, vol: vol }, true];
+                                    }
+                                });
+                            });
+                        };
+                        var recur_mi = function recur_mi(type, index) {
+                            var getList = function getList() {
+                                if (type === 2) {
+                                    return getTpexList();
+                                } else if (type === 3) {
+                                    return getTwseList();
+                                } else {
+                                    var getType = function getType() {
+                                        return getTpexList().then(function (_ref25) {
+                                            var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
+                                                type = _ref26[0],
+                                                list = _ref26[1];
+
+                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref27) {
+                                                var _ref28 = (0, _slicedToArray3.default)(_ref27, 2),
+                                                    type = _ref28[0],
+                                                    list = _ref28[1];
+
+                                                return list.high.length > 0 ? [type, list] : [1, list];
+                                            });
+                                        });
+                                    };
+                                    return getType();
+                                }
+                            };
+                            if (start_month && raw_list && raw_list[year] && raw_list[year][month_str]) {
+                                raw_arr = raw_arr.concat(raw_list[year][month_str].raw);
+                                if (raw_list[year][month_str].max > max) {
+                                    max = raw_list[year][month_str].max;
+                                }
+                                if (!min || raw_list[year][month_str].min < min) {
+                                    min = raw_list[year][month_str].min;
+                                }
+                                if (!interval_data) {
+                                    interval_data = {};
+                                }
+                                if (!interval_data[year]) {
+                                    interval_data[year] = {};
+                                }
+                                interval_data[year][month_str] = {
+                                    raw: raw_list[year][month_str].raw,
+                                    max: raw_list[year][month_str].max,
+                                    min: raw_list[year][month_str].min
+                                };
+                                return rest_interval(type, index);
+                            } else {
+                                return getList().then(function (_ref29) {
+                                    var _ref30 = (0, _slicedToArray3.default)(_ref29, 3),
+                                        type = _ref30[0],
+                                        list = _ref30[1],
+                                        is_stop = _ref30[2];
+
+                                    if (list.high.length > 0) {
+                                        if (!start_month) {
+                                            start_month = '' + year + month_str;
+                                        }
+                                        var tmp_interval = [];
+                                        var tmp_max = 0;
+                                        var tmp_min = 0;
+                                        for (var i in list.high) {
+                                            if (list.high[i] > max) {
+                                                max = list.high[i];
+                                            }
+                                            if (!min || list.low[i] < min) {
+                                                min = list.low[i];
+                                            }
+                                            if (list.high[i] > tmp_max) {
+                                                tmp_max = list.high[i];
+                                            }
+                                            if (!tmp_min || list.low[i] < tmp_min) {
+                                                tmp_min = list.low[i];
+                                            }
+                                            raw_arr.push({
+                                                h: list.high[i],
+                                                l: list.low[i],
+                                                v: list.vol[i]
+                                            });
+                                            tmp_interval.push(raw_arr[raw_arr.length - 1]);
+                                        }
+                                        if (!interval_data) {
+                                            interval_data = {};
+                                        }
+                                        if (!interval_data[year]) {
+                                            interval_data[year] = {};
+                                        }
+                                        interval_data[year][month_str] = {
+                                            raw: tmp_interval,
+                                            max: tmp_max,
+                                            min: tmp_min
+                                        };
+                                    }
+                                    return rest_interval(type, index, is_stop);
+                                });
+                            }
+                        };
+                        var exGet = function exGet() {
+                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
+                        };
+                        return exGet().then(function (_ref31) {
+                            var _ref32 = (0, _slicedToArray3.default)(_ref31, 2),
+                                raw_list = _ref32[0],
+                                ret_obj = _ref32[1];
 
                             if (raw_list) {
                                 (0, _redisTool2.default)('hmset', 'interval: ' + items[0].type + items[0].index, {
@@ -4128,10 +4965,10 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError('there is another inverval running'));
         }
         stockIntervaling = true;
-        return this.getInterval(id, session).then(function (_ref21) {
-            var _ref22 = (0, _slicedToArray3.default)(_ref21, 2),
-                result = _ref22[0],
-                index = _ref22[1];
+        return this.getIntervalV2(id, session).then(function (_ref33) {
+            var _ref34 = (0, _slicedToArray3.default)(_ref33, 2),
+                result = _ref34[0],
+                index = _ref34[1];
 
             stockIntervaling = false;
             return [result, index];
@@ -4140,7 +4977,7 @@ exports.default = {
             return (0, _utility.handleError)(err);
         });
     },
-    stockFilterV2: function stockFilterV2() {
+    stockFilterV3: function stockFilterV3() {
         var option = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
         var _this = this;
@@ -4227,11 +5064,157 @@ exports.default = {
             return recur_query();
         }).then(function (filterList) {
             var filterList1 = [];
+            var stage3 = function stage3(iIndex) {
+                return iIndex < filterList.length ? _this.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref35) {
+                    var _ref36 = (0, _slicedToArray3.default)(_ref35, 2),
+                        result = _ref36[0],
+                        index = _ref36[1];
+
+                    console.log(filterList[iIndex].name);
+                    console.log(result);
+                    var intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\d+) (\d+)$/);
+                    if (intervalVal) {
+                        var cok = option.close ? option.close[1] === '>' && intervalVal[1] > option.close[2] || option.close[1] === '<' && intervalVal[1] < option.close[2] ? true : false : true;
+                        var pok = option.profit ? option.profit[1] === '>' && intervalVal[3] > option.profit[2] || option.profit[1] === '<' && intervalVal[3] < option.profit[2] ? true : false : true;
+                        var gok = option.gap ? option.gap[1] === '>' && intervalVal[4] > option.gap[2] || option.gap[1] === '<' && intervalVal[4] < option.gap[2] ? true : false : true;
+                        var tok = option.times ? option.times[1] === '>' && intervalVal[5] > option.times[2] || option.times[1] === '<' && intervalVal[5] < option.times[2] ? true : false : true;
+                        var sok = option.stop ? option.stop[1] === '>' && intervalVal[6] > option.stop[2] || option.stop[1] === '<' && intervalVal[6] < option.stop[2] ? true : false : true;
+                        var iok = option.interval ? option.interval[1] === '>' && intervalVal[7] > option.interval[2] || option.interval[1] === '<' && intervalVal[7] < option.interval[2] ? true : false : true;
+                        var vok = option.vol ? option.vol[1] === '>' && intervalVal[8] > option.vol[2] || option.vol[1] === '<' && intervalVal[8] < option.vol[2] ? true : false : true;
+                        if (iok && vok && cok && pok && gok && tok && sok) {
+                            filterList1.push(filterList[iIndex]);
+                        }
+                    }
+                }).catch(function (err) {
+                    if (web) {
+                        (0, _sendWs2.default)({
+                            type: user.username,
+                            data: 'Filter ' + option.name + ': ' + filterList[iIndex].index + ' Error'
+                        }, 0);
+                    }
+                    (0, _utility.handleError)(err, 'Stock filter');
+                }).then(function () {
+                    return stage3(iIndex + 1);
+                }) : _promise2.default.resolve();
+            };
+            console.log('stage three');
+            return option.interval || option.vol || option.close ? stage3(0).then(function () {
+                return filterList1;
+            }) : filterList;
+        }).then(function (filterList) {
+            var addFilter = function addFilter(index) {
+                return index < filterList.length ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(function (add_result) {
+                    (0, _sendWs2.default)({
+                        type: 'stock',
+                        data: add_result.id
+                    }, 0, 1);
+                }).catch(function (err) {
+                    if (web) {
+                        (0, _sendWs2.default)({
+                            type: user.username,
+                            data: 'Filter ' + option.name + ': ' + filterList[iIndex].index + ' Error'
+                        }, 0);
+                    }
+                    (0, _utility.handleError)(err, 'Stock filter');
+                }).then(function () {
+                    return addFilter(index + 1);
+                }) : _promise2.default.resolve(filterList);
+            };
+            return addFilter(0);
+        });
+    },
+    stockFilterV2: function stockFilterV2() {
+        var option = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+        var _this2 = this;
+
+        var user = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { _id: '000000000000000000000000' };
+        var session = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        var web = option ? true : false;
+        if (!option) {
+            option = _constants.STOCK_FILTER;
+        }
+        var last = false;
+        var queried = 0;
+        var filterList = [];
+        var clearName = function clearName() {
+            return StockTagTool.tagQuery(queried, option.name, false, 0, option.sortName, option.sortType, user, {}, _constants.STOCK_FILTER_LIMIT).then(function (result) {
+                var delFilter = function delFilter(index) {
+                    return index < result.items.length ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(function (del_result) {
+                        (0, _sendWs2.default)({
+                            type: 'stock',
+                            data: del_result.id
+                        }, 0, 1);
+                    }).catch(function (err) {
+                        if (web) {
+                            (0, _sendWs2.default)({
+                                type: user.username,
+                                data: 'Filter ' + option.name + ': ' + result.items[iIndex].index + ' Error'
+                            }, 0);
+                        }
+                        (0, _utility.handleError)(err, 'Stock filter');
+                    }).then(function () {
+                        return delFilter(index + 1);
+                    }) : _promise2.default.resolve(result.items.length);
+                };
+                return delFilter(0);
+            });
+        };
+        var recur_query = function recur_query() {
+            return StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, _constants.STOCK_FILTER_LIMIT).then(function (result) {
+                console.log(queried);
+                if (result.items.length < _constants.STOCK_FILTER_LIMIT) {
+                    last = true;
+                }
+                queried += result.items.length;
+                if (result.items.length < 1) {
+                    return filterList;
+                }
+                var first_stage = [];
+                result.items.forEach(function (i) {
+                    var eok = option.per ? option.per[1] === '>' && i.per > option.per[2] || option.per[1] === '<' && i.per < option.per[2] ? true : false : true;
+                    var dok = option.pdr ? option.pdr[1] === '>' && i.pdr > option.pdr[2] || option.pdr[1] === '<' && i.pdr < option.pdr[2] ? true : false : true;
+                    var bok = option.pbr ? option.pbr[1] === '>' && i.pbr > option.pbr[2] || option.pbr[1] === '<' && i.pbr < option.pbr[2] ? true : false : true;
+                    if (eok && dok && bok) {
+                        first_stage.push(i);
+                    }
+                });
+                if (first_stage.length < 1) {
+                    return filterList;
+                }
+                var recur_per = function recur_per(index) {
+                    var nextFilter = function nextFilter() {
+                        index++;
+                        if (index < first_stage.length) {
+                            return recur_per(index);
+                        }
+                        if (!last) {
+                            return recur_query();
+                        }
+                        return filterList;
+                    };
+                    var addFilter = function addFilter() {
+                        filterList.push(first_stage[index]);
+                        if (filterList.length >= _constants.STOCK_FILTER_LIMIT) {
+                            return filterList;
+                        }
+                        return nextFilter();
+                    };
+                    return addFilter();
+                };
+                return recur_per(0);
+            });
+        };
+        return clearName().then(function () {
+            return recur_query();
+        }).then(function (filterList) {
+            var filterList1 = [];
             var stage2 = function stage2(pIndex) {
-                return pIndex < filterList.length ? _this.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref23) {
-                    var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
-                        result = _ref24[0],
-                        index = _ref24[1];
+                return pIndex < filterList.length ? _this2.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref37) {
+                    var _ref38 = (0, _slicedToArray3.default)(_ref37, 2),
+                        result = _ref38[0],
+                        index = _ref38[1];
 
                     console.log(filterList[pIndex].name);
                     console.log(result);
@@ -4258,10 +5241,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage3 = function stage3(iIndex) {
-                return iIndex < filterList.length ? _this.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref25) {
-                    var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
-                        result = _ref26[0],
-                        index = _ref26[1];
+                return iIndex < filterList.length ? _this2.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref39) {
+                    var _ref40 = (0, _slicedToArray3.default)(_ref39, 2),
+                        result = _ref40[0],
+                        index = _ref40[1];
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
@@ -4315,7 +5298,7 @@ exports.default = {
     stockFilter: function stockFilter() {
         var option = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-        var _this2 = this;
+        var _this3 = this;
 
         var user = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : { _id: '000000000000000000000000' };
         var session = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -4391,15 +5374,15 @@ exports.default = {
                         return nextFilter();
                     };
                     if (option.per) {
-                        return _this2.getStockPER(first_stage[index]._id).then(function (_ref27) {
-                            var _ref28 = (0, _slicedToArray3.default)(_ref27, 1),
-                                stockPer = _ref28[0];
+                        return _this3.getStockPER(first_stage[index]._id).then(function (_ref41) {
+                            var _ref42 = (0, _slicedToArray3.default)(_ref41, 1),
+                                stockPer = _ref42[0];
 
                             if (option.per && stockPer > 0 && (option.per[1] === '>' && stockPer > option.per[2] * 2 / 3 || option.per[1] === '<' && stockPer < option.per[2] * 4 / 3)) {
                                 console.log(stockPer);
                                 console.log(first_stage[index].name);
                                 if (option.yieldNumber) {
-                                    return _this2.getStockYield(first_stage[index]._id).then(function (stockYield) {
+                                    return _this3.getStockYield(first_stage[index]._id).then(function (stockYield) {
                                         if (option.yieldNumber && stockYield > 0 && (option.yieldNumber[1] === '>' && stockYield > option.yieldNumber[2] * 2 / 3 || option.yieldNumber[1] === '<' && stockYield < option.yieldNumber[2] * 4 / 3)) {
                                             console.log(stockYield);
                                             return addFilter();
@@ -4424,7 +5407,7 @@ exports.default = {
                             return nextFilter();
                         });
                     } else if (option.yieldNumber) {
-                        return _this2.getStockYield(first_stage[index]._id).then(function (stockYield) {
+                        return _this3.getStockYield(first_stage[index]._id).then(function (stockYield) {
                             if (option.yieldNumber && stockYield > 0 && (option.yieldNumber[1] === '>' && stockYield > option.yieldNumber[2] * 2 / 3 || option.yieldNumber[1] === '<' && stockYield < option.yieldNumber[2] * 4 / 3)) {
                                 console.log(stockYield);
                                 console.log(first_stage[index].name);
@@ -4454,10 +5437,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage2 = function stage2(pIndex) {
-                return pIndex < filterList.length ? _this2.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref29) {
-                    var _ref30 = (0, _slicedToArray3.default)(_ref29, 2),
-                        result = _ref30[0],
-                        index = _ref30[1];
+                return pIndex < filterList.length ? _this3.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref43) {
+                    var _ref44 = (0, _slicedToArray3.default)(_ref43, 2),
+                        result = _ref44[0],
+                        index = _ref44[1];
 
                     console.log(filterList[pIndex].name);
                     console.log(result);
@@ -4484,10 +5467,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage3 = function stage3(iIndex) {
-                return iIndex < filterList.length ? _this2.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref31) {
-                    var _ref32 = (0, _slicedToArray3.default)(_ref31, 2),
-                        result = _ref32[0],
-                        index = _ref32[1];
+                return iIndex < filterList.length ? _this3.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref45) {
+                    var _ref46 = (0, _slicedToArray3.default)(_ref45, 2),
+                        result = _ref46[0],
+                        index = _ref46[1];
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
@@ -4547,7 +5530,7 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilterV2(option, user, session).then(function (list) {
+        return this.stockFilterV3(option, user, session).then(function (list) {
             stockFiltering = false;
             var number = list.length;
             console.log('End: ' + number);
@@ -4572,23 +5555,24 @@ exports.default = {
                     index: 0,
                     name: '投資部位',
                     type: 'total',
-                    cost: 0,
-                    count: 1,
-                    top: 0,
-                    bottom: 0
+                    amount: 0,
+                    count: 1
                 }).then(function (item) {
                     return {
-                        remain: item[0].cost,
+                        remain: item[0].amount,
                         total: 0,
                         stock: [{
                             name: item[0].name,
                             type: item[0].type,
-                            cost: 0,
+                            remain: 0,
                             price: 0,
+                            profit: 0,
                             count: 1,
-                            plus: 0,
-                            minus: 0,
-                            current: 0
+                            mid: 0,
+                            //plus: 0,
+                            //minus: 0,
+                            current: 0,
+                            str: ''
                         }]
                     };
                 });
@@ -4596,55 +5580,64 @@ exports.default = {
             var remain = 0;
             var totalName = '';
             var totalType = '';
-            var cost = 0;
+            var profit = 0;
             var totalPrice = 0;
-            var plus = 0;
-            var minus = 0;
+            //let plus = 0;
+            //let minus = 0;
             var stock = [];
             var getStock = function getStock(v) {
                 if (v.name === '投資部位' && v.type === 'total') {
-                    remain = v.cost;
+                    remain = v.amount;
                     totalName = v.name;
                     totalType = v.type;
                     return _promise2.default.resolve();
                 } else {
                     return getStockPrice('twse', v.index).then(function (price) {
-                        cost += v.cost;
-                        var current = Math.floor(price * v.count * 100) / 100;
+                        var current = price * v.count;
                         totalPrice += current;
-                        var p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                        var m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                        plus += p;
-                        minus += m;
+                        var p = current + v.amount - v.orig;
+                        profit += p;
+                        //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                        //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                        //plus += p;
+                        //minus += m;
                         stock.push({
                             name: v.name,
                             type: v.type,
-                            cost: v.cost,
+                            //cost: v.cost,
                             price: price,
+                            mid: v.mid,
                             count: v.count,
-                            plus: p,
-                            minus: m,
-                            current: current
+                            remain: Math.round(v.amount * 100) / 100,
+                            profit: p,
+                            //top: v.top,
+                            //bottom: v.bottom,
+                            //plus: p,
+                            //minus: m,
+                            current: current,
+                            str: v.str ? v.str : ''
                         });
                     });
                 }
             };
             var recurGet = function recurGet(index) {
                 if (index >= items.length) {
-                    totalPrice = Math.floor(totalPrice * 100) / 100;
                     stock.unshift({
                         name: totalName,
                         type: totalType,
-                        cost: cost,
+                        profit: profit,
                         price: totalPrice,
+                        mid: 1,
+                        remain: totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 + '%' : '0%',
                         count: 1,
-                        plus: Math.floor(plus * 100) / 100,
-                        minus: Math.floor(minus * 100) / 100,
-                        current: totalPrice
+                        //plus: Math.floor(plus * 100) / 100,
+                        //minus: Math.floor(minus * 100) / 100,
+                        current: totalPrice,
+                        str: ''
                     });
                     return {
-                        remain: Math.floor(remain * 100) / 100,
-                        total: Math.floor((totalPrice + remain) * 100) / 100,
+                        remain: remain,
+                        total: totalPrice + remain,
                         stock: stock
                     };
                 } else {
@@ -4659,11 +5652,13 @@ exports.default = {
     updateStockTotal: function updateStockTotal(user, info) {
         var real = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
-        //remain 800
-        //delete 2330
-        //2330 (-)0.5
-        //2330 300 220
-        //2330 2 450 cost
+        //remain 800 重設remain
+        //delete 2330 刪除股票
+        //2330 (-)0.5 增減張數
+        //2330 5000 amount 新增股票(設定最大金額)
+        //2330 2 450 重設cost
+        //#2330 2 450 cost
+        //#2330 300 220
         return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: user._id }).then(function (items) {
             if (items.length < 1) {
                 return (0, _utility.handleError)(new _utility.HoError('No user data!!!'));
@@ -4672,32 +5667,32 @@ exports.default = {
             var totalName = '';
             var totalType = '';
             var totalId = null;
-            var _iteratorNormalCompletion12 = true;
-            var _didIteratorError12 = false;
-            var _iteratorError12 = undefined;
+            var _iteratorNormalCompletion14 = true;
+            var _didIteratorError14 = false;
+            var _iteratorError14 = undefined;
 
             try {
-                for (var _iterator12 = (0, _getIterator3.default)(items), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                    var v = _step12.value;
+                for (var _iterator14 = (0, _getIterator3.default)(items), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                    var v = _step14.value;
 
                     if (v.name === '投資部位' && v.type === 'total') {
-                        remain = v.cost;
+                        remain = v.amount;
                         totalName = v.name;
                         totalType = v.type;
                         totalId = v._id;
                     }
                 }
             } catch (err) {
-                _didIteratorError12 = true;
-                _iteratorError12 = err;
+                _didIteratorError14 = true;
+                _iteratorError14 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                        _iterator12.return();
+                    if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                        _iterator14.return();
                     }
                 } finally {
-                    if (_didIteratorError12) {
-                        throw _iteratorError12;
+                    if (_didIteratorError14) {
+                        throw _iteratorError14;
                     }
                 }
             }
@@ -4705,18 +5700,18 @@ exports.default = {
             var updateTotal = {};
             var removeTotal = [];
             var single = function single(v) {
-                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*)?\s*(cost)?/);
+                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
-                        remain += +cmd[2];
-                        updateTotal[totalId] = { cost: remain };
+                        remain = +cmd[2];
+                        updateTotal[totalId] = { amount: remain };
                     } else if (cmd[1] === 'delete') {
                         var _loop = function _loop(i) {
                             if (cmd[2] === items[i].index) {
                                 return {
                                     v: getStockPrice('twse', items[i].index).then(function (price) {
-                                        remain += price * items[i].count;
-                                        updateTotal[totalId] = { cost: remain };
+                                        remain += price * items[i].count * (1 - _constants.TRADE_FEE);
+                                        updateTotal[totalId] = { amount: remain };
                                         if (items[i]._id) {
                                             removeTotal.push(items[i]._id);
                                         }
@@ -4741,68 +5736,104 @@ exports.default = {
                     } else {
                         var is_find = false;
 
-                        var _loop3 = function _loop3(_i30) {
-                            if (cmd[1] === items[_i30].index) {
+                        var _loop3 = function _loop3(_i32) {
+                            if (cmd[1] === items[_i32].index) {
                                 is_find = true;
                                 if (!cmd[3]) {
-                                    var orig_count = items[_i30].count;
-                                    items[_i30].count += +cmd[2];
-                                    if (items[_i30].count < 0) {
+                                    var orig_count = items[_i32].count;
+                                    items[_i32].count += +cmd[2];
+                                    if (items[_i32].count < 0) {
                                         cmd[2] = -orig_count;
-                                        items[_i30].count = 0;
+                                        items[_i32].count = 0;
                                     }
                                     return {
-                                        v: getStockPrice('twse', items[_i30].index).then(function (price) {
-                                            var new_cost = Math.floor(price * +cmd[2] * 100) / 100;
-                                            items[_i30].cost += new_cost;
+                                        v: getStockPrice('twse', items[_i32].index).then(function (price) {
+                                            var new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
+                                            items[_i32].amount -= new_cost;
                                             remain -= new_cost;
-                                            updateTotal[totalId] = { cost: remain };
-                                            if (items[_i30]._id) {
-                                                if (updateTotal[items[_i30]._id]) {
-                                                    updateTotal[items[_i30]._id].count = items[_i30].count;
-                                                    updateTotal[items[_i30]._id].cost = items[_i30].cost;
+                                            updateTotal[totalId] = { amount: remain };
+                                            items[_i32].privious = {
+                                                price: price,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                type: +cmd[2] > 0 ? 'buy' : 'sell'
+                                            };
+                                            if (items[_i32]._id) {
+                                                if (updateTotal[items[_i32]._id]) {
+                                                    updateTotal[items[_i32]._id].count = items[_i32].count;
+                                                    updateTotal[items[_i32]._id].amount = items[_i32].amount;
+                                                    updateTotal[items[_i32]._id].privious = items[_i32].privious;
                                                 } else {
-                                                    updateTotal[items[_i30]._id] = { count: items[_i30].count, cost: items[_i30].cost };
+                                                    updateTotal[items[_i32]._id] = { count: items[_i32].count, amount: items[_i32].amount, privious: items[_i32].privious };
                                                 }
                                             }
                                         })
                                     };
-                                } else if (cmd[4]) {
-                                    items[_i30].count = +cmd[2] > 0 ? +cmd[2] : 0;
-                                    remain += +cmd[3] - items[_i30].cost;
-                                    items[_i30].cost = +cmd[3];
-                                    updateTotal[totalId] = { cost: remain };
-                                    if (items[_i30]._id) {
-                                        if (updateTotal[items[_i30]._id]) {
-                                            updateTotal[items[_i30]._id].count = items[_i30].count;
-                                            updateTotal[items[_i30]._id].cost = items[_i30].cost;
+                                } else if (cmd[3] === 'amount') {
+                                    var newWeb = adjustWeb(items[_i32].web, items[_i32].mid, +cmd[2]);
+                                    if (!newWeb) {
+                                        return {
+                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i32].mid * (items[_i32].web.length - 1) / 3)))
+                                        };
+                                    }
+                                    items[_i32].web = newWeb.arr;
+                                    items[_i32].mid = newWeb.mid;
+                                    items[_i32].times = newWeb.times;
+                                    items[_i32].amount = items[_i32].amount + +cmd[2] - items[_i32].orig;
+                                    items[_i32].orig = +cmd[2];
+                                    if (items[_i32]._id) {
+                                        if (updateTotal[items[_i32]._id]) {
+                                            updateTotal[items[_i32]._id].web = items[_i32].web;
+                                            updateTotal[items[_i32]._id].mid = items[_i32].mid;
+                                            updateTotal[items[_i32]._id].times = items[_i32].times;
+                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
+                                            updateTotal[items[_i32]._id].orig = items[_i32].orig;
                                         } else {
-                                            updateTotal[items[_i30]._id] = { count: items[_i30].count, cost: items[_i30].cost };
+                                            updateTotal[items[_i32]._id] = {
+                                                web: items[_i32].web,
+                                                mid: items[_i32].mid,
+                                                times: items[_i32].times,
+                                                amount: items[_i32].amount,
+                                                orig: items[_i32].orig
+                                            };
                                         }
                                     }
-                                } else {
-                                    if (+cmd[2] > +cmd[3]) {
-                                        items[_i30].top = +cmd[2];
-                                        items[_i30].bottom = +cmd[3];
-                                    } else {
-                                        items[_i30].top = +cmd[3];
-                                        items[_i30].bottom = +cmd[2];
-                                    }
-                                    if (items[_i30]._id) {
-                                        if (updateTotal[items[_i30]._id]) {
-                                            updateTotal[items[_i30]._id].top = items[_i30].top;
-                                            updateTotal[items[_i30]._id].bottom = items[_i30].bottom;
+                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0) {
+                                    //} else if (cmd[4]) {
+                                    items[_i32].count = +cmd[2];
+                                    remain = remain + items[_i32].orig - items[_i32].amount - +cmd[3];
+                                    items[_i32].amount = items[_i32].orig - +cmd[3];
+                                    updateTotal[totalId] = { amount: remain };
+                                    if (items[_i32]._id) {
+                                        if (updateTotal[items[_i32]._id]) {
+                                            updateTotal[items[_i32]._id].count = items[_i32].count;
+                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
                                         } else {
-                                            updateTotal[items[_i30]._id] = { top: items[_i30].top, bottom: items[_i30].bottom };
+                                            updateTotal[items[_i32]._id] = { count: items[_i32].count, amount: items[_i32].amount };
                                         }
                                     }
+                                    /*} else {
+                                        if (+cmd[2] > +cmd[3]) {
+                                            items[i].top = +cmd[2];
+                                            items[i].bottom = +cmd[3];
+                                        } else {
+                                            items[i].top = +cmd[3];
+                                            items[i].bottom = +cmd[2];
+                                        }
+                                        if (items[i]._id) {
+                                            if (updateTotal[items[i]._id]) {
+                                                updateTotal[items[i]._id].top = items[i].top;
+                                                updateTotal[items[i]._id].bottom = items[i].bottom;
+                                            } else {
+                                                updateTotal[items[i]._id] = {top: items[i].top, bottom: items[i].bottom};
+                                            }
+                                        }*/
                                 }
                                 return 'break';
                             }
                         };
 
-                        _loop4: for (var _i30 in items) {
-                            var _ret8 = _loop3(_i30);
+                        _loop4: for (var _i32 in items) {
+                            var _ret8 = _loop3(_i32);
 
                             switch (_ret8) {
                                 case 'break':
@@ -4814,49 +5845,64 @@ exports.default = {
                         }
 
                         if (!is_find) {
-                            if (!cmd[3] && +cmd[2] >= 0) {
-                                return getBasicStockData('twse', cmd[1]).then(function (basic) {
-                                    return getStockPrice('twse', basic.stock_index).then(function (price) {
+                            if (+cmd[2] >= 0 && cmd[3] === 'amount') {
+                                //init amount
+                                //get web? arr mid count
+                                return (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: 'twse', index: cmd[1] }, { limit: 1 }).then(function (item) {
+                                    if (item.length < 1) {
+                                        return (0, _utility.handleError)(new _utility.HoError('No stock data!!!'));
+                                    }
+                                    if (!item[0].web) {
+                                        return (0, _utility.handleError)(new _utility.HoError('No web data!!!'));
+                                    }
+                                    var newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
+                                    if (!newWeb) {
+                                        return (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)));
+                                    }
+                                    return getBasicStockData('twse', cmd[1]).then(function (basic) {
+                                        return getStockPrice('twse', basic.stock_index).then(function (price) {
+                                            console.log(basic);
+                                            items.push({
+                                                owner: user._id,
+                                                index: basic.stock_index,
+                                                name: basic.stock_index + ' ' + basic.stock_name,
+                                                type: basic.stock_class,
+                                                //cost: 0,
+                                                count: 0,
+                                                web: newWeb.arr,
+                                                wType: newWeb.type,
+                                                mid: newWeb.mid,
+                                                times: newWeb.times,
+                                                amount: +cmd[2],
+                                                orig: +cmd[2],
+                                                //top: Math.floor(price * 1.2 * 100) / 100,
+                                                //bottom: Math.floor(price * 0.95 * 100) / 100,
+                                                price: price
+                                            });
+                                            //remain -= cost;
+                                            //updateTotal[totalId] = {cost: remain};
+                                        });
+                                    });
+                                });
+                                /*} else if (cmd[4] && +cmd[2] > 0) {
+                                    return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
                                         console.log(basic);
-                                        var cost = Math.floor(+cmd[2] * price * 100) / 100;
-                                        cost = cost > 0 ? cost : 0;
+                                        const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
                                         items.push({
                                             owner: user._id,
                                             index: basic.stock_index,
-                                            name: basic.stock_index + ' ' + basic.stock_name,
+                                            name: `${basic.stock_index} ${basic.stock_name}`,
                                             type: basic.stock_class,
-                                            cost: cost,
+                                            cost,
                                             count: +cmd[2],
                                             top: Math.floor(price * 1.2 * 100) / 100,
                                             bottom: Math.floor(price * 0.95 * 100) / 100,
-                                            price: price,
-                                            high: price
-                                        });
+                                            price,
+                                            high: price,
+                                        })
                                         remain -= cost;
-                                        updateTotal[totalId] = { cost: remain };
-                                    });
-                                });
-                            } else if (cmd[4] && +cmd[2] > 0) {
-                                return getBasicStockData('twse', cmd[1]).then(function (basic) {
-                                    return getStockPrice('tese', basic.stock_index).then(function (price) {
-                                        console.log(basic);
-                                        var cost = +cmd[3] > 0 ? +cmd[3] : 0;
-                                        items.push({
-                                            owner: user._id,
-                                            index: basic.stock_index,
-                                            name: basic.stock_index + ' ' + basic.stock_name,
-                                            type: basic.stock_class,
-                                            cost: cost,
-                                            count: +cmd[2],
-                                            top: Math.floor(price * 1.2 * 100) / 100,
-                                            bottom: Math.floor(price * 0.95 * 100) / 100,
-                                            price: price,
-                                            high: price
-                                        });
-                                        remain -= cost;
-                                        updateTotal[totalId] = { cost: remain };
-                                    });
-                                });
+                                        updateTotal[totalId] = {cost: remain};
+                                    }));*/
                             }
                         }
                     }
@@ -4889,32 +5935,39 @@ exports.default = {
                 return real ? recurUpdate(0) : rest();
             };
             var rest = function rest() {
-                var cost = 0;
+                var profit = 0;
                 var totalPrice = 0;
-                var plus = 0;
-                var minus = 0;
+                //let plus = 0;
+                //let minus = 0;
                 var stock = [];
                 var getStock = function getStock(v) {
                     if (v.name === '投資部位' && v.type === 'total') {
                         return _promise2.default.resolve();
                     } else {
                         return getStockPrice('twse', v.index).then(function (price) {
-                            cost += v.cost;
-                            var current = Math.floor(price * v.count * 100) / 100;
+                            var current = price * v.count;
                             totalPrice += current;
-                            var p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                            var m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                            plus += p;
-                            minus += m;
+                            var p = current + v.amount - v.orig;
+                            profit += p;
+                            //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                            //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                            //plus += p;
+                            //minus += m;
                             stock.push({
                                 name: v.name,
                                 type: v.type,
-                                cost: v.cost,
+                                //cost: v.cost,
                                 price: price,
+                                mid: v.mid,
                                 count: v.count,
-                                plus: p,
-                                minus: m,
-                                current: current
+                                remain: Math.round(v.amount * 100) / 100,
+                                profit: p,
+                                //top: v.top,
+                                //bottom: v.bottom,
+                                //plus: p,
+                                //minus: m,
+                                current: current,
+                                str: v.str ? v.str : ''
                             });
                         });
                     }
@@ -4924,16 +5977,19 @@ exports.default = {
                         stock.unshift({
                             name: totalName,
                             type: totalType,
-                            cost: cost,
+                            profit: profit,
                             price: totalPrice,
+                            mid: 1,
+                            remain: totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 + '%' : '0%',
                             count: 1,
-                            plus: Math.floor(plus * 100) / 100,
-                            minus: Math.floor(minus * 100) / 100,
-                            current: totalPrice
+                            //plus: Math.floor(plus * 100) / 100,
+                            //minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice,
+                            str: ''
                         });
                         return {
-                            remain: Math.floor(remain * 100) / 100,
-                            total: Math.floor((totalPrice + remain) * 100) / 100,
+                            remain: remain,
+                            total: totalPrice + remain,
                             stock: stock
                         };
                     } else {
@@ -5008,13 +6064,13 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
         }
         var tds = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
         var filename = false;
-        var _iteratorNormalCompletion13 = true;
-        var _didIteratorError13 = false;
-        var _iteratorError13 = undefined;
+        var _iteratorNormalCompletion15 = true;
+        var _didIteratorError15 = false;
+        var _iteratorError15 = undefined;
 
         try {
-            for (var _iterator13 = (0, _getIterator3.default)(tds), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                var t = _step13.value;
+            for (var _iterator15 = (0, _getIterator3.default)(tds), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                var t = _step15.value;
 
                 var a = (0, _utility.findTag)(t, 'a')[0];
                 if (a) {
@@ -5023,16 +6079,16 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
                 }
             }
         } catch (err) {
-            _didIteratorError13 = true;
-            _iteratorError13 = err;
+            _didIteratorError15 = true;
+            _iteratorError15 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                    _iterator13.return();
+                if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                    _iterator15.return();
                 }
             } finally {
-                if (_didIteratorError13) {
-                    throw _iteratorError13;
+                if (_didIteratorError15) {
+                    throw _iteratorError15;
                 }
             }
         }
@@ -5124,27 +6180,27 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
         }).then(function (metadata) {
             return recur_annual(year, metadata.id);
         }) : (0, _apiToolGoogle2.default)('list file', { folderId: annualList[0].id }).then(function (metadataList) {
-            var _iteratorNormalCompletion14 = true;
-            var _didIteratorError14 = false;
-            var _iteratorError14 = undefined;
+            var _iteratorNormalCompletion16 = true;
+            var _didIteratorError16 = false;
+            var _iteratorError16 = undefined;
 
             try {
-                for (var _iterator14 = (0, _getIterator3.default)(metadataList), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                    var i = _step14.value;
+                for (var _iterator16 = (0, _getIterator3.default)(metadataList), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                    var i = _step16.value;
 
                     annual_list.push((0, _mime.getExtname)(i.title).front);
                 }
             } catch (err) {
-                _didIteratorError14 = true;
-                _iteratorError14 = err;
+                _didIteratorError16 = true;
+                _iteratorError16 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                        _iterator14.return();
+                    if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                        _iterator16.return();
                     }
                 } finally {
-                    if (_didIteratorError14) {
-                        throw _iteratorError14;
+                    if (_didIteratorError16) {
+                        throw _iteratorError16;
                     }
                 }
             }
@@ -5155,7 +6211,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     });
 };
 
-var stockStatus = exports.stockStatus = function stockStatus() {
+var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
         var recur_price = function recur_price(index) {
             return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(function (price) {
@@ -5163,21 +6219,56 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                     return 0;
                 }
                 var item = items[index];
-                var high = !item.high || price > item.high ? price : item.high;
+                var suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
+                console.log(item);
+                console.log(suggestion.str);
+                if (newStr && (!item.sent || item.sent !== new Date().getDay())) {
+                    item.sent = new Date().getDay();
+                    (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
+                }
+                if (suggestion.type === 2) {
+                    if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE) * item.bCurrent) {
+                        item.bTarget = item.bCurrent;
+                        item.bCurrent = suggestion.buy;
+                    }
+                } else if (price > item.bTarget * 1.05) {
+                    item.bCurrent = 0;
+                    item.bTarget = 0;
+                }
+                if (suggestion.type === 4) {
+                    if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE) * item.sCurrent) {
+                        item.sTarget = item.sCurrent;
+                        item.sCurrent = suggestion.sell;
+                    }
+                } else if (price < item.sTarget * 0.95) {
+                    item.sCurrent = 0;
+                    item.sTarget = 0;
+                }
+                if (item.count > 0 && suggestion.type === 1 && price < item.price) {
+                    (0, _sendWs2.default)(item.name + ' SELL ALL NOW!!!', 0, 0, true);
+                }
+                if (item.bTarget && price >= item.bTarget && price > item.price && item.amount >= price) {
+                    (0, _sendWs2.default)(item.name + ' BUY NOW!!!', 0, 0, true);
+                }
+                if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
+                    (0, _sendWs2.default)(item.name + ' SELL NOW!!!', 0, 0, true);
+                }
+                /*
+                const high = (!item.high || price > item.high) ? price : item.high;
                 if (price > item.price) {
                     if (price <= item.bottom * 1.05 && price >= item.bottom) {
-                        (0, _sendWs2.default)(item.name + ' BUY!!!', 0, 0, true);
+                        sendWs(`${item.name} BUY!!!`, 0, 0, true);
                     }
                 } else if (item.count > 0 && price < item.price) {
                     if (high > item.top && price < item.top) {
-                        (0, _sendWs2.default)(item.name + ' SELL!!!', 0, 0, true);
+                        sendWs(`${item.name} SELL!!!`, 0, 0, true);
                     } else {
-                        var midB = item.bottom;
-                        var midT = item.bottom * 1.2;
-                        while (midB < item.top) {
+                        let midB = item.bottom;
+                        let midT = item.bottom * 1.2;
+                        while(midB < item.top) {
                             if (high < midT) {
-                                if (price < midB * 0.95 || price < high * 0.9) {
-                                    (0, _sendWs2.default)(item.name + ' SELL!!!', 0, 0, true);
+                                if (price < midB * 0.95 || price < high*0.9) {
+                                    sendWs(`${item.name} SELL!!!`, 0, 0, true);
                                 }
                                 break;
                             }
@@ -5185,10 +6276,15 @@ var stockStatus = exports.stockStatus = function stockStatus() {
                             midT = midB * 1.2;
                         }
                     }
-                }
+                }*/
                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
-                        high: high,
-                        price: price
+                        price: price,
+                        str: suggestion.str,
+                        sent: item.sent,
+                        bTarget: item.bTarget,
+                        bCurrent: item.bCurrent,
+                        sTarget: item.sTarget,
+                        sCurrent: item.sCurrent
                     } });
             }).then(function () {
                 return recur_price(index + 1);
@@ -5254,18 +6350,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                     if (Number(index)) {
                                         var exist = false;
 
-                                        var _loop5 = function _loop5(_i31) {
-                                            if (stock_list[_i31].index === index) {
+                                        var _loop5 = function _loop5(_i33) {
+                                            if (stock_list[_i33].index === index) {
                                                 exist = true;
                                                 tag.forEach(function (v) {
-                                                    return stock_list[_i31].tag.push(v);
+                                                    return stock_list[_i33].tag.push(v);
                                                 });
                                                 return 'break';
                                             }
                                         };
 
-                                        for (var _i31 = 0; _i31 < stock_list.length; _i31++) {
-                                            var _ret11 = _loop5(_i31);
+                                        for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
+                                            var _ret11 = _loop5(_i33);
 
                                             if (_ret11 === 'break') break;
                                         }
@@ -5289,4 +6385,741 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         default:
             return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
     }
+};
+
+var stockProcess = function stockProcess(price, priceArray, priceTimes) {
+    var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    var pType = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 4;
+    var now = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : Math.round(new Date().getTime() / 1000);
+
+    //const now = Math.round(new Date().getTime() / 1000);
+    var is_buy = true;
+    var is_sell = true;
+    var bTimes = priceTimes ? priceTimes : 1;
+    var sTimes = priceTimes ? priceTimes : 1;
+    var bP = 8;
+    var nowBP = priceArray.length - 1;
+    //let tmpB = 0;
+    for (; nowBP >= 0; nowBP--) {
+        if (Math.abs(priceArray[nowBP]) * 1.001 >= price) {
+            break;
+        }
+        if (priceArray[nowBP] < 0) {
+            bP--;
+        }
+    }
+    if (nowBP === priceArray.length - 1) {
+        //if (bP > 6) {
+        var newMid = 0;
+        var count = 0;
+        for (nowBP = priceArray.length - 1; nowBP >= 0; nowBP--) {
+            if (priceArray[nowBP] < 0) {
+                if (++count === 3) {
+                    newMid = Math.abs(priceArray[nowBP]);
+                    break;
+                }
+            }
+        }
+        return {
+            resetWeb: true,
+            newMid: newMid
+        };
+        //return {
+        //    str: 'SELL ALL',
+        //    type: 1,
+        //};
+    }
+    var sP = 0;
+    var nowSP = 0;
+    for (; nowSP < priceArray.length; nowSP++) {
+        /*if ((sP < 6) && (priceArray[nowSP] < 0)) {
+            tmpB = Math.abs(priceArray[nowSP]);
+        }*/
+        if (Math.abs(priceArray[nowSP]) * 0.999 <= price) {
+            break;
+        }
+        if (priceArray[nowSP] < 0) {
+            sP++;
+        }
+    }
+    if (nowSP === 0) {
+        //if (sP < 2) {
+        var _newMid = 0;
+        var _count5 = 0;
+        for (nowSP = 0; nowSP < priceArray.length; nowSP++) {
+            if (priceArray[nowSP] < 0) {
+                if (++_count5 === 3) {
+                    _newMid = Math.abs(priceArray[nowSP]);
+                    break;
+                }
+            }
+        }
+        return {
+            resetWeb: true,
+            newMid: _newMid
+        };
+    }
+    if (previous.time) {
+        if (previous.price >= price) {
+            var previousP = priceArray.length - 1;
+            var pP = 8;
+            for (; previousP >= 0; previousP--) {
+                if (Math.abs(priceArray[previousP]) * 1.001 >= previous.price) {
+                    break;
+                }
+                if (priceArray[previousP] < 0) {
+                    pP--;
+                }
+            }
+            //console.log(now);
+            //console.log(previous.time);
+            //console.log(nowSP);
+            //console.log(nowBP);
+            //console.log(previousP);
+            if (previous.type === 'buy') {
+                if (now - previous.time >= (nowBP - previousP + 1) * _constants.TRADE_INTERVAL) {
+                    is_buy = true;
+                    bTimes = bTimes * (nowBP - previousP + 1);
+                } else {
+                    is_buy = false;
+                }
+            } else if (previous.type === 'sell') {
+                if (now - previous.time >= _constants.TRADE_INTERVAL) {
+                    is_sell = true;
+                } else {
+                    is_sell = false;
+                }
+            }
+            previousP = 0;
+            pP = 0;
+            for (; previousP < priceArray.length; previousP++) {
+                if (Math.abs(priceArray[previousP]) * 0.999 <= previous.price) {
+                    break;
+                }
+                if (priceArray[previousP] < 0) {
+                    pP++;
+                }
+            }
+            nowSP = previousP;
+            sP = pP;
+        }
+        if (previous.price < price) {
+            var _previousP = 0;
+            var _pP = 0;
+            for (; _previousP < priceArray.length; _previousP++) {
+                if (Math.abs(priceArray[_previousP]) * 0.999 <= previous.price) {
+                    break;
+                }
+                if (priceArray[_previousP] < 0) {
+                    _pP++;
+                }
+            }
+            //console.log(now);
+            //console.log(previous.time);
+            //console.log(nowSP);
+            //console.log(nowBP);
+            //console.log(previousP);
+            if (previous.type === 'sell') {
+                if (now - previous.time >= (_previousP - nowSP + 1) * _constants.TRADE_INTERVAL) {
+                    is_sell = true;
+                    sTimes = sTimes * (_previousP - nowSP + 1);
+                } else {
+                    is_sell = false;
+                }
+            } else if (previous.type === 'buy') {
+                if (now - previous.time >= _constants.TRADE_INTERVAL) {
+                    is_buy = true;
+                } else {
+                    is_buy = false;
+                }
+            }
+            _previousP = priceArray.length - 1;
+            _pP = 8;
+            for (; _previousP >= 0; _previousP--) {
+                if (Math.abs(priceArray[_previousP]) * 1.001 >= previous.price) {
+                    break;
+                }
+                if (priceArray[_previousP] < 0) {
+                    _pP--;
+                }
+            }
+            nowBP = _previousP;
+            bP = _pP;
+        }
+    }
+    /*console.log(nowBP);
+    console.log(nowSP);
+    console.log(bP);
+    console.log(sP);*/
+    var buy = 0;
+    var sell = 0;
+    var str = '';
+    var bCount = 1;
+    var sCount = 1;
+    var type = 0;
+    bCount = bTimes * bCount;
+    sCount = sTimes * sCount;
+    if (is_buy) {
+        /*if (bP > 4) {
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            bCount = bCount * 2;
+            str += `Buy ${buy} ( ${bCount} ) `;
+        } else {
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            if (pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            str += `Buy ${buy} ( ${bCount} ) `;
+        }*/
+        if (bP < 3) {
+            str += 'Buy too high ';
+        } else if (bP > 6) {
+            //type = 2;
+            //type = 3;
+            type = 6;
+            //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            bCount = bCount * 2;
+            //buy = Math.round(tmpB * 100) / 100;
+            str += 'Buy 3/4 ' + buy + ' ( ' + bCount + ' ) ';
+        } else if (bP > 5) {
+            type = 3;
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            bCount = bCount * 2;
+            str += 'Buy 1/2 ' + buy + ' ( ' + bCount + ' ) ';
+        } else if (bP > 4) {
+            type = 7;
+            //type = 3;
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            bCount = bCount * 2;
+            str += 'Buy 1/4 ' + buy + ' ( ' + bCount + ' ) ';
+        } else {
+            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            if (pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            str += 'Buy ' + buy + ' ( ' + bCount + ' ) ';
+        }
+    }
+    if (is_sell) {
+        /*if (sP < 4) {
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            if (pType === 5 || pType === 4) {
+                sCount = sCount * 2;
+            }
+            str += `Sell ${sell} ( ${sCount} ) `;
+        } else {
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            if (pType === 2 || pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            str += `Sell ${sell} ( ${sCount} ) `;
+        }*/
+        if (sP > 5) {
+            str += 'Sell too low ';
+        } else if (sP < 2) {
+            //type = 4;
+            //type = 5;
+            type = 8;
+            //sell = Math.round(Math.abs(priceArray[nowSP]) * 100) / 100;
+            if (pType === 5 || pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            str += 'Sell 3/4 ' + sell + ' ( ' + sCount + ' ) ';
+        } else if (sP < 3) {
+            type = 5;
+            if (pType === 5 || pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            str += 'Sell 1/2 ' + sell + ' ( ' + sCount + ' ) ';
+        } else if (sP < 4) {
+            type = 9;
+            //type = 5;
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            if (pType === 5 || pType === 4) {
+                sCount = sCount * 2;
+            }
+            str += 'Sell 1/4 ' + sell + ' ( ' + sCount + ' ) ';
+        } else {
+            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            if (pType === 2 || pType === 4 || pType === 3) {
+                sCount = sCount * 2;
+            }
+            str += 'Sell ' + sell + ' ( ' + sCount + ' ) ';
+        }
+    }
+    return {
+        price: price,
+        str: str,
+        buy: buy,
+        sell: sell,
+        type: type,
+        bCount: bCount,
+        sCount: sCount
+    };
+};
+
+var stockTest = function stockTest(his_arr, web) {
+    var pType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var start = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    var len = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 250;
+
+    var now = Math.round(new Date().getTime() / 1000);
+    //let is_start = false;
+    var maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+    var amount = maxAmount;
+    var count = 0;
+    var privious = {};
+    var priviousTrade = {};
+    //let maxCount = 0;
+    var buyTrade = 0;
+    var sellTrade = 0;
+    var stopLoss = 0;
+    var newMid = [];
+    var newArr = [];
+    var newPTrade = {};
+    var price = 0;
+    //console.log('stock test');
+    //console.log(amount);
+    //console.log(count);
+    var startI = start + len - 1;
+    for (; startI < his_arr.length - 1; startI++) {
+        //if (his_arr[startI].h < web.mid * 0.9) {
+        if (his_arr[startI].h < web.mid) {
+            privious = his_arr[startI + 1];
+            var tmpAmount = amount - maxAmount / 2;
+            while (tmpAmount - his_arr[startI + 1].h > 0) {
+                amount -= his_arr[startI + 1].h;
+                tmpAmount = amount - maxAmount / 2;
+                count++;
+            }
+            break;
+        }
+    }
+    if (startI >= his_arr.length - 1) {
+        return {
+            str: '0% ' + Math.ceil(maxAmount) + ' 0% 0% 0 0',
+            start: startI
+        };
+    }
+    console.log(startI);
+    for (var i = startI; i > startI - len + 1; i--) {
+        /*if (his_arr[i].l <= web.mid) {
+            is_start = true;
+            privious = his_arr[i + 1];
+        }*/
+        //if (is_start) {
+        if (his_arr[i].h && his_arr[i].l && privious.h && privious.l) {
+            var hh = privious.h - his_arr[i].h;
+            var ll = his_arr[i].l - privious.l;
+            if (hh >= 0 && ll >= 0 || hh <= 0 && ll <= 0) {
+                price = Math.abs(hh) > Math.abs(ll) ? his_arr[i].h : his_arr[i].l;
+            } else {
+                price = hh < 0 ? his_arr[i].h : his_arr[i].l;
+            }
+        } else if (!price) {
+            if (his_arr[i].h) {
+                price = his_arr[i].h;
+            } else if (his_arr[i].l) {
+                price = his_arr[i].list;
+            } else if (privious.h) {
+                price = privious.h;
+            } else if (privious.l) {
+                price = privious.l;
+            }
+        }
+        var suggest = null;
+        var checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
+        while (newMid.length > 0 && (newMid[newMid.length - 1] > checkMid && price < checkMid || newMid[newMid.length - 1] <= checkMid && price > checkMid)) {
+            newMid.pop();
+            newPTrade = {};
+            stopLoss--;
+            newArr = web.arr.map(function (v) {
+                return v * newMid[newMid.length - 1] / web.mid;
+            });
+            checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
+        }
+        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, newMid.length > 0 ? newPTrade : priviousTrade, pType, now - i * 86400);
+        while (suggest.resetWeb) {
+            //console.log(amount);
+            //console.log(count);
+            stopLoss++;
+            newMid.push(suggest.newMid);
+            newArr = web.arr.map(function (v) {
+                return v * newMid[newMid.length - 1] / web.mid;
+            });
+            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, newMid.length > 0 ? newPTrade : priviousTrade, pType, now - i * 86400);
+            //console.log(price);
+            //console.log(suggest);
+            //console.log(newArr);
+        }
+        //console.log(privious);
+        //console.log(his_arr[i]);
+        //console.log(his_arr[i - 1]);
+        //console.log(price);
+        //console.log(priviousTrade);
+        //console.log(suggest);
+        //console.log(suggest.str);
+        /*if (suggest.type === 1) {
+            amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
+            if (count > 0) {
+                stopLoss++;
+            }
+            count = 0;
+            priviousTrade = {
+                price: his_arr[i - 1].l,
+                time: now - (i * 86400) + 3600,
+                type: 'sell',
+            }
+        }*/
+        /*if (suggest.type === 2) {
+            if (suggest.buy && (his_arr[i - 1].h <= suggest.buy)) {
+                while ((amount - suggest.buy) > 0) {
+                    amount -= suggest.buy;
+                    count++;
+                    priviousTrade = {
+                        price: suggest.buy,
+                        time: now - (i * 86400) + 3600,
+                        type: 'buy',
+                    }
+                    buyTrade++;
+                }
+            }
+        } else*/if (suggest.type === 7) {
+            if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                for (var j = 0; j < suggest.bCount; j++) {
+                    if (amount - suggest.buy <= 0) {
+                        break;
+                    } else {
+                        amount -= suggest.buy;
+                        count++;
+                        priviousTrade = {
+                            price: suggest.buy,
+                            time: now - i * 86400 + 3600,
+                            type: 'buy',
+                            win: 0
+                        };
+                        buyTrade++;
+                    }
+                }
+                var _tmpAmount = amount - maxAmount * 3 / 4;
+                while (_tmpAmount - suggest.buy > 0) {
+                    amount -= suggest.buy;
+                    _tmpAmount = amount - maxAmount * 3 / 4;
+                    count++;
+                    priviousTrade = {
+                        price: suggest.buy,
+                        time: now - i * 86400 + 3600,
+                        type: 'buy',
+                        win: 0
+                    };
+                    buyTrade++;
+                }
+            }
+        } else if (suggest.type === 3) {
+            if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                for (var _j5 = 0; _j5 < suggest.bCount; _j5++) {
+                    if (amount - suggest.buy <= 0) {
+                        break;
+                    } else {
+                        amount -= suggest.buy;
+                        count++;
+                        priviousTrade = {
+                            price: suggest.buy,
+                            time: now - i * 86400 + 3600,
+                            type: 'buy',
+                            win: 0
+                        };
+                        buyTrade++;
+                    }
+                }
+                var _tmpAmount2 = amount - maxAmount / 2;
+                while (_tmpAmount2 - suggest.buy > 0) {
+                    amount -= suggest.buy;
+                    _tmpAmount2 = amount - maxAmount / 2;
+                    count++;
+                    priviousTrade = {
+                        price: suggest.buy,
+                        time: now - i * 86400 + 3600,
+                        type: 'buy',
+                        win: 0
+                    };
+                    buyTrade++;
+                }
+            }
+        } else if (suggest.type === 6) {
+            if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                for (var _j6 = 0; _j6 < suggest.bCount; _j6++) {
+                    if (amount - suggest.buy <= 0) {
+                        break;
+                    } else {
+                        amount -= suggest.buy;
+                        count++;
+                        priviousTrade = {
+                            price: suggest.buy,
+                            time: now - i * 86400 + 3600,
+                            type: 'buy',
+                            win: 0
+                        };
+                        buyTrade++;
+                    }
+                }
+                var _tmpAmount3 = amount - maxAmount / 4;
+                while (_tmpAmount3 - suggest.buy > 0) {
+                    amount -= suggest.buy;
+                    _tmpAmount3 = amount - maxAmount / 4;
+                    count++;
+                    priviousTrade = {
+                        price: suggest.buy,
+                        time: now - i * 86400 + 3600,
+                        type: 'buy',
+                        win: 0
+                    };
+                    buyTrade++;
+                }
+            }
+        } else if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+            for (var _j7 = 0; _j7 < suggest.bCount; _j7++) {
+                if (amount - suggest.buy <= 0) {
+                    break;
+                } else {
+                    amount -= suggest.buy;
+                    count++;
+                    priviousTrade = {
+                        price: suggest.buy,
+                        time: now - i * 86400 + 3600,
+                        type: 'buy',
+                        win: 0
+                    };
+                    buyTrade++;
+                }
+            }
+        }
+
+        /*if (suggest.type === 4) {
+            if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                amount += (suggest.sell * count * (1 - TRADE_FEE));
+                sellTrade = sellTrade + count;
+                count = 0;
+                priviousTrade = {
+                    price: suggest.sell,
+                    time: now - (i * 86400) + 3600,
+                    type: 'sell',
+                }
+            }
+        } else */if (suggest.type === 9) {
+            if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
+                for (var _j8 = 0; _j8 < suggest.sCount; _j8++) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                var _tmpAmount4 = maxAmount / 4 - amount;
+                while (_tmpAmount4 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    _tmpAmount4 = maxAmount / 4 - amount;
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                priviousTrade = {
+                    price: suggest.sell,
+                    time: now - i * 86400 + 3600,
+                    type: 'sell',
+                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
+                };
+                //console.log(priviousTrade.win);
+            }
+        } else if (suggest.type === 5) {
+            if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
+                for (var _j9 = 0; _j9 < suggest.sCount; _j9++) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                var _tmpAmount5 = maxAmount / 2 - amount;
+                while (_tmpAmount5 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    _tmpAmount5 = maxAmount / 2 - amount;
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                priviousTrade = {
+                    price: suggest.sell,
+                    time: now - i * 86400 + 3600,
+                    type: 'sell',
+                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
+                };
+                //console.log(priviousTrade.win);
+            }
+        } else if (suggest.type === 8) {
+            if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
+                for (var _j10 = 0; _j10 < suggest.sCount; _j10++) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                var _tmpAmount6 = maxAmount * 3 / 4 - amount;
+                while (_tmpAmount6 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    _tmpAmount6 = maxAmount * 3 / 4 - amount;
+                    sellTrade++;
+                    count--;
+                    if (count <= 0) {
+                        break;
+                    }
+                }
+                priviousTrade = {
+                    price: suggest.sell,
+                    time: now - i * 86400 + 3600,
+                    type: 'sell',
+                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
+                };
+                //console.log(priviousTrade.win);
+            }
+        } else if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
+            for (var _j11 = 0; _j11 < suggest.sCount; _j11++) {
+                amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                count--;
+                sellTrade++;
+                if (count <= 0) {
+                    break;
+                }
+            }
+            priviousTrade = {
+                price: suggest.sell,
+                time: now - i * 86400 + 3600,
+                type: 'sell',
+                win: priviousTrade.win ? priviousTrade.win + 1 : 1
+            };
+            //console.log(priviousTrade.win);
+        }
+        //console.log(amount);
+        //console.log(count);
+        privious = his_arr[i];
+        //}
+    }
+    console.log(amount);
+    console.log(count);
+    amount += his_arr[startI - len + 1].l * count * (1 - _constants.TRADE_FEE);
+    count = 0;
+    //console.log('result');
+    //console.log(amount);
+    //console.log(maxAmount);
+    //console.log(buyTrade);
+    //console.log(sellTrade);
+    //console.log(stopLoss);
+    var str = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(maxAmount) + ' ' + Math.round((amount / maxAmount - 1) * 10000) / 100 + '% ' + (his_arr[startI].l ? Math.round((his_arr[startI - len + 1].h / his_arr[startI].l - 1) * 10000) / 100 : 0) + '% ' + sellTrade + ' ' + stopLoss;
+    //const str = is_start ? `${Math.ceil(maxAmount)} ${Math.round((his_arr[start].h / his_arr[start + len - 1].l - 1) * 10000) / 100}% ${Math.round((amount / maxAmount - 1) * 10000) / 100}% ${sellTrade} ${stopLoss}` : `${Math.ceil(maxAmount)} ${Math.round((his_arr[start].h / his_arr[start + len - 1].l - 1) * 10000) / 100}% 0% 0 0`;
+    return {
+        str: str,
+        start: startI
+    };
+};
+
+var logArray = function logArray(max, min) {
+    var pos = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 100;
+
+    var logMax = Math.log(max);
+    var logMin = Math.log(min);
+    var scale = (logMax - logMin) / pos;
+    var posArr = [min];
+    for (var i = 1; i < pos; i++) {
+        posArr.push(posArr[posArr.length - 1] * (1 + scale));
+    }
+    return {
+        arr: posArr,
+        diff: scale
+    };
+};
+
+var adjustWeb = function adjustWeb(webArr, webMid) {
+    var amount = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    var force = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+    if (amount === 0) {
+        return {
+            arr: webArr,
+            mid: webMid
+        };
+    }
+    amount = amount;
+    var maxAmount = webMid * (webArr.length - 1) / 3 * 2;
+    if (amount >= maxAmount) {
+        var _count6 = Math.floor(amount / maxAmount);
+        var newWeb = {
+            arr: webArr,
+            mid: webMid
+        };
+        if (_count6 > 1) {
+            newWeb.times = _count6;
+        }
+        return newWeb;
+    }
+    if (amount < maxAmount / 2) {
+        if (force) {
+            amount = maxAmount / 2 + 1;
+        } else {
+            return false;
+        }
+    }
+    var ignore = Math.floor(maxAmount / (maxAmount - amount));
+    var neg = 0;
+    var mid = 0;
+    for (; mid < webArr.length; mid++) {
+        if (webArr[mid] < 0) {
+            neg++;
+        }
+        if (neg === 4) {
+            break;
+        }
+    }
+    var new_arr = [];
+    var count = 0;
+    console.log(mid);
+    for (var i = mid; i < webArr.length; i++) {
+        if (webArr[i] >= 0) {
+            count++;
+            if (count === ignore) {
+                count = 0;
+            } else {
+                new_arr.push(webArr[i]);
+            }
+        } else {
+            new_arr.push(webArr[i]);
+        }
+    }
+    count = 0;
+    for (var _i34 = mid - 1; _i34 >= 0; _i34--) {
+        if (webArr[_i34] >= 0) {
+            count++;
+            if (count === ignore) {
+                count = 0;
+            } else {
+                new_arr.splice(0, 0, webArr[_i34]);
+            }
+        } else {
+            new_arr.splice(0, 0, webArr[_i34]);
+        }
+    }
+    return {
+        arr: webArr,
+        mid: webMid
+    };
 };

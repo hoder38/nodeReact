@@ -1177,7 +1177,7 @@ export const setWsOffer = (id, curArr=[]) => {
             return transMargin().then(() => checkOrder(0)).then(() => processOrder(0));
         }
         const checkExpire = () => {
-            if ((Math.round(new Date().getTime() / 1000) - current.last_trade) > current.interval) {
+            if ((Math.round(new Date().getTime() / 1000) - current.last_trade) > (current.interval * 60)) {
                 current.used = 0;
                 return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
             } else {

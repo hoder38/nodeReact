@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.STOCK_INDEX = exports.BITNIFEX_PARENT = exports.MAX_RATE = exports.SUPPORT_PAIR = exports.SUPPORT_PRICE = exports.SUPPORT_COIN = exports.MINIMAL_OFFER = exports.UPDATE_ORDER = exports.UPDATE_BOOK = exports.EXTREM_DURATION = exports.COIN_MAX_MAX = exports.EXTREM_RATE_NUMBER = exports.COIN_MAX = exports.OFFER_MAX = exports.RISK_MAX = exports.DISTRIBUTION = exports.BITFINEX_MIN = exports.BITFINEX_EXP = exports.TOMG_SYM = exports.TUSDT_SYM = exports.TETH_SYM = exports.TBTC_SYM = exports.FOMG_SYM = exports.FETH_SYM = exports.FBTC_SYM = exports.FUSDT_SYM = exports.FUSD_SYM = exports.BITFINEX = exports.BACKUP_COLLECTION = exports.STOCK_FILTER = exports.RANDOM_EMAIL = exports.GOOGLE_SCOPE = exports.RANK_LIMIT = exports.CHART_LIMIT = exports.FITNESS_POINT = exports.MIME_EXT = exports.KINDLE_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.KUBO_TYPE = exports.KUBO_COUNTRY = exports.BILI_TYPE = exports.DM5_AREA_LIST = exports.DM5_TAG_LIST = exports.DM5_CH_LIST = exports.DM5_ORI_LIST = exports.DM5_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.RANK_PARENT = exports.FITNESS_PARENT = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.KINDLE_LIMIT = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.RATE_INTERVAL = exports.PRICE_INTERVAL = exports.BACKUP_INTERVAL = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.BACKUP_LIMIT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_SIZE = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.TOTALDB = exports.LOTTERYDB = exports.VERIFYDB = exports.DOCDB = exports.RANKDB = exports.FITNESSDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
+exports.STOCK_INDEX = exports.BITNIFEX_PARENT = exports.MAX_RATE = exports.SUPPORT_PAIR = exports.SUPPORT_PRICE = exports.SUPPORT_COIN = exports.TRADE_INTERVAL = exports.TRADE_FEE = exports.MINIMAL_OFFER = exports.UPDATE_ORDER = exports.UPDATE_BOOK = exports.EXTREM_DURATION = exports.COIN_MAX_MAX = exports.EXTREM_RATE_NUMBER = exports.COIN_MAX = exports.OFFER_MAX = exports.RISK_MAX = exports.GAIN_LOSS = exports.NORMAL_DISTRIBUTION = exports.DISTRIBUTION = exports.BITFINEX_MIN = exports.BITFINEX_EXP = exports.TOMG_SYM = exports.TUSDT_SYM = exports.TETH_SYM = exports.TBTC_SYM = exports.FOMG_SYM = exports.FETH_SYM = exports.FBTC_SYM = exports.FUSDT_SYM = exports.FUSD_SYM = exports.BITFINEX = exports.BACKUP_COLLECTION = exports.STOCK_FILTER = exports.RANDOM_EMAIL = exports.GOOGLE_SCOPE = exports.RANK_LIMIT = exports.CHART_LIMIT = exports.FITNESS_POINT = exports.MIME_EXT = exports.KINDLE_EXT = exports.SUB_EXT = exports.TORRENT_EXT = exports.DOC_EXT = exports.MUSIC_EXT = exports.VIDEO_EXT = exports.ZIP_EXT = exports.IMAGE_EXT = exports.MEDIA_TAG = exports.API_EXPIRE = exports.MAD_INDEX = exports.BILI_INDEX = exports.KUBO_TYPE = exports.KUBO_COUNTRY = exports.BILI_TYPE = exports.DM5_AREA_LIST = exports.DM5_TAG_LIST = exports.DM5_CH_LIST = exports.DM5_ORI_LIST = exports.DM5_LIST = exports.ANIME_LIST = exports.ADULT_LIST = exports.MUSIC_LIST = exports.MUSIC_LIST_WEB = exports.GAME_LIST_CH = exports.GAME_LIST = exports.GENRE_LIST_CH = exports.GENRE_LIST = exports.MEDIA_LIST_CH = exports.MEDIA_LIST = exports.RANK_PARENT = exports.FITNESS_PARENT = exports.STOCK_PARENT = exports.PASSWORD_PARENT = exports.ADULTONLY_PARENT = exports.STORAGE_PARENT = exports.DEFAULT_TAGS = exports.EXT_FILENAME = exports.RE_WEBURL = exports.DOC_TYPE = exports.MONTH_SHORTS = exports.MONTH_NAMES = exports.KINDLE_LIMIT = exports.ALGORITHM = exports.STOCK_FILTER_LIMIT = exports.RATE_INTERVAL = exports.PRICE_INTERVAL = exports.BACKUP_INTERVAL = exports.STOCK_INTERVAL = exports.EXTERNAL_INTERVAL = exports.MEDIA_INTERVAl = exports.DOC_INTERVAL = exports.DRIVE_INTERVAL = exports.MEGA_DURATION = exports.ZIP_DURATION = exports.TORRENT_DURATION = exports.OATH_WAITING = exports.CACHE_EXPIRE = exports.TORRENT_UPLOAD = exports.TORRENT_CONNECT = exports.BACKUP_LIMIT = exports.DRIVE_LIMIT = exports.BOOKMARK_LIMIT = exports.RELATIVE_INTER = exports.RELATIVE_UNION = exports.RELATIVE_LIMIT = exports.MAX_RETRY = exports.QUERY_LIMIT = exports.NOISE_SIZE = exports.NOISE_TIME = exports.HANDLE_TIME = exports.UNACTIVE_HIT = exports.UNACTIVE_DAY = exports.TOTALDB = exports.LOTTERYDB = exports.VERIFYDB = exports.DOCDB = exports.RANKDB = exports.FITNESSDB = exports.PASSWORDDB = exports.STOCKDB = exports.STORAGEDB = exports.USERDB = exports.DEV = exports.RELEASE = exports.STATIC_PATH = undefined;
 
 var _path = require('path');
 
@@ -346,16 +346,20 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     name: '檢驗', //changing to filter after fixed to reading DB
     sortName: 'name',
     sortType: 'asc',
-    per: [1, '<', 15],
-    pdr: [1, '<', 50],
-    pbr: [1, '<', 20],
+    per: [1, '<', 35],
+    pdr: [1, '<', 70],
+    pbr: [1, '<', 10],
+    times: [1, '>', 12],
+    stop: [1, '<', 3],
+    //gap: [1, '>', 0],
+    profit: [1, '>', 20],
     //pp: [1, '>', 100],
     //ss: [1, '>', -500],
     //mm: [1, '>', 3],
-    pre: [1, '>', 10],
-    interval: [1, '>', 700],
-    vol: [1, '>', 10],
-    close: [1, '<', 15]
+    //pre: [1, '>', 10],
+    interval: [1, '>', 750],
+    vol: [1, '>', 200],
+    close: [1, '<', 0]
 };
 
 var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];
@@ -373,6 +377,8 @@ var TOMG_SYM = exports.TOMG_SYM = 'tOMGUSD';
 var BITFINEX_EXP = exports.BITFINEX_EXP = 100000000;
 var BITFINEX_MIN = exports.BITFINEX_MIN = 100;
 var DISTRIBUTION = exports.DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
+var NORMAL_DISTRIBUTION = exports.NORMAL_DISTRIBUTION = [1, 3, 17, 50, 83, 97, 99];
+var GAIN_LOSS = exports.GAIN_LOSS = 5;
 var RISK_MAX = exports.RISK_MAX = 10;
 var OFFER_MAX = exports.OFFER_MAX = 10;
 var COIN_MAX = exports.COIN_MAX = -30;
@@ -382,6 +388,9 @@ var EXTREM_DURATION = exports.EXTREM_DURATION = 1800;
 var UPDATE_BOOK = exports.UPDATE_BOOK = 21600;
 var UPDATE_ORDER = exports.UPDATE_ORDER = 60;
 var MINIMAL_OFFER = exports.MINIMAL_OFFER = 50;
+var TRADE_FEE = exports.TRADE_FEE = 0.005;
+var TRADE_INTERVAL = exports.TRADE_INTERVAL = 86400;
+//export const MINIMAL_DS_RATE = 0.05;
 var SUPPORT_COIN = exports.SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 var SUPPORT_PRICE = exports.SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 var SUPPORT_PAIR = exports.SUPPORT_PAIR = {

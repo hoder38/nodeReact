@@ -71,6 +71,7 @@ const StockTotal = React.createClass({
                     this.setState(Object.assign({}, this.state, this._input.initValue(), {sending: false, total: result}))
                 }).catch(err => {
                     this.props.addalert(err)
+                    this._info.pop();
                     this.setState(Object.assign({}, this.state, {sending: false}))
                 })
             })
@@ -86,12 +87,13 @@ const StockTotal = React.createClass({
             dropList.push({title: `Type: ${v.type}`, onclick: () => {}, key: 0})
             dropList.push({title: `Count: ${v.count}`, onclick: () => {}, key: 1})
             dropList.push({title: `Price: ${v.price}`, onclick: () => {}, key: 2})
-            dropList.push({title: `+/-: ${v.plus}/${v.minus}`, onclick: () => {}, key: 3})
+            dropList.push({title: `mid: ${Math.round(v.mid * 100) / 100}`, onclick: () => {}, key: 3})
+            dropList.push({title: `${v.str}`, onclick: () => {}, key: 4})
             const percent = totals.total === 0 ? 0 : Math.floor(v.current / totals.total * 100);
             return (
                 <div className="input-group" key={key++}>
                     <div style={{content: '\A', position: 'absolute', background: 'grey', top: 0, bottom: 0, left:0, width:`${percent}%`, opacity: 0.4, zIndex: MEDIA_ZINDEX}} />
-                    <span className="form-control" style={{wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}}>{v.name}: {v.current}({percent}%) / {`${Math.floor((v.current - v.cost) * 100) / 100}(${(v.plus - v.minus === 0) ? 0 : Math.floor((v.current - v.cost - v.minus)/(v.plus - v.minus) * 100)}%)`}</span>
+                    <span className="form-control" style={{wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}}>{v.name}: {v.current}({percent}%) / {Math.round(v.profit * 100) / 100}({v.remain})</span>
                     <Dropdown headelement="span" className="input-group-btn" style={{left: 'auto', right: '0px', top: '0px'}} droplist={dropList}>
                         <button type="button" className="btn btn-default">
                             <span className="caret"></span>
@@ -104,7 +106,7 @@ const StockTotal = React.createClass({
             <section id="stock-total-section" className="panel panel-warning" style={{maxWidth: '500px', marginBottom: '0px', float: 'right', position: 'fixed', bottom: '0px', zIndex: FILE_ZINDEX}}>
                 <div className="panel-heading" onClick={e => killEvent(e, this.props.toggle)}>
                     <h4 className="panel-title">
-                        Total: {totals.remain}{`(${totals.total === 0 ? 0 : Math.floor(totals.remain / totals.total * 100)}%)`} / {totals.total}<i className="pull-right glyphicon glyphicon-remove"></i>
+                        Total: {Math.round(totals.remain * 100) / 100}{`(${totals.total === 0 ? 0 : Math.round(totals.remain / totals.total * 100)}%)`} / {Math.round(totals.total * 100) / 100}<i className="pull-right glyphicon glyphicon-remove"></i>
                     </h4>
                 </div>
                 <div className="panel-body" style={{overflowX: 'hidden', overflowY: 'auto', minHeight: '40vh', maxHeight: '80vh', padding: '0px'}}>

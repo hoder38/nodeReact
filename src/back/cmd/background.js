@@ -134,23 +134,20 @@ export const updateStock = () => {
                 use_stock_list = stock_batch_list;
             }*/
             let use_stock_list = [];
-            const parseStockList = () => (sDay === -1) ? Promise.resolve() : getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => Mongo('find', STOCKDB, {important: 1}).then(items => {
+            const parseStockList = () => (sDay === -1) ? Promise.resolve() : getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
-                    /*if (use_stock_list.indexOf(i.index) === -1) {
-                        use_stock_list.push(i.index);
-                    }*/
                     if (annualList.indexOf(i.index) === -1) {
                         annualList.push(i.index);
                     }
-                });
+                });*/
                 stocklist.forEach(i => {
                     if (use_stock_list.indexOf(i) === -1) {
                         use_stock_list.push(i);
                     }
                 });
-                let folderList = [];
+                /*let folderList = [];
                 const recur_find = (userlist, index) => (index < userlist.length) ? GoogleApi('list folder', {
                     folderId: userlist[index].auto,
                     name: 'downloaded',
@@ -165,7 +162,9 @@ export const updateStock = () => {
                     perm: 1,
                 }).then(userlist => recur_find(userlist, 0)) : Promise.resolve();
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
-            }));
+            }));*/
+                return updateStockList(use_stock_list, 'twse');
+            });
             return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), STOCK_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
@@ -183,6 +182,7 @@ export const filterStock = () => {
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
+        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => loopStockFilter());
     }
 }
 
@@ -210,7 +210,10 @@ export const dbBackup = () => {
 
 export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
-        const checkS = () => stockStatus().catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
+        const checkS = () => {
+            const newStr = (new Date().getHours() >= 16) ? true : false;
+            return stockStatus(newStr).catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
+        }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => checkS());
     }
 }
