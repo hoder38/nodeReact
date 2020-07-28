@@ -4219,7 +4219,7 @@ exports.default = {
                                             return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
                                                     web: newWeb.arr,
                                                     mid: newWeb.mid,
-                                                    times: newWeb.times,
+                                                    times: newwebWeb.times,
                                                     wType: type
                                                 } }).then(function () {
                                                 return recur_web(index + 1);
@@ -5870,7 +5870,7 @@ exports.default = {
                                                 //cost: 0,
                                                 count: 0,
                                                 web: newWeb.arr,
-                                                wType: newWeb.type,
+                                                wType: item[0].web.type,
                                                 mid: newWeb.mid,
                                                 times: newWeb.times,
                                                 amount: +cmd[2],

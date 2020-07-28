@@ -3836,7 +3836,7 @@ export default {
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
-                                            times: newWeb.times,
+                                            times: newwebWeb.times,
                                             wType: type,
                                         }}).then(() => recur_web(index + 1));
                                     }
@@ -5028,7 +5028,7 @@ export default {
                                             //cost: 0,
                                             count: 0,
                                             web: newWeb.arr,
-                                            wType: newWeb.type,
+                                            wType: item[0].web.type,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             amount: +cmd[2],
