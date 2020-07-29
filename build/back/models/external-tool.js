@@ -791,7 +791,7 @@ exports.default = {
                     return list;
                 });
             case 'ism':
-                return (0, _apiTool2.default)('url', 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/', { cookie: 'HttpOnly;Path=/;Domain=www.ismworld.org;sso-check=true' }).then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
@@ -799,25 +799,19 @@ exports.default = {
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
                     var docDate = _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getDate() + ', ' + date.getFullYear();
                     console.log(docDate);
-                    var docStr = 'FOR RELEASE: ' + docDate;
                     var list = [];
-                    if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
-                        list.push({
-                            url: 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1',
-                            name: (0, _utility.toValidName)('Manufacturing ISM'),
-                            date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
+                    if (date.getDate() === 27) {
+                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'rootOfObserver')[0], 'main')[0], 'div', 'component')[1], 'div', 'container')[0], 'div', 'cardCollection')[0], 'div', 'row justify-content-center')[0], 'div', 'col-md-4 card__col').forEach(function (c, i) {
+                            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(c, 'div', 'card')[0], 'div', 'card__content')[0], 'div', 'card__text')[0], 'center')[0], 'p')[0], 'a').forEach(function (a) {
+                                list.push({
+                                    url: (0, _utility.addPre)(a.attribs.href, 'https://www.ismworld.org'),
+                                    name: i === 0 ? (0, _utility.toValidName)('Manufacturing ISM') : (0, _utility.toValidName)('Non-Manufacturing ISM'),
+                                    date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
+                                });
+                            });
                         });
                     }
-                    return (0, _apiTool2.default)('url', 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1').then(function (raw_data) {
-                        if ((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
-                            list.push({
-                                url: 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1',
-                                name: (0, _utility.toValidName)('Non-Manufacturing ISM'),
-                                date: date.getMonth() + 1 + '_' + date.getDate() + '_' + date.getFullYear()
-                            });
-                        }
-                        return list;
-                    });
+                    return list;
                 });
             case 'cbo':
                 return (0, _apiTool2.default)('url', 'https://www.conference-board.org/data/consumerconfidence.cfm').then(function (raw_data) {
@@ -856,16 +850,16 @@ exports.default = {
                     });
                 });
             case 'sem':
-                return (0, _apiTool2.default)('url', 'http://www1.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.semi.org/en/news-resources/press/semi/rss.xml').then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));
                     }
                     date = new Date(new Date(date).setDate(date.getDate() - 1));
-                    var docDate = (0, _utility.completeZero)(date.getDate(), 2) + ' ' + _constants.MONTH_SHORTS[date.getMonth()] + ' ' + date.getFullYear();
+                    var docDate = (0, _utility.completeZero)(date.getDate(), 2) + ' ' + _constants.MONTH_NAMES[date.getMonth()] + ' ' + date.getFullYear();
                     console.log(docDate);
                     var list = [];
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'atom:link')[0], 'item').forEach(function (e) {
+                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(function (e) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(e, 'pubdate')[0])[0].match(/^[a-zA-Z]+, (\d\d [a-zA-Z]+ \d\d\d\d)/)[1] === docDate) {
                             list.push({
                                 url: (0, _utility.addPre)((0, _utility.findTag)(e)[0], 'http://www.semi.org'),
@@ -1576,20 +1570,41 @@ exports.default = {
                 });
             case 'ism':
                 console.log(obj);
-                driveName = obj.name + ' ' + obj.date + '.txt';
-                console.log(driveName);
-                return (0, _apiToolGoogle2.default)('upload', {
-                    type: 'auto',
-                    name: driveName,
-                    body: obj.url,
-                    parent: parent,
-                    rest: function rest() {
-                        return updateDocDate(type, obj.date);
-                    },
-                    errhandle: function errhandle(err) {
-                        return (0, _utility.handleError)(err);
-                    }
-                });
+                if (obj.url.match(/\.pdf$/)) {
+                    driveName = obj.name + ' ' + obj.date + '.pdf';
+                    console.log(driveName);
+                    return mkFolder((0, _path.dirname)(filePath)).then(function () {
+                        return (0, _apiTool2.default)('url', obj.url, { filePath: filePath }).then(function () {
+                            return (0, _apiToolGoogle2.default)('upload', {
+                                type: 'auto',
+                                name: driveName,
+                                filePath: filePath,
+                                parent: parent,
+                                rest: function rest() {
+                                    return updateDocDate(type, obj.date);
+                                },
+                                errhandle: function errhandle(err) {
+                                    return (0, _utility.handleError)(err);
+                                }
+                            });
+                        });
+                    });
+                } else {
+                    driveName = obj.name + ' ' + obj.date + '.txt';
+                    console.log(driveName);
+                    return (0, _apiToolGoogle2.default)('upload', {
+                        type: 'auto',
+                        name: driveName,
+                        body: obj.url,
+                        parent: parent,
+                        rest: function rest() {
+                            return updateDocDate(type, obj.date);
+                        },
+                        errhandle: function errhandle(err) {
+                            return (0, _utility.handleError)(err);
+                        }
+                    });
+                }
             case 'cbo':
                 console.log(obj);
                 driveName = obj.name + ' ' + obj.date + '.txt';

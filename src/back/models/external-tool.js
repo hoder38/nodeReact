@@ -630,7 +630,7 @@ export default {
                 return list;
             });
             case 'ism':
-            return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1').then(raw_data => {
+            return Api('url', 'https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/', {cookie: 'HttpOnly;Path=/;Domain=www.ismworld.org;sso-check=true'}).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
@@ -638,25 +638,19 @@ export default {
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
-                const docStr = `FOR RELEASE: ${docDate}`;
                 let list = [];
-                if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'span')[0], 'p')[0], 'strong')[0])[0] === docStr) {
-                    list.push({
-                        url: 'https://www.instituteforsupplymanagement.org/ISMReport/MfgROB.cfm?SSO=1',
-                        name: toValidName('Manufacturing ISM'),
-                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                if (date.getDate() === 27) {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'rootOfObserver')[0], 'main')[0], 'div', 'component')[1], 'div', 'container')[0], 'div', 'cardCollection')[0], 'div', 'row justify-content-center')[0], 'div', 'col-md-4 card__col').forEach((c, i) => {
+                        findTag(findTag(findTag(findTag(findTag(findTag(c, 'div', 'card')[0], 'div', 'card__content')[0], 'div', 'card__text')[0], 'center')[0], 'p')[0], 'a').forEach(a => {
+                            list.push({
+                                url: addPre(a.attribs.href, 'https://www.ismworld.org'),
+                                name: (i === 0) ? toValidName('Manufacturing ISM') : toValidName('Non-Manufacturing ISM'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        })
                     });
                 }
-                return Api('url', 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1').then(raw_data => {
-                    if(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container mt-4')[0], 'div', 'column2')[0], 'div', 'home_feature_container')[0], 'div', 'content')[0], 'div', 'column1_list')[0], 'div', 'formatted_content')[0], 'p')[0], 'strong')[0])[0] === docStr) {
-                        list.push({
-                            url: 'https://www.instituteforsupplymanagement.org/ISMReport/NonMfgROB.cfm?SSO=1',
-                            name: toValidName('Non-Manufacturing ISM'),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
-                    }
-                    return list;
-                });
+                return list;
             });
             case 'cbo':
             return Api('url', 'https://www.conference-board.org/data/consumerconfidence.cfm').then(raw_data => {
@@ -695,16 +689,16 @@ export default {
                 });
             });
             case 'sem':
-            return Api('url', 'http://www1.semi.org/en/NewsFeeds/SEMIHighlights/index.rss').then(raw_data => {
+            return Api('url', 'https://www.semi.org/en/news-resources/press/semi/rss.xml').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${completeZero(date.getDate(), 2)} ${MONTH_SHORTS[date.getMonth()]} ${date.getFullYear()}`;
+                const docDate = `${completeZero(date.getDate(), 2)} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'atom:link')[0], 'item').forEach(e => {
+                findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'rss')[0], 'channel')[0], 'item').forEach(e => {
                     if (findTag(findTag(e, 'pubdate')[0])[0].match(/^[a-zA-Z]+, (\d\d [a-zA-Z]+ \d\d\d\d)/)[1] === docDate) {
                         list.push({
                             url: addPre(findTag(e)[0], 'http://www.semi.org'),
@@ -1189,16 +1183,29 @@ export default {
             });
             case 'ism':
             console.log(obj);
-            driveName = `${obj.name} ${obj.date}.txt`;
-            console.log(driveName);
-            return GoogleApi('upload', {
-                type: 'auto',
-                name: driveName,
-                body: obj.url,
-                parent,
-                rest: () => updateDocDate(type, obj.date),
-                errhandle: err => handleError(err),
-            });
+            if (obj.url.match(/\.pdf$/)) {
+                driveName = `${obj.name} ${obj.date}.pdf`;
+                console.log(driveName);
+                return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
+                    type: 'auto',
+                    name: driveName,
+                    filePath,
+                    parent,
+                    rest: () => updateDocDate(type, obj.date),
+                    errhandle: err => handleError(err),
+                })));
+            } else {
+                driveName = `${obj.name} ${obj.date}.txt`;
+                console.log(driveName);
+                return GoogleApi('upload', {
+                    type: 'auto',
+                    name: driveName,
+                    body: obj.url,
+                    parent,
+                    rest: () => updateDocDate(type, obj.date),
+                    errhandle: err => handleError(err),
+                });
+            }
             case 'cbo':
             console.log(obj);
             driveName = `${obj.name} ${obj.date}.txt`;

@@ -6219,7 +6219,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     return 0;
                 }
                 var item = items[index];
-                var suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
+                var suggestion = stockProcess(price, item.web, item.times, item.privious, item.wType);
                 console.log(item);
                 console.log(suggestion.str);
                 if (newStr && (!item.sent || item.sent !== new Date().getDay())) {

@@ -5262,7 +5262,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             return 0;
         }
         const item = items[index];
-        const suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
+        const suggestion = stockProcess(price, item.web, item.times, item.privious, item.wType);
         console.log(item);
         console.log(suggestion.str);
         if (newStr && (!item.sent || item.sent !== new Date().getDay())) {
