@@ -424,7 +424,7 @@ var checkStock = exports.checkStock = function checkStock() {
     if ((0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
         var _ret8 = function () {
             var checkS = function checkS() {
-                var newStr = new Date().getHours() >= 16 ? true : false;
+                var newStr = new Date().getHours() >= 20 ? true : false;
                 return (0, _stockTool.stockStatus)(newStr).catch(function (err) {
                     return bgError(err, 'Loop checkStock');
                 }).then(function () {
