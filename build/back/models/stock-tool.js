@@ -5464,7 +5464,7 @@ exports.default = {
             var updateTotal = {};
             var removeTotal = [];
             var single = function single(v) {
-                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?/);
+                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?\s*(cost)?/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];

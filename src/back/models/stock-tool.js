@@ -4646,7 +4646,7 @@ export default {
             const updateTotal = {};
             const removeTotal = [];
             const single = v => {
-                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?/)
+                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?\s*(cost)?/)
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];
