@@ -1,4 +1,4 @@
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/ } from '../constants'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/ } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -3484,344 +3484,99 @@ export default {
                                     web3 = calStair(750);
                                 }
                                 return getStockPrice('twse', items[0].index).then(price => {
+                                    const year1 = [];
+                                    const year2 = [];
+                                    const year3 = [];
+                                    const ret_str1 = [];
                                     let ret_str = '';
                                     let best_rate = 0;
-                                    let lastest_type = 4;
+                                    let lastest_type = 0;
                                     let lastest_rate = 0;
-                                    let ret_str1 = '';
-                                    let ret_str2 = '';
-                                    let ret_str3 = '';
-                                    let ret_str4 = '';
-                                    let ret_str5 = '';
-                                    let testResult1 = null;
-                                    if (web1) {
-                                        testResult1 = stockTest(raw_arr, web1, 4);
-                                    }
-                                    let testResult2 = null;
-                                    if (web2) {
-                                        testResult2 = stockTest(raw_arr, web2, 4, testResult1.start + 1);
-                                    }
-                                    let testResult3 = null;
-                                    if (web3) {
-                                        testResult3 = stockTest(raw_arr, web3, 4, testResult2.start + 1);
-                                    }
-                                    let testResult4 = null;
-                                    if (web1) {
-                                        testResult4 = stockTest(raw_arr, web1, 3);
-                                    }
-                                    let testResult5 = null;
-                                    if (web2) {
-                                        testResult5 = stockTest(raw_arr, web2, 3, testResult4.start + 1);
-                                    }
-                                    let testResult6 = null;
-                                    if (web3) {
-                                        testResult6 = stockTest(raw_arr, web3, 3, testResult5.start + 1);
-                                    }
-                                    let testResult7 = null;
-                                    if (web1) {
-                                        testResult7 = stockTest(raw_arr, web1, 2);
-                                    }
-                                    let testResult8 = null;
-                                    if (web2) {
-                                        testResult8 = stockTest(raw_arr, web2, 2, testResult7.start + 1);
-                                    }
-                                    let testResult9 = null;
-                                    if (web3) {
-                                        testResult9 = stockTest(raw_arr, web3, 2, testResult8.start + 1);
-                                    }
-                                    let testResult10 = null;
-                                    if (web1) {
-                                        testResult10 = stockTest(raw_arr, web1, 1);
-                                    }
-                                    let testResult11 = null;
-                                    if (web2) {
-                                        testResult11 = stockTest(raw_arr, web2, 1, testResult10.start + 1);
-                                    }
-                                    let testResult12 = null;
-                                    if (web3) {
-                                        testResult12 = stockTest(raw_arr, web3, 1, testResult11.start + 1);
-                                    }
-                                    let testResult13 = null;
-                                    if (web1) {
-                                        testResult13 = stockTest(raw_arr, web1, 5);
-                                    }
-                                    let testResult14 = null;
-                                    if (web2) {
-                                        testResult14 = stockTest(raw_arr, web2, 5, testResult13.start + 1);
-                                    }
-                                    let testResult15 = null;
-                                    if (web3) {
-                                        testResult15 = stockTest(raw_arr, web3, 5, testResult14.start + 1);
-                                    }
-                                    if (testResult1) {
-                                        console.log('year1');
-                                        console.log(testResult1.str);
-                                        console.log(testResult4.str);
-                                        console.log(testResult7.str);
-                                        console.log(testResult10.str);
-                                        console.log(testResult13.str);
-                                    }
-                                    if (testResult2) {
-                                        console.log('year2');
-                                        console.log(testResult2.str);
-                                        console.log(testResult5.str);
-                                        console.log(testResult8.str);
-                                        console.log(testResult11.str);
-                                        console.log(testResult14.str);
-                                    }
-                                    if (testResult3) {
-                                        console.log('year3');
-                                        console.log(testResult3.str);
-                                        console.log(testResult6.str);
-                                        console.log(testResult9.str);
-                                        console.log(testResult12.str);
-                                        console.log(testResult15.str);
-                                    }
-                                    if (testResult1) {
-                                        const match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        let match1 = null;
-                                        let match2 = null;
+                                    const resultShow = type => {
+                                        let str = '';
+                                        let testResult1 = null;
+                                        if (web1) {
+                                            testResult1 = stockTest(raw_arr, web1, type);
+                                        }
+                                        let testResult2 = null;
+                                        if (web2) {
+                                            testResult2 = stockTest(raw_arr, web2, type, testResult1.start + 1);
+                                        }
+                                        let testResult3 = null;
+                                        if (web3) {
+                                            testResult3 = stockTest(raw_arr, web3, type, testResult2.start + 1);
+                                        }
+                                        if (testResult1) {
+                                            year1.push(testResult1.str);
+                                        }
                                         if (testResult2) {
-                                            match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            year2.push(testResult2.str);
                                         }
                                         if (testResult3) {
-                                            match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            year3.push(testResult3.str);
                                         }
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                            rate = rate * (Number(match[3]) + 100) / 100;
-                                            lastest_rate = rate;
-                                            real = real * (Number(match[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                            rate = rate * (Number(match1[3]) + 100) / 100;
-                                            real = real * (Number(match1[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                            rate = rate * (Number(match2[3]) + 100) / 100;
-                                            real = real * (Number(match2[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        ret_str1 = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                        if (count !== 0) {
-                                            rate = Math.round(rate * 10000 - 10000) / 100;
-                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                            best_rate = rate;
-                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                            ret_str1 += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                        } else {
-                                            ret_str1 += ' no less than mid point';
-                                        }
-                                    } else {
-                                        ret_str1 = 'less than a year';
-                                    }
-                                    ret_str = ret_str1;
-                                    console.log(ret_str1);
-                                    if (testResult4) {
-                                        const match = testResult4.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        let match1 = null;
-                                        let match2 = null;
-                                        if (testResult5) {
-                                            match1 = testResult5.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        if (testResult6) {
-                                            match2 = testResult6.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                            rate = rate * (Number(match[3]) + 100) / 100;
-                                            if (rate > lastest_rate) {
-                                                lastest_rate = rate;
-                                                lastest_type = 3;
+                                        if (testResult1) {
+                                            const match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            let match1 = null;
+                                            let match2 = null;
+                                            if (testResult2) {
+                                                match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
                                             }
-                                            real = real * (Number(match[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                            rate = rate * (Number(match1[3]) + 100) / 100;
-                                            real = real * (Number(match1[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                            rate = rate * (Number(match2[3]) + 100) / 100;
-                                            real = real * (Number(match2[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        ret_str2 = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                        if (count !== 0) {
-                                            rate = Math.round(rate * 10000 - 10000) / 100;
-                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                            ret_str2 += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                            if (rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = ret_str2;
+                                            if (testResult3) {
+                                                match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                            }
+                                            let rate = 1;
+                                            let real = 1;
+                                            let count = 0;
+                                            if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                                                rate = rate * (Number(match[3]) + 100) / 100;
+                                                if (!lastest_rate || rate > lastest_rate) {
+                                                    lastest_rate = rate;
+                                                    lastest_type = type;
+                                                }
+                                                real = real * (Number(match[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                                                rate = rate * (Number(match1[3]) + 100) / 100;
+                                                real = real * (Number(match1[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                                                rate = rate * (Number(match2[3]) + 100) / 100;
+                                                real = real * (Number(match2[4]) + 100) / 100;
+                                                count++;
+                                            }
+                                            str = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
+                                            if (count !== 0) {
+                                                rate = Math.round(rate * 10000 - 10000) / 100;
+                                                real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                                const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                                                const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                                                str += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
+                                                if (!best_rate || rate > best_rate) {
+                                                    best_rate = rate;
+                                                    ret_str = str;
+                                                }
+                                            } else {
+                                                str += ' no less than mid point';
                                             }
                                         } else {
-                                            ret_str2 += ' no less than mid point';
+                                            str = 'less than a year';
                                         }
-                                    } else {
-                                        ret_str2 = 'less than a year';
+                                        ret_str1.push(str);
                                     }
-                                    console.log(ret_str2);
-                                    if (testResult7) {
-                                        const match = testResult7.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        let match1 = null;
-                                        let match2 = null;
-                                        if (testResult8) {
-                                            match1 = testResult8.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        if (testResult9) {
-                                            match2 = testResult9.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                            rate = rate * (Number(match[3]) + 100) / 100;
-                                            if (rate > lastest_rate) {
-                                                lastest_rate = rate;
-                                                lastest_type = 2;
-                                            }
-                                            real = real * (Number(match[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                            rate = rate * (Number(match1[3]) + 100) / 100;
-                                            real = real * (Number(match1[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                            rate = rate * (Number(match2[3]) + 100) / 100;
-                                            real = real * (Number(match2[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        ret_str3 = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                        if (count !== 0) {
-                                            rate = Math.round(rate * 10000 - 10000) / 100;
-                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                            ret_str3 += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                            if (rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = ret_str3;
-                                            }
-                                        } else {
-                                            ret_str3 += ' no less than mid point';
-                                        }
-                                    } else {
-                                        ret_str3 = 'less than a year';
+                                    for (let i = 15; i >= 0; i--) {
+                                        resultShow(i);
                                     }
-                                    console.log(ret_str3);
-                                    if (testResult10) {
-                                        const match = testResult10.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        let match1 = null;
-                                        let match2 = null;
-                                        if (testResult11) {
-                                            match1 = testResult11.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        if (testResult12) {
-                                            match2 = testResult12.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                            rate = rate * (Number(match[3]) + 100) / 100;
-                                            real = real * (Number(match[4]) + 100) / 100;
-                                            if (rate > lastest_rate) {
-                                                lastest_rate = rate;
-                                                lastest_type = 1;
-                                            }
-                                            count++;
-                                        }
-                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                            rate = rate * (Number(match1[3]) + 100) / 100;
-                                            real = real * (Number(match1[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                            rate = rate * (Number(match2[3]) + 100) / 100;
-                                            real = real * (Number(match2[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        ret_str4 = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                        if (count !== 0) {
-                                            rate = Math.round(rate * 10000 - 10000) / 100;
-                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                            ret_str4 += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                            if (rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = ret_str4;
-                                            }
-                                        } else {
-                                            ret_str4 += ' no less than mid point';
-                                        }
-                                    } else {
-                                        ret_str4 = 'less than a year';
-                                    }
-                                    console.log(ret_str4);
-                                    if (testResult13) {
-                                        const match = testResult13.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        let match1 = null;
-                                        let match2 = null;
-                                        if (testResult14) {
-                                            match1 = testResult14.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        if (testResult15) {
-                                            match2 = testResult15.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                        }
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                            rate = rate * (Number(match[3]) + 100) / 100;
-                                            if (rate > lastest_rate) {
-                                                lastest_rate = rate;
-                                                lastest_type = 5;
-                                            }
-                                            real = real * (Number(match[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                            rate = rate * (Number(match1[3]) + 100) / 100;
-                                            real = real * (Number(match1[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                            rate = rate * (Number(match2[3]) + 100) / 100;
-                                            real = real * (Number(match2[4]) + 100) / 100;
-                                            count++;
-                                        }
-                                        ret_str5 = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                        if (count !== 0) {
-                                            rate = Math.round(rate * 10000 - 10000) / 100;
-                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                            ret_str5 += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                            if (rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = ret_str5;
-                                            }
-                                        } else {
-                                            ret_str5 += ' no less than mid point';
-                                        }
-                                    } else {
-                                        ret_str5 = 'less than a year';
-                                    }
-                                    console.log(ret_str5);
+                                    console.log('year1');
+                                    year1.forEach(v => console.log(v));
+                                    console.log('year2');
+                                    year2.forEach(v => console.log(v));
+                                    console.log('year3');
+                                    year3.forEach(v => console.log(v));
+                                    ret_str1.forEach(v => console.log(v));
+                                    console.log(lastest_type);
                                     //amount real strategy times stoploss (no less than mid point)
                                     console.log('done');
                                     return [interval_data, ret_str, lastest_type];
@@ -3836,7 +3591,7 @@ export default {
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
-                                            times: newwebWeb.times,
+                                            times: newWeb.times,
                                             wType: type,
                                         }}).then(() => recur_web(index + 1));
                                     }
@@ -3984,7 +3739,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
+                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ recur_mi(1, 0) /*: Promise.resolve([null, ret_obj])*/;
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -4869,8 +4624,8 @@ export default {
         //delete 2330 刪除股票
         //2330 (-)0.5 增減張數
         //2330 5000 amount 新增股票(設定最大金額)
-        //2330 2 450 重設cost
-        //#2330 2 450 cost
+        //2330 2 50 輸入交易股價
+        //2330 2 450 cost 重設cost
         //#2330 300 220
         return Mongo('find', TOTALDB, {owner: user._id}).then(items => {
             if (items.length < 1) {
@@ -4915,34 +4670,7 @@ export default {
                         for (let i in items) {
                             if (cmd[1] === items[i].index) {
                                 is_find = true;
-                                if (!cmd[3]) {
-                                    const orig_count = items[i].count;
-                                    items[i].count += +cmd[2];
-                                    if (items[i].count < 0) {
-                                        cmd[2] = -orig_count;
-                                        items[i].count = 0;
-                                    }
-                                    return getStockPrice('twse', items[i].index).then(price => {
-                                        const new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - TRADE_FEE) * price * +cmd[2];
-                                        items[i].amount -= new_cost;
-                                        remain -= new_cost;
-                                        updateTotal[totalId] = {amount: remain};
-                                        items[i].privious = {
-                                            price,
-                                            time: Math.round(new Date().getTime() / 1000),
-                                            type: (+cmd[2] > 0) ? 'buy' : 'sell',
-                                        }
-                                        if (items[i]._id) {
-                                            if (updateTotal[items[i]._id]) {
-                                                updateTotal[items[i]._id].count = items[i].count;
-                                                updateTotal[items[i]._id].amount = items[i].amount;
-                                                updateTotal[items[i]._id].privious = items[i].privious;
-                                            } else {
-                                                updateTotal[items[i]._id] = {count: items[i].count, amount: items[i].amount, privious: items[i].privious};
-                                            }
-                                        }
-                                    });
-                                } else if (cmd[3] === 'amount') {
+                                if (cmd[3] === 'amount') {
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
                                     if (!newWeb) {
                                         return handleError(new HoError(`Amount need large than ${Math.ceil(items[i].mid * (items[i].web.length - 1) / 3)}`));
@@ -4969,7 +4697,7 @@ export default {
                                             };
                                         }
                                     }
-                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0) {
+                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
                                 //} else if (cmd[4]) {
                                     items[i].count = +cmd[2];
                                     remain = remain + items[i].orig - items[i].amount - +cmd[3];
@@ -4983,6 +4711,74 @@ export default {
                                             updateTotal[items[i]._id] = {count: items[i].count, amount: items[i].amount};
                                         }
                                     }
+                                } else if (!isNaN(+cmd[2])) {
+                                    const orig_count = items[i].count;
+                                    items[i].count += +cmd[2];
+                                    if (items[i].count < 0) {
+                                        cmd[2] = -orig_count;
+                                        items[i].count = 0;
+                                    }
+                                    return getStockPrice('twse', items[i].index).then(price => {
+                                        price = !isNaN(+cmd[3]) ? +cmd[3] : price;
+                                        const new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - TRADE_FEE) * price * +cmd[2];
+                                        items[i].amount -= new_cost;
+                                        remain -= new_cost;
+                                        updateTotal[totalId] = {amount: remain};
+                                        const time = Math.round(new Date().getTime() / 1000);
+                                        const tradeType = (+cmd[2] > 0) ? 'buy' : 'sell';
+                                        if (tradeType === 'buy') {
+                                            let is_insert = false;
+                                            for (let k = 0; k < items[i].previous.buy.length; k++) {
+                                                if (price < items[i].previous.buy[k].price) {
+                                                    items[i].previous.buy.splice(k, 0, {price, time});
+                                                    is_insert = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_insert) {
+                                                items[i].previous.buy.push({price, time});
+                                            }
+                                            items[i].previous = {
+                                                price,
+                                                time,
+                                                type: 'buy',
+                                                buy: items[i].previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                sell: items[i].previous.sell,
+                                                count: items[i].count,
+                                                amount: items[i].amount,
+                                            }
+                                        } else if (tradeType === 'sell') {
+                                            let is_insert = false;
+                                            for (let k = 0; k < items[i].previous.sell.length; k++) {
+                                                if (price > items[i].previous.sell[k].price) {
+                                                    items[i].previous.sell.splice(k, 0, {price, time});
+                                                    is_insert = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_insert) {
+                                                items[i].previous.sell.push({price, time});
+                                            }
+                                            items[i].previous = {
+                                                price,
+                                                time,
+                                                type: 'sell',
+                                                sell: items[i].previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                buy: items[i].previous.buy,
+                                                count: items[i].count,
+                                                amount: items[i].amount,
+                                            }
+                                        }
+                                        if (items[i]._id) {
+                                            if (updateTotal[items[i]._id]) {
+                                                updateTotal[items[i]._id].count = items[i].count;
+                                                updateTotal[items[i]._id].amount = items[i].amount;
+                                                updateTotal[items[i]._id].previous = items[i].previous;
+                                            } else {
+                                                updateTotal[items[i]._id] = {count: items[i].count, amount: items[i].amount, previous: items[i].previous};
+                                            }
+                                        }
+                                    });
                                 /*} else {
                                     if (+cmd[2] > +cmd[3]) {
                                         items[i].top = +cmd[2];
@@ -5036,6 +4832,7 @@ export default {
                                             //top: Math.floor(price * 1.2 * 100) / 100,
                                             //bottom: Math.floor(price * 0.95 * 100) / 100,
                                             price,
+                                            previous: {buy: [], sell: [], amount: +cmd[2], count: 0}
                                             //high: price,
                                         })
                                         //remain -= cost;
@@ -5262,8 +5059,87 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             return 0;
         }
         const item = items[index];
-        const suggestion = stockProcess(price, item.web, item.times, item.privious, item.wType);
+        //new mid
+        const suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
         console.log(item);
+        let count = 0;
+        let amount = item.amount;
+        if (suggestion.type === 7) {
+            if (amount > item.orig * 7 / 8) {
+                let tmpAmount = amount - item.orig * 3 / 4;
+                while ((tmpAmount - suggestion.buy) > 0) {
+                    amount -= suggestion.buy;
+                    tmpAmount = amount - item.orig * 3 / 4;
+                    count++;
+                }
+                suggestion.str += `[new buy ${count}] `;
+            } else {
+                suggestion.str += '[new buy no need] ';
+            }
+        } else if (suggestion.type === 3) {
+            if (amount > item.orig * 5 / 8) {
+                let tmpAmount = amount - item.orig / 2;
+                while ((tmpAmount - suggestion.buy) > 0) {
+                    amount -= suggestion.buy;
+                    tmpAmount = amount - item.orig / 2;
+                    count++;
+                }
+                suggestion.str += `[new buy ${count}] `;
+            } else {
+                suggestion.str += '[new buy no need] ';
+            }
+        } else if (suggestion.type === 6) {
+            if (amount > item.orig * 3 / 8) {
+                let tmpAmount = amount - item.orig / 4;
+                while ((tmpAmount - suggestion.buy) > 0) {
+                    amount -= suggestion.buy;
+                    tmpAmount = amount - item.orig / 4;
+                    count++;
+                }
+                suggestion.str += `[new buy ${count}] `;
+            } else {
+                suggestion.str += '[new buy no need] ';
+            }
+        }
+        count = 0;
+        amount = item.amount;
+        if (suggestion.type === 9) {
+            if (amount < item.orig / 8) {
+                let tmpAmount = item.orig / 4 - amount;
+                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
+                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                    tmpAmount = item.orig / 4 - amount;
+                    count++;
+                }
+                suggestion.str += `[new sell ${count}] `;
+            } else {
+                suggestion.str += '[new sell no need] ';
+            }
+        } else if (suggestion.type === 5) {
+            if (amount < item.orig * 3 / 8) {
+                let tmpAmount = item.orig / 2 - amount;
+                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
+                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                    tmpAmount = item.orig / 2 - amount;
+                    count++;
+                }
+                suggestion.str += `[new sell ${count}] `;
+            } else {
+                suggestion.str += '[new sell no need] ';
+            }
+        } else if (suggestion.type === 8) {
+            if (amount < item.orig * 5 / 8) {
+                let tmpAmount = item.orig * 3 / 4 - amount;
+                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
+                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                    tmpAmount = item.orig * 3 / 4 - amount;
+                    count++;
+                }
+                suggestion.str += `[new sell ${count}] `;
+            } else {
+                suggestion.str += '[new sell no need] ';
+            }
+        }
         console.log(suggestion.str);
         if (newStr && (!item.sent || item.sent !== new Date().getDay())) {
             item.sent = new Date().getDay();
@@ -5407,14 +5283,21 @@ export const getStockListV2 = (type, year, month) => {
     }
 }
 
-const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now = Math.round(new Date().getTime() / 1000)) => {
+const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:[]}, pType = 0, now = Math.round(new Date().getTime() / 1000)) => {
+    priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
+    const t1 = (pType|1) === pType ? true : false;
+    const t2 = (pType|2) === pType ? true : false;
+    const t3 = (pType|4) === pType ? true : false;
+    const t4 = (pType|8) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
-    let bTimes = priceTimes ? priceTimes : 1;
-    let sTimes = priceTimes ? priceTimes : 1;
+    let bTimes = 1;
+    let sTimes = 1;
     let bP = 8;
     let nowBP = priceArray.length - 1;
+    let bAdd = 0;
+    let sAdd = 0;
     //let tmpB = 0;
     for (; nowBP >= 0; nowBP--) {
         if (Math.abs(priceArray[nowBP]) * 1.001 >= price) {
@@ -5493,7 +5376,7 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'buy') {
-                if ((now - previous.time) >= ((nowBP - previousP + 1) * TRADE_INTERVAL)) {
+                if ((now - previous.time) >= (TRADE_TIME + (nowBP - previousP) * TRADE_INTERVAL)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
                 } else {
@@ -5536,7 +5419,7 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'sell') {
-                if ((now - previous.time) >= ((previousP - nowSP + 1) * TRADE_INTERVAL)) {
+                if ((now - previous.time) >= (TRADE_TIME + (previousP - nowSP) * TRADE_INTERVAL)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
                 } else {
@@ -5562,6 +5445,24 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
             nowBP = previousP;
             bP = pP;
         }
+        //if (pType === 0 && previous.buy && previous.sell) {
+        if (previous.buy.length > 0 && previous.sell.length > 0) {
+            /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                //bAdd--;
+            } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                bAdd++;
+            }
+            if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
+                sAdd++;
+            }// else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                //sAdd--;
+            //}
+            //console.log(previous);
+            /*console.log(Math.abs(priceArray[nowBP + 1]));
+            console.log(bAdd);
+            console.log(Math.abs(priceArray[nowSP - 1]));
+            console.log(sAdd);*/
+        }
     }
     /*console.log(nowBP);
     console.log(nowSP);
@@ -5573,8 +5474,33 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
     let bCount = 1;
     let sCount = 1;
     let type = 0;
-    bCount = bTimes * bCount;
-    sCount = sTimes * sCount;
+    bCount = bTimes * bCount * priceTimes;
+    sCount = sTimes * sCount * priceTimes;
+    const finalSell = () => {
+        if (previous.count && sCount) {
+            const remain = previous.count - sCount;
+            if (previous.count < 3 * priceTimes) {
+                sCount = priceTimes;
+            } else if (previous.count < 5 * priceTimes) {
+                sCount = 2 * priceTimes;
+            } else if (remain < 2 * priceTimes) {
+                sCount = sCount - 2 * priceTimes + remain;
+            }
+        }
+    }
+    const finalBuy = () => {
+        if (previous.amount && bCount) {
+            const nowC = Math.floor(previous.amount / buy)
+            const remain = nowC - bCount;
+            if (nowC < 3 * priceTimes) {
+                bCount = priceTimes;
+            } else if (nowC < 5 * priceTimes) {
+                bCount = 2 * priceTimes;
+            } else if (remain < 2 * priceTimes) {
+                bCount = bCount - 2 * priceTimes + remain;
+            }
+        }
+    }
     if (is_buy) {
         /*if (bP > 4) {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
@@ -5595,25 +5521,48 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
             //buy = Math.round(tmpB * 100) / 100;
+            finalBuy();
             str += `Buy 3/4 ${buy} ( ${bCount} ) `;
         } else if (bP > 5) {
             type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
+            finalBuy();
             str += `Buy 1/2 ${buy} ( ${bCount} ) `;
         } else if (bP > 4) {
             type = 7;
             //type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
+            finalBuy();
             str += `Buy 1/4 ${buy} ( ${bCount} ) `;
         } else {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            if (pType === 4 || pType === 3) {
-                sCount = sCount * 2;
+            /*if (pType === 0) {
+                bCount = bCount * (2 + bAdd);
+            } else if (pType === 4 || pType === 3) {
+                bCount = bCount * 2;
+            }*/
+            if (t1) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
             }
+            finalBuy();
             str += `Buy ${buy} ( ${bCount} ) `;
         }
     }
@@ -5638,31 +5587,63 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
             //type = 5;
             type = 8;
             //sell = Math.round(Math.abs(priceArray[nowSP]) * 100) / 100;
-            if (pType === 5 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            finalSell();
             str += `Sell 3/4 ${sell} ( ${sCount} ) `;
         } else if (sP < 3) {
             type = 5;
-            if (pType === 5 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            finalSell();
             str += `Sell 1/2 ${sell} ( ${sCount} ) `;
         } else if (sP < 4) {
             type = 9;
             //type = 5;
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 5 || pType === 4) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
+            finalSell();
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 2 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 2 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t4) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
+            finalSell();
             str += `Sell ${sell} ( ${sCount} ) `;
         }
     }
@@ -5677,21 +5658,21 @@ const stockProcess = (price, priceArray, priceTimes, previous={}, pType = 4, now
     };
 }
 
-const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
+const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
     const now = Math.round(new Date().getTime() / 1000);
     //let is_start = false;
     const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
     let amount = maxAmount;
     let count = 0;
     let privious = {};
-    let priviousTrade = {};
+    let priviousTrade = {buy:[], sell:[]};
+    let tmpPT = null;
     //let maxCount = 0;
     let buyTrade = 0;
     let sellTrade = 0;
     let stopLoss = 0;
     let newMid = [];
     let newArr = [];
-    let newPTrade = {};
     let price = 0;
     //console.log('stock test');
     //console.log(amount);
@@ -5707,6 +5688,12 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                 tmpAmount = amount - maxAmount / 2;
                 count++;
             }
+            priviousTrade.amount = amount;
+            priviousTrade.count = count;
+            /*console.log(his_arr[startI + 1].h);
+            console.log(amount);
+            console.log(maxAmount);
+            console.log(count);*/
             break;
         }
     }
@@ -5716,7 +5703,9 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
             start: startI,
         }
     }
-    console.log(startI);
+    //console.log('start');
+    //console.log(pType);
+    //console.log(startI);
     for (let i = startI; i > startI - len + 1; i--) {
         /*if (his_arr[i].l <= web.mid) {
             is_start = true;
@@ -5746,19 +5735,30 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
             let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             while ((newMid.length > 0) && ((newMid[newMid.length - 1] > checkMid && price < checkMid) || (newMid[newMid.length - 1] <= checkMid && price > checkMid))) {
                 newMid.pop();
-                newPTrade = {};
+                if (newMid.length === 0) {
+                    priviousTrade.price = tmpPT.price;
+                    priviousTrade.time = tmpPT.time;
+                    priviousTrade.type = tmpPT.type;
+                }
                 stopLoss--;
                 newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
                 checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             }
-            suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, (newMid.length > 0) ? newPTrade : priviousTrade, pType, now - (i * 86400));
+            suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, pType, now - (i * 86400));
             while(suggest.resetWeb) {
+                if (newMid.length === 0) {
+                    tmpPT = {
+                        price: priviousTrade.price,
+                        time: priviousTrade.time,
+                        type: priviousTrade.type,
+                    };
+                }
                 //console.log(amount);
                 //console.log(count);
                 stopLoss++;
                 newMid.push(suggest.newMid);
                 newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
-                suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, (newMid.length > 0) ? newPTrade : priviousTrade, pType, now - (i * 86400));
+                suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, pType, now - (i * 86400));
                 //console.log(price);
                 //console.log(suggest);
                 //console.log(newArr);
@@ -5770,6 +5770,51 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
             //console.log(priviousTrade);
             //console.log(suggest);
             //console.log(suggest.str);
+            const newPrevious = (tradeType, tradePrice, time = Math.round(new Date().getTime() / 1000)) => {
+                if (tradeType === 'buy') {
+                    let is_insert = false;
+                    for (let k = 0; k < priviousTrade.buy.length; k++) {
+                        if (tradePrice < priviousTrade.buy[k].price) {
+                            priviousTrade.buy.splice(k, 0, {price: tradePrice, time});
+                            is_insert = true;
+                            break;
+                        }
+                    }
+                    if (!is_insert) {
+                        priviousTrade.buy.push({price: tradePrice, time});
+                    }
+                    priviousTrade = {
+                        price: tradePrice,
+                        time,
+                        type: 'buy',
+                        buy: priviousTrade.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        sell: priviousTrade.sell,
+                        count,
+                        amount,
+                    }
+                } else if (tradeType === 'sell') {
+                    let is_insert = false;
+                    for (let k = 0; k < priviousTrade.sell.length; k++) {
+                        if (tradePrice > priviousTrade.sell[k].price) {
+                            priviousTrade.sell.splice(k, 0, {price: tradePrice, time});
+                            is_insert = true;
+                            break;
+                        }
+                    }
+                    if (!is_insert) {
+                        priviousTrade.sell.push({price: tradePrice, time});
+                    }
+                    priviousTrade = {
+                        price: tradePrice,
+                        time,
+                        type: 'sell',
+                        sell: priviousTrade.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        buy: priviousTrade.buy,
+                        count,
+                        amount,
+                    }
+                }
+            }
             /*if (suggest.type === 1) {
                 amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
                 if (count > 0) {
@@ -5797,112 +5842,92 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                 }
             } else*/ if (suggest.type === 7) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                    const origCount = count;
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
                             break;
                         } else {
                             amount -= suggest.buy;
                             count++;
-                            priviousTrade = {
-                                price: suggest.buy,
-                                time: now - (i * 86400) + 3600,
-                                type: 'buy',
-                                win: 0,
-                            }
                             buyTrade++;
                         }
                     }
-                    let tmpAmount = amount - maxAmount * 3 / 4;
-                    while ((tmpAmount - suggest.buy) > 0) {
-                        amount -= suggest.buy;
-                        tmpAmount = amount - maxAmount * 3 / 4;
-                        count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - (i * 86400) + 3600,
-                            type: 'buy',
-                            win: 0,
+                    if (amount > maxAmount * 7 / 8) {
+                        let tmpAmount = amount - maxAmount * 3 / 4;
+                        while ((tmpAmount - suggest.buy) > 0) {
+                            amount -= suggest.buy;
+                            tmpAmount = amount - maxAmount * 3 / 4;
+                            count++;
+                            buyTrade++;
                         }
-                        buyTrade++;
+                    }
+                    if (count > origCount) {
+                        newPrevious('buy', suggest.buy, now - (i * 86400) + 3600);
                     }
                 }
             } else if (suggest.type === 3) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                    const origCount = count;
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
                             break;
                         } else {
                             amount -= suggest.buy;
                             count++;
-                            priviousTrade = {
-                                price: suggest.buy,
-                                time: now - (i * 86400) + 3600,
-                                type: 'buy',
-                                win: 0,
-                            }
                             buyTrade++;
                         }
                     }
-                    let tmpAmount = amount - maxAmount / 2;
-                    while ((tmpAmount - suggest.buy) > 0) {
-                        amount -= suggest.buy;
-                        tmpAmount = amount - maxAmount / 2;
-                        count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - (i * 86400) + 3600,
-                            type: 'buy',
-                            win: 0,
+                    if (amount > maxAmount * 5 / 8) {
+                        let tmpAmount = amount - maxAmount / 2;
+                        while ((tmpAmount - suggest.buy) > 0) {
+                            amount -= suggest.buy;
+                            tmpAmount = amount - maxAmount / 2;
+                            count++;
+                            buyTrade++;
                         }
-                        buyTrade++;
+                    }
+                    if (count > origCount) {
+                        newPrevious('buy', suggest.buy, now - (i * 86400) + 3600);
                     }
                 }
             } else if (suggest.type === 6) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                    const origCount = count;
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
                             break;
                         } else {
                             amount -= suggest.buy;
                             count++;
-                            priviousTrade = {
-                                price: suggest.buy,
-                                time: now - (i * 86400) + 3600,
-                                type: 'buy',
-                                win: 0,
-                            }
                             buyTrade++;
                         }
                     }
-                    let tmpAmount = amount - maxAmount / 4;
-                    while ((tmpAmount - suggest.buy) > 0) {
-                        amount -= suggest.buy;
-                        tmpAmount = amount - maxAmount / 4;
-                        count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - (i * 86400) + 3600,
-                            type: 'buy',
-                            win: 0,
+                    if (amount > maxAmount * 3 / 8) {
+                        let tmpAmount = amount - maxAmount / 4;
+                        while ((tmpAmount - suggest.buy) > 0) {
+                            amount -= suggest.buy;
+                            tmpAmount = amount - maxAmount / 4;
+                            count++;
+                            buyTrade++;
                         }
-                        buyTrade++;
+                    }
+                    if (count > origCount) {
+                        newPrevious('buy', suggest.buy, now - (i * 86400) + 3600);
                     }
                 }
             } else if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                const origCount = count;
                 for (let j = 0; j < suggest.bCount; j++) {
                     if ((amount - suggest.buy) <= 0) {
                         break;
                     } else {
                         amount -= suggest.buy;
                         count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - (i * 86400) + 3600,
-                            type: 'buy',
-                            win: 0,
-                        }
                         buyTrade++;
                     }
+                }
+                if (count > origCount) {
+                    newPrevious('buy', suggest.buy, now - (i * 86400) + 3600);
                 }
             }
 
@@ -5927,22 +5952,19 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                             break;
                         }
                     }
-                    let tmpAmount = maxAmount / 4 - amount;
-                    while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
-                        tmpAmount = maxAmount / 4 - amount;
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+                    if (amount < maxAmount / 8) {
+                        let tmpAmount = maxAmount / 4 - amount;
+                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
+                            amount += (suggest.sell * (1 - TRADE_FEE));
+                            tmpAmount = maxAmount / 4 - amount;
+                            sellTrade++;
+                            count--;
+                            if (count <= 0) {
+                                break;
+                            }
                         }
                     }
-                    priviousTrade = {
-                        price: suggest.sell,
-                        time: now - (i * 86400) + 3600,
-                        type: 'sell',
-                        win: priviousTrade.win ? priviousTrade.win + 1 : 1,
-                    }
+                    newPrevious('sell', suggest.sell, now - (i * 86400) + 3600);
                     //console.log(priviousTrade.win);
                 }
             } else if (suggest.type === 5) {
@@ -5955,22 +5977,19 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                             break;
                         }
                     }
-                    let tmpAmount = maxAmount / 2 - amount;
-                    while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
-                        tmpAmount = maxAmount / 2 - amount;
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+                    if (amount < maxAmount * 3 / 8) {
+                        let tmpAmount = maxAmount / 2 - amount;
+                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
+                            amount += (suggest.sell * (1 - TRADE_FEE));
+                            tmpAmount = maxAmount / 2 - amount;
+                            sellTrade++;
+                            count--;
+                            if (count <= 0) {
+                                break;
+                            }
                         }
                     }
-                    priviousTrade = {
-                        price: suggest.sell,
-                        time: now - (i * 86400) + 3600,
-                        type: 'sell',
-                        win: priviousTrade.win ? priviousTrade.win + 1 : 1,
-                    }
+                    newPrevious('sell', suggest.sell, now - (i * 86400) + 3600);
                     //console.log(priviousTrade.win);
                 }
             } else if (suggest.type === 8) {
@@ -5983,22 +6002,19 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                             break;
                         }
                     }
-                    let tmpAmount = maxAmount * 3 / 4 - amount;
-                    while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
-                        tmpAmount = maxAmount * 3 / 4 - amount;
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+                    if (amount < maxAmount * 5 / 8) {
+                        let tmpAmount = maxAmount * 3 / 4 - amount;
+                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
+                            amount += (suggest.sell * (1 - TRADE_FEE));
+                            tmpAmount = maxAmount * 3 / 4 - amount;
+                            sellTrade++;
+                            count--;
+                            if (count <= 0) {
+                                break;
+                            }
                         }
                     }
-                    priviousTrade = {
-                        price: suggest.sell,
-                        time: now - (i * 86400) + 3600,
-                        type: 'sell',
-                        win: priviousTrade.win ? priviousTrade.win + 1 : 1,
-                    }
+                    newPrevious('sell', suggest.sell, now - (i * 86400) + 3600);
                     //console.log(priviousTrade.win);
                 }
             } else if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
@@ -6010,12 +6026,7 @@ const stockTest = (his_arr, web, pType = 1, start=0, len=250) => {
                         break;
                     }
                 }
-                priviousTrade = {
-                    price: suggest.sell,
-                    time: now - (i * 86400) + 3600,
-                    type: 'sell',
-                    win: priviousTrade.win ? priviousTrade.win + 1 : 1,
-                }
+                newPrevious('sell', suggest.sell, now - (i * 86400) + 3600);
                 //console.log(priviousTrade.win);
             }
             //console.log(amount);

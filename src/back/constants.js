@@ -803,7 +803,7 @@ export const STOCK_FILTER = {
     per: [1, '<', 35],
     pdr: [1, '<', 70],
     pbr: [1, '<', 10],
-    times: [1, '>', 12],
+    times: [1, '>', 24],
     stop: [1, '<', 3],
     //gap: [1, '>', 0],
     profit: [1, '>', 20],
@@ -853,6 +853,8 @@ export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
 export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
+export const TRADE_TIME = 21600;
+export const RANGE_INTERVAL = 7776000;
 //export const MINIMAL_DS_RATE = 0.05;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];

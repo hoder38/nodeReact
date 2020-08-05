@@ -3867,344 +3867,107 @@ exports.default = {
                                         web3 = calStair(750);
                                     }
                                     return getStockPrice('twse', items[0].index).then(function (price) {
+                                        var year1 = [];
+                                        var year2 = [];
+                                        var year3 = [];
+                                        var ret_str1 = [];
                                         var ret_str = '';
                                         var best_rate = 0;
-                                        var lastest_type = 4;
+                                        var lastest_type = 0;
                                         var lastest_rate = 0;
-                                        var ret_str1 = '';
-                                        var ret_str2 = '';
-                                        var ret_str3 = '';
-                                        var ret_str4 = '';
-                                        var ret_str5 = '';
-                                        var testResult1 = null;
-                                        if (web1) {
-                                            testResult1 = stockTest(raw_arr, web1, 4);
-                                        }
-                                        var testResult2 = null;
-                                        if (web2) {
-                                            testResult2 = stockTest(raw_arr, web2, 4, testResult1.start + 1);
-                                        }
-                                        var testResult3 = null;
-                                        if (web3) {
-                                            testResult3 = stockTest(raw_arr, web3, 4, testResult2.start + 1);
-                                        }
-                                        var testResult4 = null;
-                                        if (web1) {
-                                            testResult4 = stockTest(raw_arr, web1, 3);
-                                        }
-                                        var testResult5 = null;
-                                        if (web2) {
-                                            testResult5 = stockTest(raw_arr, web2, 3, testResult4.start + 1);
-                                        }
-                                        var testResult6 = null;
-                                        if (web3) {
-                                            testResult6 = stockTest(raw_arr, web3, 3, testResult5.start + 1);
-                                        }
-                                        var testResult7 = null;
-                                        if (web1) {
-                                            testResult7 = stockTest(raw_arr, web1, 2);
-                                        }
-                                        var testResult8 = null;
-                                        if (web2) {
-                                            testResult8 = stockTest(raw_arr, web2, 2, testResult7.start + 1);
-                                        }
-                                        var testResult9 = null;
-                                        if (web3) {
-                                            testResult9 = stockTest(raw_arr, web3, 2, testResult8.start + 1);
-                                        }
-                                        var testResult10 = null;
-                                        if (web1) {
-                                            testResult10 = stockTest(raw_arr, web1, 1);
-                                        }
-                                        var testResult11 = null;
-                                        if (web2) {
-                                            testResult11 = stockTest(raw_arr, web2, 1, testResult10.start + 1);
-                                        }
-                                        var testResult12 = null;
-                                        if (web3) {
-                                            testResult12 = stockTest(raw_arr, web3, 1, testResult11.start + 1);
-                                        }
-                                        var testResult13 = null;
-                                        if (web1) {
-                                            testResult13 = stockTest(raw_arr, web1, 5);
-                                        }
-                                        var testResult14 = null;
-                                        if (web2) {
-                                            testResult14 = stockTest(raw_arr, web2, 5, testResult13.start + 1);
-                                        }
-                                        var testResult15 = null;
-                                        if (web3) {
-                                            testResult15 = stockTest(raw_arr, web3, 5, testResult14.start + 1);
-                                        }
-                                        if (testResult1) {
-                                            console.log('year1');
-                                            console.log(testResult1.str);
-                                            console.log(testResult4.str);
-                                            console.log(testResult7.str);
-                                            console.log(testResult10.str);
-                                            console.log(testResult13.str);
-                                        }
-                                        if (testResult2) {
-                                            console.log('year2');
-                                            console.log(testResult2.str);
-                                            console.log(testResult5.str);
-                                            console.log(testResult8.str);
-                                            console.log(testResult11.str);
-                                            console.log(testResult14.str);
-                                        }
-                                        if (testResult3) {
-                                            console.log('year3');
-                                            console.log(testResult3.str);
-                                            console.log(testResult6.str);
-                                            console.log(testResult9.str);
-                                            console.log(testResult12.str);
-                                            console.log(testResult15.str);
-                                        }
-                                        if (testResult1) {
-                                            var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            var match1 = null;
-                                            var match2 = null;
+                                        var resultShow = function resultShow(type) {
+                                            var str = '';
+                                            var testResult1 = null;
+                                            if (web1) {
+                                                testResult1 = stockTest(raw_arr, web1, type);
+                                            }
+                                            var testResult2 = null;
+                                            if (web2) {
+                                                testResult2 = stockTest(raw_arr, web2, type, testResult1.start + 1);
+                                            }
+                                            var testResult3 = null;
+                                            if (web3) {
+                                                testResult3 = stockTest(raw_arr, web3, type, testResult2.start + 1);
+                                            }
+                                            if (testResult1) {
+                                                year1.push(testResult1.str);
+                                            }
                                             if (testResult2) {
-                                                match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                                year2.push(testResult2.str);
                                             }
                                             if (testResult3) {
-                                                match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                                year3.push(testResult3.str);
                                             }
-                                            var rate = 1;
-                                            var real = 1;
-                                            var count = 0;
-                                            if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                                rate = rate * (Number(match[3]) + 100) / 100;
-                                                lastest_rate = rate;
-                                                real = real * (Number(match[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                                rate = rate * (Number(match1[3]) + 100) / 100;
-                                                real = real * (Number(match1[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                                rate = rate * (Number(match2[3]) + 100) / 100;
-                                                real = real * (Number(match2[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            ret_str1 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                            if (count !== 0) {
-                                                rate = Math.round(rate * 10000 - 10000) / 100;
-                                                real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                                best_rate = rate;
-                                                var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                                var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                                ret_str1 += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
-                                            } else {
-                                                ret_str1 += ' no less than mid point';
-                                            }
-                                        } else {
-                                            ret_str1 = 'less than a year';
-                                        }
-                                        ret_str = ret_str1;
-                                        console.log(ret_str1);
-                                        if (testResult4) {
-                                            var _match = testResult4.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            var _match2 = null;
-                                            var _match3 = null;
-                                            if (testResult5) {
-                                                _match2 = testResult5.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            if (testResult6) {
-                                                _match3 = testResult6.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            var _rate = 1;
-                                            var _real = 1;
-                                            var _count = 0;
-                                            if (_match && (_match[3] !== '0' || _match[5] !== '0' || _match[6] !== '0')) {
-                                                _rate = _rate * (Number(_match[3]) + 100) / 100;
-                                                if (_rate > lastest_rate) {
-                                                    lastest_rate = _rate;
-                                                    lastest_type = 3;
+                                            if (testResult1) {
+                                                var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                                var match1 = null;
+                                                var match2 = null;
+                                                if (testResult2) {
+                                                    match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
                                                 }
-                                                _real = _real * (Number(_match[4]) + 100) / 100;
-                                                _count++;
-                                            }
-                                            if (_match2 && (_match2[3] !== '0' || _match2[5] !== '0' || _match2[6] !== '0')) {
-                                                _rate = _rate * (Number(_match2[3]) + 100) / 100;
-                                                _real = _real * (Number(_match2[4]) + 100) / 100;
-                                                _count++;
-                                            }
-                                            if (_match3 && (_match3[3] !== '0' || _match3[5] !== '0' || _match3[6] !== '0')) {
-                                                _rate = _rate * (Number(_match3[3]) + 100) / 100;
-                                                _real = _real * (Number(_match3[4]) + 100) / 100;
-                                                _count++;
-                                            }
-                                            ret_str2 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                            if (_count !== 0) {
-                                                _rate = Math.round(_rate * 10000 - 10000) / 100;
-                                                _real = Math.round(_rate * 100 - _real * 10000 + 10000) / 100;
-                                                var _times = Math.round((Number(_match ? _match[5] : 0) + Number(_match2 ? _match2[5] : 0) + Number(_match3 ? _match3[5] : 0)) / _count * 100) / 100;
-                                                var _stoploss = Number(_match ? _match[6] : 0) + Number(_match2 ? _match2[6] : 0) + Number(_match3 ? _match3[6] : 0);
-                                                ret_str2 += ' ' + _rate + '% ' + _real + '% ' + _times + ' ' + _stoploss + ' ' + raw_arr.length + ' ' + min_vol;
-                                                if (_rate > best_rate) {
-                                                    best_rate = _rate;
-                                                    ret_str = ret_str2;
+                                                if (testResult3) {
+                                                    match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                                }
+                                                var rate = 1;
+                                                var real = 1;
+                                                var count = 0;
+                                                if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                                                    rate = rate * (Number(match[3]) + 100) / 100;
+                                                    if (!lastest_rate || rate > lastest_rate) {
+                                                        lastest_rate = rate;
+                                                        lastest_type = type;
+                                                    }
+                                                    real = real * (Number(match[4]) + 100) / 100;
+                                                    count++;
+                                                }
+                                                if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                                                    rate = rate * (Number(match1[3]) + 100) / 100;
+                                                    real = real * (Number(match1[4]) + 100) / 100;
+                                                    count++;
+                                                }
+                                                if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                                                    rate = rate * (Number(match2[3]) + 100) / 100;
+                                                    real = real * (Number(match2[4]) + 100) / 100;
+                                                    count++;
+                                                }
+                                                str = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                                if (count !== 0) {
+                                                    rate = Math.round(rate * 10000 - 10000) / 100;
+                                                    real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                                    var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                                                    var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                                                    str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                                                    if (!best_rate || rate > best_rate) {
+                                                        best_rate = rate;
+                                                        ret_str = str;
+                                                    }
+                                                } else {
+                                                    str += ' no less than mid point';
                                                 }
                                             } else {
-                                                ret_str2 += ' no less than mid point';
+                                                str = 'less than a year';
                                             }
-                                        } else {
-                                            ret_str2 = 'less than a year';
+                                            ret_str1.push(str);
+                                        };
+                                        for (var _i27 = 15; _i27 >= 0; _i27--) {
+                                            resultShow(_i27);
                                         }
-                                        console.log(ret_str2);
-                                        if (testResult7) {
-                                            var _match4 = testResult7.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            var _match5 = null;
-                                            var _match6 = null;
-                                            if (testResult8) {
-                                                _match5 = testResult8.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            if (testResult9) {
-                                                _match6 = testResult9.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            var _rate2 = 1;
-                                            var _real2 = 1;
-                                            var _count2 = 0;
-                                            if (_match4 && (_match4[3] !== '0' || _match4[5] !== '0' || _match4[6] !== '0')) {
-                                                _rate2 = _rate2 * (Number(_match4[3]) + 100) / 100;
-                                                if (_rate2 > lastest_rate) {
-                                                    lastest_rate = _rate2;
-                                                    lastest_type = 2;
-                                                }
-                                                _real2 = _real2 * (Number(_match4[4]) + 100) / 100;
-                                                _count2++;
-                                            }
-                                            if (_match5 && (_match5[3] !== '0' || _match5[5] !== '0' || _match5[6] !== '0')) {
-                                                _rate2 = _rate2 * (Number(_match5[3]) + 100) / 100;
-                                                _real2 = _real2 * (Number(_match5[4]) + 100) / 100;
-                                                _count2++;
-                                            }
-                                            if (_match6 && (_match6[3] !== '0' || _match6[5] !== '0' || _match6[6] !== '0')) {
-                                                _rate2 = _rate2 * (Number(_match6[3]) + 100) / 100;
-                                                _real2 = _real2 * (Number(_match6[4]) + 100) / 100;
-                                                _count2++;
-                                            }
-                                            ret_str3 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                            if (_count2 !== 0) {
-                                                _rate2 = Math.round(_rate2 * 10000 - 10000) / 100;
-                                                _real2 = Math.round(_rate2 * 100 - _real2 * 10000 + 10000) / 100;
-                                                var _times2 = Math.round((Number(_match4 ? _match4[5] : 0) + Number(_match5 ? _match5[5] : 0) + Number(_match6 ? _match6[5] : 0)) / _count2 * 100) / 100;
-                                                var _stoploss2 = Number(_match4 ? _match4[6] : 0) + Number(_match5 ? _match5[6] : 0) + Number(_match6 ? _match6[6] : 0);
-                                                ret_str3 += ' ' + _rate2 + '% ' + _real2 + '% ' + _times2 + ' ' + _stoploss2 + ' ' + raw_arr.length + ' ' + min_vol;
-                                                if (_rate2 > best_rate) {
-                                                    best_rate = _rate2;
-                                                    ret_str = ret_str3;
-                                                }
-                                            } else {
-                                                ret_str3 += ' no less than mid point';
-                                            }
-                                        } else {
-                                            ret_str3 = 'less than a year';
-                                        }
-                                        console.log(ret_str3);
-                                        if (testResult10) {
-                                            var _match7 = testResult10.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            var _match8 = null;
-                                            var _match9 = null;
-                                            if (testResult11) {
-                                                _match8 = testResult11.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            if (testResult12) {
-                                                _match9 = testResult12.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            var _rate3 = 1;
-                                            var _real3 = 1;
-                                            var _count3 = 0;
-                                            if (_match7 && (_match7[3] !== '0' || _match7[5] !== '0' || _match7[6] !== '0')) {
-                                                _rate3 = _rate3 * (Number(_match7[3]) + 100) / 100;
-                                                _real3 = _real3 * (Number(_match7[4]) + 100) / 100;
-                                                if (_rate3 > lastest_rate) {
-                                                    lastest_rate = _rate3;
-                                                    lastest_type = 1;
-                                                }
-                                                _count3++;
-                                            }
-                                            if (_match8 && (_match8[3] !== '0' || _match8[5] !== '0' || _match8[6] !== '0')) {
-                                                _rate3 = _rate3 * (Number(_match8[3]) + 100) / 100;
-                                                _real3 = _real3 * (Number(_match8[4]) + 100) / 100;
-                                                _count3++;
-                                            }
-                                            if (_match9 && (_match9[3] !== '0' || _match9[5] !== '0' || _match9[6] !== '0')) {
-                                                _rate3 = _rate3 * (Number(_match9[3]) + 100) / 100;
-                                                _real3 = _real3 * (Number(_match9[4]) + 100) / 100;
-                                                _count3++;
-                                            }
-                                            ret_str4 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                            if (_count3 !== 0) {
-                                                _rate3 = Math.round(_rate3 * 10000 - 10000) / 100;
-                                                _real3 = Math.round(_rate3 * 100 - _real3 * 10000 + 10000) / 100;
-                                                var _times3 = Math.round((Number(_match7 ? _match7[5] : 0) + Number(_match8 ? _match8[5] : 0) + Number(_match9 ? _match9[5] : 0)) / _count3 * 100) / 100;
-                                                var _stoploss3 = Number(_match7 ? _match7[6] : 0) + Number(_match8 ? _match8[6] : 0) + Number(_match9 ? _match9[6] : 0);
-                                                ret_str4 += ' ' + _rate3 + '% ' + _real3 + '% ' + _times3 + ' ' + _stoploss3 + ' ' + raw_arr.length + ' ' + min_vol;
-                                                if (_rate3 > best_rate) {
-                                                    best_rate = _rate3;
-                                                    ret_str = ret_str4;
-                                                }
-                                            } else {
-                                                ret_str4 += ' no less than mid point';
-                                            }
-                                        } else {
-                                            ret_str4 = 'less than a year';
-                                        }
-                                        console.log(ret_str4);
-                                        if (testResult13) {
-                                            var _match10 = testResult13.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            var _match11 = null;
-                                            var _match12 = null;
-                                            if (testResult14) {
-                                                _match11 = testResult14.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            if (testResult15) {
-                                                _match12 = testResult15.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            var _rate4 = 1;
-                                            var _real4 = 1;
-                                            var _count4 = 0;
-                                            if (_match10 && (_match10[3] !== '0' || _match10[5] !== '0' || _match10[6] !== '0')) {
-                                                _rate4 = _rate4 * (Number(_match10[3]) + 100) / 100;
-                                                if (_rate4 > lastest_rate) {
-                                                    lastest_rate = _rate4;
-                                                    lastest_type = 5;
-                                                }
-                                                _real4 = _real4 * (Number(_match10[4]) + 100) / 100;
-                                                _count4++;
-                                            }
-                                            if (_match11 && (_match11[3] !== '0' || _match11[5] !== '0' || _match11[6] !== '0')) {
-                                                _rate4 = _rate4 * (Number(_match11[3]) + 100) / 100;
-                                                _real4 = _real4 * (Number(_match11[4]) + 100) / 100;
-                                                _count4++;
-                                            }
-                                            if (_match12 && (_match12[3] !== '0' || _match12[5] !== '0' || _match12[6] !== '0')) {
-                                                _rate4 = _rate4 * (Number(_match12[3]) + 100) / 100;
-                                                _real4 = _real4 * (Number(_match12[4]) + 100) / 100;
-                                                _count4++;
-                                            }
-                                            ret_str5 = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                            if (_count4 !== 0) {
-                                                _rate4 = Math.round(_rate4 * 10000 - 10000) / 100;
-                                                _real4 = Math.round(_rate4 * 100 - _real4 * 10000 + 10000) / 100;
-                                                var _times4 = Math.round((Number(_match10 ? _match10[5] : 0) + Number(_match11 ? _match11[5] : 0) + Number(_match12 ? _match12[5] : 0)) / _count4 * 100) / 100;
-                                                var _stoploss4 = Number(_match10 ? _match10[6] : 0) + Number(_match11 ? _match11[6] : 0) + Number(_match12 ? _match12[6] : 0);
-                                                ret_str5 += ' ' + _rate4 + '% ' + _real4 + '% ' + _times4 + ' ' + _stoploss4 + ' ' + raw_arr.length + ' ' + min_vol;
-                                                if (_rate4 > best_rate) {
-                                                    best_rate = _rate4;
-                                                    ret_str = ret_str5;
-                                                }
-                                            } else {
-                                                ret_str5 += ' no less than mid point';
-                                            }
-                                        } else {
-                                            ret_str5 = 'less than a year';
-                                        }
-                                        console.log(ret_str5);
+                                        console.log('year1');
+                                        year1.forEach(function (v) {
+                                            return console.log(v);
+                                        });
+                                        console.log('year2');
+                                        year2.forEach(function (v) {
+                                            return console.log(v);
+                                        });
+                                        console.log('year3');
+                                        year3.forEach(function (v) {
+                                            return console.log(v);
+                                        });
+                                        ret_str1.forEach(function (v) {
+                                            return console.log(v);
+                                        });
+                                        console.log(lastest_type);
                                         //amount real strategy times stoploss (no less than mid point)
                                         console.log('done');
                                         return [interval_data, ret_str, lastest_type];
@@ -4219,7 +3982,7 @@ exports.default = {
                                             return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
                                                     web: newWeb.arr,
                                                     mid: newWeb.mid,
-                                                    times: newwebWeb.times,
+                                                    times: newWeb.times,
                                                     wType: type
                                                 } }).then(function () {
                                                 return recur_web(index + 1);
@@ -4450,8 +4213,9 @@ exports.default = {
                             }
                         };
                         var exGet = function exGet() {
-                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
-                        };
+                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/recur_mi(1, 0)
+                            );
+                        } /*: Promise.resolve([null, ret_obj])*/;
                         return exGet().then(function (_ref21) {
                             var _ref22 = (0, _slicedToArray3.default)(_ref21, 2),
                                 raw_list = _ref22[0],
@@ -4549,9 +4313,9 @@ exports.default = {
 
                             try {
                                 for (var _iterator8 = (0, _getIterator3.default)(group), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                                    var _i27 = _step8.value;
+                                    var _i28 = _step8.value;
 
-                                    if (_i27.end - _i27.start > 33) {
+                                    if (_i28.end - _i28.start > 33) {
                                         var _iteratorNormalCompletion9 = true;
                                         var _didIteratorError9 = false;
                                         var _iteratorError9 = undefined;
@@ -4580,7 +4344,7 @@ exports.default = {
                                         }
 
                                         return final_group;
-                                    } else if (_i27.end - _i27.start > 13) {
+                                    } else if (_i28.end - _i28.start > 13) {
                                         group_num++;
                                         if (group_num > 2) {
                                             var _iteratorNormalCompletion10 = true;
@@ -4666,8 +4430,8 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var final_arr = [];
-                            for (var _i28 = 0; _i28 < 100; _i28++) {
-                                final_arr[_i28] = 0;
+                            for (var _i29 = 0; _i29 < 100; _i29++) {
+                                final_arr[_i29] = 0;
                             }
                             var diff = (max - min) / 100;
                             var _iteratorNormalCompletion11 = true;
@@ -4676,12 +4440,12 @@ exports.default = {
 
                             try {
                                 for (var _iterator11 = (0, _getIterator3.default)(raw_arr), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                                    var _i31 = _step11.value;
+                                    var _i32 = _step11.value;
 
-                                    var e = Math.ceil((_i31.h - min) / diff);
-                                    var s = Math.floor((_i31.l - min) / diff);
+                                    var e = Math.ceil((_i32.h - min) / diff);
+                                    var s = Math.floor((_i32.l - min) / diff);
                                     for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i31.v;
+                                        final_arr[j] += _i32.v;
                                     }
                                 }
                             } catch (err) {
@@ -4703,11 +4467,11 @@ exports.default = {
                                 return a - b;
                             });
                             var interval = null;
-                            for (var _i29 = 19; _i29 > 0; _i29--) {
-                                interval = group_interval(_i29, 5, final_arr, sort_arr);
+                            for (var _i30 = 19; _i30 > 0; _i30--) {
+                                interval = group_interval(_i30, 5, final_arr, sort_arr);
                                 if (interval) {
                                     console.log(interval);
-                                    console.log(_i29);
+                                    console.log(_i30);
                                     break;
                                 }
                             }
@@ -4716,11 +4480,11 @@ exports.default = {
                                 var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                 var fint = lint;
                                 var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                                for (var _i30 = 1; _i30 < interval.length; _i30++) {
-                                    llow = Math.ceil(((interval[_i30].start - 1) * diff + min) * 100) / 100;
+                                for (var _i31 = 1; _i31 < interval.length; _i31++) {
+                                    llow = Math.ceil(((interval[_i31].start - 1) * diff + min) * 100) / 100;
                                     lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                     fint = lint < fint ? lint : fint;
-                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i30].end * diff + min) * 100) / 100;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i31].end * diff + min) * 100) / 100;
                                 }
                                 ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
                                 console.log('done');
@@ -5656,8 +5420,8 @@ exports.default = {
         //delete 2330 刪除股票
         //2330 (-)0.5 增減張數
         //2330 5000 amount 新增股票(設定最大金額)
-        //2330 2 450 重設cost
-        //#2330 2 450 cost
+        //2330 2 50 輸入交易股價
+        //2330 2 450 cost 重設cost
         //#2330 300 220
         return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: user._id }).then(function (items) {
             if (items.length < 1) {
@@ -5736,81 +5500,126 @@ exports.default = {
                     } else {
                         var is_find = false;
 
-                        var _loop3 = function _loop3(_i32) {
-                            if (cmd[1] === items[_i32].index) {
+                        var _loop3 = function _loop3(_i33) {
+                            if (cmd[1] === items[_i33].index) {
                                 is_find = true;
-                                if (!cmd[3]) {
-                                    var orig_count = items[_i32].count;
-                                    items[_i32].count += +cmd[2];
-                                    if (items[_i32].count < 0) {
+                                if (cmd[3] === 'amount') {
+                                    var newWeb = adjustWeb(items[_i33].web, items[_i33].mid, +cmd[2]);
+                                    if (!newWeb) {
+                                        return {
+                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i33].mid * (items[_i33].web.length - 1) / 3)))
+                                        };
+                                    }
+                                    items[_i33].web = newWeb.arr;
+                                    items[_i33].mid = newWeb.mid;
+                                    items[_i33].times = newWeb.times;
+                                    items[_i33].amount = items[_i33].amount + +cmd[2] - items[_i33].orig;
+                                    items[_i33].orig = +cmd[2];
+                                    if (items[_i33]._id) {
+                                        if (updateTotal[items[_i33]._id]) {
+                                            updateTotal[items[_i33]._id].web = items[_i33].web;
+                                            updateTotal[items[_i33]._id].mid = items[_i33].mid;
+                                            updateTotal[items[_i33]._id].times = items[_i33].times;
+                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                            updateTotal[items[_i33]._id].orig = items[_i33].orig;
+                                        } else {
+                                            updateTotal[items[_i33]._id] = {
+                                                web: items[_i33].web,
+                                                mid: items[_i33].mid,
+                                                times: items[_i33].times,
+                                                amount: items[_i33].amount,
+                                                orig: items[_i33].orig
+                                            };
+                                        }
+                                    }
+                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
+                                    //} else if (cmd[4]) {
+                                    items[_i33].count = +cmd[2];
+                                    remain = remain + items[_i33].orig - items[_i33].amount - +cmd[3];
+                                    items[_i33].amount = items[_i33].orig - +cmd[3];
+                                    updateTotal[totalId] = { amount: remain };
+                                    if (items[_i33]._id) {
+                                        if (updateTotal[items[_i33]._id]) {
+                                            updateTotal[items[_i33]._id].count = items[_i33].count;
+                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                        } else {
+                                            updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount };
+                                        }
+                                    }
+                                } else if (!isNaN(+cmd[2])) {
+                                    var orig_count = items[_i33].count;
+                                    items[_i33].count += +cmd[2];
+                                    if (items[_i33].count < 0) {
                                         cmd[2] = -orig_count;
-                                        items[_i32].count = 0;
+                                        items[_i33].count = 0;
                                     }
                                     return {
-                                        v: getStockPrice('twse', items[_i32].index).then(function (price) {
+                                        v: getStockPrice('twse', items[_i33].index).then(function (price) {
+                                            price = !isNaN(+cmd[3]) ? +cmd[3] : price;
                                             var new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
-                                            items[_i32].amount -= new_cost;
+                                            items[_i33].amount -= new_cost;
                                             remain -= new_cost;
                                             updateTotal[totalId] = { amount: remain };
-                                            items[_i32].privious = {
-                                                price: price,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                type: +cmd[2] > 0 ? 'buy' : 'sell'
-                                            };
-                                            if (items[_i32]._id) {
-                                                if (updateTotal[items[_i32]._id]) {
-                                                    updateTotal[items[_i32]._id].count = items[_i32].count;
-                                                    updateTotal[items[_i32]._id].amount = items[_i32].amount;
-                                                    updateTotal[items[_i32]._id].privious = items[_i32].privious;
+                                            var time = Math.round(new Date().getTime() / 1000);
+                                            var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
+                                            if (tradeType === 'buy') {
+                                                var is_insert = false;
+                                                for (var k = 0; k < items[_i33].previous.buy.length; k++) {
+                                                    if (price < items[_i33].previous.buy[k].price) {
+                                                        items[_i33].previous.buy.splice(k, 0, { price: price, time: time });
+                                                        is_insert = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!is_insert) {
+                                                    items[_i33].previous.buy.push({ price: price, time: time });
+                                                }
+                                                items[_i33].previous = {
+                                                    price: price,
+                                                    time: time,
+                                                    type: 'buy',
+                                                    buy: items[_i33].previous.buy.filter(function (v) {
+                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                    }),
+                                                    sell: items[_i33].previous.sell,
+                                                    count: items[_i33].count,
+                                                    amount: items[_i33].amount
+                                                };
+                                            } else if (tradeType === 'sell') {
+                                                var _is_insert = false;
+                                                for (var _k = 0; _k < items[_i33].previous.sell.length; _k++) {
+                                                    if (price > items[_i33].previous.sell[_k].price) {
+                                                        items[_i33].previous.sell.splice(_k, 0, { price: price, time: time });
+                                                        _is_insert = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!_is_insert) {
+                                                    items[_i33].previous.sell.push({ price: price, time: time });
+                                                }
+                                                items[_i33].previous = {
+                                                    price: price,
+                                                    time: time,
+                                                    type: 'sell',
+                                                    sell: items[_i33].previous.sell.filter(function (v) {
+                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                    }),
+                                                    buy: items[_i33].previous.buy,
+                                                    count: items[_i33].count,
+                                                    amount: items[_i33].amount
+                                                };
+                                            }
+                                            if (items[_i33]._id) {
+                                                if (updateTotal[items[_i33]._id]) {
+                                                    updateTotal[items[_i33]._id].count = items[_i33].count;
+                                                    updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                                    updateTotal[items[_i33]._id].previous = items[_i33].previous;
                                                 } else {
-                                                    updateTotal[items[_i32]._id] = { count: items[_i32].count, amount: items[_i32].amount, privious: items[_i32].privious };
+                                                    updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount, previous: items[_i33].previous };
                                                 }
                                             }
                                         })
                                     };
-                                } else if (cmd[3] === 'amount') {
-                                    var newWeb = adjustWeb(items[_i32].web, items[_i32].mid, +cmd[2]);
-                                    if (!newWeb) {
-                                        return {
-                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i32].mid * (items[_i32].web.length - 1) / 3)))
-                                        };
-                                    }
-                                    items[_i32].web = newWeb.arr;
-                                    items[_i32].mid = newWeb.mid;
-                                    items[_i32].times = newWeb.times;
-                                    items[_i32].amount = items[_i32].amount + +cmd[2] - items[_i32].orig;
-                                    items[_i32].orig = +cmd[2];
-                                    if (items[_i32]._id) {
-                                        if (updateTotal[items[_i32]._id]) {
-                                            updateTotal[items[_i32]._id].web = items[_i32].web;
-                                            updateTotal[items[_i32]._id].mid = items[_i32].mid;
-                                            updateTotal[items[_i32]._id].times = items[_i32].times;
-                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
-                                            updateTotal[items[_i32]._id].orig = items[_i32].orig;
-                                        } else {
-                                            updateTotal[items[_i32]._id] = {
-                                                web: items[_i32].web,
-                                                mid: items[_i32].mid,
-                                                times: items[_i32].times,
-                                                amount: items[_i32].amount,
-                                                orig: items[_i32].orig
-                                            };
-                                        }
-                                    }
-                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0) {
-                                    //} else if (cmd[4]) {
-                                    items[_i32].count = +cmd[2];
-                                    remain = remain + items[_i32].orig - items[_i32].amount - +cmd[3];
-                                    items[_i32].amount = items[_i32].orig - +cmd[3];
-                                    updateTotal[totalId] = { amount: remain };
-                                    if (items[_i32]._id) {
-                                        if (updateTotal[items[_i32]._id]) {
-                                            updateTotal[items[_i32]._id].count = items[_i32].count;
-                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
-                                        } else {
-                                            updateTotal[items[_i32]._id] = { count: items[_i32].count, amount: items[_i32].amount };
-                                        }
-                                    }
                                     /*} else {
                                         if (+cmd[2] > +cmd[3]) {
                                             items[i].top = +cmd[2];
@@ -5832,8 +5641,8 @@ exports.default = {
                             }
                         };
 
-                        _loop4: for (var _i32 in items) {
-                            var _ret8 = _loop3(_i32);
+                        _loop4: for (var _i33 in items) {
+                            var _ret8 = _loop3(_i33);
 
                             switch (_ret8) {
                                 case 'break':
@@ -5877,7 +5686,9 @@ exports.default = {
                                                 orig: +cmd[2],
                                                 //top: Math.floor(price * 1.2 * 100) / 100,
                                                 //bottom: Math.floor(price * 0.95 * 100) / 100,
-                                                price: price
+                                                price: price,
+                                                previous: { buy: [], sell: [], amount: +cmd[2], count: 0 }
+                                                //high: price,
                                             });
                                             //remain -= cost;
                                             //updateTotal[totalId] = {cost: remain};
@@ -6219,8 +6030,87 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     return 0;
                 }
                 var item = items[index];
-                var suggestion = stockProcess(price, item.web, item.times, item.privious, item.wType);
+                //new mid
+                var suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
                 console.log(item);
+                var count = 0;
+                var amount = item.amount;
+                if (suggestion.type === 7) {
+                    if (amount > item.orig * 7 / 8) {
+                        var tmpAmount = amount - item.orig * 3 / 4;
+                        while (tmpAmount - suggestion.buy > 0) {
+                            amount -= suggestion.buy;
+                            tmpAmount = amount - item.orig * 3 / 4;
+                            count++;
+                        }
+                        suggestion.str += '[new buy ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new buy no need] ';
+                    }
+                } else if (suggestion.type === 3) {
+                    if (amount > item.orig * 5 / 8) {
+                        var _tmpAmount = amount - item.orig / 2;
+                        while (_tmpAmount - suggestion.buy > 0) {
+                            amount -= suggestion.buy;
+                            _tmpAmount = amount - item.orig / 2;
+                            count++;
+                        }
+                        suggestion.str += '[new buy ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new buy no need] ';
+                    }
+                } else if (suggestion.type === 6) {
+                    if (amount > item.orig * 3 / 8) {
+                        var _tmpAmount2 = amount - item.orig / 4;
+                        while (_tmpAmount2 - suggestion.buy > 0) {
+                            amount -= suggestion.buy;
+                            _tmpAmount2 = amount - item.orig / 4;
+                            count++;
+                        }
+                        suggestion.str += '[new buy ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new buy no need] ';
+                    }
+                }
+                count = 0;
+                amount = item.amount;
+                if (suggestion.type === 9) {
+                    if (amount < item.orig / 8) {
+                        var _tmpAmount3 = item.orig / 4 - amount;
+                        while (_tmpAmount3 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
+                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                            _tmpAmount3 = item.orig / 4 - amount;
+                            count++;
+                        }
+                        suggestion.str += '[new sell ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new sell no need] ';
+                    }
+                } else if (suggestion.type === 5) {
+                    if (amount < item.orig * 3 / 8) {
+                        var _tmpAmount4 = item.orig / 2 - amount;
+                        while (_tmpAmount4 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
+                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                            _tmpAmount4 = item.orig / 2 - amount;
+                            count++;
+                        }
+                        suggestion.str += '[new sell ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new sell no need] ';
+                    }
+                } else if (suggestion.type === 8) {
+                    if (amount < item.orig * 5 / 8) {
+                        var _tmpAmount5 = item.orig * 3 / 4 - amount;
+                        while (_tmpAmount5 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
+                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                            _tmpAmount5 = item.orig * 3 / 4 - amount;
+                            count++;
+                        }
+                        suggestion.str += '[new sell ' + count + '] ';
+                    } else {
+                        suggestion.str += '[new sell no need] ';
+                    }
+                }
                 console.log(suggestion.str);
                 if (newStr && (!item.sent || item.sent !== new Date().getDay())) {
                     item.sent = new Date().getDay();
@@ -6350,18 +6240,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                     if (Number(index)) {
                                         var exist = false;
 
-                                        var _loop5 = function _loop5(_i33) {
-                                            if (stock_list[_i33].index === index) {
+                                        var _loop5 = function _loop5(_i34) {
+                                            if (stock_list[_i34].index === index) {
                                                 exist = true;
                                                 tag.forEach(function (v) {
-                                                    return stock_list[_i33].tag.push(v);
+                                                    return stock_list[_i34].tag.push(v);
                                                 });
                                                 return 'break';
                                             }
                                         };
 
-                                        for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
-                                            var _ret11 = _loop5(_i33);
+                                        for (var _i34 = 0; _i34 < stock_list.length; _i34++) {
+                                            var _ret11 = _loop5(_i34);
 
                                             if (_ret11 === 'break') break;
                                         }
@@ -6387,18 +6277,26 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
     }
 };
 
-var stockProcess = function stockProcess(price, priceArray, priceTimes) {
-    var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    var pType = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 4;
+var stockProcess = function stockProcess(price, priceArray) {
+    var priceTimes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : { buy: [], sell: [] };
+    var pType = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
     var now = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : Math.round(new Date().getTime() / 1000);
 
+    priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
+    var t1 = (pType | 1) === pType ? true : false;
+    var t2 = (pType | 2) === pType ? true : false;
+    var t3 = (pType | 4) === pType ? true : false;
+    var t4 = (pType | 8) === pType ? true : false;
     var is_buy = true;
     var is_sell = true;
-    var bTimes = priceTimes ? priceTimes : 1;
-    var sTimes = priceTimes ? priceTimes : 1;
+    var bTimes = 1;
+    var sTimes = 1;
     var bP = 8;
     var nowBP = priceArray.length - 1;
+    var bAdd = 0;
+    var sAdd = 0;
     //let tmpB = 0;
     for (; nowBP >= 0; nowBP--) {
         if (Math.abs(priceArray[nowBP]) * 1.001 >= price) {
@@ -6445,10 +6343,10 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
     if (nowSP === 0) {
         //if (sP < 2) {
         var _newMid = 0;
-        var _count5 = 0;
+        var _count = 0;
         for (nowSP = 0; nowSP < priceArray.length; nowSP++) {
             if (priceArray[nowSP] < 0) {
-                if (++_count5 === 3) {
+                if (++_count === 3) {
                     _newMid = Math.abs(priceArray[nowSP]);
                     break;
                 }
@@ -6477,7 +6375,7 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'buy') {
-                if (now - previous.time >= (nowBP - previousP + 1) * _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= _constants.TRADE_TIME + (nowBP - previousP) * _constants.TRADE_INTERVAL) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
                 } else {
@@ -6520,7 +6418,7 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'sell') {
-                if (now - previous.time >= (_previousP - nowSP + 1) * _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= _constants.TRADE_TIME + (_previousP - nowSP) * _constants.TRADE_INTERVAL) {
                     is_sell = true;
                     sTimes = sTimes * (_previousP - nowSP + 1);
                 } else {
@@ -6546,6 +6444,24 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
             nowBP = _previousP;
             bP = _pP;
         }
+        //if (pType === 0 && previous.buy && previous.sell) {
+        if (previous.buy.length > 0 && previous.sell.length > 0) {
+            /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                //bAdd--;
+            } else*/if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                bAdd++;
+            }
+            if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
+                sAdd++;
+            } // else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+            //sAdd--;
+            //}
+            //console.log(previous);
+            /*console.log(Math.abs(priceArray[nowBP + 1]));
+            console.log(bAdd);
+            console.log(Math.abs(priceArray[nowSP - 1]));
+            console.log(sAdd);*/
+        }
     }
     /*console.log(nowBP);
     console.log(nowSP);
@@ -6557,8 +6473,33 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
     var bCount = 1;
     var sCount = 1;
     var type = 0;
-    bCount = bTimes * bCount;
-    sCount = sTimes * sCount;
+    bCount = bTimes * bCount * priceTimes;
+    sCount = sTimes * sCount * priceTimes;
+    var finalSell = function finalSell() {
+        if (previous.count && sCount) {
+            var remain = previous.count - sCount;
+            if (previous.count < 3 * priceTimes) {
+                sCount = priceTimes;
+            } else if (previous.count < 5 * priceTimes) {
+                sCount = 2 * priceTimes;
+            } else if (remain < 2 * priceTimes) {
+                sCount = sCount - 2 * priceTimes + remain;
+            }
+        }
+    };
+    var finalBuy = function finalBuy() {
+        if (previous.amount && bCount) {
+            var nowC = Math.floor(previous.amount / buy);
+            var remain = nowC - bCount;
+            if (nowC < 3 * priceTimes) {
+                bCount = priceTimes;
+            } else if (nowC < 5 * priceTimes) {
+                bCount = 2 * priceTimes;
+            } else if (remain < 2 * priceTimes) {
+                bCount = bCount - 2 * priceTimes + remain;
+            }
+        }
+    };
     if (is_buy) {
         /*if (bP > 4) {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
@@ -6579,25 +6520,48 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
             //buy = Math.round(tmpB * 100) / 100;
+            finalBuy();
             str += 'Buy 3/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else if (bP > 5) {
             type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
+            finalBuy();
             str += 'Buy 1/2 ' + buy + ' ( ' + bCount + ' ) ';
         } else if (bP > 4) {
             type = 7;
             //type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
+            if (t2) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
+            }
+            finalBuy();
             str += 'Buy 1/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            if (pType === 4 || pType === 3) {
-                sCount = sCount * 2;
+            /*if (pType === 0) {
+                bCount = bCount * (2 + bAdd);
+            } else if (pType === 4 || pType === 3) {
+                bCount = bCount * 2;
+            }*/
+            if (t1) {
+                bCount = bCount * (2 + bAdd);
+            } else {
+                bCount = bCount * (1 + bAdd);
             }
+            finalBuy();
             str += 'Buy ' + buy + ' ( ' + bCount + ' ) ';
         }
     }
@@ -6622,31 +6586,63 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
             //type = 5;
             type = 8;
             //sell = Math.round(Math.abs(priceArray[nowSP]) * 100) / 100;
-            if (pType === 5 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            finalSell();
             str += 'Sell 3/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 3) {
             type = 5;
-            if (pType === 5 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            finalSell();
             str += 'Sell 1/2 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 4) {
             type = 9;
             //type = 5;
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 5 || pType === 4) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 5 || pType === 4) {
                 sCount = sCount * 2;
+            }*/
+            if (t3) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
+            finalSell();
             str += 'Sell 1/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else {
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 2 || pType === 4 || pType === 3) {
+            /*if (pType === 0) {
+                sCount = sCount * (2 + sAdd);
+            } else if (pType === 2 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
+            }*/
+            if (t4) {
+                sCount = sCount * (2 + sAdd);
+            } else {
+                sCount = sCount * (1 + sAdd);
             }
+            finalSell();
             str += 'Sell ' + sell + ' ( ' + sCount + ' ) ';
         }
     }
@@ -6662,7 +6658,7 @@ var stockProcess = function stockProcess(price, priceArray, priceTimes) {
 };
 
 var stockTest = function stockTest(his_arr, web) {
-    var pType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
+    var pType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
     var start = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     var len = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 250;
 
@@ -6672,14 +6668,14 @@ var stockTest = function stockTest(his_arr, web) {
     var amount = maxAmount;
     var count = 0;
     var privious = {};
-    var priviousTrade = {};
+    var priviousTrade = { buy: [], sell: [] };
+    var tmpPT = null;
     //let maxCount = 0;
     var buyTrade = 0;
     var sellTrade = 0;
     var stopLoss = 0;
     var newMid = [];
     var newArr = [];
-    var newPTrade = {};
     var price = 0;
     //console.log('stock test');
     //console.log(amount);
@@ -6695,6 +6691,12 @@ var stockTest = function stockTest(his_arr, web) {
                 tmpAmount = amount - maxAmount / 2;
                 count++;
             }
+            priviousTrade.amount = amount;
+            priviousTrade.count = count;
+            /*console.log(his_arr[startI + 1].h);
+            console.log(amount);
+            console.log(maxAmount);
+            console.log(count);*/
             break;
         }
     }
@@ -6704,7 +6706,9 @@ var stockTest = function stockTest(his_arr, web) {
             start: startI
         };
     }
-    console.log(startI);
+    //console.log('start');
+    //console.log(pType);
+    //console.log(startI);
     for (var i = startI; i > startI - len + 1; i--) {
         /*if (his_arr[i].l <= web.mid) {
             is_start = true;
@@ -6734,15 +6738,26 @@ var stockTest = function stockTest(his_arr, web) {
         var checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         while (newMid.length > 0 && (newMid[newMid.length - 1] > checkMid && price < checkMid || newMid[newMid.length - 1] <= checkMid && price > checkMid)) {
             newMid.pop();
-            newPTrade = {};
+            if (newMid.length === 0) {
+                priviousTrade.price = tmpPT.price;
+                priviousTrade.time = tmpPT.time;
+                priviousTrade.type = tmpPT.type;
+            }
             stopLoss--;
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             });
             checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         }
-        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, newMid.length > 0 ? newPTrade : priviousTrade, pType, now - i * 86400);
+        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, pType, now - i * 86400);
         while (suggest.resetWeb) {
+            if (newMid.length === 0) {
+                tmpPT = {
+                    price: priviousTrade.price,
+                    time: priviousTrade.time,
+                    type: priviousTrade.type
+                };
+            }
             //console.log(amount);
             //console.log(count);
             stopLoss++;
@@ -6750,7 +6765,7 @@ var stockTest = function stockTest(his_arr, web) {
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             });
-            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, newMid.length > 0 ? newPTrade : priviousTrade, pType, now - i * 86400);
+            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, pType, now - i * 86400);
             //console.log(price);
             //console.log(suggest);
             //console.log(newArr);
@@ -6762,6 +6777,57 @@ var stockTest = function stockTest(his_arr, web) {
         //console.log(priviousTrade);
         //console.log(suggest);
         //console.log(suggest.str);
+        var newPrevious = function newPrevious(tradeType, tradePrice) {
+            var time = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : Math.round(new Date().getTime() / 1000);
+
+            if (tradeType === 'buy') {
+                var is_insert = false;
+                for (var k = 0; k < priviousTrade.buy.length; k++) {
+                    if (tradePrice < priviousTrade.buy[k].price) {
+                        priviousTrade.buy.splice(k, 0, { price: tradePrice, time: time });
+                        is_insert = true;
+                        break;
+                    }
+                }
+                if (!is_insert) {
+                    priviousTrade.buy.push({ price: tradePrice, time: time });
+                }
+                priviousTrade = {
+                    price: tradePrice,
+                    time: time,
+                    type: 'buy',
+                    buy: priviousTrade.buy.filter(function (v) {
+                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                    }),
+                    sell: priviousTrade.sell,
+                    count: count,
+                    amount: amount
+                };
+            } else if (tradeType === 'sell') {
+                var _is_insert2 = false;
+                for (var _k2 = 0; _k2 < priviousTrade.sell.length; _k2++) {
+                    if (tradePrice > priviousTrade.sell[_k2].price) {
+                        priviousTrade.sell.splice(_k2, 0, { price: tradePrice, time: time });
+                        _is_insert2 = true;
+                        break;
+                    }
+                }
+                if (!_is_insert2) {
+                    priviousTrade.sell.push({ price: tradePrice, time: time });
+                }
+                priviousTrade = {
+                    price: tradePrice,
+                    time: time,
+                    type: 'sell',
+                    sell: priviousTrade.sell.filter(function (v) {
+                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                    }),
+                    buy: priviousTrade.buy,
+                    count: count,
+                    amount: amount
+                };
+            }
+        };
         /*if (suggest.type === 1) {
             amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
             if (count > 0) {
@@ -6789,112 +6855,92 @@ var stockTest = function stockTest(his_arr, web) {
             }
         } else*/if (suggest.type === 7) {
             if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                var origCount = count;
                 for (var j = 0; j < suggest.bCount; j++) {
                     if (amount - suggest.buy <= 0) {
                         break;
                     } else {
                         amount -= suggest.buy;
                         count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - i * 86400 + 3600,
-                            type: 'buy',
-                            win: 0
-                        };
                         buyTrade++;
                     }
                 }
-                var _tmpAmount = amount - maxAmount * 3 / 4;
-                while (_tmpAmount - suggest.buy > 0) {
-                    amount -= suggest.buy;
-                    _tmpAmount = amount - maxAmount * 3 / 4;
-                    count++;
-                    priviousTrade = {
-                        price: suggest.buy,
-                        time: now - i * 86400 + 3600,
-                        type: 'buy',
-                        win: 0
-                    };
-                    buyTrade++;
+                if (amount > maxAmount * 7 / 8) {
+                    var _tmpAmount6 = amount - maxAmount * 3 / 4;
+                    while (_tmpAmount6 - suggest.buy > 0) {
+                        amount -= suggest.buy;
+                        _tmpAmount6 = amount - maxAmount * 3 / 4;
+                        count++;
+                        buyTrade++;
+                    }
+                }
+                if (count > origCount) {
+                    newPrevious('buy', suggest.buy, now - i * 86400 + 3600);
                 }
             }
         } else if (suggest.type === 3) {
             if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                var _origCount = count;
                 for (var _j5 = 0; _j5 < suggest.bCount; _j5++) {
                     if (amount - suggest.buy <= 0) {
                         break;
                     } else {
                         amount -= suggest.buy;
                         count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - i * 86400 + 3600,
-                            type: 'buy',
-                            win: 0
-                        };
                         buyTrade++;
                     }
                 }
-                var _tmpAmount2 = amount - maxAmount / 2;
-                while (_tmpAmount2 - suggest.buy > 0) {
-                    amount -= suggest.buy;
-                    _tmpAmount2 = amount - maxAmount / 2;
-                    count++;
-                    priviousTrade = {
-                        price: suggest.buy,
-                        time: now - i * 86400 + 3600,
-                        type: 'buy',
-                        win: 0
-                    };
-                    buyTrade++;
+                if (amount > maxAmount * 5 / 8) {
+                    var _tmpAmount7 = amount - maxAmount / 2;
+                    while (_tmpAmount7 - suggest.buy > 0) {
+                        amount -= suggest.buy;
+                        _tmpAmount7 = amount - maxAmount / 2;
+                        count++;
+                        buyTrade++;
+                    }
+                }
+                if (count > _origCount) {
+                    newPrevious('buy', suggest.buy, now - i * 86400 + 3600);
                 }
             }
         } else if (suggest.type === 6) {
             if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+                var _origCount2 = count;
                 for (var _j6 = 0; _j6 < suggest.bCount; _j6++) {
                     if (amount - suggest.buy <= 0) {
                         break;
                     } else {
                         amount -= suggest.buy;
                         count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - i * 86400 + 3600,
-                            type: 'buy',
-                            win: 0
-                        };
                         buyTrade++;
                     }
                 }
-                var _tmpAmount3 = amount - maxAmount / 4;
-                while (_tmpAmount3 - suggest.buy > 0) {
-                    amount -= suggest.buy;
-                    _tmpAmount3 = amount - maxAmount / 4;
-                    count++;
-                    priviousTrade = {
-                        price: suggest.buy,
-                        time: now - i * 86400 + 3600,
-                        type: 'buy',
-                        win: 0
-                    };
-                    buyTrade++;
+                if (amount > maxAmount * 3 / 8) {
+                    var _tmpAmount8 = amount - maxAmount / 4;
+                    while (_tmpAmount8 - suggest.buy > 0) {
+                        amount -= suggest.buy;
+                        _tmpAmount8 = amount - maxAmount / 4;
+                        count++;
+                        buyTrade++;
+                    }
+                }
+                if (count > _origCount2) {
+                    newPrevious('buy', suggest.buy, now - i * 86400 + 3600);
                 }
             }
         } else if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
+            var _origCount3 = count;
             for (var _j7 = 0; _j7 < suggest.bCount; _j7++) {
                 if (amount - suggest.buy <= 0) {
                     break;
                 } else {
                     amount -= suggest.buy;
                     count++;
-                    priviousTrade = {
-                        price: suggest.buy,
-                        time: now - i * 86400 + 3600,
-                        type: 'buy',
-                        win: 0
-                    };
                     buyTrade++;
                 }
+            }
+            if (count > _origCount3) {
+                newPrevious('buy', suggest.buy, now - i * 86400 + 3600);
             }
         }
 
@@ -6919,22 +6965,19 @@ var stockTest = function stockTest(his_arr, web) {
                         break;
                     }
                 }
-                var _tmpAmount4 = maxAmount / 4 - amount;
-                while (_tmpAmount4 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
-                    _tmpAmount4 = maxAmount / 4 - amount;
-                    sellTrade++;
-                    count--;
-                    if (count <= 0) {
-                        break;
+                if (amount < maxAmount / 8) {
+                    var _tmpAmount9 = maxAmount / 4 - amount;
+                    while (_tmpAmount9 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                        _tmpAmount9 = maxAmount / 4 - amount;
+                        sellTrade++;
+                        count--;
+                        if (count <= 0) {
+                            break;
+                        }
                     }
                 }
-                priviousTrade = {
-                    price: suggest.sell,
-                    time: now - i * 86400 + 3600,
-                    type: 'sell',
-                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
-                };
+                newPrevious('sell', suggest.sell, now - i * 86400 + 3600);
                 //console.log(priviousTrade.win);
             }
         } else if (suggest.type === 5) {
@@ -6947,22 +6990,19 @@ var stockTest = function stockTest(his_arr, web) {
                         break;
                     }
                 }
-                var _tmpAmount5 = maxAmount / 2 - amount;
-                while (_tmpAmount5 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
-                    _tmpAmount5 = maxAmount / 2 - amount;
-                    sellTrade++;
-                    count--;
-                    if (count <= 0) {
-                        break;
+                if (amount < maxAmount * 3 / 8) {
+                    var _tmpAmount10 = maxAmount / 2 - amount;
+                    while (_tmpAmount10 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                        _tmpAmount10 = maxAmount / 2 - amount;
+                        sellTrade++;
+                        count--;
+                        if (count <= 0) {
+                            break;
+                        }
                     }
                 }
-                priviousTrade = {
-                    price: suggest.sell,
-                    time: now - i * 86400 + 3600,
-                    type: 'sell',
-                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
-                };
+                newPrevious('sell', suggest.sell, now - i * 86400 + 3600);
                 //console.log(priviousTrade.win);
             }
         } else if (suggest.type === 8) {
@@ -6975,22 +7015,19 @@ var stockTest = function stockTest(his_arr, web) {
                         break;
                     }
                 }
-                var _tmpAmount6 = maxAmount * 3 / 4 - amount;
-                while (_tmpAmount6 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
-                    _tmpAmount6 = maxAmount * 3 / 4 - amount;
-                    sellTrade++;
-                    count--;
-                    if (count <= 0) {
-                        break;
+                if (amount < maxAmount * 5 / 8) {
+                    var _tmpAmount11 = maxAmount * 3 / 4 - amount;
+                    while (_tmpAmount11 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
+                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                        _tmpAmount11 = maxAmount * 3 / 4 - amount;
+                        sellTrade++;
+                        count--;
+                        if (count <= 0) {
+                            break;
+                        }
                     }
                 }
-                priviousTrade = {
-                    price: suggest.sell,
-                    time: now - i * 86400 + 3600,
-                    type: 'sell',
-                    win: priviousTrade.win ? priviousTrade.win + 1 : 1
-                };
+                newPrevious('sell', suggest.sell, now - i * 86400 + 3600);
                 //console.log(priviousTrade.win);
             }
         } else if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
@@ -7002,12 +7039,7 @@ var stockTest = function stockTest(his_arr, web) {
                     break;
                 }
             }
-            priviousTrade = {
-                price: suggest.sell,
-                time: now - i * 86400 + 3600,
-                type: 'sell',
-                win: priviousTrade.win ? priviousTrade.win + 1 : 1
-            };
+            newPrevious('sell', suggest.sell, now - i * 86400 + 3600);
             //console.log(priviousTrade.win);
         }
         //console.log(amount);
@@ -7062,13 +7094,13 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
     amount = amount;
     var maxAmount = webMid * (webArr.length - 1) / 3 * 2;
     if (amount >= maxAmount) {
-        var _count6 = Math.floor(amount / maxAmount);
+        var _count2 = Math.floor(amount / maxAmount);
         var newWeb = {
             arr: webArr,
             mid: webMid
         };
-        if (_count6 > 1) {
-            newWeb.times = _count6;
+        if (_count2 > 1) {
+            newWeb.times = _count2;
         }
         return newWeb;
     }
@@ -7106,16 +7138,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i34 = mid - 1; _i34 >= 0; _i34--) {
-        if (webArr[_i34] >= 0) {
+    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
+        if (webArr[_i35] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i34]);
+                new_arr.splice(0, 0, webArr[_i35]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i34]);
+            new_arr.splice(0, 0, webArr[_i35]);
         }
     }
     return {
