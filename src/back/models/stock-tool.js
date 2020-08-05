@@ -4832,7 +4832,8 @@ export default {
                                             //top: Math.floor(price * 1.2 * 100) / 100,
                                             //bottom: Math.floor(price * 0.95 * 100) / 100,
                                             price,
-                                            previous: {buy: [], sell: [], amount: +cmd[2], count: 0}
+                                            previous: {buy: [], sell: [], amount: +cmd[2], count: 0},
+                                            newMid: [],
                                             //high: price,
                                         })
                                         //remain -= cost;
@@ -5059,9 +5060,36 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             return 0;
         }
         const item = items[index];
-        //new mid
-        const suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
         console.log(item);
+        //new mid
+        let newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+        let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+        while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && price < checkMid) || (item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid))) {
+            item.newMid.pop();
+            if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
+                item.previous.price = item.tmpPT.price;
+                item.previous.time = item.tmpPT.time;
+                item.previous.type = item.tmpPT.type;
+            } else {
+                item.previous.time = 0;
+            }
+            newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+            checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+        }
+        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.wType);
+        while(suggestion.resetWeb) {
+            if (item.newMid.length === 0) {
+                item.tmpPT = {
+                    price: item.previous.price,
+                    time: item.previous.time,
+                    type: item.previous.type,
+                };
+            }
+            item.previous.time = 0;
+            item.newMid.push(suggestion.newMid);
+            newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.wType);
+        }
         let count = 0;
         let amount = item.amount;
         if (suggestion.type === 7) {
@@ -5204,6 +5232,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             bCurrent: item.bCurrent,
             sTarget: item.sTarget,
             sCurrent: item.sCurrent,
+            newMid: item.newMid,
+            tmpPT: item.tmpPT,
+            previous: item.previous,
         }});
     }).then(() => recur_price(index + 1));
     return recur_price(0);
@@ -5735,10 +5766,12 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             while ((newMid.length > 0) && ((newMid[newMid.length - 1] > checkMid && price < checkMid) || (newMid[newMid.length - 1] <= checkMid && price > checkMid))) {
                 newMid.pop();
-                if (newMid.length === 0) {
+                if (newMid.length === 0 && now - item.tmpPT.time < RANGE_INTERVAL) {
                     priviousTrade.price = tmpPT.price;
                     priviousTrade.time = tmpPT.time;
                     priviousTrade.type = tmpPT.type;
+                } else {
+                    priviousTrade.time = 0;
                 }
                 stopLoss--;
                 newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
@@ -5753,6 +5786,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                         type: priviousTrade.type,
                     };
                 }
+                priviousTrade.time = 0;
                 //console.log(amount);
                 //console.log(count);
                 stopLoss++;

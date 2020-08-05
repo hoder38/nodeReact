@@ -5687,8 +5687,8 @@ exports.default = {
                                                 //top: Math.floor(price * 1.2 * 100) / 100,
                                                 //bottom: Math.floor(price * 0.95 * 100) / 100,
                                                 price: price,
-                                                previous: { buy: [], sell: [], amount: +cmd[2], count: 0 }
-                                                //high: price,
+                                                previous: { buy: [], sell: [], amount: +cmd[2], count: 0 },
+                                                newMid: []
                                             });
                                             //remain -= cost;
                                             //updateTotal[totalId] = {cost: remain};
@@ -6030,9 +6030,42 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     return 0;
                 }
                 var item = items[index];
-                //new mid
-                var suggestion = stockProcess(price, item.web, item.times, item.previous, item.wType);
                 console.log(item);
+                //new mid
+                var newArr = item.web.map(function (v) {
+                    return v * item.newMid[item.newMid.length - 1] / item.mid;
+                });
+                var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && price < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid)) {
+                    item.newMid.pop();
+                    if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < _constants.RANGE_INTERVAL) {
+                        item.previous.price = item.tmpPT.price;
+                        item.previous.time = item.tmpPT.time;
+                        item.previous.type = item.tmpPT.type;
+                    } else {
+                        item.previous.time = 0;
+                    }
+                    newArr = item.web.map(function (v) {
+                        return v * item.newMid[item.newMid.length - 1] / item.mid;
+                    });
+                    checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                }
+                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.wType);
+                while (suggestion.resetWeb) {
+                    if (item.newMid.length === 0) {
+                        item.tmpPT = {
+                            price: item.previous.price,
+                            time: item.previous.time,
+                            type: item.previous.type
+                        };
+                    }
+                    item.previous.time = 0;
+                    item.newMid.push(suggestion.newMid);
+                    newArr = item.web.map(function (v) {
+                        return v * item.newMid[item.newMid.length - 1] / item.mid;
+                    });
+                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.wType);
+                }
                 var count = 0;
                 var amount = item.amount;
                 if (suggestion.type === 7) {
@@ -6174,7 +6207,10 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                         bTarget: item.bTarget,
                         bCurrent: item.bCurrent,
                         sTarget: item.sTarget,
-                        sCurrent: item.sCurrent
+                        sCurrent: item.sCurrent,
+                        newMid: item.newMid,
+                        tmpPT: item.tmpPT,
+                        previous: item.previous
                     } });
             }).then(function () {
                 return recur_price(index + 1);
@@ -6738,10 +6774,12 @@ var stockTest = function stockTest(his_arr, web) {
         var checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         while (newMid.length > 0 && (newMid[newMid.length - 1] > checkMid && price < checkMid || newMid[newMid.length - 1] <= checkMid && price > checkMid)) {
             newMid.pop();
-            if (newMid.length === 0) {
+            if (newMid.length === 0 && now - item.tmpPT.time < _constants.RANGE_INTERVAL) {
                 priviousTrade.price = tmpPT.price;
                 priviousTrade.time = tmpPT.time;
                 priviousTrade.type = tmpPT.type;
+            } else {
+                priviousTrade.time = 0;
             }
             stopLoss--;
             newArr = web.arr.map(function (v) {
@@ -6758,6 +6796,7 @@ var stockTest = function stockTest(his_arr, web) {
                     type: priviousTrade.type
                 };
             }
+            priviousTrade.time = 0;
             //console.log(amount);
             //console.log(count);
             stopLoss++;
