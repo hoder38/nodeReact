@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getStockListV2 = exports.stockShow = exports.stockStatus = exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
+exports.calStair = exports.logArray = exports.stockTest = exports.stockProcess = exports.getStockListV2 = exports.stockShow = exports.stockStatus = exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -3712,141 +3712,8 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var loga = logArray(max, min);
-                            //console.log(loga);
-                            var calStair = function calStair() {
-                                var stair_start = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-
-                                var single_arr = [];
-                                var final_arr = [];
-                                for (var _i25 = 0; _i25 < 100; _i25++) {
-                                    final_arr[_i25] = 0;
-                                }
-                                var volsum = 0;
-                                for (var _i26 = stair_start; _i26 < raw_arr.length; _i26++) {
-                                    var s = 0;
-                                    var e = 100;
-                                    for (var _j2 = 0; _j2 < 100; _j2++) {
-                                        if (raw_arr[_i26].l >= loga.arr[_j2]) {
-                                            s = _j2;
-                                        }
-                                        if (raw_arr[_i26].h <= loga.arr[_j2]) {
-                                            e = _j2;
-                                            break;
-                                        }
-                                    }
-                                    volsum += raw_arr[_i26].v;
-                                    single_arr.push((raw_arr[_i26].h - raw_arr[_i26].l) / raw_arr[_i26].h * 100);
-                                    if (e - s === 0) {
-                                        final_arr[s] += raw_arr[_i26].v;
-                                    } else {
-                                        var v = raw_arr[_i26].v / (e - s);
-                                        for (var _j3 = s; _j3 < e; _j3++) {
-                                            final_arr[_j3] += v;
-                                        }
-                                    }
-                                }
-                                var vol = 0;
-                                var j = 0;
-                                var nd = [];
-                                final_arr.forEach(function (v, i) {
-                                    vol += v;
-                                    while (vol >= volsum / 100 * _constants.NORMAL_DISTRIBUTION[j] && j < _constants.NORMAL_DISTRIBUTION.length) {
-                                        //console.log(i);
-                                        nd.push(i);
-                                        //nd.push(Math.pow(1 + loga.diff, i) * min);
-                                        j++;
-                                    }
-                                });
-                                var sort_arr = [].concat(single_arr).sort(function (a, b) {
-                                    return a - b;
-                                });
-                                //console.log(final_arr);
-                                var web = {
-                                    mid: Math.pow(1 + loga.diff, nd[3]) * min,
-                                    up: nd[4] - nd[3],
-                                    down: nd[3] - nd[2],
-                                    extrem: sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
-                                    single: loga.diff
-                                };
-                                if (1 + web.extrem < (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE)) {
-                                    web.extrem = sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
-                                    web.ds = 2;
-                                    if (1 + web.extrem < (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE)) {
-                                        return false;
-                                    }
-                                }
-                                var calWeb = function calWeb() {
-                                    var stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
-                                    var upArray = [];
-                                    var up = stair;
-                                    while (up < web.up) {
-                                        upArray.push(up);
-                                        up += stair;
-                                    }
-                                    if (up - web.up < stair / 2) {
-                                        upArray.push(web.up);
-                                    } else {
-                                        if (upArray.length > 0) {
-                                            upArray[upArray.length - 1] = web.up;
-                                        } else {
-                                            upArray.push(web.up);
-                                        }
-                                    }
-                                    console.log(upArray);
-                                    var downArray = [];
-                                    var down = stair;
-                                    while (down < web.down) {
-                                        downArray.push(down);
-                                        down += stair;
-                                    }
-                                    if (down - web.down < stair / 2) {
-                                        downArray.push(web.down);
-                                    } else {
-                                        if (downArray.length > 0) {
-                                            downArray[downArray.length - 1] = web.down;
-                                        } else {
-                                            downArray.push(web.down);
-                                        }
-                                    }
-                                    console.log(downArray);
-                                    var result = [-web.mid];
-                                    var temp = web.mid;
-                                    upArray.forEach(function (v) {
-                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
-                                    });
-                                    temp = result[0];
-                                    result[0] = -result[0];
-                                    upArray.forEach(function (v) {
-                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
-                                    });
-                                    temp = result[0];
-                                    result[0] = -result[0];
-                                    upArray.forEach(function (v) {
-                                        return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
-                                    });
-                                    result[0] = -result[0];
-                                    temp = web.mid;
-                                    downArray.forEach(function (v) {
-                                        return result.push(temp / Math.pow(1 + web.single, v));
-                                    });
-                                    temp = result[result.length - 1];
-                                    result[result.length - 1] = -result[result.length - 1];
-                                    downArray.forEach(function (v) {
-                                        return result.push(temp / Math.pow(1 + web.single, v));
-                                    });
-                                    temp = result[result.length - 1];
-                                    result[result.length - 1] = -result[result.length - 1];
-                                    downArray.forEach(function (v) {
-                                        return result.push(temp / Math.pow(1 + web.single, v));
-                                    });
-                                    result[result.length - 1] = -result[result.length - 1];
-                                    return result;
-                                };
-                                web.arr = calWeb();
-                                console.log(web);
-                                return web;
-                            };
-                            var web = calStair();
+                            var web = calStair(raw_arr, loga, min);
+                            console.log(web);
                             return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id }, { $set: { web: web } }).then(function (item) {
                                 console.log(item);
                                 if (!web) {
@@ -3854,18 +3721,6 @@ exports.default = {
                                 }
                                 //update total
                                 var restTest = function restTest() {
-                                    var web1 = null;
-                                    if (raw_arr.length >= 250) {
-                                        web1 = calStair(250);
-                                    }
-                                    var web2 = null;
-                                    if (raw_arr.length >= 500) {
-                                        web2 = calStair(500);
-                                    }
-                                    var web3 = null;
-                                    if (raw_arr.length >= 750) {
-                                        web3 = calStair(750);
-                                    }
                                     return getStockPrice('twse', items[0].index).then(function (price) {
                                         var year1 = [];
                                         var year2 = [];
@@ -3877,18 +3732,9 @@ exports.default = {
                                         var lastest_rate = 0;
                                         var resultShow = function resultShow(type) {
                                             var str = '';
-                                            var testResult1 = null;
-                                            if (web1) {
-                                                testResult1 = stockTest(raw_arr, web1, type);
-                                            }
-                                            var testResult2 = null;
-                                            if (web2) {
-                                                testResult2 = stockTest(raw_arr, web2, type, testResult1.start + 1);
-                                            }
-                                            var testResult3 = null;
-                                            if (web3) {
-                                                testResult3 = stockTest(raw_arr, web3, type, testResult2.start + 1);
-                                            }
+                                            var testResult1 = stockTest(raw_arr, loga, min, type);
+                                            var testResult2 = stockTest(raw_arr, loga, min, type, testResult1.start + 1);
+                                            var testResult3 = stockTest(raw_arr, loga, min, type, testResult2.start + 1);
                                             if (testResult1) {
                                                 year1.push(testResult1.str);
                                             }
@@ -3949,8 +3795,8 @@ exports.default = {
                                             }
                                             ret_str1.push(str);
                                         };
-                                        for (var _i27 = 15; _i27 >= 0; _i27--) {
-                                            resultShow(_i27);
+                                        for (var _i25 = 15; _i25 >= 0; _i25--) {
+                                            resultShow(_i25);
                                         }
                                         console.log('year1');
                                         year1.forEach(function (v) {
@@ -4312,9 +4158,9 @@ exports.default = {
 
                             try {
                                 for (var _iterator8 = (0, _getIterator3.default)(group), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                                    var _i28 = _step8.value;
+                                    var _i26 = _step8.value;
 
-                                    if (_i28.end - _i28.start > 33) {
+                                    if (_i26.end - _i26.start > 33) {
                                         var _iteratorNormalCompletion9 = true;
                                         var _didIteratorError9 = false;
                                         var _iteratorError9 = undefined;
@@ -4343,7 +4189,7 @@ exports.default = {
                                         }
 
                                         return final_group;
-                                    } else if (_i28.end - _i28.start > 13) {
+                                    } else if (_i26.end - _i26.start > 13) {
                                         group_num++;
                                         if (group_num > 2) {
                                             var _iteratorNormalCompletion10 = true;
@@ -4352,10 +4198,10 @@ exports.default = {
 
                                             try {
                                                 for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                                    var _j4 = _step10.value;
+                                                    var _j2 = _step10.value;
 
-                                                    if (_j4.end - _j4.start > 13) {
-                                                        final_group.push(_j4);
+                                                    if (_j2.end - _j2.start > 13) {
+                                                        final_group.push(_j2);
                                                     }
                                                 }
                                             } catch (err) {
@@ -4429,8 +4275,8 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var final_arr = [];
-                            for (var _i29 = 0; _i29 < 100; _i29++) {
-                                final_arr[_i29] = 0;
+                            for (var _i27 = 0; _i27 < 100; _i27++) {
+                                final_arr[_i27] = 0;
                             }
                             var diff = (max - min) / 100;
                             var _iteratorNormalCompletion11 = true;
@@ -4439,12 +4285,12 @@ exports.default = {
 
                             try {
                                 for (var _iterator11 = (0, _getIterator3.default)(raw_arr), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                                    var _i32 = _step11.value;
+                                    var _i30 = _step11.value;
 
-                                    var e = Math.ceil((_i32.h - min) / diff);
-                                    var s = Math.floor((_i32.l - min) / diff);
+                                    var e = Math.ceil((_i30.h - min) / diff);
+                                    var s = Math.floor((_i30.l - min) / diff);
                                     for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i32.v;
+                                        final_arr[j] += _i30.v;
                                     }
                                 }
                             } catch (err) {
@@ -4466,11 +4312,11 @@ exports.default = {
                                 return a - b;
                             });
                             var interval = null;
-                            for (var _i30 = 19; _i30 > 0; _i30--) {
-                                interval = group_interval(_i30, 5, final_arr, sort_arr);
+                            for (var _i28 = 19; _i28 > 0; _i28--) {
+                                interval = group_interval(_i28, 5, final_arr, sort_arr);
                                 if (interval) {
                                     console.log(interval);
-                                    console.log(_i30);
+                                    console.log(_i28);
                                     break;
                                 }
                             }
@@ -4479,11 +4325,11 @@ exports.default = {
                                 var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                 var fint = lint;
                                 var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                                for (var _i31 = 1; _i31 < interval.length; _i31++) {
-                                    llow = Math.ceil(((interval[_i31].start - 1) * diff + min) * 100) / 100;
+                                for (var _i29 = 1; _i29 < interval.length; _i29++) {
+                                    llow = Math.ceil(((interval[_i29].start - 1) * diff + min) * 100) / 100;
                                     lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                     fint = lint < fint ? lint : fint;
-                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i31].end * diff + min) * 100) / 100;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i29].end * diff + min) * 100) / 100;
                                 }
                                 ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
                                 console.log('done');
@@ -5463,7 +5309,7 @@ exports.default = {
             var updateTotal = {};
             var removeTotal = [];
             var single = function single(v) {
-                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?\s*(cost)?/);
+                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];
@@ -5499,122 +5345,121 @@ exports.default = {
                     } else {
                         var is_find = false;
 
-                        var _loop3 = function _loop3(_i33) {
-                            if (cmd[1] === items[_i33].index) {
+                        var _loop3 = function _loop3(_i31) {
+                            if (cmd[1] === items[_i31].index) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
-                                    var newWeb = adjustWeb(items[_i33].web, items[_i33].mid, +cmd[2]);
+                                    var newWeb = adjustWeb(items[_i31].web, items[_i31].mid, +cmd[2]);
                                     if (!newWeb) {
                                         return {
-                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i33].mid * (items[_i33].web.length - 1) / 3)))
+                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i31].mid * (items[_i31].web.length - 1) / 3)))
                                         };
                                     }
-                                    items[_i33].web = newWeb.arr;
-                                    items[_i33].mid = newWeb.mid;
-                                    items[_i33].times = newWeb.times;
-                                    items[_i33].amount = items[_i33].amount + +cmd[2] - items[_i33].orig;
-                                    items[_i33].orig = +cmd[2];
-                                    if (items[_i33]._id) {
-                                        if (updateTotal[items[_i33]._id]) {
-                                            updateTotal[items[_i33]._id].web = items[_i33].web;
-                                            updateTotal[items[_i33]._id].mid = items[_i33].mid;
-                                            updateTotal[items[_i33]._id].times = items[_i33].times;
-                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
-                                            updateTotal[items[_i33]._id].orig = items[_i33].orig;
+                                    items[_i31].web = newWeb.arr;
+                                    items[_i31].mid = newWeb.mid;
+                                    items[_i31].times = newWeb.times;
+                                    items[_i31].amount = items[_i31].amount + +cmd[2] - items[_i31].orig;
+                                    items[_i31].orig = +cmd[2];
+                                    if (items[_i31]._id) {
+                                        if (updateTotal[items[_i31]._id]) {
+                                            updateTotal[items[_i31]._id].web = items[_i31].web;
+                                            updateTotal[items[_i31]._id].mid = items[_i31].mid;
+                                            updateTotal[items[_i31]._id].times = items[_i31].times;
+                                            updateTotal[items[_i31]._id].amount = items[_i31].amount;
+                                            updateTotal[items[_i31]._id].orig = items[_i31].orig;
                                         } else {
-                                            updateTotal[items[_i33]._id] = {
-                                                web: items[_i33].web,
-                                                mid: items[_i33].mid,
-                                                times: items[_i33].times,
-                                                amount: items[_i33].amount,
-                                                orig: items[_i33].orig
+                                            updateTotal[items[_i31]._id] = {
+                                                web: items[_i31].web,
+                                                mid: items[_i31].mid,
+                                                times: items[_i31].times,
+                                                amount: items[_i31].amount,
+                                                orig: items[_i31].orig
                                             };
                                         }
                                     }
                                 } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
                                     //} else if (cmd[4]) {
-                                    items[_i33].count = +cmd[2];
-                                    remain = remain + items[_i33].orig - items[_i33].amount - +cmd[3];
-                                    items[_i33].amount = items[_i33].orig - +cmd[3];
+                                    items[_i31].count = +cmd[2];
+                                    remain = remain + items[_i31].orig - items[_i31].amount - +cmd[3];
+                                    items[_i31].amount = items[_i31].orig - +cmd[3];
                                     updateTotal[totalId] = { amount: remain };
-                                    if (items[_i33]._id) {
-                                        if (updateTotal[items[_i33]._id]) {
-                                            updateTotal[items[_i33]._id].count = items[_i33].count;
-                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                    if (items[_i31]._id) {
+                                        if (updateTotal[items[_i31]._id]) {
+                                            updateTotal[items[_i31]._id].count = items[_i31].count;
+                                            updateTotal[items[_i31]._id].amount = items[_i31].amount;
                                         } else {
-                                            updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount };
+                                            updateTotal[items[_i31]._id] = { count: items[_i31].count, amount: items[_i31].amount };
                                         }
                                     }
                                 } else if (!isNaN(+cmd[2])) {
-                                    var orig_count = items[_i33].count;
-                                    items[_i33].count += +cmd[2];
-                                    if (items[_i33].count < 0) {
+                                    var orig_count = items[_i31].count;
+                                    items[_i31].count += +cmd[2];
+                                    if (items[_i31].count < 0) {
                                         cmd[2] = -orig_count;
-                                        items[_i33].count = 0;
+                                        items[_i31].count = 0;
                                     }
                                     return {
-                                        v: getStockPrice('twse', items[_i33].index).then(function (price) {
+                                        v: getStockPrice('twse', items[_i31].index).then(function (price) {
                                             price = !isNaN(+cmd[3]) ? +cmd[3] : price;
                                             var new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
-                                            items[_i33].amount -= new_cost;
+                                            items[_i31].amount -= new_cost;
                                             remain -= new_cost;
                                             updateTotal[totalId] = { amount: remain };
                                             var time = Math.round(new Date().getTime() / 1000);
                                             var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
                                             if (tradeType === 'buy') {
                                                 var is_insert = false;
-                                                for (var k = 0; k < items[_i33].previous.buy.length; k++) {
-                                                    if (price < items[_i33].previous.buy[k].price) {
-                                                        items[_i33].previous.buy.splice(k, 0, { price: price, time: time });
+                                                for (var k = 0; k < items[_i31].previous.buy.length; k++) {
+                                                    if (price < items[_i31].previous.buy[k].price) {
+                                                        items[_i31].previous.buy.splice(k, 0, { price: price, time: time });
                                                         is_insert = true;
                                                         break;
                                                     }
                                                 }
                                                 if (!is_insert) {
-                                                    items[_i33].previous.buy.push({ price: price, time: time });
+                                                    items[_i31].previous.buy.push({ price: price, time: time });
                                                 }
-                                                items[_i33].previous = {
+                                                items[_i31].previous = {
                                                     price: price,
                                                     time: time,
                                                     type: 'buy',
-                                                    buy: items[_i33].previous.buy.filter(function (v) {
+                                                    buy: items[_i31].previous.buy.filter(function (v) {
                                                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                     }),
-                                                    sell: items[_i33].previous.sell,
-                                                    count: items[_i33].count,
-                                                    amount: items[_i33].amount
+                                                    sell: items[_i31].previous.sell
                                                 };
                                             } else if (tradeType === 'sell') {
                                                 var _is_insert = false;
-                                                for (var _k = 0; _k < items[_i33].previous.sell.length; _k++) {
-                                                    if (price > items[_i33].previous.sell[_k].price) {
-                                                        items[_i33].previous.sell.splice(_k, 0, { price: price, time: time });
+                                                for (var _k = 0; _k < items[_i31].previous.sell.length; _k++) {
+                                                    if (price > items[_i31].previous.sell[_k].price) {
+                                                        items[_i31].previous.sell.splice(_k, 0, { price: price, time: time });
                                                         _is_insert = true;
                                                         break;
                                                     }
                                                 }
                                                 if (!_is_insert) {
-                                                    items[_i33].previous.sell.push({ price: price, time: time });
+                                                    items[_i31].previous.sell.push({ price: price, time: time });
                                                 }
-                                                items[_i33].previous = {
+                                                items[_i31].previous = {
                                                     price: price,
                                                     time: time,
                                                     type: 'sell',
-                                                    sell: items[_i33].previous.sell.filter(function (v) {
+                                                    sell: items[_i31].previous.sell.filter(function (v) {
                                                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                     }),
-                                                    buy: items[_i33].previous.buy,
-                                                    count: items[_i33].count,
-                                                    amount: items[_i33].amount
+                                                    buy: items[_i31].previous.buy
                                                 };
                                             }
-                                            if (items[_i33]._id) {
-                                                if (updateTotal[items[_i33]._id]) {
-                                                    updateTotal[items[_i33]._id].count = items[_i33].count;
-                                                    updateTotal[items[_i33]._id].amount = items[_i33].amount;
-                                                    updateTotal[items[_i33]._id].previous = items[_i33].previous;
+                                            if (items[_i31]._id) {
+                                                if (updateTotal[items[_i31]._id]) {
+                                                    updateTotal[items[_i31]._id].count = items[_i31].count;
+                                                    updateTotal[items[_i31]._id].amount = items[_i31].amount;
+                                                    updateTotal[items[_i31]._id].previous = items[_i31].previous;
                                                 } else {
-                                                    updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount, previous: items[_i33].previous };
+                                                    updateTotal[items[_i31]._id] = { count: items[_i31].count,
+                                                        amount: items[_i31].amount,
+                                                        previous: items[_i31].previous
+                                                    };
                                                 }
                                             }
                                         })
@@ -5640,8 +5485,8 @@ exports.default = {
                             }
                         };
 
-                        _loop4: for (var _i33 in items) {
-                            var _ret8 = _loop3(_i33);
+                        _loop4: for (var _i31 in items) {
+                            var _ret8 = _loop3(_i31);
 
                             switch (_ret8) {
                                 case 'break':
@@ -5686,7 +5531,7 @@ exports.default = {
                                                 //top: Math.floor(price * 1.2 * 100) / 100,
                                                 //bottom: Math.floor(price * 0.95 * 100) / 100,
                                                 price: price,
-                                                previous: { buy: [], sell: [], amount: +cmd[2], count: 0 },
+                                                previous: { buy: [], sell: [] },
                                                 newMid: []
                                             });
                                             //remain -= cost;
@@ -6049,7 +5894,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     });
                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                 }
-                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.wType);
+                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
                 while (suggestion.resetWeb) {
                     if (item.newMid.length === 0) {
                         item.tmpPT = {
@@ -6063,7 +5908,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     newArr = item.web.map(function (v) {
                         return v * item.newMid[item.newMid.length - 1] / item.mid;
                     });
-                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.wType);
+                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
                 }
                 var count = 0;
                 var amount = item.amount;
@@ -6275,18 +6120,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                     if (Number(index)) {
                                         var exist = false;
 
-                                        var _loop5 = function _loop5(_i34) {
-                                            if (stock_list[_i34].index === index) {
+                                        var _loop5 = function _loop5(_i32) {
+                                            if (stock_list[_i32].index === index) {
                                                 exist = true;
                                                 tag.forEach(function (v) {
-                                                    return stock_list[_i34].tag.push(v);
+                                                    return stock_list[_i32].tag.push(v);
                                                 });
                                                 return 'break';
                                             }
                                         };
 
-                                        for (var _i34 = 0; _i34 < stock_list.length; _i34++) {
-                                            var _ret11 = _loop5(_i34);
+                                        for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
+                                            var _ret11 = _loop5(_i32);
 
                                             if (_ret11 === 'break') break;
                                         }
@@ -6312,11 +6157,15 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
     }
 };
 
-var stockProcess = function stockProcess(price, priceArray) {
+var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
     var priceTimes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : { buy: [], sell: [] };
-    var pType = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var now = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : Math.round(new Date().getTime() / 1000);
+    var pAmount = arguments[4];
+    var pCount = arguments[5];
+    var pType = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
+    var ttime = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : _constants.TRADE_TIME;
+    var tinterval = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_INTERVAL;
+    var now = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : Math.round(new Date().getTime() / 1000);
 
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
@@ -6410,14 +6259,14 @@ var stockProcess = function stockProcess(price, priceArray) {
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'buy') {
-                if (now - previous.time >= _constants.TRADE_TIME + (nowBP - previousP) * _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= ttime + (nowBP - previousP) * tinterval) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
                 } else {
                     is_buy = false;
                 }
             } else if (previous.type === 'sell') {
-                if (now - previous.time >= _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= tinterval) {
                     is_sell = true;
                 } else {
                     is_sell = false;
@@ -6453,14 +6302,14 @@ var stockProcess = function stockProcess(price, priceArray) {
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'sell') {
-                if (now - previous.time >= _constants.TRADE_TIME + (_previousP - nowSP) * _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= ttime + (_previousP - nowSP) * tinterval) {
                     is_sell = true;
                     sTimes = sTimes * (_previousP - nowSP + 1);
                 } else {
                     is_sell = false;
                 }
             } else if (previous.type === 'buy') {
-                if (now - previous.time >= _constants.TRADE_INTERVAL) {
+                if (now - previous.time >= tinterval) {
                     is_buy = true;
                 } else {
                     is_buy = false;
@@ -6512,10 +6361,10 @@ var stockProcess = function stockProcess(price, priceArray) {
     sCount = sTimes * sCount * priceTimes;
     var finalSell = function finalSell() {
         if (previous.count && sCount) {
-            var remain = previous.count - sCount;
-            if (previous.count < 3 * priceTimes) {
+            var remain = pCount - sCount;
+            if (pCount < 3 * priceTimes) {
                 sCount = priceTimes;
-            } else if (previous.count < 5 * priceTimes) {
+            } else if (pCount < 5 * priceTimes) {
                 sCount = 2 * priceTimes;
             } else if (remain < 2 * priceTimes) {
                 sCount = sCount - 2 * priceTimes + remain;
@@ -6523,8 +6372,8 @@ var stockProcess = function stockProcess(price, priceArray) {
         }
     };
     var finalBuy = function finalBuy() {
-        if (previous.amount && bCount) {
-            var nowC = Math.floor(previous.amount / buy);
+        if (pAmount && bCount) {
+            var nowC = Math.floor(pAmount / buy);
             var remain = nowC - bCount;
             if (nowC < 3 * priceTimes) {
                 bCount = priceTimes;
@@ -6692,15 +6541,19 @@ var stockProcess = function stockProcess(price, priceArray) {
     };
 };
 
-var stockTest = function stockTest(his_arr, web) {
-    var pType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
-    var start = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-    var len = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 250;
+var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
+    var pType = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    var start = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
+    var len = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 250;
+    var rinterval = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : _constants.RANGE_INTERVAL;
+    var fee = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : _constants.TRADE_FEE;
+    var ttime = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_TIME;
+    var tinterval = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_INTERVAL;
+    var resetWeb = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 5;
+    var just = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : false;
 
     var now = Math.round(new Date().getTime() / 1000);
     //let is_start = false;
-    var maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-    var amount = maxAmount;
     var count = 0;
     var privious = {};
     var priviousTrade = { buy: [], sell: [] };
@@ -6716,9 +6569,24 @@ var stockTest = function stockTest(his_arr, web) {
     //console.log(amount);
     //console.log(count);
     var startI = start + len - 1;
+    var checkweb = resetWeb;
+    var web = null;
+    var maxAmount = 0;
+    var amount = 0;
     for (; startI < his_arr.length - 1; startI++) {
-        //if (his_arr[startI].h < web.mid * 0.9) {
-        if (his_arr[startI].h < web.mid) {
+        if (checkweb > resetWeb - 1) {
+            checkweb = 0;
+            web = calStair(his_arr, loga, min, startI);
+            maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+            amount = maxAmount;
+        } else {
+            checkweb++;
+        }
+        //if (his_arr[startI].h < mid * 0.9) {
+        if (just || his_arr[startI].h < web.mid) {
+            /*console.log('max');
+            console.log(web.mid);
+            console.log(web.arr.length);*/
             privious = his_arr[startI + 1];
             var tmpAmount = amount - maxAmount / 2;
             while (tmpAmount - his_arr[startI + 1].h > 0) {
@@ -6726,8 +6594,6 @@ var stockTest = function stockTest(his_arr, web) {
                 tmpAmount = amount - maxAmount / 2;
                 count++;
             }
-            priviousTrade.amount = amount;
-            priviousTrade.count = count;
             /*console.log(his_arr[startI + 1].h);
             console.log(amount);
             console.log(maxAmount);
@@ -6750,6 +6616,16 @@ var stockTest = function stockTest(his_arr, web) {
             privious = his_arr[i + 1];
         }*/
         //if (is_start) {
+        if (checkweb > resetWeb - 1) {
+            checkweb = 0;
+            web = calStair(his_arr, loga, min, i);
+            var newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
+            web.arr = newWeb.arr;
+            web.mid = newWeb.mid;
+            web.times = newWeb.times;
+        } else {
+            checkweb++;
+        }
         if (his_arr[i].h && his_arr[i].l && privious.h && privious.l) {
             var hh = privious.h - his_arr[i].h;
             var ll = his_arr[i].l - privious.l;
@@ -6773,7 +6649,7 @@ var stockTest = function stockTest(his_arr, web) {
         var checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         while (newMid.length > 0 && (newMid[newMid.length - 1] > checkMid && price < checkMid || newMid[newMid.length - 1] <= checkMid && price > checkMid)) {
             newMid.pop();
-            if (newMid.length === 0 && now - item.tmpPT.time < _constants.RANGE_INTERVAL) {
+            if (newMid.length === 0 && now - tmpPT.time < rinterval) {
                 priviousTrade.price = tmpPT.price;
                 priviousTrade.time = tmpPT.time;
                 priviousTrade.type = tmpPT.type;
@@ -6786,7 +6662,7 @@ var stockTest = function stockTest(his_arr, web) {
             });
             checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         }
-        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, pType, now - i * 86400);
+        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, ttime, tinterval, now - i * 86400);
         while (suggest.resetWeb) {
             if (newMid.length === 0) {
                 tmpPT = {
@@ -6803,7 +6679,7 @@ var stockTest = function stockTest(his_arr, web) {
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             });
-            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, pType, now - i * 86400);
+            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, ttime, tinterval, pType, now - i * 86400);
             //console.log(price);
             //console.log(suggest);
             //console.log(newArr);
@@ -6837,9 +6713,7 @@ var stockTest = function stockTest(his_arr, web) {
                     buy: priviousTrade.buy.filter(function (v) {
                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                     }),
-                    sell: priviousTrade.sell,
-                    count: count,
-                    amount: amount
+                    sell: priviousTrade.sell
                 };
             } else if (tradeType === 'sell') {
                 var _is_insert2 = false;
@@ -6860,9 +6734,7 @@ var stockTest = function stockTest(his_arr, web) {
                     sell: priviousTrade.sell.filter(function (v) {
                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                     }),
-                    buy: priviousTrade.buy,
-                    count: count,
-                    amount: amount
+                    buy: priviousTrade.buy
                 };
             }
         };
@@ -6919,7 +6791,7 @@ var stockTest = function stockTest(his_arr, web) {
         } else if (suggest.type === 3) {
             if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
                 var _origCount = count;
-                for (var _j5 = 0; _j5 < suggest.bCount; _j5++) {
+                for (var _j3 = 0; _j3 < suggest.bCount; _j3++) {
                     if (amount - suggest.buy <= 0) {
                         break;
                     } else {
@@ -6944,7 +6816,7 @@ var stockTest = function stockTest(his_arr, web) {
         } else if (suggest.type === 6) {
             if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
                 var _origCount2 = count;
-                for (var _j6 = 0; _j6 < suggest.bCount; _j6++) {
+                for (var _j4 = 0; _j4 < suggest.bCount; _j4++) {
                     if (amount - suggest.buy <= 0) {
                         break;
                     } else {
@@ -6968,7 +6840,7 @@ var stockTest = function stockTest(his_arr, web) {
             }
         } else if (suggest.buy && his_arr[i - 1].l <= suggest.buy) {
             var _origCount3 = count;
-            for (var _j7 = 0; _j7 < suggest.bCount; _j7++) {
+            for (var _j5 = 0; _j5 < suggest.bCount; _j5++) {
                 if (amount - suggest.buy <= 0) {
                     break;
                 } else {
@@ -6995,8 +6867,8 @@ var stockTest = function stockTest(his_arr, web) {
             }
         } else */if (suggest.type === 9) {
             if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
-                for (var _j8 = 0; _j8 < suggest.sCount; _j8++) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                for (var _j6 = 0; _j6 < suggest.sCount; _j6++) {
+                    amount += suggest.sell * (1 - fee);
                     sellTrade++;
                     count--;
                     if (count <= 0) {
@@ -7005,8 +6877,8 @@ var stockTest = function stockTest(his_arr, web) {
                 }
                 if (amount < maxAmount / 8) {
                     var _tmpAmount9 = maxAmount / 4 - amount;
-                    while (_tmpAmount9 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    while (_tmpAmount9 - suggest.sell * (1 - fee) > 0) {
+                        amount += suggest.sell * (1 - fee);
                         _tmpAmount9 = maxAmount / 4 - amount;
                         sellTrade++;
                         count--;
@@ -7020,8 +6892,8 @@ var stockTest = function stockTest(his_arr, web) {
             }
         } else if (suggest.type === 5) {
             if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
-                for (var _j9 = 0; _j9 < suggest.sCount; _j9++) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                for (var _j7 = 0; _j7 < suggest.sCount; _j7++) {
+                    amount += suggest.sell * (1 - fee);
                     sellTrade++;
                     count--;
                     if (count <= 0) {
@@ -7030,8 +6902,8 @@ var stockTest = function stockTest(his_arr, web) {
                 }
                 if (amount < maxAmount * 3 / 8) {
                     var _tmpAmount10 = maxAmount / 2 - amount;
-                    while (_tmpAmount10 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    while (_tmpAmount10 - suggest.sell * (1 - fee) > 0) {
+                        amount += suggest.sell * (1 - fee);
                         _tmpAmount10 = maxAmount / 2 - amount;
                         sellTrade++;
                         count--;
@@ -7045,8 +6917,8 @@ var stockTest = function stockTest(his_arr, web) {
             }
         } else if (suggest.type === 8) {
             if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
-                for (var _j10 = 0; _j10 < suggest.sCount; _j10++) {
-                    amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                for (var _j8 = 0; _j8 < suggest.sCount; _j8++) {
+                    amount += suggest.sell * (1 - fee);
                     sellTrade++;
                     count--;
                     if (count <= 0) {
@@ -7055,8 +6927,8 @@ var stockTest = function stockTest(his_arr, web) {
                 }
                 if (amount < maxAmount * 5 / 8) {
                     var _tmpAmount11 = maxAmount * 3 / 4 - amount;
-                    while (_tmpAmount11 - suggest.sell * (1 - _constants.TRADE_FEE) > 0) {
-                        amount += suggest.sell * (1 - _constants.TRADE_FEE);
+                    while (_tmpAmount11 - suggest.sell * (1 - fee) > 0) {
+                        amount += suggest.sell * (1 - fee);
                         _tmpAmount11 = maxAmount * 3 / 4 - amount;
                         sellTrade++;
                         count--;
@@ -7069,8 +6941,8 @@ var stockTest = function stockTest(his_arr, web) {
                 //console.log(priviousTrade.win);
             }
         } else if (count > 0 && suggest.sell && his_arr[i - 1].h >= suggest.sell) {
-            for (var _j11 = 0; _j11 < suggest.sCount; _j11++) {
-                amount += suggest.sell * (1 - _constants.TRADE_FEE);
+            for (var _j9 = 0; _j9 < suggest.sCount; _j9++) {
+                amount += suggest.sell * (1 - fee);
                 count--;
                 sellTrade++;
                 if (count <= 0) {
@@ -7085,9 +6957,9 @@ var stockTest = function stockTest(his_arr, web) {
         privious = his_arr[i];
         //}
     }
-    console.log(amount);
-    console.log(count);
-    amount += his_arr[startI - len + 1].l * count * (1 - _constants.TRADE_FEE);
+    //console.log(amount);
+    //console.log(count);
+    amount += his_arr[startI - len + 1].l * count * (1 - fee);
     count = 0;
     //console.log('result');
     //console.log(amount);
@@ -7103,7 +6975,7 @@ var stockTest = function stockTest(his_arr, web) {
     };
 };
 
-var logArray = function logArray(max, min) {
+var logArray = exports.logArray = function logArray(max, min) {
     var pos = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 100;
 
     var logMax = Math.log(max);
@@ -7119,6 +6991,141 @@ var logArray = function logArray(max, min) {
     };
 };
 
+var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
+    var stair_start = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
+    var fee = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : _constants.TRADE_FEE;
+
+    var single_arr = [];
+    var final_arr = [];
+    for (var i = 0; i < 100; i++) {
+        final_arr[i] = 0;
+    }
+    var volsum = 0;
+    for (var _i33 = stair_start; _i33 < raw_arr.length; _i33++) {
+        var s = 0;
+        var e = 100;
+        for (var _j10 = 0; _j10 < 100; _j10++) {
+            if (raw_arr[_i33].l >= loga.arr[_j10]) {
+                s = _j10;
+            }
+            if (raw_arr[_i33].h <= loga.arr[_j10]) {
+                e = _j10;
+                break;
+            }
+        }
+        volsum += raw_arr[_i33].v;
+        single_arr.push((raw_arr[_i33].h - raw_arr[_i33].l) / raw_arr[_i33].h * 100);
+        if (e - s === 0) {
+            final_arr[s] += raw_arr[_i33].v;
+        } else {
+            var v = raw_arr[_i33].v / (e - s);
+            for (var _j11 = s; _j11 < e; _j11++) {
+                final_arr[_j11] += v;
+            }
+        }
+    }
+    var vol = 0;
+    var j = 0;
+    var nd = [];
+    final_arr.forEach(function (v, i) {
+        vol += v;
+        while (vol >= volsum / 100 * _constants.NORMAL_DISTRIBUTION[j] && j < _constants.NORMAL_DISTRIBUTION.length) {
+            //console.log(i);
+            nd.push(i);
+            //nd.push(Math.pow(1 + loga.diff, i) * min);
+            j++;
+        }
+    });
+    var sort_arr = [].concat(single_arr).sort(function (a, b) {
+        return a - b;
+    });
+    //console.log(final_arr);
+    var web = {
+        mid: Math.pow(1 + loga.diff, nd[3]) * min,
+        up: nd[4] - nd[3],
+        down: nd[3] - nd[2],
+        extrem: sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
+        single: loga.diff
+    };
+    if (1 + web.extrem < (1 + fee) * (1 + fee)) {
+        web.extrem = sort_arr[Math.round(sort_arr.length * _constants.NORMAL_DISTRIBUTION[_constants.NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
+        web.ds = 2;
+        if (1 + web.extrem < (1 + fee) * (1 + fee)) {
+            return false;
+        }
+    }
+    var calWeb = function calWeb() {
+        var stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
+        var upArray = [];
+        var up = stair;
+        while (up < web.up) {
+            upArray.push(up);
+            up += stair;
+        }
+        if (up - web.up < stair / 2) {
+            upArray.push(web.up);
+        } else {
+            if (upArray.length > 0) {
+                upArray[upArray.length - 1] = web.up;
+            } else {
+                upArray.push(web.up);
+            }
+        }
+        //console.log(upArray);
+        var downArray = [];
+        var down = stair;
+        while (down < web.down) {
+            downArray.push(down);
+            down += stair;
+        }
+        if (down - web.down < stair / 2) {
+            downArray.push(web.down);
+        } else {
+            if (downArray.length > 0) {
+                downArray[downArray.length - 1] = web.down;
+            } else {
+                downArray.push(web.down);
+            }
+        }
+        //console.log(downArray);
+        var result = [-web.mid];
+        var temp = web.mid;
+        upArray.forEach(function (v) {
+            return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+        });
+        temp = result[0];
+        result[0] = -result[0];
+        upArray.forEach(function (v) {
+            return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+        });
+        temp = result[0];
+        result[0] = -result[0];
+        upArray.forEach(function (v) {
+            return result.splice(0, 0, temp * Math.pow(1 + web.single, v));
+        });
+        result[0] = -result[0];
+        temp = web.mid;
+        downArray.forEach(function (v) {
+            return result.push(temp / Math.pow(1 + web.single, v));
+        });
+        temp = result[result.length - 1];
+        result[result.length - 1] = -result[result.length - 1];
+        downArray.forEach(function (v) {
+            return result.push(temp / Math.pow(1 + web.single, v));
+        });
+        temp = result[result.length - 1];
+        result[result.length - 1] = -result[result.length - 1];
+        downArray.forEach(function (v) {
+            return result.push(temp / Math.pow(1 + web.single, v));
+        });
+        result[result.length - 1] = -result[result.length - 1];
+        return result;
+    };
+    web.arr = calWeb();
+    //console.log(web);
+    return web;
+};
+
 var adjustWeb = function adjustWeb(webArr, webMid) {
     var amount = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
     var force = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
@@ -7129,7 +7136,6 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
             mid: webMid
         };
     }
-    amount = amount;
     var maxAmount = webMid * (webArr.length - 1) / 3 * 2;
     if (amount >= maxAmount) {
         var _count2 = Math.floor(amount / maxAmount);
@@ -7162,7 +7168,7 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
     }
     var new_arr = [];
     var count = 0;
-    console.log(mid);
+    //console.log(mid);
     for (var i = mid; i < webArr.length; i++) {
         if (webArr[i] >= 0) {
             count++;
@@ -7176,16 +7182,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
-        if (webArr[_i35] >= 0) {
+    for (var _i34 = mid - 1; _i34 >= 0; _i34--) {
+        if (webArr[_i34] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i35]);
+                new_arr.splice(0, 0, webArr[_i34]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i35]);
+            new_arr.splice(0, 0, webArr[_i34]);
         }
     }
     return {

@@ -3345,243 +3345,103 @@ export default {
                         }
                         console.log(min_vol);
                         const loga = logArray(max, min);
-                        //console.log(loga);
-                        const calStair = (stair_start = 0) => {
-                            const single_arr = [];
-                            const final_arr = [];
-                            for (let i = 0; i < 100; i++) {
-                                final_arr[i] = 0;
-                            }
-                            let volsum = 0;
-                            for (let i = stair_start; i < raw_arr.length; i++) {
-                                let s = 0;
-                                let e = 100;
-                                for (let j = 0; j < 100; j++) {
-                                    if (raw_arr[i].l >= loga.arr[j]) {
-                                        s = j;
-                                    }
-                                    if (raw_arr[i].h <= loga.arr[j]) {
-                                        e = j;
-                                        break;
-                                    }
-                                }
-                                volsum += raw_arr[i].v;
-                                single_arr.push((raw_arr[i].h - raw_arr[i].l) / raw_arr[i].h * 100);
-                                if ((e - s) === 0) {
-                                    final_arr[s] += raw_arr[i].v;
-                                } else {
-                                    const v = raw_arr[i].v / (e - s);
-                                    for (let j = s; j < e; j++) {
-                                        final_arr[j] += v;
-                                    }
-                                }
-                            }
-                            let vol = 0;
-                            let j = 0;
-                            const nd = [];
-                            final_arr.forEach((v, i) => {
-                                vol += v;
-                                while (vol >= (volsum / 100 * NORMAL_DISTRIBUTION[j]) && j < NORMAL_DISTRIBUTION.length) {
-                                    //console.log(i);
-                                    nd.push(i);
-                                    //nd.push(Math.pow(1 + loga.diff, i) * min);
-                                    j++;
-                                }
-                            });
-                            const sort_arr = [...single_arr].sort((a,b) => a - b);
-                            //console.log(final_arr);
-                            const web = {
-                                mid: Math.pow(1 + loga.diff, nd[3]) * min,
-                                up: nd[4] - nd[3],
-                                down: nd[3] - nd[2],
-                                extrem: sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
-                                single: loga.diff,
-                            }
-                            if ((1 + web.extrem) < (1 + TRADE_FEE) * (1 + TRADE_FEE)) {
-                                web.extrem = sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
-                                web.ds = 2;
-                                if ((1 + web.extrem) < (1 + TRADE_FEE) * (1 + TRADE_FEE)) {
-                                    return false;
-                                }
-                            }
-                            const calWeb = () => {
-                                const stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
-                                const upArray = [];
-                                let up = stair;
-                                while (up < web.up) {
-                                    upArray.push(up);
-                                    up += stair;
-                                }
-                                if ((up - web.up) < (stair / 2)) {
-                                    upArray.push(web.up);
-                                } else {
-                                    if (upArray.length > 0) {
-                                        upArray[upArray.length - 1] = web.up;
-                                    } else {
-                                        upArray.push(web.up);
-                                    }
-                                }
-                                console.log(upArray);
-                                const downArray = [];
-                                let down = stair;
-                                while (down < web.down) {
-                                    downArray.push(down);
-                                    down += stair;
-                                }
-                                if ((down - web.down) < (stair / 2)) {
-                                    downArray.push(web.down);
-                                } else {
-                                    if (downArray.length > 0) {
-                                        downArray[downArray.length - 1] = web.down;
-                                    } else {
-                                        downArray.push(web.down);
-                                    }
-                                }
-                                console.log(downArray);
-                                const result = [-web.mid];
-                                let temp = web.mid;
-                                upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-                                temp = result[0];
-                                result[0] = -result[0];
-                                upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-                                temp = result[0];
-                                result[0] = -result[0];
-                                upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-                                result[0] = -result[0];
-                                temp = web.mid;
-                                downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-                                temp = result[result.length - 1];
-                                result[result.length - 1] = -result[result.length - 1];
-                                downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-                                temp = result[result.length - 1];
-                                result[result.length - 1] = -result[result.length - 1];
-                                downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-                                result[result.length - 1] = -result[result.length - 1];
-                                return result;
-                            }
-                            web.arr = calWeb();
-                            console.log(web);
-                            return web;
-                        }
-                        const web = calStair();
+                        const web = calStair(raw_arr, loga, min);
+                        console.log(web);
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
                             console.log(item);
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
                             //update total
-                            const restTest = () => {
-                                let web1 = null;
-                                if (raw_arr.length >= 250) {
-                                    web1 = calStair(250);
-                                }
-                                let web2 = null;
-                                if (raw_arr.length >= 500) {
-                                    web2 = calStair(500);
-                                }
-                                let web3 = null;
-                                if (raw_arr.length >= 750) {
-                                    web3 = calStair(750);
-                                }
-                                return getStockPrice('twse', items[0].index).then(price => {
-                                    const year1 = [];
-                                    const year2 = [];
-                                    const year3 = [];
-                                    const ret_str1 = [];
-                                    let ret_str = '';
-                                    let best_rate = 0;
-                                    let lastest_type = 0;
-                                    let lastest_rate = 0;
-                                    const resultShow = type => {
-                                        let str = '';
-                                        let testResult1 = null;
-                                        if (web1) {
-                                            testResult1 = stockTest(raw_arr, web1, type);
-                                        }
-                                        let testResult2 = null;
-                                        if (web2) {
-                                            testResult2 = stockTest(raw_arr, web2, type, testResult1.start + 1);
-                                        }
-                                        let testResult3 = null;
-                                        if (web3) {
-                                            testResult3 = stockTest(raw_arr, web3, type, testResult2.start + 1);
-                                        }
-                                        if (testResult1) {
-                                            year1.push(testResult1.str);
-                                        }
+                            const restTest = () => getStockPrice('twse', items[0].index).then(price => {
+                                const year1 = [];
+                                const year2 = [];
+                                const year3 = [];
+                                const ret_str1 = [];
+                                let ret_str = '';
+                                let best_rate = 0;
+                                let lastest_type = 0;
+                                let lastest_rate = 0;
+                                const resultShow = type => {
+                                    let str = '';
+                                    const testResult1 = stockTest(raw_arr, loga, min, type);
+                                    const testResult2 = stockTest(raw_arr, loga, min, type, testResult1.start + 1);
+                                    const testResult3 = stockTest(raw_arr, loga, min, type, testResult2.start + 1);
+                                    if (testResult1) {
+                                        year1.push(testResult1.str);
+                                    }
+                                    if (testResult2) {
+                                        year2.push(testResult2.str);
+                                    }
+                                    if (testResult3) {
+                                        year3.push(testResult3.str);
+                                    }
+                                    if (testResult1) {
+                                        const match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                        let match1 = null;
+                                        let match2 = null;
                                         if (testResult2) {
-                                            year2.push(testResult2.str);
+                                            match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
                                         }
                                         if (testResult3) {
-                                            year3.push(testResult3.str);
+                                            match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
                                         }
-                                        if (testResult1) {
-                                            const match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            let match1 = null;
-                                            let match2 = null;
-                                            if (testResult2) {
-                                                match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                                        let rate = 1;
+                                        let real = 1;
+                                        let count = 0;
+                                        if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                                            rate = rate * (Number(match[3]) + 100) / 100;
+                                            if (!lastest_rate || rate > lastest_rate) {
+                                                lastest_rate = rate;
+                                                lastest_type = type;
                                             }
-                                            if (testResult3) {
-                                                match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                            }
-                                            let rate = 1;
-                                            let real = 1;
-                                            let count = 0;
-                                            if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                                rate = rate * (Number(match[3]) + 100) / 100;
-                                                if (!lastest_rate || rate > lastest_rate) {
-                                                    lastest_rate = rate;
-                                                    lastest_type = type;
-                                                }
-                                                real = real * (Number(match[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                                rate = rate * (Number(match1[3]) + 100) / 100;
-                                                real = real * (Number(match1[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                                rate = rate * (Number(match2[3]) + 100) / 100;
-                                                real = real * (Number(match2[4]) + 100) / 100;
-                                                count++;
-                                            }
-                                            str = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
-                                            if (count !== 0) {
-                                                rate = Math.round(rate * 10000 - 10000) / 100;
-                                                real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                                const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                                const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                                str += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
-                                                if (!best_rate || rate > best_rate) {
-                                                    best_rate = rate;
-                                                    ret_str = str;
-                                                }
-                                            } else {
-                                                str += ' no less than mid point';
+                                            real = real * (Number(match[4]) + 100) / 100;
+                                            count++;
+                                        }
+                                        if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                                            rate = rate * (Number(match1[3]) + 100) / 100;
+                                            real = real * (Number(match1[4]) + 100) / 100;
+                                            count++;
+                                        }
+                                        if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                                            rate = rate * (Number(match2[3]) + 100) / 100;
+                                            real = real * (Number(match2[4]) + 100) / 100;
+                                            count++;
+                                        }
+                                        str = `${Math.round((price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
+                                        if (count !== 0) {
+                                            rate = Math.round(rate * 10000 - 10000) / 100;
+                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                            const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                                            const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                                            str += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
+                                            if (!best_rate || rate > best_rate) {
+                                                best_rate = rate;
+                                                ret_str = str;
                                             }
                                         } else {
-                                            str = 'less than a year';
+                                            str += ' no less than mid point';
                                         }
-                                        ret_str1.push(str);
+                                    } else {
+                                        str = 'less than a year';
                                     }
-                                    for (let i = 15; i >= 0; i--) {
-                                        resultShow(i);
-                                    }
-                                    console.log('year1');
-                                    year1.forEach(v => console.log(v));
-                                    console.log('year2');
-                                    year2.forEach(v => console.log(v));
-                                    console.log('year3');
-                                    year3.forEach(v => console.log(v));
-                                    ret_str1.forEach(v => console.log(v));
-                                    console.log(lastest_type);
-                                    //amount real strategy times stoploss (no less than mid point)
-                                    console.log('done');
-                                    return [interval_data, ret_str, lastest_type];
-                                });
-                            }
+                                    ret_str1.push(str);
+                                }
+                                for (let i = 15; i >= 0; i--) {
+                                    resultShow(i);
+                                }
+                                console.log('year1');
+                                year1.forEach(v => console.log(v));
+                                console.log('year2');
+                                year2.forEach(v => console.log(v));
+                                console.log('year3');
+                                year3.forEach(v => console.log(v));
+                                ret_str1.forEach(v => console.log(v));
+                                console.log(lastest_type);
+                                //amount real strategy times stoploss (no less than mid point)
+                                console.log('done');
+                                return [interval_data, ret_str, lastest_type];
+                            });
                             return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
                                 const recur_web = (index, type) => {
                                     if (index >= item.length) {
@@ -4646,7 +4506,7 @@ export default {
             const updateTotal = {};
             const removeTotal = [];
             const single = v => {
-                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+|amount)?\s*(cost)?/)
+                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];
@@ -4744,8 +4604,6 @@ export default {
                                                 type: 'buy',
                                                 buy: items[i].previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
                                                 sell: items[i].previous.sell,
-                                                count: items[i].count,
-                                                amount: items[i].amount,
                                             }
                                         } else if (tradeType === 'sell') {
                                             let is_insert = false;
@@ -4765,8 +4623,6 @@ export default {
                                                 type: 'sell',
                                                 sell: items[i].previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
                                                 buy: items[i].previous.buy,
-                                                count: items[i].count,
-                                                amount: items[i].amount,
                                             }
                                         }
                                         if (items[i]._id) {
@@ -4775,7 +4631,10 @@ export default {
                                                 updateTotal[items[i]._id].amount = items[i].amount;
                                                 updateTotal[items[i]._id].previous = items[i].previous;
                                             } else {
-                                                updateTotal[items[i]._id] = {count: items[i].count, amount: items[i].amount, previous: items[i].previous};
+                                                updateTotal[items[i]._id] = {count: items[i].count,
+                                                    amount: items[i].amount,
+                                                    previous: items[i].previous,
+                                                };
                                             }
                                         }
                                     });
@@ -4832,7 +4691,7 @@ export default {
                                             //top: Math.floor(price * 1.2 * 100) / 100,
                                             //bottom: Math.floor(price * 0.95 * 100) / 100,
                                             price,
-                                            previous: {buy: [], sell: [], amount: +cmd[2], count: 0},
+                                            previous: {buy: [], sell: []},
                                             newMid: [],
                                             //high: price,
                                         })
@@ -5076,7 +4935,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
             checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         }
-        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.wType);
+        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
         while(suggestion.resetWeb) {
             if (item.newMid.length === 0) {
                 item.tmpPT = {
@@ -5088,7 +4947,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             item.previous.time = 0;
             item.newMid.push(suggestion.newMid);
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.wType);
+            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
         }
         let count = 0;
         let amount = item.amount;
@@ -5314,7 +5173,7 @@ export const getStockListV2 = (type, year, month) => {
     }
 }
 
-const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:[]}, pType = 0, now = Math.round(new Date().getTime() / 1000)) => {
+export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pAmount, pCount, pType = 0, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
     const t1 = (pType|1) === pType ? true : false;
@@ -5407,14 +5266,14 @@ const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'buy') {
-                if ((now - previous.time) >= (TRADE_TIME + (nowBP - previousP) * TRADE_INTERVAL)) {
+                if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
                 } else {
                     is_buy = false;
                 }
             } else if (previous.type === 'sell') {
-                if ((now - previous.time) >= TRADE_INTERVAL) {
+                if ((now - previous.time) >= tinterval) {
                     is_sell = true;
                 } else {
                     is_sell = false;
@@ -5450,14 +5309,14 @@ const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:
             //console.log(nowBP);
             //console.log(previousP);
             if (previous.type === 'sell') {
-                if ((now - previous.time) >= (TRADE_TIME + (previousP - nowSP) * TRADE_INTERVAL)) {
+                if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
                 } else {
                     is_sell = false;
                 }
             } else if (previous.type === 'buy') {
-                if ((now - previous.time) >= TRADE_INTERVAL) {
+                if ((now - previous.time) >= tinterval) {
                     is_buy = true;
                 } else {
                     is_buy = false;
@@ -5509,10 +5368,10 @@ const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:
     sCount = sTimes * sCount * priceTimes;
     const finalSell = () => {
         if (previous.count && sCount) {
-            const remain = previous.count - sCount;
-            if (previous.count < 3 * priceTimes) {
+            const remain = pCount - sCount;
+            if (pCount < 3 * priceTimes) {
                 sCount = priceTimes;
-            } else if (previous.count < 5 * priceTimes) {
+            } else if (pCount < 5 * priceTimes) {
                 sCount = 2 * priceTimes;
             } else if (remain < 2 * priceTimes) {
                 sCount = sCount - 2 * priceTimes + remain;
@@ -5520,8 +5379,8 @@ const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:
         }
     }
     const finalBuy = () => {
-        if (previous.amount && bCount) {
-            const nowC = Math.floor(previous.amount / buy)
+        if (pAmount && bCount) {
+            const nowC = Math.floor(pAmount / buy)
             const remain = nowC - bCount;
             if (nowC < 3 * priceTimes) {
                 bCount = priceTimes;
@@ -5689,11 +5548,9 @@ const stockProcess = (price, priceArray, priceTimes = 1, previous={buy:[], sell:
     };
 }
 
-const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
+export const stockTest = (his_arr, loga, min, pType = 0, start = 0, len = 250, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, just = false) => {
     const now = Math.round(new Date().getTime() / 1000);
     //let is_start = false;
-    const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-    let amount = maxAmount;
     let count = 0;
     let privious = {};
     let priviousTrade = {buy:[], sell:[]};
@@ -5709,9 +5566,24 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
     //console.log(amount);
     //console.log(count);
     let startI = start + len - 1;
+    let checkweb = resetWeb;
+    let web = null;
+    let maxAmount = 0;
+    let amount = 0;
     for (; startI < his_arr.length - 1; startI++) {
-        //if (his_arr[startI].h < web.mid * 0.9) {
-        if (his_arr[startI].h < web.mid) {
+        if (checkweb > resetWeb - 1) {
+            checkweb = 0;
+            web = calStair(his_arr, loga, min, startI);
+            maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+            amount = maxAmount;
+        } else {
+            checkweb++;
+        }
+        //if (his_arr[startI].h < mid * 0.9) {
+        if (just || his_arr[startI].h < web.mid) {
+            /*console.log('max');
+            console.log(web.mid);
+            console.log(web.arr.length);*/
             privious = his_arr[startI + 1];
             let tmpAmount = amount - maxAmount / 2;
             while ((tmpAmount - his_arr[startI + 1].h) > 0) {
@@ -5719,8 +5591,6 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                 tmpAmount = amount - maxAmount / 2;
                 count++;
             }
-            priviousTrade.amount = amount;
-            priviousTrade.count = count;
             /*console.log(his_arr[startI + 1].h);
             console.log(amount);
             console.log(maxAmount);
@@ -5743,6 +5613,16 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             privious = his_arr[i + 1];
         }*/
         //if (is_start) {
+            if (checkweb > resetWeb - 1) {
+                checkweb = 0;
+                web = calStair(his_arr, loga, min, i);
+                const newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
+                web.arr = newWeb.arr;
+                web.mid = newWeb.mid;
+                web.times = newWeb.times;
+            } else {
+                checkweb++;
+            }
             if (his_arr[i].h && his_arr[i].l && privious.h && privious.l) {
                 const hh = privious.h - his_arr[i].h;
                 const ll = his_arr[i].l - privious.l;
@@ -5766,7 +5646,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             while ((newMid.length > 0) && ((newMid[newMid.length - 1] > checkMid && price < checkMid) || (newMid[newMid.length - 1] <= checkMid && price > checkMid))) {
                 newMid.pop();
-                if (newMid.length === 0 && now - item.tmpPT.time < RANGE_INTERVAL) {
+                if (newMid.length === 0 && now - tmpPT.time < rinterval) {
                     priviousTrade.price = tmpPT.price;
                     priviousTrade.time = tmpPT.time;
                     priviousTrade.type = tmpPT.type;
@@ -5777,7 +5657,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                 newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
                 checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             }
-            suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, pType, now - (i * 86400));
+            suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, ttime, tinterval, now - (i * 86400));
             while(suggest.resetWeb) {
                 if (newMid.length === 0) {
                     tmpPT = {
@@ -5792,7 +5672,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                 stopLoss++;
                 newMid.push(suggest.newMid);
                 newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
-                suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, pType, now - (i * 86400));
+                suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, amount, count, ttime, tinterval, pType, now - (i * 86400));
                 //console.log(price);
                 //console.log(suggest);
                 //console.log(newArr);
@@ -5823,8 +5703,6 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                         type: 'buy',
                         buy: priviousTrade.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
                         sell: priviousTrade.sell,
-                        count,
-                        amount,
                     }
                 } else if (tradeType === 'sell') {
                     let is_insert = false;
@@ -5844,8 +5722,6 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                         type: 'sell',
                         sell: priviousTrade.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
                         buy: priviousTrade.buy,
-                        count,
-                        amount,
                     }
                 }
             }
@@ -5979,7 +5855,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             } else */if (suggest.type === 9) {
                 if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
                     for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
+                        amount += (suggest.sell * (1 - fee));
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -5988,8 +5864,8 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                     }
                     if (amount < maxAmount / 8) {
                         let tmpAmount = maxAmount / 4 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                            amount += (suggest.sell * (1 - TRADE_FEE));
+                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                            amount += (suggest.sell * (1 - fee));
                             tmpAmount = maxAmount / 4 - amount;
                             sellTrade++;
                             count--;
@@ -6004,7 +5880,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             } else if (suggest.type === 5) {
                 if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
                     for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
+                        amount += (suggest.sell * (1 - fee));
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -6013,8 +5889,8 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                     }
                     if (amount < maxAmount * 3 / 8) {
                         let tmpAmount = maxAmount / 2 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                            amount += (suggest.sell * (1 - TRADE_FEE));
+                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                            amount += (suggest.sell * (1 - fee));
                             tmpAmount = maxAmount / 2 - amount;
                             sellTrade++;
                             count--;
@@ -6029,7 +5905,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             } else if (suggest.type === 8) {
                 if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
                     for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - TRADE_FEE));
+                        amount += (suggest.sell * (1 - fee));
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -6038,8 +5914,8 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                     }
                     if (amount < maxAmount * 5 / 8) {
                         let tmpAmount = maxAmount * 3 / 4 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - TRADE_FEE)) > 0) {
-                            amount += (suggest.sell * (1 - TRADE_FEE));
+                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                            amount += (suggest.sell * (1 - fee));
                             tmpAmount = maxAmount * 3 / 4 - amount;
                             sellTrade++;
                             count--;
@@ -6053,7 +5929,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
                 }
             } else if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
                 for (let j = 0; j < suggest.sCount; j++) {
-                    amount += (suggest.sell * (1 - TRADE_FEE));
+                    amount += (suggest.sell * (1 - fee));
                     count--;
                     sellTrade++;
                     if (count <= 0) {
@@ -6068,9 +5944,9 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
             privious = his_arr[i];
         //}
     }
-    console.log(amount);
-    console.log(count);
-    amount += (his_arr[startI - len + 1].l * count * (1 - TRADE_FEE));
+    //console.log(amount);
+    //console.log(count);
+    amount += (his_arr[startI - len + 1].l * count * (1 - fee));
     count = 0;
     //console.log('result');
     //console.log(amount);
@@ -6086,7 +5962,7 @@ const stockTest = (his_arr, web, pType = 0, start=0, len=250) => {
     };
 }
 
-const logArray = (max, min, pos=100) => {
+export const logArray = (max, min, pos=100) => {
     const logMax = Math.log(max);
     const logMin = Math.log(min);
     const scale = (logMax - logMin) / pos;
@@ -6100,6 +5976,124 @@ const logArray = (max, min, pos=100) => {
     }
 }
 
+export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE) => {
+    const single_arr = [];
+    const final_arr = [];
+    for (let i = 0; i < 100; i++) {
+        final_arr[i] = 0;
+    }
+    let volsum = 0;
+    for (let i = stair_start; i < raw_arr.length; i++) {
+        let s = 0;
+        let e = 100;
+        for (let j = 0; j < 100; j++) {
+        if (raw_arr[i].l >= loga.arr[j]) {
+                s = j;
+            }
+            if (raw_arr[i].h <= loga.arr[j]) {
+                e = j;
+                break;
+            }
+        }
+        volsum += raw_arr[i].v;
+        single_arr.push((raw_arr[i].h - raw_arr[i].l) / raw_arr[i].h * 100);
+        if ((e - s) === 0) {
+            final_arr[s] += raw_arr[i].v;
+        } else {
+            const v = raw_arr[i].v / (e - s);
+            for (let j = s; j < e; j++) {
+                final_arr[j] += v;
+            }
+        }
+    }
+    let vol = 0;
+    let j = 0;
+    const nd = [];
+    final_arr.forEach((v, i) => {
+        vol += v;
+        while (vol >= (volsum / 100 * NORMAL_DISTRIBUTION[j]) && j < NORMAL_DISTRIBUTION.length) {
+            //console.log(i);
+            nd.push(i);
+            //nd.push(Math.pow(1 + loga.diff, i) * min);
+            j++;
+        }
+    });
+    const sort_arr = [...single_arr].sort((a,b) => a - b);
+    //console.log(final_arr);
+    const web = {
+        mid: Math.pow(1 + loga.diff, nd[3]) * min,
+        up: nd[4] - nd[3],
+        down: nd[3] - nd[2],
+        extrem: sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
+        single: loga.diff,
+    }
+    if ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
+        web.extrem = sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
+        web.ds = 2;
+        if ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
+                return false;
+        }
+    }
+    const calWeb = () => {
+        const stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
+        const upArray = [];
+        let up = stair;
+        while (up < web.up) {
+            upArray.push(up);
+            up += stair;
+        }
+        if ((up - web.up) < (stair / 2)) {
+            upArray.push(web.up);
+        } else {
+            if (upArray.length > 0) {
+                upArray[upArray.length - 1] = web.up;
+            } else {
+                upArray.push(web.up);
+            }
+        }
+        //console.log(upArray);
+        const downArray = [];
+        let down = stair;
+        while (down < web.down) {
+            downArray.push(down);
+            down += stair;
+        }
+        if ((down - web.down) < (stair / 2)) {
+            downArray.push(web.down);
+        } else {
+            if (downArray.length > 0) {
+                downArray[downArray.length - 1] = web.down;
+            } else {
+                downArray.push(web.down);
+            }
+        }
+        //console.log(downArray);
+        const result = [-web.mid];
+        let temp = web.mid;
+        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
+        temp = result[0];
+        result[0] = -result[0];
+        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
+        temp = result[0];
+        result[0] = -result[0];
+        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
+        result[0] = -result[0];
+        temp = web.mid;
+        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
+        temp = result[result.length - 1];
+        result[result.length - 1] = -result[result.length - 1];
+        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
+        temp = result[result.length - 1];
+        result[result.length - 1] = -result[result.length - 1];
+        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
+        result[result.length - 1] = -result[result.length - 1];
+        return result;
+    }
+    web.arr = calWeb();
+    //console.log(web);
+    return web;
+}
+
 const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     if (amount === 0) {
         return {
@@ -6107,7 +6101,6 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
             mid: webMid,
         };
     }
-    amount = amount;
     const maxAmount = webMid * (webArr.length - 1) / 3 * 2;
     if (amount >= maxAmount) {
         const count = Math.floor(amount / maxAmount);
@@ -6140,7 +6133,7 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     }
     const new_arr = [];
     let count = 0;
-    console.log(mid);
+    //console.log(mid);
     for (let i = mid; i < webArr.length; i++) {
         if (webArr[i] >= 0) {
             count++;

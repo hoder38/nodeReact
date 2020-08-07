@@ -1,7 +1,8 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
+import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool'
 import Mongo from '../models/mongo-tool'
 import { handleError, HoError, isValidString } from '../util/utility'
 import sendWs from '../util/sendWs'
@@ -156,6 +157,144 @@ export const calRate = curArr => {
             data: 0,
         })) : (SUPPORT_COIN.indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
     return recurPrice(0).then(() => recurType(0));
+}
+
+export const calWeb = curArr => {
+    /*const recurPrice = index => {
+        if (index >= SUPPORT_PRICE.length) {
+            return Promise.resolve();
+        } else {
+            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
+                priceData[SUPPORT_PRICE[index]] = {
+                    dailyChange: ticker.dailyChangePerc * 100,
+                    lastPrice: ticker.lastPrice,
+                    time: Math.round(new Date().getTime() / 1000),
+                }
+                return recurPrice(index + 1);
+            });
+        }
+    }*/
+    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '1h', query: {limit: 2880}}).then(entries => {
+        let max = 0;
+        let min = 0;
+        let min_vol = 0;
+        const raw_arr = entries.map(v => {
+            if (!max || max < v.high) {
+                max = v.high;
+            }
+            if (!min || min > v.low) {
+                min = v.low;
+            }
+            if (!min_vol || min_vol > v.volume) {
+                min_vol = v.volume;
+            }
+            return {
+                h: v.high,
+                l: v.low,
+                v: v.volume,
+            }
+        });
+        console.log(max);
+        console.log(min);
+        console.log(min_vol);
+        const loga = logArray(max, min);
+        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE);
+        console.log(web);
+        const month1 = [];
+        const month2 = [];
+        const month3 = [];
+        const ret_str1 = [];
+        let ret_str = '';
+        let best_rate = 0;
+        let lastest_type = 0;
+        let lastest_rate = 0;
+        const resultShow = type => {
+            let str = '';
+            console.log('start');
+            console.log(type);
+            const testResult1 = stockTest(raw_arr, loga, min, type, 0, 480, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24);
+            console.log('start');
+            console.log(testResult1.start);
+            const testResult2 = stockTest(raw_arr, loga, min, type, testResult1.start + 1, 480, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24);
+            console.log('start');
+            console.log(testResult2.start);
+            const testResult3 = stockTest(raw_arr, loga, min, type, testResult2.start + 1, 480, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24);
+            if (testResult1) {
+                month1.push(testResult1.str);
+            }
+            if (testResult2) {
+                month2.push(testResult2.str);
+            }
+            if (testResult3) {
+                month3.push(testResult3.str);
+            }
+            if (testResult1) {
+                const match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                let match1 = null;
+                let match2 = null;
+                if (testResult2) {
+                    match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                }
+                if (testResult3) {
+                    match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                }
+                let rate = 1;
+                let real = 1;
+                let count = 0;
+                if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                    rate = rate * (Number(match[3]) + 100) / 100;
+                    if (!lastest_rate || rate > lastest_rate) {
+                        lastest_rate = rate;
+                        lastest_type = type;
+                    }
+                    real = real * (Number(match[4]) + 100) / 100;
+                    count++;
+                }
+                if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                    rate = rate * (Number(match1[3]) + 100) / 100;
+                    real = real * (Number(match1[4]) + 100) / 100;
+                    count++;
+                }
+                if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                    rate = rate * (Number(match2[3]) + 100) / 100;
+                    real = real * (Number(match2[4]) + 100) / 100;
+                    count++;
+                }
+                str = `${Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
+                if (count !== 0) {
+                    rate = Math.round(rate * 10000 - 10000) / 100;
+                    real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                    const times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                    const stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                    str += ` ${rate}% ${real}% ${times} ${stoploss} ${raw_arr.length} ${min_vol}`;
+                    if (!best_rate || rate > best_rate) {
+                        best_rate = rate;
+                        ret_str = str;
+                    }
+                } else {
+                    str += ' no less than mid point';
+                }
+            } else {
+                str = 'less than a month';
+            }
+            ret_str1.push(str);
+        }
+        for (let i = 15; i >= 0; i--) {
+            resultShow(i);
+        }
+        console.log('month1');
+        month1.forEach(v => console.log(v));
+        console.log('month2');
+        month2.forEach(v => console.log(v));
+        console.log('month3');
+        month3.forEach(v => console.log(v));
+        ret_str1.forEach(v => console.log(v));
+        console.log(lastest_type);
+        console.log('done');
+    });
+    //return recurPrice(0).then(() => recurType(0));
+    return recurType(0);
 }
 
 export const setWsOffer = (id, curArr=[]) => {
@@ -1928,3 +2067,5 @@ const returnSupport = bitfinex => bitfinex ? SUPPORT_COIN.map(v => {
     }
     return {type: v};
 }) : SUPPORT_COIN.map(v => ({type: v}));
+
+//calWeb([TBTC_SYM, TETH_SYM, TOMG_SYM]);

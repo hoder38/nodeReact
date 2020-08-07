@@ -851,6 +851,9 @@ export const EXTREM_DURATION = 1800;
 export const UPDATE_BOOK = 21600;
 export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
+export const BITFINEX_FEE = 0.003;
+export const BITFINEX_INTERVAL = 3600;
+export const RANGE_BITFINEX_INTERVAL = 259200;
 export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
 export const TRADE_TIME = 21600;
@@ -859,7 +862,7 @@ export const RANGE_INTERVAL = 7776000;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 export const SUPPORT_PAIR = {
-    fUSD: [TBTC_SYM, TETH_SYM],
+    fUSD: [TBTC_SYM, TETH_SYM, TOMG_SYM],
 }
 export const MAX_RATE = 7000000;
 export const BITNIFEX_PARENT = [

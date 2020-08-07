@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.resetBFX = exports.setWsOffer = exports.calRate = undefined;
+exports.resetBFX = exports.setWsOffer = exports.calWeb = exports.calRate = undefined;
 
 var _assign = require('babel-runtime/core-js/object/assign');
 
@@ -38,6 +38,8 @@ var _bitfinexApiNode = require('bitfinex-api-node');
 var _bitfinexApiNode2 = _interopRequireDefault(_bitfinexApiNode);
 
 var _bfxApiNodeModels = require('bfx-api-node-models');
+
+var _stockTool = require('../models/stock-tool');
 
 var _mongoTool = require('../models/mongo-tool');
 
@@ -219,6 +221,158 @@ var calRate = exports.calRate = function calRate(curArr) {
     return recurPrice(0).then(function () {
         return recurType(0);
     });
+};
+
+var calWeb = exports.calWeb = function calWeb(curArr) {
+    /*const recurPrice = index => {
+        if (index >= SUPPORT_PRICE.length) {
+            return Promise.resolve();
+        } else {
+            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
+                priceData[SUPPORT_PRICE[index]] = {
+                    dailyChange: ticker.dailyChangePerc * 100,
+                    lastPrice: ticker.lastPrice,
+                    time: Math.round(new Date().getTime() / 1000),
+                }
+                return recurPrice(index + 1);
+            });
+        }
+    }*/
+    var recurType = function recurType(index) {
+        return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
+            return recurType(index + 1);
+        }) : recurType(index + 1);
+    };
+    var singleCal = function singleCal(curType, index) {
+        return rest.candles({ symbol: curType, timeframe: '1h', query: { limit: 2880 } }).then(function (entries) {
+            var max = 0;
+            var min = 0;
+            var min_vol = 0;
+            var raw_arr = entries.map(function (v) {
+                if (!max || max < v.high) {
+                    max = v.high;
+                }
+                if (!min || min > v.low) {
+                    min = v.low;
+                }
+                if (!min_vol || min_vol > v.volume) {
+                    min_vol = v.volume;
+                }
+                return {
+                    h: v.high,
+                    l: v.low,
+                    v: v.volume
+                };
+            });
+            console.log(max);
+            console.log(min);
+            console.log(min_vol);
+            var loga = (0, _stockTool.logArray)(max, min);
+            var web = (0, _stockTool.calStair)(raw_arr, loga, min, 0, _constants.BITFINEX_FEE);
+            console.log(web);
+            var month1 = [];
+            var month2 = [];
+            var month3 = [];
+            var ret_str1 = [];
+            var ret_str = '';
+            var best_rate = 0;
+            var lastest_type = 0;
+            var lastest_rate = 0;
+            var resultShow = function resultShow(type) {
+                var str = '';
+                console.log('start');
+                console.log(type);
+                var testResult1 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, 0, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                console.log('start');
+                console.log(testResult1.start);
+                var testResult2 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, testResult1.start + 1, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                console.log('start');
+                console.log(testResult2.start);
+                var testResult3 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, testResult2.start + 1, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                if (testResult1) {
+                    month1.push(testResult1.str);
+                }
+                if (testResult2) {
+                    month2.push(testResult2.str);
+                }
+                if (testResult3) {
+                    month3.push(testResult3.str);
+                }
+                if (testResult1) {
+                    var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                    var match1 = null;
+                    var match2 = null;
+                    if (testResult2) {
+                        match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                    }
+                    if (testResult3) {
+                        match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
+                    }
+                    var rate = 1;
+                    var real = 1;
+                    var count = 0;
+                    if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
+                        rate = rate * (Number(match[3]) + 100) / 100;
+                        if (!lastest_rate || rate > lastest_rate) {
+                            lastest_rate = rate;
+                            lastest_type = type;
+                        }
+                        real = real * (Number(match[4]) + 100) / 100;
+                        count++;
+                    }
+                    if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
+                        rate = rate * (Number(match1[3]) + 100) / 100;
+                        real = real * (Number(match1[4]) + 100) / 100;
+                        count++;
+                    }
+                    if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
+                        rate = rate * (Number(match2[3]) + 100) / 100;
+                        real = real * (Number(match2[4]) + 100) / 100;
+                        count++;
+                    }
+                    str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                    if (count !== 0) {
+                        rate = Math.round(rate * 10000 - 10000) / 100;
+                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                        var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
+                        var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
+                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                        if (!best_rate || rate > best_rate) {
+                            best_rate = rate;
+                            ret_str = str;
+                        }
+                    } else {
+                        str += ' no less than mid point';
+                    }
+                } else {
+                    str = 'less than a month';
+                }
+                ret_str1.push(str);
+            };
+            for (var i = 15; i >= 0; i--) {
+                resultShow(i);
+            }
+            console.log('month1');
+            month1.forEach(function (v) {
+                return console.log(v);
+            });
+            console.log('month2');
+            month2.forEach(function (v) {
+                return console.log(v);
+            });
+            console.log('month3');
+            month3.forEach(function (v) {
+                return console.log(v);
+            });
+            ret_str1.forEach(function (v) {
+                return console.log(v);
+            });
+            console.log(lastest_type);
+            console.log('done');
+        });
+    };
+    //return recurPrice(0).then(() => recurType(0));
+    return recurType(0);
 };
 
 var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
@@ -2325,3 +2479,5 @@ var returnSupport = function returnSupport(bitfinex) {
         return { type: v };
     });
 };
+
+//calWeb([TBTC_SYM, TETH_SYM, TOMG_SYM]);
