@@ -3649,7 +3649,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ recur_mi(1, 0) /*: Promise.resolve([null, ret_obj])*/;
+                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {

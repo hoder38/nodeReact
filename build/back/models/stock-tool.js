@@ -4122,9 +4122,8 @@ exports.default = {
                             }
                         };
                         var exGet = function exGet() {
-                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/recur_mi(1, 0)
-                            );
-                        } /*: Promise.resolve([null, ret_obj])*/;
+                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
+                        };
                         return exGet().then(function (_ref23) {
                             var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
                                 raw_list = _ref24[0],
