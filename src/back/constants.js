@@ -803,7 +803,7 @@ export const STOCK_FILTER = {
     per: [1, '<', 35],
     pdr: [1, '<', 70],
     pbr: [1, '<', 10],
-    times: [1, '>', 24],
+    times: [1, '>', 20],
     stop: [1, '<', 3],
     //gap: [1, '>', 0],
     profit: [1, '>', 20],
@@ -813,7 +813,7 @@ export const STOCK_FILTER = {
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
     vol: [1, '>', 200],
-    close: [1, '<', 0],
+    close: [1, '>', 5],
 }
 
 export const BACKUP_COLLECTION = [

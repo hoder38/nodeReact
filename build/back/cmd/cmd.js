@@ -285,6 +285,13 @@ rl.on('line', function (line) {
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, 'CMD stock');
             });
+        case 'testdata':
+            console.log('testdata');
+            return _stockTool2.default.testData().then(function () {
+                return console.log('done');
+            }).catch(function (err) {
+                return (0, _utility.handleError)(err, 'CMD testdata');
+            });
         case 'drive':
             console.log('drive');
             return cmdUpdateDrive(cmd[1], cmd[2]).then(function () {
@@ -357,5 +364,6 @@ rl.on('line', function (line) {
             console.log('dbdump collection');
             console.log('dbrestore collection');
             console.log('randomsend list|edit|send [name:email|append]');
+            console.log('testdata');
     }
 });

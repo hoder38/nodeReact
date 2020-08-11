@@ -17,13 +17,13 @@ var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
 
 var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
 
-var _typeof2 = require('babel-runtime/helpers/typeof');
-
-var _typeof3 = _interopRequireDefault(_typeof2);
-
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
 var _getIterator3 = _interopRequireDefault(_getIterator2);
+
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
 
 var _promise = require('babel-runtime/core-js/promise');
 
@@ -224,27 +224,27 @@ var calRate = exports.calRate = function calRate(curArr) {
 };
 
 var calWeb = exports.calWeb = function calWeb(curArr) {
-    /*const recurPrice = index => {
-        if (index >= SUPPORT_PRICE.length) {
-            return Promise.resolve();
+    var recurPrice = function recurPrice(index) {
+        if (index >= _constants.SUPPORT_PRICE.length) {
+            return _promise2.default.resolve();
         } else {
-            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
-                priceData[SUPPORT_PRICE[index]] = {
+            return rest.ticker(_constants.SUPPORT_PRICE[index]).then(function (ticker) {
+                priceData[_constants.SUPPORT_PRICE[index]] = {
                     dailyChange: ticker.dailyChangePerc * 100,
                     lastPrice: ticker.lastPrice,
-                    time: Math.round(new Date().getTime() / 1000),
-                }
+                    time: Math.round(new Date().getTime() / 1000)
+                };
                 return recurPrice(index + 1);
             });
         }
-    }*/
+    };
     var recurType = function recurType(index) {
         return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
             return recurType(index + 1);
         }) : recurType(index + 1);
     };
     var singleCal = function singleCal(curType, index) {
-        return rest.candles({ symbol: curType, timeframe: '1h', query: { limit: 2880 } }).then(function (entries) {
+        return rest.candles({ symbol: curType, timeframe: '1h', query: { limit: 1200 } }).then(function (entries) {
             var max = 0;
             var min = 0;
             var min_vol = 0;
@@ -270,9 +270,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
             var loga = (0, _stockTool.logArray)(max, min);
             var web = (0, _stockTool.calStair)(raw_arr, loga, min, 0, _constants.BITFINEX_FEE);
             console.log(web);
-            var month1 = [];
-            var month2 = [];
-            var month3 = [];
+            var month = [];
             var ret_str1 = [];
             var ret_str = '';
             var best_rate = 0;
@@ -280,99 +278,101 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
             var lastest_rate = 0;
             var resultShow = function resultShow(type) {
                 var str = '';
+                var testResult = [];
+                var match = [];
+                var j = raw_arr.length - 1;
                 console.log('start');
-                console.log(type);
-                var testResult1 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, 0, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
-                console.log('start');
-                console.log(testResult1.start);
-                var testResult2 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, testResult1.start + 1, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
-                console.log('start');
-                console.log(testResult2.start);
-                var testResult3 = (0, _stockTool.stockTest)(raw_arr, loga, min, type, testResult2.start + 1, 480, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
-                if (testResult1) {
-                    month1.push(testResult1.str);
+                while (j > 239) {
+                    console.log(j);
+                    var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                        testResult.push(temp);
+                        match.push(tempM);
+                    }
+                    j = temp.start + 1;
                 }
-                if (testResult2) {
-                    month2.push(testResult2.str);
-                }
-                if (testResult3) {
-                    month3.push(testResult3.str);
-                }
-                if (testResult1) {
-                    var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                    var match1 = null;
-                    var match2 = null;
-                    if (testResult2) {
-                        match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                    }
-                    if (testResult3) {
-                        match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                    }
-                    var rate = 1;
-                    var real = 1;
-                    var count = 0;
-                    if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                        rate = rate * (Number(match[3]) + 100) / 100;
-                        if (!lastest_rate || rate > lastest_rate) {
-                            lastest_rate = rate;
-                            lastest_type = type;
-                        }
-                        real = real * (Number(match[4]) + 100) / 100;
-                        count++;
-                    }
-                    if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                        rate = rate * (Number(match1[3]) + 100) / 100;
-                        real = real * (Number(match1[4]) + 100) / 100;
-                        count++;
-                    }
-                    if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                        rate = rate * (Number(match2[3]) + 100) / 100;
-                        real = real * (Number(match2[4]) + 100) / 100;
-                        count++;
-                    }
-                    str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                    if (count !== 0) {
+                if (testResult.length > 0) {
+                    var _ret = function () {
+                        testResult.forEach(function (v, i) {
+                            if (!month[i]) {
+                                month[i] = [];
+                            }
+                            month[i].push(v);
+                        });
+                        var rate = 1;
+                        var real = 1;
+                        var count = 0;
+                        var times = 0;
+                        var stoploss = 0;
+                        var maxloss = 0;
+                        match.forEach(function (v, i) {
+                            rate = rate * (Number(v[3]) + 100) / 100;
+                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                lastest_rate = Number(v[3]);
+                                lastest_type = type;
+                            }*/
+                            real = real * (Number(v[4]) + 100) / 100;
+                            count++;
+                            times += Number(v[5]);
+                            stoploss += Number(v[6]);
+                            if (!maxloss || maxloss > +v[7]) {
+                                maxloss = +v[7];
+                            }
+                        });
+                        str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
                         rate = Math.round(rate * 10000 - 10000) / 100;
                         real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                        var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                        var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                        times = Math.round(times / count * 100) / 100;
+                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
                         if (!best_rate || rate > best_rate) {
                             best_rate = rate;
                             ret_str = str;
                         }
-                    } else {
-                        str += ' no less than mid point';
-                    }
+                        var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, true, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                        if (temp === 'data miss') {
+                            return {
+                                v: true
+                            };
+                        }
+                        var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                lastest_rate = Number(tempM[3]);
+                                lastest_type = type;
+                            }
+                        }
+                    }();
+
+                    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
                 } else {
-                    str = 'less than a month';
+                    str = 'no less than mid point';
                 }
                 ret_str1.push(str);
             };
             for (var i = 15; i >= 0; i--) {
                 resultShow(i);
             }
-            console.log('month1');
-            month1.forEach(function (v) {
-                return console.log(v);
-            });
-            console.log('month2');
-            month2.forEach(function (v) {
-                return console.log(v);
-            });
-            console.log('month3');
-            month3.forEach(function (v) {
-                return console.log(v);
+            month.forEach(function (v, i) {
+                console.log('month' + (+i + 1));
+                v.forEach(function (k) {
+                    return console.log(k.str);
+                });
             });
             ret_str1.forEach(function (v) {
                 return console.log(v);
             });
+            if (!ret_str) {
+                ret_str = 'no less than mid point';
+            }
             console.log(lastest_type);
             console.log('done');
         });
     };
-    //return recurPrice(0).then(() => recurType(0));
-    return recurType(0);
+    return recurPrice(0).then(function () {
+        return recurType(0);
+    });
+    //return recurType(0);
 };
 
 var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
@@ -850,9 +850,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 };
 
                 for (var _i2 = 0; _i2 < curArr.length; _i2++) {
-                    var _ret = _loop(_i2);
+                    var _ret2 = _loop(_i2);
 
-                    if (_ret === 'break') break;
+                    if (_ret2 === 'break') break;
                 }
             }
         });
@@ -1305,7 +1305,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 }
                 return _promise2.default.resolve();
             } else {
-                var _ret2 = function () {
+                var _ret3 = function () {
                     var DRT = getDR(finalNew[index].rate);
                     console.log(DRT);
                     var fo = new _bfxApiNodeModels.FundingOffer({
@@ -1350,7 +1350,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
             }
         };
         return cancelOffer(0).then(function () {
@@ -1365,7 +1365,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         console.log(current);
         //set stop
         if (!extremRate[id][current.type].is_low || Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low > _constants.EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            var _ret3 = function () {
+            var _ret4 = function () {
                 var is_high = false;
                 if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION) {
                     is_high = true;
@@ -1456,7 +1456,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             last_price = priceData[processing[index].os.symbol].lastPrice;
                         }
 
-                        var _ret4 = function () {
+                        var _ret5 = function () {
                             switch (processing[index].type) {
                                 case 1:
                                     var amount = processing[index].os.amount * processing[index].os.price / current.leverage;
@@ -1487,7 +1487,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             v: processOrder(index + 1)
                                         };
                                     } else {
-                                        var _ret5 = function () {
+                                        var _ret6 = function () {
                                             var pre_os = {
                                                 amount: processing[index].os.amount,
                                                 time: processing[index].os.time
@@ -1544,7 +1544,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             };
                                         }();
 
-                                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                                     }
                                 case 3:
                                     //update
@@ -1579,7 +1579,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             }
                         }();
 
-                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                     }
                 };
                 return {
@@ -1591,7 +1591,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 };
             }();
 
-            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
         }
         var checkExpire = function checkExpire() {
             if (Math.round(new Date().getTime() / 1000) - current.last_trade > current.interval * 60) {
@@ -1619,7 +1619,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     //close offer
                     if (offer[id] && offer[id][current.type]) {
-                        var _ret6 = function () {
+                        var _ret7 = function () {
                             var cancelOffer = function cancelOffer(index) {
                                 if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
                                     return _promise2.default.resolve([availableMargin, needAmount]);
@@ -1647,7 +1647,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             };
                         }();
 
-                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                     }
                 }
             }
@@ -1688,7 +1688,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             //order
             var marginOrderAmount = margin[id][current.type].avail > needAmount ? needAmount : margin[id][current.type].avail;
             if (marginOrderAmount >= 10) {
-                var _ret7 = function () {
+                var _ret8 = function () {
                     var getLowpoint = function getLowpoint() {
                         var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
                         var final_low_point = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
@@ -1757,7 +1757,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     };
                 }();
 
-                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
             }
         });
     };
@@ -2078,7 +2078,7 @@ exports.default = {
                 data['leverage'] = leverage;
             }
             if (set.pair) {
-                var _ret8 = function () {
+                var _ret9 = function () {
                     var pair = (0, _utility.isValidString)(set.pair, 'name');
                     if (pair === false) {
                         return {
@@ -2097,7 +2097,7 @@ exports.default = {
                     }
                 }();
 
-                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
             }
         }
         data['type'] = set.type;
@@ -2134,7 +2134,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret9 = function () {
+                var _ret10 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -2147,7 +2147,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
             } else {
                 return returnSupport();
             }

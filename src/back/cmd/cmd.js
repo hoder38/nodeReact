@@ -175,6 +175,9 @@ rl.on('line', line => {
         case 'stock':
         console.log('stock');
         return StockTool.getSingleStockV2('twse', {index: cmd[1]||2330, tag: []}, cmd[2]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
+        case 'testdata':
+        console.log('testdata');
+        return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
         case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));
@@ -213,5 +216,6 @@ rl.on('line', line => {
         console.log('dbdump collection');
         console.log('dbrestore collection');
         console.log('randomsend list|edit|send [name:email|append]');
+        console.log('testdata');
     }
 });

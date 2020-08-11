@@ -349,7 +349,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     per: [1, '<', 35],
     pdr: [1, '<', 70],
     pbr: [1, '<', 10],
-    times: [1, '>', 24],
+    times: [1, '>', 20],
     stop: [1, '<', 3],
     //gap: [1, '>', 0],
     profit: [1, '>', 20],
@@ -359,7 +359,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
     vol: [1, '>', 200],
-    close: [1, '<', 0]
+    close: [1, '>', 5]
 };
 
 var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];

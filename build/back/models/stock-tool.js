@@ -3642,6 +3642,60 @@ exports.default = {
             });
         });
     },*/
+    testData: function testData() {
+        return (0, _mongoTool2.default)('find', _constants.STOCKDB, {}).then(function (items) {
+            var recur_test = function recur_test(index) {
+                return index >= items.length ? _promise2.default.resolve() : (0, _redisTool2.default)('hgetall', 'interval: ' + items[index].type + items[index].index).then(function (item) {
+                    var getInit = function getInit() {
+                        return item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
+                    };
+                    return getInit();
+                }).then(function (_ref11) {
+                    var _ref12 = (0, _slicedToArray3.default)(_ref11, 3),
+                        raw_list = _ref12[0],
+                        ret_obj = _ref12[1],
+                        etime = _ref12[2];
+
+                    console.log(items[index].index + items[index].name);
+                    if (!raw_list) {
+                        console.log(items[index].type + ' ' + items[index].index + ' data empty');
+                    } else {
+                        var isnull = false;
+                        for (var i in raw_list) {
+                            console.log(i);
+                            for (var j in raw_list[i]) {
+                                for (var k = 0; k < raw_list[i][j].raw.length; k++) {
+                                    if (!raw_list[i][j].raw[k].h || !raw_list[i][j].raw[k].l) {
+                                        console.log(j);
+                                        console.log(k);
+                                        console.log(raw_list[i][j].raw[k]);
+                                        console.log(items[index].type + ' ' + items[index].index + ' data miss');
+                                        (0, _redisTool2.default)('hmset', 'interval: ' + items[index].type + items[index].index, {
+                                            raw_list: false,
+                                            ret_obj: 0,
+                                            etime: -1
+                                        }).catch(function (err) {
+                                            return (0, _utility.handleError)(err, 'Redis');
+                                        });
+                                        isnull = true;
+                                        break;
+                                    }
+                                }
+                                if (isnull) {
+                                    break;
+                                }
+                            }
+                            if (isnull) {
+                                break;
+                            }
+                        }
+                    }
+                    return recur_test(index + 1);
+                });
+            };
+            return recur_test(0);
+        });
+    },
     getIntervalV2: function getIntervalV2(id, session) {
         var date = new Date();
         var year = date.getFullYear();
@@ -3666,11 +3720,11 @@ exports.default = {
                             return item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
                         };
                         return getInit();
-                    }).then(function (_ref11) {
-                        var _ref12 = (0, _slicedToArray3.default)(_ref11, 3),
-                            raw_list = _ref12[0],
-                            ret_obj = _ref12[1],
-                            etime = _ref12[2];
+                    }).then(function (_ref13) {
+                        var _ref14 = (0, _slicedToArray3.default)(_ref13, 3),
+                            raw_list = _ref14[0],
+                            ret_obj = _ref14[1],
+                            etime = _ref14[2];
 
                         var interval_data = null;
                         var start_month = '';
@@ -3722,9 +3776,7 @@ exports.default = {
                                 //update total
                                 var restTest = function restTest() {
                                     return getStockPrice('twse', items[0].index).then(function (price) {
-                                        var year1 = [];
-                                        var year2 = [];
-                                        var year3 = [];
+                                        var year = [];
                                         var ret_str1 = [];
                                         var ret_str = '';
                                         var best_rate = 0;
@@ -3732,87 +3784,96 @@ exports.default = {
                                         var lastest_rate = 0;
                                         var resultShow = function resultShow(type) {
                                             var str = '';
-                                            var testResult1 = stockTest(raw_arr, loga, min, type);
-                                            var testResult2 = stockTest(raw_arr, loga, min, type, testResult1.start + 1);
-                                            var testResult3 = stockTest(raw_arr, loga, min, type, testResult2.start + 1);
-                                            if (testResult1) {
-                                                year1.push(testResult1.str);
+                                            var testResult = [];
+                                            var match = [];
+                                            var j = raw_arr.length - 1;
+                                            while (j > 249) {
+                                                var _temp12 = stockTest(raw_arr, loga, min, type, j);
+                                                if (_temp12 === 'data miss') {
+                                                    return true;
+                                                }
+                                                var tempM = _temp12.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                    testResult.push(_temp12);
+                                                    match.push(tempM);
+                                                }
+                                                j = _temp12.start + 1;
                                             }
-                                            if (testResult2) {
-                                                year2.push(testResult2.str);
-                                            }
-                                            if (testResult3) {
-                                                year3.push(testResult3.str);
-                                            }
-                                            if (testResult1) {
-                                                var match = testResult1.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                                var match1 = null;
-                                                var match2 = null;
-                                                if (testResult2) {
-                                                    match1 = testResult2.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                                }
-                                                if (testResult3) {
-                                                    match2 = testResult3.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+)/);
-                                                }
-                                                var rate = 1;
-                                                var real = 1;
-                                                var count = 0;
-                                                if (match && (match[3] !== '0' || match[5] !== '0' || match[6] !== '0')) {
-                                                    rate = rate * (Number(match[3]) + 100) / 100;
-                                                    if (!lastest_rate || rate > lastest_rate) {
-                                                        lastest_rate = rate;
-                                                        lastest_type = type;
-                                                    }
-                                                    real = real * (Number(match[4]) + 100) / 100;
-                                                    count++;
-                                                }
-                                                if (match1 && (match1[3] !== '0' || match1[5] !== '0' || match1[6] !== '0')) {
-                                                    rate = rate * (Number(match1[3]) + 100) / 100;
-                                                    real = real * (Number(match1[4]) + 100) / 100;
-                                                    count++;
-                                                }
-                                                if (match2 && (match2[3] !== '0' || match2[5] !== '0' || match2[6] !== '0')) {
-                                                    rate = rate * (Number(match2[3]) + 100) / 100;
-                                                    real = real * (Number(match2[4]) + 100) / 100;
-                                                    count++;
-                                                }
-                                                str = Math.round((price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
-                                                if (count !== 0) {
+                                            if (testResult.length > 0) {
+                                                var _ret7 = function () {
+                                                    testResult.forEach(function (v, i) {
+                                                        if (!year[i]) {
+                                                            year[i] = [];
+                                                        }
+                                                        year[i].push(v);
+                                                    });
+                                                    var rate = 1;
+                                                    var real = 1;
+                                                    var count = 0;
+                                                    var times = 0;
+                                                    var stoploss = 0;
+                                                    var maxloss = 0;
+                                                    match.forEach(function (v, i) {
+                                                        rate = rate * (Number(v[3]) + 100) / 100;
+                                                        /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                            lastest_rate = Number(v[3]);
+                                                            lastest_type = type;
+                                                        }*/
+                                                        real = real * (Number(v[4]) + 100) / 100;
+                                                        count++;
+                                                        times += Number(v[5]);
+                                                        stoploss += Number(v[6]);
+                                                        if (!maxloss || maxloss > +v[7]) {
+                                                            maxloss = +v[7];
+                                                        }
+                                                    });
+                                                    str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
                                                     rate = Math.round(rate * 10000 - 10000) / 100;
                                                     real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                                    var times = Math.round((Number(match ? match[5] : 0) + Number(match1 ? match1[5] : 0) + Number(match2 ? match2[5] : 0)) / count * 100) / 100;
-                                                    var stoploss = Number(match ? match[6] : 0) + Number(match1 ? match1[6] : 0) + Number(match2 ? match2[6] : 0);
-                                                    str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + raw_arr.length + ' ' + min_vol;
+                                                    times = Math.round(times / count * 100) / 100;
+                                                    str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
                                                     if (!best_rate || rate > best_rate) {
                                                         best_rate = rate;
                                                         ret_str = str;
                                                     }
-                                                } else {
-                                                    str += ' no less than mid point';
-                                                }
+                                                    var temp = stockTest(raw_arr, loga, min, type, 0, true);
+                                                    if (temp === 'data miss') {
+                                                        return {
+                                                            v: true
+                                                        };
+                                                    }
+                                                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                        if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                            lastest_rate = Number(tempM[3]);
+                                                            lastest_type = type;
+                                                        }
+                                                    }
+                                                }();
+
+                                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                             } else {
-                                                str = 'less than a year';
+                                                str = 'no less than mid point';
                                             }
                                             ret_str1.push(str);
                                         };
                                         for (var _i25 = 15; _i25 >= 0; _i25--) {
-                                            resultShow(_i25);
+                                            if (resultShow(_i25)) {
+                                                return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
+                                            }
                                         }
-                                        console.log('year1');
-                                        year1.forEach(function (v) {
-                                            return console.log(v);
-                                        });
-                                        console.log('year2');
-                                        year2.forEach(function (v) {
-                                            return console.log(v);
-                                        });
-                                        console.log('year3');
-                                        year3.forEach(function (v) {
-                                            return console.log(v);
+                                        year.forEach(function (v, i) {
+                                            console.log('year' + (+i + 1));
+                                            v.forEach(function (k) {
+                                                return console.log(k.str);
+                                            });
                                         });
                                         ret_str1.forEach(function (v) {
                                             return console.log(v);
                                         });
+                                        if (!ret_str) {
+                                            ret_str = 'no less than mid point';
+                                        }
                                         console.log(lastest_type);
                                         //amount real strategy times stoploss (no less than mid point)
                                         console.log('done');
@@ -3835,11 +3896,11 @@ exports.default = {
                                             });
                                         }
                                     };
-                                    return restTest().then(function (_ref13) {
-                                        var _ref14 = (0, _slicedToArray3.default)(_ref13, 3),
-                                            result = _ref14[0],
-                                            index = _ref14[1],
-                                            type = _ref14[2];
+                                    return restTest().then(function (_ref15) {
+                                        var _ref16 = (0, _slicedToArray3.default)(_ref15, 3),
+                                            result = _ref16[0],
+                                            index = _ref16[1],
+                                            type = _ref16[2];
 
                                         web.type = type;
                                         return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id }, { $set: { web: web } }).then(function (item) {
@@ -3937,9 +3998,11 @@ exports.default = {
                                                             }
                                                         }
                                                     }
-                                                    high.push(Number(tmp_list_1[4]));
-                                                    low.push(Number(tmp_list_1[5]));
-                                                    vol.push(Number(tmp_list_1[8]));
+                                                    if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
+                                                        high.push(Number(tmp_list_1[4]));
+                                                        low.push(Number(tmp_list_1[5]));
+                                                        vol.push(Number(tmp_list_1[8]));
+                                                    }
                                                 }
                                             } catch (err) {
                                                 _didIteratorError7 = true;
@@ -3971,15 +4034,15 @@ exports.default = {
                                     return getTwseList();
                                 } else {
                                     var getType = function getType() {
-                                        return getTpexList().then(function (_ref15) {
-                                            var _ref16 = (0, _slicedToArray3.default)(_ref15, 2),
-                                                type = _ref16[0],
-                                                list = _ref16[1];
+                                        return getTpexList().then(function (_ref17) {
+                                            var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
+                                                type = _ref18[0],
+                                                list = _ref18[1];
 
-                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref17) {
-                                                var _ref18 = (0, _slicedToArray3.default)(_ref17, 2),
-                                                    type = _ref18[0],
-                                                    list = _ref18[1];
+                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref19) {
+                                                var _ref20 = (0, _slicedToArray3.default)(_ref19, 2),
+                                                    type = _ref20[0],
+                                                    list = _ref20[1];
 
                                                 return list.high.length > 0 ? [type, list] : [1, list];
                                             });
@@ -4009,11 +4072,11 @@ exports.default = {
                                 };
                                 return rest_interval(type, index);
                             } else {
-                                return getList().then(function (_ref19) {
-                                    var _ref20 = (0, _slicedToArray3.default)(_ref19, 3),
-                                        type = _ref20[0],
-                                        list = _ref20[1],
-                                        is_stop = _ref20[2];
+                                return getList().then(function (_ref21) {
+                                    var _ref22 = (0, _slicedToArray3.default)(_ref21, 3),
+                                        type = _ref22[0],
+                                        list = _ref22[1],
+                                        is_stop = _ref22[2];
 
                                     if (list.high.length > 0) {
                                         if (!start_month) {
@@ -4059,12 +4122,13 @@ exports.default = {
                             }
                         };
                         var exGet = function exGet() {
-                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
-                        };
-                        return exGet().then(function (_ref21) {
-                            var _ref22 = (0, _slicedToArray3.default)(_ref21, 2),
-                                raw_list = _ref22[0],
-                                ret_obj = _ref22[1];
+                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/recur_mi(1, 0)
+                            );
+                        } /*: Promise.resolve([null, ret_obj])*/;
+                        return exGet().then(function (_ref23) {
+                            var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
+                                raw_list = _ref24[0],
+                                ret_obj = _ref24[1];
 
                             if (raw_list) {
                                 (0, _redisTool2.default)('hmset', 'interval: ' + items[0].type + items[0].index, {
@@ -4107,11 +4171,11 @@ exports.default = {
                             return item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
                         };
                         return getInit();
-                    }).then(function (_ref23) {
-                        var _ref24 = (0, _slicedToArray3.default)(_ref23, 3),
-                            raw_list = _ref24[0],
-                            ret_obj = _ref24[1],
-                            etime = _ref24[2];
+                    }).then(function (_ref25) {
+                        var _ref26 = (0, _slicedToArray3.default)(_ref25, 3),
+                            raw_list = _ref26[0],
+                            ret_obj = _ref26[1],
+                            etime = _ref26[2];
 
                         var interval_data = null;
                         var start_month = '';
@@ -4457,15 +4521,15 @@ exports.default = {
                                     return getTwseList();
                                 } else {
                                     var getType = function getType() {
-                                        return getTpexList().then(function (_ref25) {
-                                            var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
-                                                type = _ref26[0],
-                                                list = _ref26[1];
+                                        return getTpexList().then(function (_ref27) {
+                                            var _ref28 = (0, _slicedToArray3.default)(_ref27, 2),
+                                                type = _ref28[0],
+                                                list = _ref28[1];
 
-                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref27) {
-                                                var _ref28 = (0, _slicedToArray3.default)(_ref27, 2),
-                                                    type = _ref28[0],
-                                                    list = _ref28[1];
+                                            return list.high.length > 0 ? [type, list] : getTwseList().then(function (_ref29) {
+                                                var _ref30 = (0, _slicedToArray3.default)(_ref29, 2),
+                                                    type = _ref30[0],
+                                                    list = _ref30[1];
 
                                                 return list.high.length > 0 ? [type, list] : [1, list];
                                             });
@@ -4495,11 +4559,11 @@ exports.default = {
                                 };
                                 return rest_interval(type, index);
                             } else {
-                                return getList().then(function (_ref29) {
-                                    var _ref30 = (0, _slicedToArray3.default)(_ref29, 3),
-                                        type = _ref30[0],
-                                        list = _ref30[1],
-                                        is_stop = _ref30[2];
+                                return getList().then(function (_ref31) {
+                                    var _ref32 = (0, _slicedToArray3.default)(_ref31, 3),
+                                        type = _ref32[0],
+                                        list = _ref32[1],
+                                        is_stop = _ref32[2];
 
                                     if (list.high.length > 0) {
                                         if (!start_month) {
@@ -4547,10 +4611,10 @@ exports.default = {
                         var exGet = function exGet() {
                             return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
                         };
-                        return exGet().then(function (_ref31) {
-                            var _ref32 = (0, _slicedToArray3.default)(_ref31, 2),
-                                raw_list = _ref32[0],
-                                ret_obj = _ref32[1];
+                        return exGet().then(function (_ref33) {
+                            var _ref34 = (0, _slicedToArray3.default)(_ref33, 2),
+                                raw_list = _ref34[0],
+                                ret_obj = _ref34[1];
 
                             if (raw_list) {
                                 (0, _redisTool2.default)('hmset', 'interval: ' + items[0].type + items[0].index, {
@@ -4574,10 +4638,10 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError('there is another inverval running'));
         }
         stockIntervaling = true;
-        return this.getIntervalV2(id, session).then(function (_ref33) {
-            var _ref34 = (0, _slicedToArray3.default)(_ref33, 2),
-                result = _ref34[0],
-                index = _ref34[1];
+        return this.getIntervalV2(id, session).then(function (_ref35) {
+            var _ref36 = (0, _slicedToArray3.default)(_ref35, 2),
+                result = _ref36[0],
+                index = _ref36[1];
 
             stockIntervaling = false;
             return [result, index];
@@ -4674,10 +4738,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage3 = function stage3(iIndex) {
-                return iIndex < filterList.length ? _this.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref35) {
-                    var _ref36 = (0, _slicedToArray3.default)(_ref35, 2),
-                        result = _ref36[0],
-                        index = _ref36[1];
+                return iIndex < filterList.length ? _this.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref37) {
+                    var _ref38 = (0, _slicedToArray3.default)(_ref37, 2),
+                        result = _ref38[0],
+                        index = _ref38[1];
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
@@ -4820,10 +4884,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage2 = function stage2(pIndex) {
-                return pIndex < filterList.length ? _this2.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref37) {
-                    var _ref38 = (0, _slicedToArray3.default)(_ref37, 2),
-                        result = _ref38[0],
-                        index = _ref38[1];
+                return pIndex < filterList.length ? _this2.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref39) {
+                    var _ref40 = (0, _slicedToArray3.default)(_ref39, 2),
+                        result = _ref40[0],
+                        index = _ref40[1];
 
                     console.log(filterList[pIndex].name);
                     console.log(result);
@@ -4850,10 +4914,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage3 = function stage3(iIndex) {
-                return iIndex < filterList.length ? _this2.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref39) {
-                    var _ref40 = (0, _slicedToArray3.default)(_ref39, 2),
-                        result = _ref40[0],
-                        index = _ref40[1];
+                return iIndex < filterList.length ? _this2.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref41) {
+                    var _ref42 = (0, _slicedToArray3.default)(_ref41, 2),
+                        result = _ref42[0],
+                        index = _ref42[1];
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
@@ -4983,9 +5047,9 @@ exports.default = {
                         return nextFilter();
                     };
                     if (option.per) {
-                        return _this3.getStockPER(first_stage[index]._id).then(function (_ref41) {
-                            var _ref42 = (0, _slicedToArray3.default)(_ref41, 1),
-                                stockPer = _ref42[0];
+                        return _this3.getStockPER(first_stage[index]._id).then(function (_ref43) {
+                            var _ref44 = (0, _slicedToArray3.default)(_ref43, 1),
+                                stockPer = _ref44[0];
 
                             if (option.per && stockPer > 0 && (option.per[1] === '>' && stockPer > option.per[2] * 2 / 3 || option.per[1] === '<' && stockPer < option.per[2] * 4 / 3)) {
                                 console.log(stockPer);
@@ -5046,10 +5110,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage2 = function stage2(pIndex) {
-                return pIndex < filterList.length ? _this3.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref43) {
-                    var _ref44 = (0, _slicedToArray3.default)(_ref43, 2),
-                        result = _ref44[0],
-                        index = _ref44[1];
+                return pIndex < filterList.length ? _this3.getPredictPERWarp(filterList[pIndex]._id, session, true).then(function (_ref45) {
+                    var _ref46 = (0, _slicedToArray3.default)(_ref45, 2),
+                        result = _ref46[0],
+                        index = _ref46[1];
 
                     console.log(filterList[pIndex].name);
                     console.log(result);
@@ -5076,10 +5140,10 @@ exports.default = {
         }).then(function (filterList) {
             var filterList1 = [];
             var stage3 = function stage3(iIndex) {
-                return iIndex < filterList.length ? _this3.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref45) {
-                    var _ref46 = (0, _slicedToArray3.default)(_ref45, 2),
-                        result = _ref46[0],
-                        index = _ref46[1];
+                return iIndex < filterList.length ? _this3.getIntervalWarp(filterList[iIndex]._id, session).then(function (_ref47) {
+                    var _ref48 = (0, _slicedToArray3.default)(_ref47, 2),
+                        result = _ref48[0],
+                        index = _ref48[1];
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
@@ -5332,14 +5396,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret7 = _loop(i);
+                            var _ret8 = _loop(i);
 
-                            switch (_ret7) {
+                            switch (_ret8) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                             }
                         }
                     } else {
@@ -5486,14 +5550,14 @@ exports.default = {
                         };
 
                         _loop4: for (var _i31 in items) {
-                            var _ret8 = _loop3(_i31);
+                            var _ret9 = _loop3(_i31);
 
-                            switch (_ret8) {
+                            switch (_ret9) {
                                 case 'break':
                                     break _loop4;
 
                                 default:
-                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                             }
                         }
 
@@ -5670,7 +5734,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret9 = function () {
+    var _ret10 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -5702,7 +5766,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -5770,7 +5834,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret10 = function () {
+            var _ret11 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -5817,7 +5881,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+            if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -5989,8 +6053,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     }
                 }
                 console.log(suggestion.str);
-                if (newStr && (!item.sent || item.sent !== new Date().getDay())) {
-                    item.sent = new Date().getDay();
+                if (newStr && (!item.sent || item.sent !== new Date().getDay() + 1)) {
+                    item.sent = new Date().getDay() + 1;
                     (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
                 }
                 if (suggestion.type === 2) {
@@ -6131,9 +6195,9 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                         };
 
                                         for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
-                                            var _ret11 = _loop5(_i32);
+                                            var _ret12 = _loop5(_i32);
 
-                                            if (_ret11 === 'break') break;
+                                            if (_ret12 === 'break') break;
                                         }
                                         if (!exist) {
                                             stock_list.push({
@@ -6203,7 +6267,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
         }
         return {
-            resetWeb: true,
+            resetWeb: 1,
             newMid: newMid
         };
         //return {
@@ -6237,7 +6301,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
         }
         return {
-            resetWeb: true,
+            resetWeb: 2,
             newMid: _newMid
         };
     }
@@ -6404,6 +6468,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = twseTicker(buy);
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6415,6 +6480,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         } else if (bP > 5) {
             type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = twseTicker(buy);
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6426,6 +6492,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             type = 7;
             //type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = twseTicker(buy);
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6435,6 +6502,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             str += 'Buy 1/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = twseTicker(buy);
             /*if (pType === 0) {
                 bCount = bCount * (2 + bAdd);
             } else if (pType === 4 || pType === 3) {
@@ -6481,6 +6549,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = twseTicker(sell, false);
             finalSell();
             str += 'Sell 3/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 3) {
@@ -6496,12 +6565,14 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = twseTicker(sell, false);
             finalSell();
             str += 'Sell 1/2 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 4) {
             type = 9;
             //type = 5;
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = twseTicker(sell, false);
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 5 || pType === 4) {
@@ -6516,6 +6587,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             str += 'Sell 1/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else {
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = twseTicker(sell, false);
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 2 || pType === 4 || pType === 3) {
@@ -6544,13 +6616,13 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
 var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
     var pType = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     var start = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
-    var len = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : 250;
-    var rinterval = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : _constants.RANGE_INTERVAL;
-    var fee = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : _constants.TRADE_FEE;
-    var ttime = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_TIME;
-    var tinterval = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_INTERVAL;
-    var resetWeb = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : 5;
-    var just = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : false;
+    var reverse = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : false;
+    var len = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 250;
+    var rinterval = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : _constants.RANGE_INTERVAL;
+    var fee = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_FEE;
+    var ttime = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_TIME;
+    var tinterval = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : _constants.TRADE_INTERVAL;
+    var resetWeb = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : 5;
 
     var now = Math.round(new Date().getTime() / 1000);
     //let is_start = false;
@@ -6568,49 +6640,102 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
     //console.log('stock test');
     //console.log(amount);
     //console.log(count);
-    var startI = start + len - 1;
+    //let startI = start + len - 1;
+    var startI = start < his_arr.length - len - 1 ? start : his_arr.length - len - 1;
     var checkweb = resetWeb;
     var web = null;
     var maxAmount = 0;
     var amount = 0;
-    for (; startI < his_arr.length - 1; startI++) {
-        if (checkweb > resetWeb - 1) {
-            checkweb = 0;
-            web = calStair(his_arr, loga, min, startI);
-            maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-            amount = maxAmount;
-        } else {
-            checkweb++;
-        }
-        //if (his_arr[startI].h < mid * 0.9) {
-        if (just || his_arr[startI].h < web.mid) {
-            /*console.log('max');
-            console.log(web.mid);
-            console.log(web.arr.length);*/
-            privious = his_arr[startI + 1];
-            var tmpAmount = amount - maxAmount / 2;
-            while (tmpAmount - his_arr[startI + 1].h > 0) {
-                amount -= his_arr[startI + 1].h;
-                tmpAmount = amount - maxAmount / 2;
-                count++;
+    var maxLost = 0;
+    var maxGain = 0;
+    var startMid = 0;
+    //let minus = false;
+    if (!reverse) {
+        for (; startI > len - 1; startI--) {
+            if (checkweb > resetWeb - 1) {
+                checkweb = 0;
+                web = calStair(his_arr, loga, min, startI);
+                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                amount = maxAmount;
+            } else {
+                checkweb++;
             }
-            /*console.log(his_arr[startI + 1].h);
-            console.log(amount);
-            console.log(maxAmount);
-            console.log(count);*/
-            break;
+            //console.log(startI);
+            //console.log(web.mid);
+            //console.log(his_arr[startI].h);
+            //if (his_arr[startI].h < mid * 0.9) {
+            //if (his_arr[startI].h < web.mid) {
+            if (his_arr[startI].h < web.mid) {
+                //minus = true;
+                //} else if (minus) {
+                startMid = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100;
+                //console.log('max');
+                //console.log(web.mid);
+                //console.log(web.arr.length);
+                privious = his_arr[startI + 1];
+                var tmpAmount = amount - maxAmount / 2;
+                if (his_arr[startI + 1].h === null) {
+                    console.log(startI);
+                    console.log(his_arr[startI + 1]);
+                    return 'data miss';
+                }
+                /*while ((tmpAmount - his_arr[startI + 1].h) > 0) {
+                    amount -= his_arr[startI + 1].h;
+                    tmpAmount = amount - maxAmount / 2;
+                    count++;
+                }*/
+                /*console.log(his_arr[startI + 1].h);
+                console.log(amount);
+                console.log(maxAmount);
+                console.log(count);*/
+                break;
+            }
         }
-    }
-    if (startI >= his_arr.length - 1) {
-        return {
-            str: '0% ' + Math.ceil(maxAmount) + ' 0% 0% 0 0',
-            start: startI
-        };
+        if (startI <= len - 1) {
+            return {
+                str: '0% 0 0% 0% 0 0 0%',
+                start: 0
+            };
+        }
+    } else {
+        var next = 0;
+        startI = start + len - 1;
+        for (; startI < his_arr.length - len - 1; startI++) {
+            if (checkweb > resetWeb - 1) {
+                checkweb = 0;
+                web = calStair(his_arr, loga, min, startI);
+                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                amount = maxAmount;
+            } else {
+                checkweb++;
+            }
+            if (next && his_arr[startI].h < web.mid) {
+                next = 2;
+            }
+            if (!next && his_arr[startI].h < web.mid || next === 2 && his_arr[startI].h > web.mid) {
+                startI++;
+                startMid = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100;
+                privious = his_arr[startI + 1];
+                var _tmpAmount6 = amount - maxAmount / 2;
+                if (his_arr[startI + 1].h === null) {
+                    console.log(startI);
+                    console.log(his_arr[startI + 1]);
+                    return 'data miss';
+                }
+                break;
+            }
+            if (!next) {
+                next = 1;
+            }
+        }
     }
     //console.log('start');
     //console.log(pType);
     //console.log(startI);
-    for (var i = startI; i > startI - len + 1; i--) {
+    var tlength = startI - len + 1;
+    var lastNode = his_arr[startI - len + 1];
+    for (var i = startI; i > tlength; i--) {
+        //console.log(his_arr[i]);
         /*if (his_arr[i].l <= web.mid) {
             is_start = true;
             privious = his_arr[i + 1];
@@ -6625,6 +6750,11 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             web.times = newWeb.times;
         } else {
             checkweb++;
+        }
+        if (his_arr[i].h === null || his_arr[i].l === null) {
+            console.log(i);
+            console.log(his_arr[i]);
+            return 'data miss';
         }
         if (his_arr[i].h && his_arr[i].l && privious.h && privious.l) {
             var hh = privious.h - his_arr[i].h;
@@ -6656,7 +6786,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             } else {
                 priviousTrade.time = 0;
             }
-            stopLoss--;
+            stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             });
@@ -6674,7 +6804,9 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             priviousTrade.time = 0;
             //console.log(amount);
             //console.log(count);
-            stopLoss++;
+            if (suggest.resetWeb === 1) {
+                stopLoss++;
+            }
             newMid.push(suggest.newMid);
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
@@ -6776,10 +6908,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 7 / 8) {
-                    var _tmpAmount6 = amount - maxAmount * 3 / 4;
-                    while (_tmpAmount6 - suggest.buy > 0) {
+                    var _tmpAmount7 = amount - maxAmount * 3 / 4;
+                    while (_tmpAmount7 - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount6 = amount - maxAmount * 3 / 4;
+                        _tmpAmount7 = amount - maxAmount * 3 / 4;
                         count++;
                         buyTrade++;
                     }
@@ -6801,10 +6933,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 5 / 8) {
-                    var _tmpAmount7 = amount - maxAmount / 2;
-                    while (_tmpAmount7 - suggest.buy > 0) {
+                    var _tmpAmount8 = amount - maxAmount / 2;
+                    while (_tmpAmount8 - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount7 = amount - maxAmount / 2;
+                        _tmpAmount8 = amount - maxAmount / 2;
                         count++;
                         buyTrade++;
                     }
@@ -6826,10 +6958,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 3 / 8) {
-                    var _tmpAmount8 = amount - maxAmount / 4;
-                    while (_tmpAmount8 - suggest.buy > 0) {
+                    var _tmpAmount9 = amount - maxAmount / 4;
+                    while (_tmpAmount9 - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount8 = amount - maxAmount / 4;
+                        _tmpAmount9 = amount - maxAmount / 4;
                         count++;
                         buyTrade++;
                     }
@@ -6876,10 +7008,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount / 8) {
-                    var _tmpAmount9 = maxAmount / 4 - amount;
-                    while (_tmpAmount9 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount10 = maxAmount / 4 - amount;
+                    while (_tmpAmount10 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount9 = maxAmount / 4 - amount;
+                        _tmpAmount10 = maxAmount / 4 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -6901,10 +7033,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount * 3 / 8) {
-                    var _tmpAmount10 = maxAmount / 2 - amount;
-                    while (_tmpAmount10 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount11 = maxAmount / 2 - amount;
+                    while (_tmpAmount11 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount10 = maxAmount / 2 - amount;
+                        _tmpAmount11 = maxAmount / 2 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -6926,10 +7058,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount * 5 / 8) {
-                    var _tmpAmount11 = maxAmount * 3 / 4 - amount;
-                    while (_tmpAmount11 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount12 = maxAmount * 3 / 4 - amount;
+                    while (_tmpAmount12 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount11 = maxAmount * 3 / 4 - amount;
+                        _tmpAmount12 = maxAmount * 3 / 4 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -6956,10 +7088,17 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
         //console.log(count);
         privious = his_arr[i];
         //}
+        var testAmount = amount + his_arr[i].l * count * (1 - fee);
+        if (!maxLost || maxLost > testAmount) {
+            maxLost = testAmount;
+        }
+        if (!maxGain || maxGain < testAmount) {
+            maxGain = testAmount;
+        }
     }
     //console.log(amount);
     //console.log(count);
-    amount += his_arr[startI - len + 1].l * count * (1 - fee);
+    amount += lastNode.l * count * (1 - fee);
     count = 0;
     //console.log('result');
     //console.log(amount);
@@ -6967,11 +7106,11 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
     //console.log(buyTrade);
     //console.log(sellTrade);
     //console.log(stopLoss);
-    var str = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(maxAmount) + ' ' + Math.round((amount / maxAmount - 1) * 10000) / 100 + '% ' + (his_arr[startI].l ? Math.round((his_arr[startI - len + 1].h / his_arr[startI].l - 1) * 10000) / 100 : 0) + '% ' + sellTrade + ' ' + stopLoss;
+    var str = startMid + '% ' + Math.ceil(maxAmount) + ' ' + Math.round((amount / maxAmount - 1) * 10000) / 100 + '% ' + (his_arr[startI].l ? Math.round((lastNode.h / his_arr[startI].l - 1) * 10000) / 100 : 0) + '% ' + sellTrade + ' ' + stopLoss + ' ' + Math.round((maxLost / maxAmount - 1) * 10000) / 100 + '% ' + Math.round((maxGain / maxAmount - 1) * 10000) / 100 + '%';
     //const str = is_start ? `${Math.ceil(maxAmount)} ${Math.round((his_arr[start].h / his_arr[start + len - 1].l - 1) * 10000) / 100}% ${Math.round((amount / maxAmount - 1) * 10000) / 100}% ${sellTrade} ${stopLoss}` : `${Math.ceil(maxAmount)} ${Math.round((his_arr[start].h / his_arr[start + len - 1].l - 1) * 10000) / 100}% 0% 0 0`;
     return {
         str: str,
-        start: startI
+        start: startI - len + 1
     };
 };
 
@@ -7198,4 +7337,46 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         arr: webArr,
         mid: webMid
     };
+};
+
+var twseTicker = function twseTicker(price) {
+    var large = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+
+    if (price < 10) {
+        if (large) {
+            return Math.ceil(price * 100) / 100;
+        } else {
+            return Math.floor(price * 100) / 100;
+        }
+    } else if (price < 50) {
+        if (large) {
+            return Math.ceil(price * 20) / 20;
+        } else {
+            return Math.floor(price * 20) / 20;
+        }
+    } else if (price < 100) {
+        if (large) {
+            return Math.ceil(price * 10) / 10;
+        } else {
+            return Math.floor(price * 10) / 10;
+        }
+    } else if (price < 500) {
+        if (large) {
+            return Math.ceil(price * 2) / 2;
+        } else {
+            return Math.floor(price * 2) / 2;
+        }
+    } else if (price < 1000) {
+        if (large) {
+            return Math.ceil(price);
+        } else {
+            return Math.floor(price);
+        }
+    } else {
+        if (large) {
+            return Math.ceil(price / 5) * 5;
+        } else {
+            return Math.floor(price / 5) * 5;
+        }
+    }
 };
