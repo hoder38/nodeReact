@@ -4056,15 +4056,15 @@ export default {
             const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
                 console.log(filterList[iIndex].name);
                 console.log(result);
-                const intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\d+) (\d+)$/);
+                const intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
                 if (intervalVal) {
                     const cok = option.close ? ((option.close[1] === '>' && intervalVal[1] > option.close[2]) || (option.close[1] === '<' && intervalVal[1] < option.close[2])) ? true : false : true;
                     const pok = option.profit ? ((option.profit[1] === '>' && intervalVal[3] > option.profit[2]) || (option.profit[1] === '<' && intervalVal[3] < option.profit[2])) ? true : false : true;
                     const gok = option.gap ? ((option.gap[1] === '>' && intervalVal[4] > option.gap[2]) || (option.gap[1] === '<' && intervalVal[4] < option.gap[2])) ? true : false : true;
                     const tok = option.times ? ((option.times[1] === '>' && intervalVal[5] > option.times[2]) || (option.times[1] === '<' && intervalVal[5] < option.times[2])) ? true : false : true;
                     const sok = option.stop ? ((option.stop[1] === '>' && intervalVal[6] > option.stop[2]) || (option.stop[1] === '<' && intervalVal[6] < option.stop[2])) ? true : false : true;
-                    const iok = option.interval ? ((option.interval[1] === '>' && intervalVal[7] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[7] < option.interval[2])) ? true : false : true;
-                    const vok = option.vol ? ((option.vol[1] === '>' && intervalVal[8] > option.vol[2]) || (option.vol[1] === '<' && intervalVal[8] < option.vol[2])) ? true : false : true;
+                    const iok = option.interval ? ((option.interval[1] === '>' && intervalVal[8] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[8] < option.interval[2])) ? true : false : true;
+                    const vok = option.vol ? ((option.vol[1] === '>' && intervalVal[9] > option.vol[2]) || (option.vol[1] === '<' && intervalVal[9] < option.vol[2])) ? true : false : true;
                     if (iok && vok && cok && pok && gok && tok && sok) {
                         filterList1.push(filterList[iIndex]);
                     }

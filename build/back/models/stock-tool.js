@@ -4744,15 +4744,15 @@ exports.default = {
 
                     console.log(filterList[iIndex].name);
                     console.log(result);
-                    var intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\d+) (\d+)$/);
+                    var intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
                     if (intervalVal) {
                         var cok = option.close ? option.close[1] === '>' && intervalVal[1] > option.close[2] || option.close[1] === '<' && intervalVal[1] < option.close[2] ? true : false : true;
                         var pok = option.profit ? option.profit[1] === '>' && intervalVal[3] > option.profit[2] || option.profit[1] === '<' && intervalVal[3] < option.profit[2] ? true : false : true;
                         var gok = option.gap ? option.gap[1] === '>' && intervalVal[4] > option.gap[2] || option.gap[1] === '<' && intervalVal[4] < option.gap[2] ? true : false : true;
                         var tok = option.times ? option.times[1] === '>' && intervalVal[5] > option.times[2] || option.times[1] === '<' && intervalVal[5] < option.times[2] ? true : false : true;
                         var sok = option.stop ? option.stop[1] === '>' && intervalVal[6] > option.stop[2] || option.stop[1] === '<' && intervalVal[6] < option.stop[2] ? true : false : true;
-                        var iok = option.interval ? option.interval[1] === '>' && intervalVal[7] > option.interval[2] || option.interval[1] === '<' && intervalVal[7] < option.interval[2] ? true : false : true;
-                        var vok = option.vol ? option.vol[1] === '>' && intervalVal[8] > option.vol[2] || option.vol[1] === '<' && intervalVal[8] < option.vol[2] ? true : false : true;
+                        var iok = option.interval ? option.interval[1] === '>' && intervalVal[8] > option.interval[2] || option.interval[1] === '<' && intervalVal[8] < option.interval[2] ? true : false : true;
+                        var vok = option.vol ? option.vol[1] === '>' && intervalVal[9] > option.vol[2] || option.vol[1] === '<' && intervalVal[9] < option.vol[2] ? true : false : true;
                         if (iok && vok && cok && pok && gok && tok && sok) {
                             filterList1.push(filterList[iIndex]);
                         }

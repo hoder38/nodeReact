@@ -813,7 +813,7 @@ export const STOCK_FILTER = {
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
     vol: [1, '>', 200],
-    close: [1, '>', 5],
+    close: [1, '<', 5],
 }
 
 export const BACKUP_COLLECTION = [

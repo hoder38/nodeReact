@@ -359,7 +359,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
     vol: [1, '>', 200],
-    close: [1, '>', 5]
+    close: [1, '<', 5]
 };
 
 var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];
