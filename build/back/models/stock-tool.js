@@ -4122,9 +4122,8 @@ exports.default = {
                             }
                         };
                         var exGet = function exGet() {
-                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/recur_mi(1, 0)
-                            );
-                        } /*: Promise.resolve([null, ret_obj])*/;
+                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
+                        };
                         return exGet().then(function (_ref23) {
                             var _ref24 = (0, _slicedToArray3.default)(_ref23, 2),
                                 raw_list = _ref24[0],
@@ -5958,7 +5957,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     });
                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                 }
-                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, sType);
+                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
                 while (suggestion.resetWeb) {
                     if (item.newMid.length === 0) {
                         item.tmpPT = {
@@ -5972,7 +5971,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     newArr = item.web.map(function (v) {
                         return v * item.newMid[item.newMid.length - 1] / item.mid;
                     });
-                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, sType);
+                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
                 }
                 var count = 0;
                 var amount = item.amount;

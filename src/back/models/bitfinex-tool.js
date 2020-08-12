@@ -175,7 +175,7 @@ export const calWeb = curArr => {
         }
     }
     const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '3h', query: {limit: 1200}}).then(entries => {
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '6h', query: {limit: 1200}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
@@ -211,7 +211,8 @@ export const calWeb = curArr => {
             let str = '';
             const testResult = [];
             const match = [];
-            let j = Math.floor((raw_arr.length - 1) / 2);
+            //let j = Math.floor((raw_arr.length - 1) / 2);
+            let j = raw_arr.length - 1;
             console.log('start');
             while (j > 239) {
                 console.log(j);
@@ -259,7 +260,7 @@ export const calWeb = curArr => {
                     best_rate = rate;
                     ret_str = str;
                 }
-                const temp = stockTest(raw_arr, loga, min, type, j, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24);
+                const temp = stockTest(raw_arr, loga, min, type, j, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1);
                 if (temp === 'data miss') {
                     return true;
                 }

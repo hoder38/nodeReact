@@ -3649,7 +3649,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ recur_mi(1, 0) /*: Promise.resolve([null, ret_obj])*/;
+                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -4985,7 +4985,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
             checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         }
-        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, sType);
+        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
         while(suggestion.resetWeb) {
             if (item.newMid.length === 0) {
                 item.tmpPT = {
@@ -4997,7 +4997,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             item.previous.time = 0;
             item.newMid.push(suggestion.newMid);
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, sType);
+            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
         }
         let count = 0;
         let amount = item.amount;

@@ -244,7 +244,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
         }) : recurType(index + 1);
     };
     var singleCal = function singleCal(curType, index) {
-        return rest.candles({ symbol: curType, timeframe: '3h', query: { limit: 1200 } }).then(function (entries) {
+        return rest.candles({ symbol: curType, timeframe: '6h', query: { limit: 1200 } }).then(function (entries) {
             var max = 0;
             var min = 0;
             var min_vol = 0;
@@ -280,7 +280,8 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                 var str = '';
                 var testResult = [];
                 var match = [];
-                var j = Math.floor((raw_arr.length - 1) / 2);
+                //let j = Math.floor((raw_arr.length - 1) / 2);
+                var j = raw_arr.length - 1;
                 console.log('start');
                 while (j > 239) {
                     console.log(j);
@@ -329,7 +330,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                             best_rate = rate;
                             ret_str = str;
                         }
-                        var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, true, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                        var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, true, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
                         if (temp === 'data miss') {
                             return {
                                 v: true
