@@ -244,7 +244,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
         }) : recurType(index + 1);
     };
     var singleCal = function singleCal(curType, index) {
-        return rest.candles({ symbol: curType, timeframe: '1h', query: { limit: 1200 } }).then(function (entries) {
+        return rest.candles({ symbol: curType, timeframe: '3h', query: { limit: 1200 } }).then(function (entries) {
             var max = 0;
             var min = 0;
             var min_vol = 0;
@@ -280,11 +280,11 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                 var str = '';
                 var testResult = [];
                 var match = [];
-                var j = raw_arr.length - 1;
+                var j = Math.floor((raw_arr.length - 1) / 2);
                 console.log('start');
                 while (j > 239) {
                     console.log(j);
-                    var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24);
+                    var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
                     var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
                     if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
                         testResult.push(temp);

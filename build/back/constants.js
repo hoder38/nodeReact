@@ -358,7 +358,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     //mm: [1, '>', 3],
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
-    vol: [1, '>', 200],
+    vol: [1, '>', 150],
     close: [1, '<', 5]
 };
 
@@ -389,8 +389,8 @@ var UPDATE_BOOK = exports.UPDATE_BOOK = 21600;
 var UPDATE_ORDER = exports.UPDATE_ORDER = 60;
 var MINIMAL_OFFER = exports.MINIMAL_OFFER = 50;
 var BITFINEX_FEE = exports.BITFINEX_FEE = 0.003;
-var BITFINEX_INTERVAL = exports.BITFINEX_INTERVAL = 3600;
-var RANGE_BITFINEX_INTERVAL = exports.RANGE_BITFINEX_INTERVAL = 259200;
+var BITFINEX_INTERVAL = exports.BITFINEX_INTERVAL = 10800;
+var RANGE_BITFINEX_INTERVAL = exports.RANGE_BITFINEX_INTERVAL = 777600;
 var TRADE_FEE = exports.TRADE_FEE = 0.005;
 var TRADE_INTERVAL = exports.TRADE_INTERVAL = 86400;
 var TRADE_TIME = exports.TRADE_TIME = 21600;

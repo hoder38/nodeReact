@@ -812,7 +812,7 @@ export const STOCK_FILTER = {
     //mm: [1, '>', 3],
     //pre: [1, '>', 10],
     interval: [1, '>', 750],
-    vol: [1, '>', 200],
+    vol: [1, '>', 150],
     close: [1, '<', 5],
 }
 
@@ -852,8 +852,8 @@ export const UPDATE_BOOK = 21600;
 export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
 export const BITFINEX_FEE = 0.003;
-export const BITFINEX_INTERVAL = 3600;
-export const RANGE_BITFINEX_INTERVAL = 259200;
+export const BITFINEX_INTERVAL = 10800;
+export const RANGE_BITFINEX_INTERVAL = 777600;
 export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
 export const TRADE_TIME = 21600;

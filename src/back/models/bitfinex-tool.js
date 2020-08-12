@@ -175,7 +175,7 @@ export const calWeb = curArr => {
         }
     }
     const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '1h', query: {limit: 1200}}).then(entries => {
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '3h', query: {limit: 1200}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
@@ -211,11 +211,11 @@ export const calWeb = curArr => {
             let str = '';
             const testResult = [];
             const match = [];
-            let j = raw_arr.length - 1;
+            let j = Math.floor((raw_arr.length - 1) / 2);
             console.log('start');
             while (j > 239) {
                 console.log(j);
-                const temp = stockTest(raw_arr, loga, min, type, j, false, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24);
+                const temp = stockTest(raw_arr, loga, min, type, j, false, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1);
                 const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
                 if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
                     testResult.push(temp);
