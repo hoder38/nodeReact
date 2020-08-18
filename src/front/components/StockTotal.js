@@ -93,7 +93,7 @@ const StockTotal = React.createClass({
             return (
                 <div className="input-group" key={key++}>
                     <div style={{content: '\A', position: 'absolute', background: 'grey', top: 0, bottom: 0, left:0, width:`${percent}%`, opacity: 0.4, zIndex: MEDIA_ZINDEX}} />
-                    <span className="form-control" style={{wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}}>{v.name}: {v.current}({percent}%) / {Math.round(v.profit * 100) / 100}({v.remain})</span>
+                    <span className="form-control" style={{wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}}>{v.name}: {Math.round(v.current * 100) / 100}({percent}%) / {Math.round(v.profit * 100) / 100}({v.remain})</span>
                     <Dropdown headelement="span" className="input-group-btn" style={{left: 'auto', right: '0px', top: '0px'}} droplist={dropList}>
                         <button type="button" className="btn btn-default">
                             <span className="caret"></span>

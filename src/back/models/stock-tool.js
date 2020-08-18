@@ -5461,7 +5461,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = (sType === 0) ? twseTicker(buy) : buy;
+            buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -5473,7 +5473,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         } else if (bP > 5) {
             type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = (sType === 0) ? twseTicker(buy) : buy;
+            buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -5485,7 +5485,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             type = 7;
             //type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = (sType === 0) ? twseTicker(buy) : buy;
+            buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -5495,7 +5495,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Buy 1/4 ${buy} ( ${bCount} ) `;
         } else {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = (sType === 0) ? twseTicker(buy) : buy;
+            buy = (sType === 0) ? twseTicker(buy, false) : buy;
             /*if (pType === 0) {
                 bCount = bCount * (2 + bAdd);
             } else if (pType === 4 || pType === 3) {
@@ -5542,7 +5542,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = (sType === 0) ? twseTicker(sell, false) : sell;
+            sell = (sType === 0) ? twseTicker(sell) : sell;
             //finalSell();
             str += `Sell 3/4 ${sell} ( ${sCount} ) `;
         } else if (sP < 3) {
@@ -5558,14 +5558,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = (sType === 0) ? twseTicker(sell, false) : sell;
+            sell = (sType === 0) ? twseTicker(sell) : sell;
             //finalSell();
             str += `Sell 1/2 ${sell} ( ${sCount} ) `;
         } else if (sP < 4) {
             type = 9;
             //type = 5;
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = (sType === 0) ? twseTicker(sell, false) : sell;
+            sell = (sType === 0) ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 5 || pType === 4) {
@@ -5580,7 +5580,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = (sType === 0) ? twseTicker(sell, false) : sell;
+            sell = (sType === 0) ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 2 || pType === 4 || pType === 3) {
@@ -5656,17 +5656,17 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 console.log(web);
                 //console.log(web.arr.length);
                 privious = his_arr[startI + 1];
-                let tmpAmount = amount - maxAmount / 2;
                 if (his_arr[startI + 1].h === null) {
                     console.log(startI);
                     console.log(his_arr[startI + 1]);
                     return 'data miss';
                 }
+                /*let tmpAmount = amount - maxAmount / 2;
                 while ((tmpAmount - his_arr[startI + 1].h) > 0) {
                     amount -= his_arr[startI + 1].h;
                     tmpAmount = amount - maxAmount / 2;
                     count++;
-                }
+                }*/
                 //console.log(his_arr[startI + 1].h);
                 console.log(amount);
                 console.log(maxAmount);
@@ -5699,7 +5699,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 startI++;
                 startMid = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100;
                 privious = his_arr[startI + 1];
-                let tmpAmount = amount - maxAmount / 2;
                 if (his_arr[startI + 1].h === null) {
                     console.log(startI);
                     console.log(his_arr[startI + 1]);
@@ -5798,6 +5797,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             //console.log(privious);
             //console.log(his_arr[i]);
             console.log(his_arr[i - 1]);
+            //console.log(i);
             //console.log(price);
             //console.log(priviousTrade);
             //console.log(suggest);

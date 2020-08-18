@@ -6468,7 +6468,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = sType === 0 ? twseTicker(buy) : buy;
+            buy = sType === 0 ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6480,7 +6480,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         } else if (bP > 5) {
             type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = sType === 0 ? twseTicker(buy) : buy;
+            buy = sType === 0 ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6492,7 +6492,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             type = 7;
             //type = 3;
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = sType === 0 ? twseTicker(buy) : buy;
+            buy = sType === 0 ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
             } else {
@@ -6502,7 +6502,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             str += 'Buy 1/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else {
             buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            buy = sType === 0 ? twseTicker(buy) : buy;
+            buy = sType === 0 ? twseTicker(buy, false) : buy;
             /*if (pType === 0) {
                 bCount = bCount * (2 + bAdd);
             } else if (pType === 4 || pType === 3) {
@@ -6549,7 +6549,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = sType === 0 ? twseTicker(sell, false) : sell;
+            sell = sType === 0 ? twseTicker(sell) : sell;
             //finalSell();
             str += 'Sell 3/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 3) {
@@ -6565,14 +6565,14 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 sCount = sCount * (1 + sAdd);
             }
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = sType === 0 ? twseTicker(sell, false) : sell;
+            sell = sType === 0 ? twseTicker(sell) : sell;
             //finalSell();
             str += 'Sell 1/2 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 4) {
             type = 9;
             //type = 5;
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = sType === 0 ? twseTicker(sell, false) : sell;
+            sell = sType === 0 ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 5 || pType === 4) {
@@ -6587,7 +6587,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             str += 'Sell 1/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else {
             sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            sell = sType === 0 ? twseTicker(sell, false) : sell;
+            sell = sType === 0 ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
             } else if (pType === 2 || pType === 4 || pType === 3) {
@@ -6674,17 +6674,17 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                 console.log(web);
                 //console.log(web.arr.length);
                 privious = his_arr[startI + 1];
-                var tmpAmount = amount - maxAmount / 2;
                 if (his_arr[startI + 1].h === null) {
                     console.log(startI);
                     console.log(his_arr[startI + 1]);
                     return 'data miss';
                 }
-                while (tmpAmount - his_arr[startI + 1].h > 0) {
+                /*let tmpAmount = amount - maxAmount / 2;
+                while ((tmpAmount - his_arr[startI + 1].h) > 0) {
                     amount -= his_arr[startI + 1].h;
                     tmpAmount = amount - maxAmount / 2;
                     count++;
-                }
+                }*/
                 //console.log(his_arr[startI + 1].h);
                 console.log(amount);
                 console.log(maxAmount);
@@ -6717,7 +6717,6 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                 startI++;
                 startMid = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100;
                 privious = his_arr[startI + 1];
-                var _tmpAmount6 = amount - maxAmount / 2;
                 if (his_arr[startI + 1].h === null) {
                     console.log(startI);
                     console.log(his_arr[startI + 1]);
@@ -6820,6 +6819,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
         //console.log(privious);
         //console.log(his_arr[i]);
         console.log(his_arr[i - 1]);
+        //console.log(i);
         //console.log(price);
         //console.log(priviousTrade);
         //console.log(suggest);
@@ -6916,10 +6916,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 7 / 8) {
-                    var _tmpAmount7 = amount - maxAmount * 3 / 4;
-                    while (_tmpAmount7 - suggest.buy > 0) {
+                    var tmpAmount = amount - maxAmount * 3 / 4;
+                    while (tmpAmount - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount7 = amount - maxAmount * 3 / 4;
+                        tmpAmount = amount - maxAmount * 3 / 4;
                         count++;
                         buyTrade++;
                     }
@@ -6941,10 +6941,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 5 / 8) {
-                    var _tmpAmount8 = amount - maxAmount / 2;
-                    while (_tmpAmount8 - suggest.buy > 0) {
+                    var _tmpAmount6 = amount - maxAmount / 2;
+                    while (_tmpAmount6 - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount8 = amount - maxAmount / 2;
+                        _tmpAmount6 = amount - maxAmount / 2;
                         count++;
                         buyTrade++;
                     }
@@ -6966,10 +6966,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount > maxAmount * 3 / 8) {
-                    var _tmpAmount9 = amount - maxAmount / 4;
-                    while (_tmpAmount9 - suggest.buy > 0) {
+                    var _tmpAmount7 = amount - maxAmount / 4;
+                    while (_tmpAmount7 - suggest.buy > 0) {
                         amount -= suggest.buy;
-                        _tmpAmount9 = amount - maxAmount / 4;
+                        _tmpAmount7 = amount - maxAmount / 4;
                         count++;
                         buyTrade++;
                     }
@@ -7016,10 +7016,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount / 8) {
-                    var _tmpAmount10 = maxAmount / 4 - amount;
-                    while (_tmpAmount10 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount8 = maxAmount / 4 - amount;
+                    while (_tmpAmount8 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount10 = maxAmount / 4 - amount;
+                        _tmpAmount8 = maxAmount / 4 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -7041,10 +7041,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount * 3 / 8) {
-                    var _tmpAmount11 = maxAmount / 2 - amount;
-                    while (_tmpAmount11 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount9 = maxAmount / 2 - amount;
+                    while (_tmpAmount9 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount11 = maxAmount / 2 - amount;
+                        _tmpAmount9 = maxAmount / 2 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
@@ -7066,10 +7066,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                     }
                 }
                 if (amount < maxAmount * 5 / 8) {
-                    var _tmpAmount12 = maxAmount * 3 / 4 - amount;
-                    while (_tmpAmount12 - suggest.sell * (1 - fee) > 0) {
+                    var _tmpAmount10 = maxAmount * 3 / 4 - amount;
+                    while (_tmpAmount10 - suggest.sell * (1 - fee) > 0) {
                         amount += suggest.sell * (1 - fee);
-                        _tmpAmount12 = maxAmount * 3 / 4 - amount;
+                        _tmpAmount10 = maxAmount * 3 / 4 - amount;
                         sellTrade++;
                         count--;
                         if (count <= 0) {
