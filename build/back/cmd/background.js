@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.filterBitfinex = exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
@@ -453,41 +453,35 @@ var checkStock = exports.checkStock = function checkStock() {
 };
 
 var rateCalculator = exports.rateCalculator = function rateCalculator() {
-    if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
-        var _ret9 = function () {
-            var calR = function calR() {
-                return (0, _bitfinexTool.calRate)([_constants.FUSD_SYM, _constants.FUSDT_SYM, _constants.FBTC_SYM, _constants.FETH_SYM, _constants.FOMG_SYM]).catch(function (err) {
-                    return bgError(err, 'Loop rate calculator');
-                }).then(function () {
-                    return new _promise2.default(function (resolve, reject) {
-                        return setTimeout(function () {
-                            return resolve();
-                        }, _constants.RATE_INTERVAL * 1000);
-                    });
-                }).then(function () {
-                    return calR();
-                });
-            };
-            return {
-                v: new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve();
-                    }, 60000);
-                }).then(function () {
-                    return calR();
-                })
-            };
-        }();
-
-        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
-    }
+    //if (BITFINEX_LOAN(ENV_TYPE)) {
+    var calR = function calR() {
+        return (0, _bitfinexTool.calRate)([_constants.FUSD_SYM, _constants.FUSDT_SYM, _constants.FBTC_SYM, _constants.FETH_SYM, _constants.FOMG_SYM]).catch(function (err) {
+            return bgError(err, 'Loop rate calculator');
+        }).then(function () {
+            return new _promise2.default(function (resolve, reject) {
+                return setTimeout(function () {
+                    return resolve();
+                }, _constants.RATE_INTERVAL * 1000);
+            });
+        }).then(function () {
+            return calR();
+        });
+    };
+    return new _promise2.default(function (resolve, reject) {
+        return setTimeout(function () {
+            return resolve();
+        }, 60000);
+    }).then(function () {
+        return calR();
+    });
+    //}
 };
 
 var setUserOffer = exports.setUserOffer = function setUserOffer() {
     if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
-        var _ret10 = function () {
+        var _ret9 = function () {
             var checkUser = function checkUser(index, userlist) {
-                return index >= userlist.length ? _promise2.default.resolve() : (0, _bitfinexTool.setWsOffer)(userlist[index].username, userlist[index].bitfinex).then(function () {
+                return index >= userlist.length ? _promise2.default.resolve() : (0, _bitfinexTool.setWsOffer)(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(function () {
                     return checkUser(index + 1, userlist);
                 });
             };
@@ -518,6 +512,37 @@ var setUserOffer = exports.setUserOffer = function setUserOffer() {
                     }, 90000);
                 }).then(function () {
                     return setO();
+                })
+            };
+        }();
+
+        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+    }
+};
+
+var filterBitfinex = exports.filterBitfinex = function filterBitfinex() {
+    if ((0, _config.BITFINEX_FILTER)(_ver.ENV_TYPE)) {
+        var _ret10 = function () {
+            var cW = function cW() {
+                return (0, _bitfinexTool.calWeb)(_constants.SUPPORT_PAIR[_constants.FUSD_SYM]).catch(function (err) {
+                    return bgError(err, 'Loop bitfinex filter');
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, _constants.BACKUP_INTERVAL * 1000);
+                    });
+                }).then(function () {
+                    return cW();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 80000);
+                }).then(function () {
+                    return cW();
                 })
             };
         }();

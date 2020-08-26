@@ -13,10 +13,6 @@ var _keys = require('babel-runtime/core-js/object/keys');
 
 var _keys2 = _interopRequireDefault(_keys);
 
-var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
-
-var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
-
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
 var _getIterator3 = _interopRequireDefault(_getIterator2);
@@ -45,6 +41,10 @@ var _mongoTool = require('../models/mongo-tool');
 
 var _mongoTool2 = _interopRequireDefault(_mongoTool);
 
+var _redisTool = require('../models/redis-tool');
+
+var _redisTool2 = _interopRequireDefault(_redisTool);
+
 var _utility = require('../util/utility');
 
 var _sendWs = require('../util/sendWs');
@@ -60,6 +60,7 @@ var finalRate = {};
 var maxRange = {};
 var currentRate = {};
 var priceData = {};
+var order_count = 0;
 
 //user
 var userWs = {};
@@ -90,12 +91,15 @@ var calRate = exports.calRate = function calRate(curArr) {
             return _promise2.default.resolve();
         } else {
             return rest.ticker(_constants.SUPPORT_PRICE[index]).then(function (ticker) {
-                priceData[_constants.SUPPORT_PRICE[index]] = {
-                    dailyChange: ticker.dailyChangePerc * 100,
-                    lastPrice: ticker.lastPrice,
-                    time: Math.round(new Date().getTime() / 1000)
-                };
-                return recurPrice(index + 1);
+                return (0, _redisTool2.default)('hgetall', 'bitfinex: ' + _constants.SUPPORT_PRICE[index]).then(function (item) {
+                    priceData[_constants.SUPPORT_PRICE[index]] = {
+                        dailyChange: ticker.dailyChangePerc * 100,
+                        lastPrice: ticker.lastPrice,
+                        time: Math.round(new Date().getTime() / 1000),
+                        str: item ? item.str : ''
+                    };
+                    return recurPrice(index + 1);
+                });
             });
         }
     };
@@ -224,27 +228,13 @@ var calRate = exports.calRate = function calRate(curArr) {
 };
 
 var calWeb = exports.calWeb = function calWeb(curArr) {
-    var recurPrice = function recurPrice(index) {
-        if (index >= _constants.SUPPORT_PRICE.length) {
-            return _promise2.default.resolve();
-        } else {
-            return rest.ticker(_constants.SUPPORT_PRICE[index]).then(function (ticker) {
-                priceData[_constants.SUPPORT_PRICE[index]] = {
-                    dailyChange: ticker.dailyChangePerc * 100,
-                    lastPrice: ticker.lastPrice,
-                    time: Math.round(new Date().getTime() / 1000)
-                };
-                return recurPrice(index + 1);
-            });
-        }
-    };
     var recurType = function recurType(index) {
-        return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
+        return index >= curArr.length ? _promise2.default.resolve() : _constants.SUPPORT_PAIR[_constants.FUSD_SYM].indexOf(curArr[index]) !== -1 ? singleCal(curArr[index], index).then(function () {
             return recurType(index + 1);
         }) : recurType(index + 1);
     };
     var singleCal = function singleCal(curType, index) {
-        return rest.candles({ symbol: curType, timeframe: '6h', query: { limit: 1200 } }).then(function (entries) {
+        return rest.candles({ symbol: curType, timeframe: '1h', query: { limit: 3600 } }).then(function (entries) {
             var max = 0;
             var min = 0;
             var min_vol = 0;
@@ -268,7 +258,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
             console.log(min);
             console.log(min_vol);
             var loga = (0, _stockTool.logArray)(max, min);
-            var web = (0, _stockTool.calStair)(raw_arr, loga, min, 0, _constants.BITFINEX_FEE);
+            var web = (0, _stockTool.calStair)(raw_arr, loga, min, 0, _constants.BITFINEX_FEE, 240 * 3);
             console.log(web);
             var month = [];
             var ret_str1 = [];
@@ -281,10 +271,10 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                 var testResult = [];
                 var match = [];
                 //let j = Math.floor((raw_arr.length - 1) / 2);
-                var j = raw_arr.length - 1;
-                console.log('start');
+                var j = raw_arr.length - 240 * 3;
+                //console.log('start');
                 while (j > 239) {
-                    console.log(j);
+                    //console.log(j);
                     var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
                     var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
                     if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
@@ -321,7 +311,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                                 maxloss = +v[7];
                             }
                         });
-                        str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                        str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
                         rate = Math.round(rate * 10000 - 10000) / 100;
                         real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                         times = Math.round(times / count * 100) / 100;
@@ -368,24 +358,83 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
             }
             console.log(lastest_type);
             console.log('done');
+            (0, _redisTool2.default)('hmset', 'bitfinex: ' + curArr[index], {
+                str: ret_str
+            }).catch(function (err) {
+                return (0, _utility.handleError)(err, 'Redis');
+            });
+            var updateWeb = function updateWeb() {
+                return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: curArr[index] }).then(function (item) {
+                    console.log(item);
+                    if (item.length < 1) {
+                        return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                            sType: 1,
+                            index: curArr[index],
+                            name: curArr[index].substr(1),
+                            type: _constants.FUSD_SYM,
+                            web: web.arr,
+                            wType: lastest_type,
+                            mid: web.mid
+                        }).then(function (items) {
+                            return console.log(items);
+                        });
+                    } else {
+                        var _ret2 = function () {
+                            var recur_update = function recur_update(i) {
+                                if (i >= item.length) {
+                                    return _promise2.default.resolve();
+                                } else {
+                                    if (!item[i].owner) {
+                                        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
+                                                web: web.arr,
+                                                wType: lastest_type,
+                                                mid: web.mid
+                                            } }).then(function (items) {
+                                            console.log(items);
+                                            return recur_update(i + 1);
+                                        });
+                                    } else {
+                                        var maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                                        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
+                                                web: web.arr,
+                                                wType: lastest_type,
+                                                mid: web.mid,
+                                                times: Math.floor(item[i].orig / maxAmount * 10000) / 10000
+                                            } }).then(function (items) {
+                                            console.log(items);
+                                            return recur_update(i + 1);
+                                        });
+                                    }
+                                }
+                            };
+                            return {
+                                v: recur_update(0)
+                            };
+                        }();
+
+                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                    }
+                });
+            };
+            return updateWeb();
         });
     };
-    return recurPrice(0).then(function () {
-        return recurType(0);
-    });
-    //return recurType(0);
+    //return recurPrice(0).then(() => recurType(0));
+    return recurType(0);
 };
 
 var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     var curArr = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+    var uid = arguments[2];
 
     //檢查跟設定active
     curArr = curArr.filter(function (v) {
-        return v.isActive && v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0 ? true : false;
+        return v.isActive && (v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0 || v.isTrade && v.amount >= 0 && v.pair) ? true : false;
     });
     if (curArr.length < 1) {
         return _promise2.default.resolve();
     }
+
     var userKey = null;
     var userSecret = null;
     for (var i = 0; i < curArr.length; i++) {
@@ -400,33 +449,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     }
     var userBfx = new _bitfinexApiNode2.default({ apiKey: userKey, apiSecret: userSecret });
     var userRest = userBfx.rest(2, { transform: true });
-    var cancelOrder = function cancelOrder(symbol, index, amount, time, type, is_close) {
-        if (!order[id][symbol] || index >= order[id][symbol].length || is_close) {
-            return _promise2.default.resolve();
-        } else {
-            console.log(amount);
-            console.log(time);
-            console.log(type);
-            console.log(order[id][symbol][index]);
-            console.log(is_close);
-            if (order[id][symbol][index].amount === amount && Math.abs(order[id][symbol][index].time - time) < 60 && (type !== 'LIMIT' && order[id][symbol][index].type == 'LIMIT' || type === 'LIMIT' && order[id][symbol][index].type !== 'LIMIT') && !is_close) {
-                return userRest.cancelOrder(order[id][symbol][index].id).then(function () {
-                    return new _promise2.default(function (resolve, reject) {
-                        return setTimeout(function () {
-                            return resolve();
-                        }, 3000);
-                    }).then(function () {
-                        return cancelOrder(symbol, index + 1, amount, time, type, true);
-                    });
-                }).catch(function (err) {
-                    (0, _sendWs2.default)(id + ' Bitfinex Close Order Error: ' + (err.message || err.msg), 0, 0, true);
-                    (0, _utility.handleError)(err, id + ' Bitfinex Close Order Error');
-                });
-            } else {
-                return cancelOrder(symbol, index + 1, amount, time, type, is_close);
-            }
-        }
-    };
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         if (!updateTime[id]) {
@@ -495,6 +517,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             time: Math.round(new Date().getTime() / 1000),
                             total: wallet.balance
                         };
+                        (0, _sendWs2.default)({
+                            type: 'bitfinex',
+                            data: (i + 1) * 100,
+                            user: id
+                        });
                     }
                 }
             });
@@ -772,88 +799,22 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         }
                     }
                 }
-
-                var _loop = function _loop(_i2) {
-                    if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].interval && curArr[_i2].amount && curArr[_i2].low_point && curArr[_i2].loss_stop && curArr[_i2].pair && curArr[_i2].pair.length > 0) {
-                        console.log(curArr[_i2]);
-                        if (os.amountOrig > 0) {
-                            if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                //set oco trail priceTrailing
-                                if (curArr[_i2].gain_stop) {
-                                    var or = new _bfxApiNodeModels.Order({
-                                        cid: Date.now(),
-                                        type: 'LIMIT',
-                                        symbol: os.symbol,
-                                        amount: -os.amountOrig / 2 * 1.005,
-                                        price: os.price * (101 + curArr[_i2].gain_stop) / 100,
-                                        priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                        flags: 17408
-                                    }, userRest);
-                                    or.submit().then(function () {
-                                        return new _promise2.default(function (resolve, reject) {
-                                            return setTimeout(function () {
-                                                return resolve();
-                                            }, 3000);
-                                        });
-                                    }).then(function () {
-                                        var or1 = new _bfxApiNodeModels.Order({
-                                            cid: Date.now(),
-                                            type: 'LIMIT',
-                                            symbol: os.symbol,
-                                            amount: -os.amountOrig / 2 * 1.005,
-                                            price: os.price * (101 + curArr[_i2].gain_stop * 2) / 100,
-                                            priceAuxLimit: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                            flags: 17408
-                                        }, userRest);
-                                        return or1.submit();
-                                    }).catch(function (err) {
-                                        (0, _sendWs2.default)(id + ' Bitfinex Order Error: ' + (err.message || err.msg), 0, 0, true);
-                                        (0, _utility.handleError)(err, id + ' Bitfinex Order Error');
-                                    });
-                                } else {
-                                    var _or = new _bfxApiNodeModels.Order({
-                                        cid: Date.now(),
-                                        type: 'STOP',
-                                        symbol: os.symbol,
-                                        amount: -os.amountOrig / 2 * 1.005,
-                                        price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                        flags: 1024
-                                    }, userRest);
-                                    _or.submit().then(function () {
-                                        return new _promise2.default(function (resolve, reject) {
-                                            return setTimeout(function () {
-                                                return resolve();
-                                            }, 3000);
-                                        });
-                                    }).then(function () {
-                                        var or1 = new _bfxApiNodeModels.Order({
-                                            cid: Date.now(),
-                                            type: 'STOP',
-                                            symbol: os.symbol,
-                                            amount: -os.amountOrig / 2 * 1.005,
-                                            price: os.price * (100 - curArr[_i2].loss_stop) / 100,
-                                            flags: 17408
-                                        }, userRest);
-                                        return or1.submit();
-                                    }).catch(function (err) {
-                                        (0, _sendWs2.default)(id + ' Bitfinex Order Error: ' + (err.message || err.msg), 0, 0, true);
-                                        (0, _utility.handleError)(err, id + ' Bitfinex Order Error');
+                for (var _i2 = 0; _i2 < curArr.length; _i2++) {
+                    if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].amount >= 0 && curArr[_i2].pair) {
+                        for (var _j = 0; _j < curArr[_i2].pair.length; _j++) {
+                            if (curArr[_i2].pair.type === os.symbol) {
+                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
+                                    var amount = os.priceAvg * (os.amountOrig - os.amount);
+                                    return (0, _mongoTool2.default)('update', _constants.TOTALDB, { owner: uid, sType: 1, type: curArr[_i2].type }, { $inc: { amount: -os.priceAvg * (os.amountOrig - os.amount) } }).catch(function (err) {
+                                        (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
+                                        (0, _utility.handleError)(err, id + ' Total Updata Error');
                                     });
                                 }
+                                break;
                             }
-                        } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
-                        } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
-                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                         }
-                        return 'break';
+                        break;
                     }
-                };
-
-                for (var _i2 = 0; _i2 < curArr.length; _i2++) {
-                    var _ret2 = _loop(_i2);
-
-                    if (_ret2 === 'break') break;
                 }
             }
         });
@@ -1049,6 +1010,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     };
 
     var singleLoan = function singleLoan(current) {
+        if (current.riskLimit > 0 && current.waitTime > 0 && current.amountLimit > 0) {} else {
+            return _promise2.default.resolve();
+        }
         var needNew = [];
         var needRetain = [];
         var finalNew = [];
@@ -1088,7 +1052,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         pushDR(current.dynamicRate2, current.dynamicDay2);
         //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
         var extremRateCheck = function extremRateCheck() {
-            if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+            /*if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+                return false;
+            }*/
+            if (current.isTrade && current.amount >= 0 && current.pair) {} else {
                 return false;
             }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
@@ -1143,12 +1110,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         //keep cash
         var calKeepCash = function calKeepCash(avail) {
             var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
-            if (current.isKeep) {
-                if (priceData[_constants.TBTC_SYM].dailyChange < _constants.COIN_MAX || priceData[_constants.TETH_SYM].dailyChange < _constants.COIN_MAX) {
-                    var dailyChange = priceData[_constants.TBTC_SYM].dailyChange < priceData[_constants.TETH_SYM].dailyChange ? priceData[_constants.TBTC_SYM].dailyChange : priceData[_constants.TETH_SYM].dailyChange;
-                    kp = kp * (50 - (_constants.COIN_MAX - dailyChange) / (_constants.COIN_MAX - _constants.COIN_MAX_MAX) * 50) / 100;
+            /*if (current.isKeep) {
+                if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
+                    const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
+                    kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
-            }
+            }*/
             if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < current.keepAmountRate1 / 100 * _constants.BITFINEX_EXP) {
                 return kp - current.keepAmountMoney1;
             } else {
@@ -1197,9 +1164,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 });
             }
             needDelete.forEach(function (v) {
+                var orig_risk = v.risk;
                 var risk = v.newAmount ? v.risk : v.risk > 1 ? v.risk - 1 : 0;
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
+                }
+                if (current.isDiff && risk < 1) {
+                    risk = orig_risk;
                 }
                 needNew.push({
                     risk: risk,
@@ -1219,8 +1190,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
             var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
             for (var _i6 = 0; _i6 < newLength; _i6++) {
+                var orig_risk = risk;
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
+                }
+                if (current.isDiff && risk < 1) {
+                    risk = orig_risk;
                 }
                 var miniOffer = _constants.MINIMAL_OFFER;
                 if (priceData['t' + current.type.substr(1) + 'USD']) {
@@ -1357,261 +1332,34 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         return cancelOffer(0).then(function () {
             return submitOffer(0);
         });
+        //return Promise.resolve();
     };
 
     var singleTrade = function singleTrade(current) {
-        if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+        console.log('singleTrade');
+        if (current.isTrade && current.amount >= 0 && current.pair) {} else {
             return _promise2.default.resolve();
         }
-        console.log(current);
-        //set stop
-        if (!extremRate[id][current.type].is_low || Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low > _constants.EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            var _ret4 = function () {
-                var is_high = false;
-                if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION) {
-                    is_high = true;
-                }
-                console.log('is_high');
-                console.log(is_high);
-                var gain_stage = [];
-                var getStage = function getStage(os) {
-                    var _iteratorNormalCompletion3 = true;
-                    var _didIteratorError3 = false;
-                    var _iteratorError3 = undefined;
-
-                    try {
-                        for (var _iterator3 = (0, _getIterator3.default)(gain_stage), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                            var _i10 = _step3.value;
-
-                            if (_i10.amount === os.amount && Math.abs(os.time - _i10.time) < 60) {
-                                return 1;
-                            }
-                        }
-                    } catch (err) {
-                        _didIteratorError3 = true;
-                        _iteratorError3 = err;
-                    } finally {
-                        try {
-                            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                _iterator3.return();
-                            }
-                        } finally {
-                            if (_didIteratorError3) {
-                                throw _iteratorError3;
-                            }
-                        }
-                    }
-
-                    return 2;
-                };
-                var transMargin = function transMargin() {
-                    console.log(margin[id]);
-                    if ((!order[id][current.type] || order[id][current.type].length < 1) && margin[id][current.type] && margin[id][current.type].avail > 1) {
-                        return userRest.transfer({
-                            from: 'margin',
-                            to: 'funding',
-                            amount: margin[id][current.type].avail.toString(),
-                            currency: current.type.substr(1)
-                        });
-                    } else {
-                        return _promise2.default.resolve();
-                    }
-                };
-                var processing = [];
-                var checkOrder = function checkOrder(index) {
-                    if (!order[id][current.type] || index >= order[id][current.type].length) {
-                        return _promise2.default.resolve();
-                    } else {
-                        if (order[id][current.type][index].amount > 0) {
-                            processing.push({
-                                type: 1,
-                                os: order[id][current.type][index]
-                            });
-                            return checkOrder(index + 1);
-                        } else if (order[id][current.type][index].type === 'STOP') {
-                            processing.push({
-                                type: 2,
-                                os: order[id][current.type][index]
-                            });
-                            return checkOrder(index + 1);
-                        } else {
-                            if (order[id][current.type][index].type === 'TRAILING STOP' && is_high) {
-                                processing.push({
-                                    type: 3,
-                                    os: order[id][current.type][index]
-                                });
-                                return checkOrder(index + 1);
-                            } else {
-                                return checkOrder(index + 1);
-                            }
-                        }
-                    }
-                };
-                var processOrder = function processOrder(index) {
-                    console.log(processing);
-                    if (index >= processing.length) {
-                        return _promise2.default.resolve();
-                    } else {
-                        var last_price = processing[index].os.price * 100 / (100.01 - current.loss_stop);
-                        if (_constants.SUPPORT_PRICE.indexOf(processing[index].os.symbol) !== -1) {
-                            last_price = priceData[processing[index].os.symbol].lastPrice;
-                        }
-
-                        var _ret5 = function () {
-                            switch (processing[index].type) {
-                                case 1:
-                                    var amount = processing[index].os.amount * processing[index].os.price / current.leverage;
-                                    return {
-                                        v: userRest.cancelOrder(processing[index].os.id).then(function () {
-                                            current.used = current.used > amount ? current.used - amount : 0;
-                                            console.log(current.used);
-                                            return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } }).then(function () {
-                                                return new _promise2.default(function (resolve, reject) {
-                                                    return setTimeout(function () {
-                                                        return resolve();
-                                                    }, 3000);
-                                                }).then(function () {
-                                                    return processOrder(index + 1);
-                                                });
-                                            });
-                                        })
-                                    };
-                                case 2:
-                                    //close & new trail & new limit
-                                    console.log(last_price * current.loss_stop / 100);
-                                    console.log(last_price * current.loss_stop / 100 / 2);
-                                    var trail = last_price * current.loss_stop / 100 / (is_high ? 2 : 1);
-                                    console.log(trail);
-                                    var limit = current.gain_stop ? last_price * (101 + getStage(processing[index].os) * current.gain_stop) / 100 : 0;
-                                    if (last_price - trail < processing[index].os.price) {
-                                        return {
-                                            v: processOrder(index + 1)
-                                        };
-                                    } else {
-                                        var _ret6 = function () {
-                                            var pre_os = {
-                                                amount: processing[index].os.amount,
-                                                time: processing[index].os.time
-                                            };
-                                            return {
-                                                v: {
-                                                    v: userRest.cancelOrder(processing[index].os.id).then(function () {
-                                                        return new _promise2.default(function (resolve, reject) {
-                                                            return setTimeout(function () {
-                                                                return resolve();
-                                                            }, 3000);
-                                                        });
-                                                    }).then(function () {
-                                                        var or = new _bfxApiNodeModels.Order({
-                                                            cid: Date.now(),
-                                                            type: 'TRAILING STOP',
-                                                            symbol: processing[index].os.symbol,
-                                                            amount: pre_os.amount,
-                                                            priceTrailing: trail,
-                                                            flags: 1024
-                                                        }, userRest);
-                                                        return or.submit().then(function () {
-                                                            gain_stage.push(pre_os);
-                                                            return new _promise2.default(function (resolve, reject) {
-                                                                return setTimeout(function () {
-                                                                    return resolve();
-                                                                }, 3000);
-                                                            });
-                                                        });
-                                                    }).then(function () {
-                                                        if (is_high || !current.gain_stop) {
-                                                            return _promise2.default.resolve();
-                                                        } else {
-                                                            var or1 = new _bfxApiNodeModels.Order({
-                                                                cid: Date.now(),
-                                                                type: 'LIMIT',
-                                                                symbol: processing[index].os.symbol,
-                                                                amount: pre_os.amount,
-                                                                price: limit,
-                                                                flags: 1024
-                                                            }, userRest);
-                                                            return or1.submit().then(function () {
-                                                                return new _promise2.default(function (resolve, reject) {
-                                                                    return setTimeout(function () {
-                                                                        return resolve();
-                                                                    }, 3000);
-                                                                });
-                                                            });
-                                                        }
-                                                    }).then(function () {
-                                                        return processOrder(index + 1);
-                                                    })
-                                                }
-                                            };
-                                        }();
-
-                                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
-                                    }
-                                case 3:
-                                    //update
-                                    var trail2 = last_price * current.loss_stop / 200;
-                                    if (trail2 * 1.5 > processing[index].os.trailing || last_price - trail2 < processing[index].os.price) {
-                                        return {
-                                            v: processOrder(index + 1)
-                                        };
-                                    } else {
-                                        return {
-                                            v: cancelOrder(current.type, 0, processing[index].os.amount, processing[index].os.time, processing[index].os.type, false).then(function () {
-                                                return userRest.updateOrder({
-                                                    id: processing[index].os.id,
-                                                    price_trailing: trail2.toString()
-                                                }).then(function (os) {
-                                                    console.log(os);
-                                                    return new _promise2.default(function (resolve, reject) {
-                                                        return setTimeout(function () {
-                                                            return resolve();
-                                                        }, 3000);
-                                                    });
-                                                }).then(function () {
-                                                    return processOrder(index + 1);
-                                                });
-                                            })
-                                        };
-                                    }
-                                default:
-                                    return {
-                                        v: processOrder(index + 1)
-                                    };
-                            }
-                        }();
-
-                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
-                    }
-                };
-                return {
-                    v: transMargin().then(function () {
-                        return checkOrder(0);
-                    }).then(function () {
-                        return processOrder(0);
-                    })
-                };
-            }();
-
-            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+        if (extremRate[id][current.type].is_low && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
+            console.log('is low');
+            current.amount = current.amount - current.amount * current.rate_ratio;
+        } else if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
+            console.log('is high');
+            current.amount = current.amount + current.amount * current.rate_ratio;
         }
-        var checkExpire = function checkExpire() {
-            if (Math.round(new Date().getTime() / 1000) - current.last_trade > current.interval * 60) {
-                current.used = 0;
-                return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } });
-            } else {
-                return _promise2.default.resolve();
-            }
-        };
+        //add rate big small
         var getAM = function getAM() {
             console.log(current);
-            var needAmount = current.used > 0 ? current.used > current.amount ? 0 : current.amount - current.used : current.amount;
-            var needTrans = needAmount;
+            var needTrans = current.used > 0 ? current.amount - current.used : current.amount;
+            //let needTrans = needAmount;
             //check need amount
-            if (margin[id][current.type]) {
-                needTrans = needTrans - margin[id][current.type].avail;
-            }
+            /*if (needTrans > 0) {
+                if (margin[id][current.type]) {
+                    needTrans = needTrans - margin[id][current.type].avail;
+                }
+            }*/
             var availableMargin = 0;
-            if (needTrans > 1) {
+            if (needTrans > 1 && current.clear !== true) {
                 if (available[id] && available[id][current.type] && available[id][current.type].avail > 0) {
                     availableMargin = available[id][current.type].avail;
                 }
@@ -1620,10 +1368,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 } else {
                     //close offer
                     if (offer[id] && offer[id][current.type]) {
-                        var _ret7 = function () {
+                        var _ret4 = function () {
                             var cancelOffer = function cancelOffer(index) {
                                 if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
-                                    return _promise2.default.resolve([availableMargin, needAmount]);
+                                    return _promise2.default.resolve(availableMargin);
                                 } else {
                                     if (offer[id][current.type][index].risk === undefined) {
                                         return cancelOffer(index + 1);
@@ -1648,26 +1396,59 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             };
                         }();
 
-                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                    }
+                }
+            } else if (needTrans < -1 || current.clear === true) {
+                if (margin[id] && margin[id][current.type] && margin[id][current.type].avail > 0) {
+                    availableMargin = -margin[id][current.type].avail;
+                }
+                if (availableMargin <= needTrans && current.clear !== true) {
+                    availableMargin = needTrans;
+                } else {
+                    //close order
+                    if (order[id] && order[id][current.type]) {
+                        var _ret5 = function () {
+                            var cancelOrder = function cancelOrder(index) {
+                                if (index >= order[id][current.type].length || availableMargin <= needTrans && current.clear !== true) {
+                                    return _promise2.default.resolve(availableMargin);
+                                }
+                                if (order[id][current.type][index].amount < 0) {
+                                    return cancelOrder(index + 1);
+                                }
+                                availableMargin = availableMargin - order[id][current.type][index].amount * order[id][current.type][index].price;
+                                if (availableMargin <= needTrans && current.clear !== true) {
+                                    availableMargin = needTrans;
+                                }
+                                return userRest.cancelOrder(order[id][current.type][index].id).then(function () {
+                                    return new _promise2.default(function (resolve, reject) {
+                                        return setTimeout(function () {
+                                            return resolve();
+                                        }, 3000);
+                                    }).then(function () {
+                                        return cancelOrder(index + 1);
+                                    });
+                                });
+                            };
+                            return {
+                                v: cancelOrder(0)
+                            };
+                        }();
+
+                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                     }
                 }
             }
-            return _promise2.default.resolve([availableMargin, needAmount]);
+            return _promise2.default.resolve(availableMargin);
         };
-        return checkExpire().then(function () {
-            return getAM();
-        }).then(function (_ref) {
-            var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
-                availableMargin = _ref2[0],
-                needAmount = _ref2[1];
-
+        return getAM().then(function (availableMargin) {
             console.log(availableMargin);
-            console.log(needAmount);
             console.log(available[id]);
+            console.log(margin[id]);
             //transform wallet
-            if (availableMargin < 1) {
-                return _promise2.default.resolve(needAmount);
-            } else {
+            if (availableMargin < 1 && availableMargin > -1) {
+                return _promise2.default.resolve();
+            } else if (availableMargin >= 1) {
                 return userRest.transfer({
                     from: 'funding',
                     to: 'margin',
@@ -1676,90 +1457,363 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
-                            return resolve(needAmount);
+                            return resolve();
                         }, 3000);
                     });
+                }).then(function () {
+                    current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
+                    return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } });
+                });
+            } else {
+                return userRest.transfer({
+                    from: 'margin',
+                    to: 'funding',
+                    amount: (-availableMargin).toString(),
+                    currency: current.type.substr(1)
+                }).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, 3000);
+                    });
+                }).then(function () {
+                    current.used = current.used > 0 && current.used + availableMargin > 1 ? current.used + availableMargin : 0;
+                    return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } });
                 });
             }
-        }).then(function (needAmount) {
-            if (!margin[id][current.type] || margin[id][current.type].avail < 1) {
+        }).then(function () {
+            order_count++;
+            if (order_count % _constants.ORDER_INTERVAL !== 3) {
                 return _promise2.default.resolve();
             }
-            console.log(margin[id][current.type].avail);
-            //order
-            var marginOrderAmount = margin[id][current.type].avail > needAmount ? needAmount : margin[id][current.type].avail;
-            if (marginOrderAmount >= 10) {
-                var _ret8 = function () {
-                    var getLowpoint = function getLowpoint() {
-                        var index = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-                        var final_low_point = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-                        var final_last_price = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
-                        var symbol = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
-
-                        if (index >= current.pair.length) {
-                            return _promise2.default.resolve([final_low_point, symbol]);
-                        } else {
-                            if (_constants.SUPPORT_PAIR[current.type] && _constants.SUPPORT_PAIR[current.type].indexOf(current.pair[index]) !== -1) {
-                                return userRest.candles({ symbol: current.pair[index], timeframe: '30m', query: { limit: 120 } }).then(function (entries) {
-                                    var low_point = 0;
-                                    var range = entries.length > current.low_point / 30 ? current.low_point / 30 : entries.length;
-                                    for (var _i11 = 0; _i11 < range; _i11++) {
-                                        if (!low_point || entries[_i11].low < low_point) {
-                                            low_point = entries[_i11].low;
+            return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
+                var reucr_status = function reucr_status(index) {
+                    if (index >= items.length) {
+                        return _promise2.default.resolve();
+                    } else {
+                        var _ret6 = function () {
+                            var item = items[index];
+                            console.log(item);
+                            var startStatus = function startStatus() {
+                                var newArr = item.web.map(function (v) {
+                                    return v * item.newMid[item.newMid.length - 1] / item.mid;
+                                });
+                                var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                                while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && +priceData[item.index].lastPrice < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && +priceData[item.index].lastPrice > checkMid)) {
+                                    item.newMid.pop();
+                                    if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < _constants.RANGE_BITFINEX_INTERVAL) {
+                                        item.previous.price = item.tmpPT.price;
+                                        item.previous.time = item.tmpPT.time;
+                                        item.previous.type = item.tmpPT.type;
+                                    } else {
+                                        item.previous.time = 0;
+                                    }
+                                    newArr = item.web.map(function (v) {
+                                        return v * item.newMid[item.newMid.length - 1] / item.mid;
+                                    });
+                                    checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                                }
+                                var item_count = 0;
+                                if (position[id] && position[id][_constants.FUSD_SYM]) {
+                                    position[id][_constants.FUSD_SYM].forEach(function (v) {
+                                        if (v.symbol === item.index) {
+                                            item_count += v.amount;
+                                        }
+                                    });
+                                }
+                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                while (suggestion.resetWeb) {
+                                    if (item.newMid.length === 0) {
+                                        item.tmpPT = {
+                                            price: item.previous.price,
+                                            time: item.previous.time,
+                                            type: item.previous.type
+                                        };
+                                    }
+                                    item.previous.time = 0;
+                                    item.newMid.push(suggestion.newMid);
+                                    newArr = item.web.map(function (v) {
+                                        return v * item.newMid[item.newMid.length - 1] / item.mid;
+                                    });
+                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                }
+                                console.log(suggestion);
+                                var count = 0;
+                                var amount = item.amount;
+                                if (suggestion.type === 7) {
+                                    if (amount > item.orig * 7 / 8) {
+                                        var tmpAmount = amount - item.orig * 3 / 4;
+                                        while (tmpAmount - suggestion.buy * item.times > 0) {
+                                            amount -= suggestion.buy * item.times;
+                                            tmpAmount = amount - item.orig * 3 / 4;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.bCount) {
+                                            suggestion.bCount = count * item.times;
                                         }
                                     }
-                                    var last_price = 1;
-                                    if (_constants.SUPPORT_PRICE.indexOf(current.pair[index]) !== -1) {
-                                        last_price = priceData[current.pair[index]].lastPrice;
+                                } else if (suggestion.type === 3) {
+                                    if (amount > item.orig * 5 / 8) {
+                                        var _tmpAmount = amount - item.orig / 2;
+                                        while (_tmpAmount - suggestion.buy * item.times > 0) {
+                                            amount -= suggestion.buy * item.times;
+                                            _tmpAmount = amount - item.orig / 2;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.bCount) {
+                                            suggestion.bCount = count * item.times;
+                                        }
                                     }
-                                    low_point = low_point * 1.005 < last_price ? low_point * 1.005 : last_price;
-                                    console.log(low_point);
-                                    console.log(last_price);
-                                    return final_low_point === 0 || final_last_price / final_low_point > last_price / low_point ? getLowpoint(index + 1, low_point, last_price, current.pair[index]) : getLowpoint(index + 1, final_low_point, final_last_price, symbol);
+                                } else if (suggestion.type === 6) {
+                                    if (amount > item.orig * 3 / 8) {
+                                        var _tmpAmount2 = amount - item.orig / 4;
+                                        while (_tmpAmount2 - suggestion.buy * item.times > 0) {
+                                            amount -= suggestion.buy * item.times;
+                                            _tmpAmount2 = amount - item.orig / 4;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.bCount) {
+                                            suggestion.bCount = count * item.times;
+                                        }
+                                    }
+                                }
+                                count = 0;
+                                amount = item.amount;
+                                if (suggestion.type === 9) {
+                                    if (amount < item.orig / 8) {
+                                        var _tmpAmount3 = item.orig / 4 - amount;
+                                        while (_tmpAmount3 - suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE) > 0) {
+                                            amount += suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE);
+                                            _tmpAmount3 = item.orig / 4 - amount;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.sCount) {
+                                            suggestion.sCount = count * item.times;
+                                        }
+                                    }
+                                } else if (suggestion.type === 5) {
+                                    if (amount < item.orig * 3 / 8) {
+                                        var _tmpAmount4 = item.orig / 2 - amount;
+                                        while (_tmpAmount4 - suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE) > 0) {
+                                            amount += suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE);
+                                            _tmpAmount4 = item.orig / 2 - amount;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.sCount) {
+                                            suggestion.sCount = count * item.times;
+                                        }
+                                    }
+                                } else if (suggestion.type === 8) {
+                                    if (amount < item.orig * 5 / 8) {
+                                        var _tmpAmount5 = item.orig * 3 / 4 - amount;
+                                        while (_tmpAmount5 - suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE) > 0) {
+                                            amount += suggestion.sell * item.times * (1 - _constants.BITFINEX_FEE);
+                                            _tmpAmount5 = item.orig * 3 / 4 - amount;
+                                            count++;
+                                        }
+                                        if (count * item.times > suggestion.sCount) {
+                                            suggestion.sCount = count * item.times;
+                                        }
+                                    }
+                                }
+                                console.log(suggestion);
+                                var submitBuy = function submitBuy() {
+                                    if (current.clear === true || current.clear[item.index] === true) {
+                                        return reucr_status(index + 1);
+                                    }
+                                    if (item.amount < suggestion.bCount * suggestion.buy) {
+                                        suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                    }
+                                    var order_avail = margin[id] && margin[id][current.type] && margin[id][current.type].total ? _constants.SUPPORT_LEVERAGE[item.index] ? _constants.SUPPORT_LEVERAGE[item.index] * margin[id][current.type].avail : margin[id][current.type].avail : 0;
+                                    if (order_avail < suggestion.bCount * suggestion.buy) {
+                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                    }
+                                    if (suggestion.bCount > 0) {
+                                        console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
+                                        var or1 = new _bfxApiNodeModels.Order({
+                                            cid: Date.now(),
+                                            type: 'LIMIT',
+                                            symbol: item.index,
+                                            amount: suggestion.bCount,
+                                            price: suggestion.buy
+                                        }, userRest);
+                                        return or1.submit().then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            return reucr_status(index + 1);
+                                        });
+                                    } else {
+                                        return reucr_status(index + 1);
+                                    }
+                                };
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                                        newMid: item.newMid,
+                                        tmpPT: item.tmpPT,
+                                        previous: item.previous
+                                    } }).then(function (result) {
+                                    console.log(result);
+                                    if (order[id] && order[id][current.type]) {
+                                        var _ret7 = function () {
+                                            var cancelOrder = function cancelOrder(index) {
+                                                if (index >= order[id][current.type].length) {
+                                                    return _promise2.default.resolve();
+                                                }
+                                                if (order[id][current.type][index].symbol !== item.index) {
+                                                    return cancelOrder(index + 1);
+                                                }
+                                                return userRest.cancelOrder(order[id][current.type][index].id).then(function () {
+                                                    return new _promise2.default(function (resolve, reject) {
+                                                        return setTimeout(function () {
+                                                            return resolve();
+                                                        }, 3000);
+                                                    }).then(function () {
+                                                        return cancelOrder(index + 1);
+                                                    });
+                                                });
+                                            };
+                                            return {
+                                                v: cancelOrder(0)
+                                            };
+                                        }();
+
+                                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                    } else {
+                                        return _promise2.default.resolve();
+                                    }
+                                }).then(function () {
+                                    if (item_count < suggestion.sCount) {
+                                        suggestion.sCount = item.count;
+                                    }
+                                    if (suggestion.sCount > 0) {
+                                        console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
+                                        var or = new _bfxApiNodeModels.Order({
+                                            cid: Date.now(),
+                                            type: 'LIMIT',
+                                            symbol: item.index,
+                                            amount: -suggestion.sCount,
+                                            price: suggestion.sell,
+                                            flags: 1024
+                                        }, userRest);
+                                        return or.submit().then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            return submitBuy();
+                                        });
+                                    } else {
+                                        return submitBuy();
+                                    }
                                 });
+                            };
+                            if (item.ing === 2) {
+                                var _ret8 = function () {
+                                    var sellAll = function sellAll() {
+                                        var item_count = 0;
+                                        if (position[id] && position[id][current.type]) {
+                                            position[id][current.type].forEach(function (v) {
+                                                if (v.symbol === item.index) {
+                                                    item_count += v.amount;
+                                                }
+                                            });
+                                        }
+                                        var delTotal = function delTotal() {
+                                            return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
+                                                return reucr_status(index + 1);
+                                            });
+                                        };
+                                        if (item_count > 0) {
+                                            var or = new _bfxApiNodeModels.Order({
+                                                cid: Date.now(),
+                                                type: 'MARKET',
+                                                symbol: item.index,
+                                                amount: -item_count,
+                                                flags: 1024
+                                            }, userRest);
+                                            return or.submit().then(function () {
+                                                return new _promise2.default(function (resolve, reject) {
+                                                    return setTimeout(function () {
+                                                        return resolve();
+                                                    }, 3000);
+                                                });
+                                            }).then(function () {
+                                                return delTotal();
+                                            });
+                                        } else {
+                                            return delTotal();
+                                        }
+                                    };
+                                    if (order[id] && order[id][current.type]) {
+                                        var _ret9 = function () {
+                                            var cancelOrder = function cancelOrder(index) {
+                                                if (index >= order[id][current.type].length) {
+                                                    return sellAll();
+                                                }
+                                                if (order[id][current.type][index].symbol !== item.index) {
+                                                    return cancelOrder(index + 1);
+                                                }
+                                                return userRest.cancelOrder(order[username][data.type][index].id).then(function () {
+                                                    return new _promise2.default(function (resolve, reject) {
+                                                        return setTimeout(function () {
+                                                            return resolve();
+                                                        }, 3000);
+                                                    }).then(function () {
+                                                        return cancelOrder(index + 1);
+                                                    });
+                                                });
+                                            };
+                                            return {
+                                                v: {
+                                                    v: {
+                                                        v: cancelOrder(0)
+                                                    }
+                                                }
+                                            };
+                                        }();
+
+                                        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                    } else {
+                                        return {
+                                            v: {
+                                                v: sellAll()
+                                            }
+                                        };
+                                    }
+                                }();
+
+                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                            } else if (item.ing === 1) {
+                                return {
+                                    v: startStatus()
+                                };
                             } else {
-                                return getLowpoint(index + 1, final_low_point, final_last_price, symbol);
+                                if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
+                                    return {
+                                        v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { ing: 1 } }).then(function (result) {
+                                            return startStatus();
+                                        })
+                                    };
+                                } else {
+                                    console.log('enter_mid');
+                                    console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
+                                    return {
+                                        v: reucr_status(index + 1)
+                                    };
+                                }
                             }
-                        }
-                    };
-                    return {
-                        v: getLowpoint(0).then(function (_ref3) {
-                            var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
-                                low_point = _ref4[0],
-                                symbol = _ref4[1];
+                        }();
 
-                            console.log(low_point);
-                            if (low_point <= 0) {
-                                return _promise2.default.resolve();
-                            }
-                            var orderAmount = current.leverage ? marginOrderAmount * current.leverage * 0.985 / low_point : marginOrderAmount * 0.985 / low_point;
-                            console.log(orderAmount);
-                            var or = new _bfxApiNodeModels.Order({
-                                cid: Date.now(),
-                                type: 'LIMIT',
-                                symbol: symbol,
-                                amount: orderAmount,
-                                price: low_point,
-                                flags: 0,
-                                lev: current.leverage ? current.leverage : 1
-                            }, userRest);
-                            return or.submit().then(function () {
-                                current.used = current.used ? current.used + marginOrderAmount : marginOrderAmount;
-                                current.last_trade = Math.round(new Date().getTime() / 1000);
-                                return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used, "bitfinex.$.last_trade": current.last_trade } }).then(function () {
-                                    return new _promise2.default(function (resolve, reject) {
-                                        return setTimeout(function () {
-                                            return resolve();
-                                        }, 3000);
-                                    });
-                                });
-                            });
-                        })
-                    };
-                }();
-
-                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
-            }
+                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                    }
+                };
+                return reucr_status(0);
+            });
         });
     };
     var getLegder = function getLegder(current) {
@@ -1785,60 +1839,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     id: e.id,
                     time: Math.round(e.mts / 1000),
                     amount: Math.round(e.amount * 100) / 100,
-                    rate: e.amount / e.balance,
-                    type: 0
+                    rate: e.amount / e.balance
                 };
             });
-        }).then(function () {
-            return userRest.ledgers({ ccy: current.type.substr(1), category: 51 }).then(function (entries) {
-                var previous = null;
-                var pamount = 0;
-                var pbalance = 0;
-                entries.forEach(function (e) {
-                    if (e.wallet === 'funding') {
-                        if (!previous) {
-                            previous = {
-                                id: e.id,
-                                time: Math.round(e.mts / 1000),
-                                amount: e.amount,
-                                type: 1
-                            };
-                            pamount = e.amount;
-                            pbalance = e.balance;
-                        } else if (pamount < 0 && e.amount > 0) {
-                            previous.rate = previous.amount / pbalance;
-                            previous.amount = Math.round(previous.amount * 100) / 100;
-                            ledger[id][current.type].push(previous);
-                            previous = {
-                                id: e.id,
-                                time: Math.round(e.mts / 1000),
-                                amount: e.amount,
-                                type: 1
-                            };
-                            pamount = e.amount;
-                            pbalance = e.balance;
-                        } else {
-                            previous = {
-                                id: e.id,
-                                time: Math.round(e.mts / 1000),
-                                amount: previous.amount + e.amount,
-                                type: 1
-                            };
-                            pamount = e.amount;
-                            pbalance = e.balance;
-                        }
-                    }
-                });
-                if (previous) {
-                    previous.rate = previous.amount / pbalance;
-                    previous.amount = Math.round(previous.amount * 100) / 100;
-                    ledger[id][current.type].push(previous);
-                }
-                (0, _sendWs2.default)({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id
-                });
+            (0, _sendWs2.default)({
+                type: 'bitfinex',
+                data: -1,
+                user: id
             });
         });
     };
@@ -1895,13 +1902,13 @@ exports.default = {
     },
     updateBot: function updateBot(id, set) {
         var isSupport = false;
-        var _iteratorNormalCompletion4 = true;
-        var _didIteratorError4 = false;
-        var _iteratorError4 = undefined;
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
 
         try {
-            for (var _iterator4 = (0, _getIterator3.default)(_constants.SUPPORT_COIN), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                var i = _step4.value;
+            for (var _iterator3 = (0, _getIterator3.default)(_constants.SUPPORT_COIN), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                var i = _step3.value;
 
                 if (set.type === i) {
                     isSupport = true;
@@ -1909,16 +1916,16 @@ exports.default = {
                 }
             }
         } catch (err) {
-            _didIteratorError4 = true;
-            _iteratorError4 = err;
+            _didIteratorError3 = true;
+            _iteratorError3 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                    _iterator4.return();
+                if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                    _iterator3.return();
                 }
             } finally {
-                if (_didIteratorError4) {
-                    throw _iteratorError4;
+                if (_didIteratorError3) {
+                    throw _iteratorError3;
                 }
             }
         }
@@ -1984,8 +1991,8 @@ exports.default = {
             }
             data['keepAmount'] = keepAmount;
         }
-        if (set.hasOwnProperty('keep')) {
-            data['isKeep'] = set.keep;
+        if (set.hasOwnProperty('diff')) {
+            data['isDiff'] = set.diff;
         }
         if (set.hasOwnProperty('active')) {
             data['isActive'] = set.active;
@@ -2036,13 +2043,6 @@ exports.default = {
             if (set.hasOwnProperty('trade')) {
                 data['isTrade'] = set.trade;
             }
-            if (set.low_point) {
-                var low_point = (0, _utility.isValidString)(set.low_point, 'int');
-                if (low_point === false) {
-                    return (0, _utility.handleError)(new _utility.HoError('Low Point is not valid'));
-                }
-                data['low_point'] = low_point;
-            }
             if (set.amount) {
                 var amount = (0, _utility.isValidString)(set.amount, 'int');
                 if (amount === false) {
@@ -2050,55 +2050,78 @@ exports.default = {
                 }
                 data['amount'] = amount;
             }
-            if (set.interval) {
-                var interval = (0, _utility.isValidString)(set.interval, 'int');
-                if (interval === false) {
-                    return (0, _utility.handleError)(new _utility.HoError('Trade Interval is not valid'));
+            if (set.enter_mid) {
+                var enter_mid = Number(set.enter_mid);
+                if (isNaN(enter_mid)) {
+                    return (0, _utility.handleError)(new _utility.HoError('Enter Mid is not valid'));
                 }
-                data['interval'] = interval;
+                data['enter_mid'] = enter_mid;
             }
-            if (set.loss_stop) {
-                var loss_stop = (0, _utility.isValidString)(set.loss_stop, 'int');
-                if (loss_stop === false) {
-                    return (0, _utility.handleError)(new _utility.HoError('Loss Stop is not valid'));
+            if (set.rate_ratio) {
+                var rate_ratio = Number(set.rate_ratio);
+                if (isNaN(rate_ratio)) {
+                    return (0, _utility.handleError)(new _utility.HoError('Rate Ratio is not valid'));
                 }
-                data['loss_stop'] = loss_stop;
+                data['rate_ratio'] = rate_ratio;
             }
-            if (set.gain_stop) {
-                var gain_stop = (0, _utility.isValidString)(set.gain_stop, 'zeroint');
-                if (gain_stop === false) {
-                    return (0, _utility.handleError)(new _utility.HoError('Gain Stop is not valid'));
-                }
-                data['gain_stop'] = gain_stop;
-            }
-            if (set.leverage) {
-                var leverage = (0, _utility.isValidString)(set.leverage, 'zeroint');
-                if (leverage === false) {
-                    return (0, _utility.handleError)(new _utility.HoError('Leverage is not valid'));
-                }
-                data['leverage'] = leverage;
-            }
-            if (set.pair) {
-                var _ret9 = function () {
-                    var pair = (0, _utility.isValidString)(set.pair, 'name');
-                    if (pair === false) {
-                        return {
-                            v: (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'))
-                        };
-                    }
-                    var pairArr = [];
-                    pair.split(',').forEach(function (v) {
-                        var p = v.trim();
-                        if (_constants.SUPPORT_PAIR[set.type].indexOf(p) !== -1) {
-                            pairArr.push(p);
+            if (set.hasOwnProperty('pair')) {
+                if (set.pair) {
+                    var _ret10 = function () {
+                        var pair = (0, _utility.isValidString)(set.pair, 'name');
+                        if (pair === false) {
+                            return {
+                                v: (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'))
+                            };
                         }
-                    });
-                    if (pairArr.length > 0) {
+                        var pairArr = [];
+                        pair.split(',').forEach(function (v) {
+                            var p = v.trim();
+                            var m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                            if (m && _constants.SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
+                                pairArr.push({
+                                    type: m[1],
+                                    amount: Number(m[2])
+                                });
+                            }
+                        });
                         data['pair'] = pairArr;
-                    }
-                }();
+                    }();
 
-                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                } else {
+                    data['pair'] = [];
+                }
+            }
+            if (set.hasOwnProperty('clear')) {
+                if (set.clear) {
+                    var _ret11 = function () {
+                        var allClear = false;
+                        var clear = (0, _utility.isValidString)(set.clear, 'name');
+                        if (clear === false) {
+                            return {
+                                v: (0, _utility.handleError)(new _utility.HoError('Trade Clear is not valid'))
+                            };
+                        }
+                        var clearArr = {};
+                        clear.split(',').forEach(function (v) {
+                            var c = v.trim();
+                            if (c === 'ALL') {
+                                allClear = true;
+                            } else if (_constants.SUPPORT_PAIR[set.type].indexOf(c) !== -1) {
+                                clearArr[c] = true;
+                            }
+                        });
+                        if (allClear) {
+                            data['clear'] = true;
+                        } else {
+                            data['clear'] = clearArr;
+                        }
+                    }();
+
+                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                } else {
+                    data['clear'] = {};
+                }
             }
         }
         data['type'] = set.type;
@@ -2125,7 +2148,83 @@ exports.default = {
             }
             return (0, _mongoTool2.default)('update', _constants.USERDB, { _id: id }, { $set: { bitfinex: bitfinex } }).then(function (user) {
                 console.log(user);
-                return returnSupport(bitfinex);
+                //處理市價出單
+                return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
+                    console.log(item);
+                    if (data['pair']) {
+                        var _ret12 = function () {
+                            for (var _i10 = 0; _i10 < data['pair'].length; _i10++) {
+                                var exist = false;
+                                for (var j = 0; j < item.length; j++) {
+                                    if (item[j].index === data['pair'][_i10].type) {
+                                        exist = true;
+                                        break;
+                                    }
+                                }
+                                if (!exist) {
+                                    item.push(data['pair'][_i10]);
+                                }
+                            }
+                            var recur_update = function recur_update(index) {
+                                if (index >= item.length) {
+                                    return returnSupport(bitfinex);
+                                } else {
+                                    if (item[index]._id) {
+                                        for (var _i11 = 0; _i11 < data['pair'].length; _i11++) {
+                                            if (item[index].index === data['pair'][_i11].type) {
+                                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
+                                                        times: Math.floor(item[index].times * data['pair'][_i11].amount / item[index].orig * 10000) / 10000,
+                                                        amount: item[index].amount + data['pair'][_i11].amount - item[index].orig,
+                                                        orig: data['pair'][_i11].amount
+                                                    } }).then(function (item) {
+                                                    console.log(item);
+                                                    return recur_update(index + 1);
+                                                });
+                                            }
+                                        }
+                                        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: { ing: 2 } }).then(function (result) {
+                                            console.log(result);
+                                            return recur_update(index + 1);
+                                        });
+                                    } else {
+                                        return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: item[index].type, sType: 1 }).then(function (webitem) {
+                                            if (webitem.length < 1) {
+                                                return (0, _utility.handleError)(new _utility.HoError('miss ' + item[index].type + ' web'));
+                                            }
+                                            var maxAmount = webitem[0].mid * (webitem[0].web.length - 1) / 3 * 2;
+                                            return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                                                owner: id,
+                                                index: item[index].type,
+                                                name: item[index].type.substr(1),
+                                                type: set.type,
+                                                sType: 1,
+                                                web: webitem[0].web,
+                                                wType: webitem[0].wType,
+                                                mid: webitem[0].mid,
+                                                times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
+                                                amount: item[index].amount,
+                                                orig: item[index].amount,
+                                                previous: { buy: [], sell: [] },
+                                                newMid: [],
+                                                ing: 0
+                                            }).then(function (item) {
+                                                console.log(item);
+                                                return recur_update(index + 1);
+                                            });
+                                        });
+                                    }
+                                }
+                            };
+                            return {
+                                v: recur_update(0)
+                            };
+                        }();
+
+                        if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                    } else {
+                        return returnSupport(bitfinex);
+                    }
+                });
             });
         });
     },
@@ -2135,7 +2234,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret10 = function () {
+                var _ret13 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -2148,7 +2247,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
             } else {
                 return returnSupport();
             }
@@ -2252,6 +2351,31 @@ exports.default = {
                         });
                     }
                 }
+                if (margin[id] && margin[id][v]) {
+                    if (uid === (i + 1) * 100) {
+                        return {
+                            item: [{
+                                name: '\u4EA4\u6613\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(margin[id][v].avail * 100) / 100,
+                                id: (i + 1) * 100,
+                                tags: [v.substr(1).toLowerCase(), 'wallet', '錢包', '交易'],
+                                rate: '$' + Math.round(margin[id][v].total * 100) / 100,
+                                count: margin[id][v].total,
+                                utime: margin[id][v].time,
+                                type: 0
+                            }]
+                        };
+                    } else {
+                        itemList.push({
+                            name: '\u4EA4\u6613\u9592\u7F6E ' + v.substr(1) + ' $' + Math.round(margin[id][v].avail * 100) / 100,
+                            id: (i + 1) * 100,
+                            tags: [v.substr(1).toLowerCase(), 'wallet', '錢包', '交易'],
+                            rate: '$' + Math.round(margin[id][v].total * 100) / 100,
+                            count: margin[id][v].total,
+                            utime: margin[id][v].time,
+                            type: 0
+                        });
+                    }
+                }
             }
         }
         if (type === 0 || type === 2) {
@@ -2283,7 +2407,8 @@ exports.default = {
                     rate: Math.floor(priceData[_i13].dailyChange * 100) / 100 + '%',
                     count: priceData[_i13].dilyChange,
                     utime: priceData[_i13].time,
-                    type: 1
+                    type: 1,
+                    str: priceData[_i13].str
                 });
             }
         }
@@ -2374,33 +2499,16 @@ exports.default = {
                 }
                 if (ledger[id] && ledger[id][v]) {
                     ledger[id][v].forEach(function (o) {
-                        switch (o.type) {
-                            case 0:
-                                var _rate = Math.round(o.rate * 10000000) / 100000;
-                                itemList.push({
-                                    name: '\u5229\u606F\u6536\u5165 ' + v.substr(1) + ' $' + o.amount,
-                                    id: o.id,
-                                    tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
-                                    rate: _rate + '%',
-                                    count: _rate,
-                                    utime: o.time,
-                                    type: 4
-                                });
-                                break;
-                            case 1:
-                                var rate1 = Math.round(o.rate * 10000000) / 100000;
-                                itemList.push({
-                                    name: '\u4EA4\u6613\u6536\u5165 ' + v.substr(1) + ' $' + o.amount,
-                                    id: o.id,
-                                    tags: [v.substr(1).toLowerCase(), 'profit', '交易收入'],
-                                    rate: rate1 + '%',
-                                    count: rate1,
-                                    utime: o.time,
-                                    type: 4,
-                                    boost: o.rate < 0 ? true : false
-                                });
-                                break;
-                        }
+                        var rate = Math.round(o.rate * 10000000) / 100000;
+                        itemList.push({
+                            name: '\u5229\u606F\u6536\u5165 ' + v.substr(1) + ' $' + o.amount,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
+                            rate: rate + '%',
+                            count: rate,
+                            utime: o.time,
+                            type: 4
+                        });
                     });
                 }
             });
@@ -2442,17 +2550,38 @@ exports.default = {
 
 var returnSupport = function returnSupport(bitfinex) {
     return bitfinex ? _constants.SUPPORT_COIN.map(function (v) {
-        var _iteratorNormalCompletion5 = true;
-        var _didIteratorError5 = false;
-        var _iteratorError5 = undefined;
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
 
         try {
-            for (var _iterator5 = (0, _getIterator3.default)(bitfinex), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                var i = _step5.value;
+            for (var _iterator4 = (0, _getIterator3.default)(bitfinex), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                var i = _step4.value;
 
                 if (i.type === v) {
                     if (i.pair) {
-                        i.pair = i.pair.toString();
+                        (function () {
+                            var p = '';
+                            i.pair.forEach(function (v) {
+                                if (p) {
+                                    p = p + ',' + v.type + '=' + v.amount;
+                                } else {
+                                    p = v.type + '=' + v.amount;
+                                }
+                            });
+                            i.pair = p;
+                        })();
+                    } else {
+                        i.pair = '';
+                    }
+                    if (i.clear) {
+                        if (i.clear === true) {
+                            i.clear = 'ALL';
+                        } else {
+                            i.clear = (0, _keys2.default)(i.clear).toString();
+                        }
+                    } else {
+                        i.clear = '';
                     }
                     if (_constants.SUPPORT_PAIR[v]) {
                         i.tradable = true;
@@ -2461,16 +2590,16 @@ var returnSupport = function returnSupport(bitfinex) {
                 }
             }
         } catch (err) {
-            _didIteratorError5 = true;
-            _iteratorError5 = err;
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                    _iterator5.return();
+                if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                    _iterator4.return();
                 }
             } finally {
-                if (_didIteratorError5) {
-                    throw _iteratorError5;
+                if (_didIteratorError4) {
+                    throw _iteratorError4;
                 }
             }
         }
@@ -2480,5 +2609,3 @@ var returnSupport = function returnSupport(bitfinex) {
         return { type: v };
     });
 };
-
-//calWeb([TBTC_SYM, TETH_SYM, TOMG_SYM]);

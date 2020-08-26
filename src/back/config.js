@@ -40,3 +40,5 @@ export const DB_BACKUP = env => env === RELEASE ? ReleaseConfig.DB_BACKUP : DevC
 export const BACKUP_PATH = env => env === RELEASE ? ReleaseConfig.BACKUP_PATH : DevConfig.BACKUP_PATH
 export const CHECK_STOCK = env => env === RELEASE ? ReleaseConfig.CHECK_STOCK : DevConfig.CHECK_STOCK
 export const BITFINEX_LOAN = env => env === RELEASE ? ReleaseConfig.BITFINEX_LOAN : DevConfig.BITFINEX_LOAN
+export const BITFINEX_FILTER = env => env === RELEASE ? ReleaseConfig.BITFINEX_FILTER : DevConfig.BITFINEX_FILTER
+export const BITFINEX_ORDER = env => env === RELEASE ? ReleaseConfig.BITFINEX_ORDER : DevConfig.BITFINEX_ORDER

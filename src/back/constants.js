@@ -46,6 +46,7 @@ export const STOCK_INTERVAL = 172800;
 export const BACKUP_INTERVAL = 86400;
 export const PRICE_INTERVAL = 600;
 export const RATE_INTERVAL = 60;
+export const ORDER_INTERVAL = 60;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800
@@ -847,13 +848,13 @@ export const OFFER_MAX = 10;
 export const COIN_MAX = -30;
 export const EXTREM_RATE_NUMBER = 15;
 export const COIN_MAX_MAX = -60;
-export const EXTREM_DURATION = 1800;
+export const EXTREM_DURATION = 86400;
 export const UPDATE_BOOK = 21600;
 export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
 export const BITFINEX_FEE = 0.003;
-export const BITFINEX_INTERVAL = 3600 * 6;
-export const RANGE_BITFINEX_INTERVAL = 259200 * 6;
+export const BITFINEX_INTERVAL = 3600;
+export const RANGE_BITFINEX_INTERVAL = 259200;
 export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
 export const TRADE_TIME = 21600;
@@ -863,6 +864,11 @@ export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
 export const SUPPORT_PAIR = {
     fUSD: [TBTC_SYM, TETH_SYM, TOMG_SYM],
+}
+export const SUPPORT_LEVERAGE = {
+    tETHUSD: 5,
+    tBTCUSD: 5,
+    tOMGUSD: 3.3,
 }
 export const MAX_RATE = 7000000;
 export const BITNIFEX_PARENT = [

@@ -4431,7 +4431,7 @@ export default {
         });
     },
     getStockTotal: function(user) {
-        return Mongo('find', TOTALDB, {owner: user._id}).then(items => {
+        return Mongo('find', TOTALDB, {owner: user._id, sType: {$exists: false}}).then(items => {
             if (items.length < 1) {
                 //new user
                 return Mongo('insert', TOTALDB, {
@@ -4537,7 +4537,7 @@ export default {
         //2330 2 50 輸入交易股價
         //2330 2 450 cost 重設cost
         //#2330 300 220
-        return Mongo('find', TOTALDB, {owner: user._id}).then(items => {
+        return Mongo('find', TOTALDB, {owner: user._id, sType: {$exists: false}}).then(items => {
             if (items.length < 1) {
                 return handleError(new HoError('No user data!!!'));
             }
@@ -4963,7 +4963,7 @@ export const getSingleAnnual = (year, folder, index) => {
     }));
 }
 
-export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
+export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
     const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(price => {
         if (price === 0) {
             return 0;
@@ -4985,7 +4985,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
             checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         }
-        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
+        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
         while(suggestion.resetWeb) {
             if (item.newMid.length === 0) {
                 item.tmpPT = {
@@ -4997,7 +4997,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
             item.previous.time = 0;
             item.newMid.push(suggestion.newMid);
             newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 0);
+            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
         }
         let count = 0;
         let amount = item.amount;
@@ -5149,7 +5149,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {}).then(items => {
     return recur_price(0);
 });
 
-export const stockShow = () => Mongo('find', TOTALDB, {}).then(items => {
+export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
     const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
@@ -5236,11 +5236,13 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     let sTimes = 1;
     let bP = 8;
     let nowBP = priceArray.length - 1;
+    //let bAdd = sType === 0 ? 0 : 1;
+    //let sAdd = sType === 0 ? 0 : 1;
     let bAdd = 0;
     let sAdd = 0;
     //let tmpB = 0;
     for (; nowBP >= 0; nowBP--) {
-        if (Math.abs(priceArray[nowBP]) * 1.001 >= price) {
+        if (Math.abs(priceArray[nowBP]) * (sType === 0 ? 1.001 : 1.0001) >= price) {
             break;
         }
         if (priceArray[nowBP] < 0) {
@@ -5274,7 +5276,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         /*if ((sP < 6) && (priceArray[nowSP] < 0)) {
             tmpB = Math.abs(priceArray[nowSP]);
         }*/
-        if (Math.abs(priceArray[nowSP]) * 0.999 <= price) {
+        if (Math.abs(priceArray[nowSP]) * (sType === 0 ? 0.999 : 0.9999) <= price) {
             break;
         }
         if (priceArray[nowSP] < 0) {
@@ -5303,7 +5305,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             let previousP = priceArray.length - 1;
             let pP = 8;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * 1.001 >= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -5332,7 +5334,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * 0.999 <= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -5346,7 +5348,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             let previousP = 0;
             let pP = 0;
             for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * 0.999 <= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -5375,7 +5377,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             previousP = priceArray.length - 1;
             pP = 8;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * 1.001 >= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -5387,16 +5389,29 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
-            /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                //bAdd--;
-            } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
-                bAdd++;
+            if (sType === 0) {
+                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                    bAdd--;
+                } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                    bAdd++;
+                }
+                if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
+                    sAdd++;
+                }/* else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                    sAdd--;
+                }*/
+            } else {
+                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                    bAdd++;
+                } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                    bAdd--;
+                }
+                if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
+                    sAdd--;
+                } /*else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                    sAdd++;
+                }*/
             }
-            if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
-                sAdd++;
-            }// else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                //sAdd--;
-            //}
             //console.log(previous);
             /*console.log(Math.abs(priceArray[nowBP + 1]));
             console.log(bAdd);
@@ -5460,7 +5475,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //type = 3;
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -5472,7 +5487,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Buy 3/4 ${buy} ( ${bCount} ) `;
         } else if (bP > 5) {
             type = 3;
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -5484,7 +5499,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         } else if (bP > 4) {
             type = 7;
             //type = 3;
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? twseTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -5494,7 +5509,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //finalBuy();
             str += `Buy 1/4 ${buy} ( ${bCount} ) `;
         } else {
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
+            buy = Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? twseTicker(buy, false) : buy;
             /*if (pType === 0) {
                 bCount = bCount * (2 + bAdd);
@@ -5541,7 +5556,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? twseTicker(sell) : sell;
             //finalSell();
             str += `Sell 3/4 ${sell} ( ${sCount} ) `;
@@ -5557,14 +5572,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? twseTicker(sell) : sell;
             //finalSell();
             str += `Sell 1/2 ${sell} ( ${sCount} ) `;
         } else if (sP < 4) {
             type = 9;
             //type = 5;
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
@@ -5579,7 +5594,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //finalSell();
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
+            sell = Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? twseTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
@@ -5637,7 +5652,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         for (; startI > len - 1; startI--) {
             if (checkweb > resetWeb - 1) {
                 checkweb = 0;
-                web = calStair(his_arr, loga, min, startI);
+                web = calStair(his_arr, loga, min, startI, fee, (sType === 0 ? false : (len * 3)));
                 maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
                 amount = maxAmount;
             } else {
@@ -5653,7 +5668,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             //} else if (minus) {
                 startMid = Math.round((his_arr[startI].h - web.mid) / web.mid * 10000) / 100;
                 //console.log('max');
-                console.log(web);
+                //console.log(web);
                 //console.log(web.arr.length);
                 privious = his_arr[startI + 1];
                 if (his_arr[startI + 1].h === null) {
@@ -5668,9 +5683,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     count++;
                 }*/
                 //console.log(his_arr[startI + 1].h);
-                console.log(amount);
-                console.log(maxAmount);
-                console.log(count);
+                //console.log(amount);
+                //console.log(maxAmount);
+                //console.log(count);
                 break;
             }
         }
@@ -5686,7 +5701,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         for (; startI < his_arr.length - len - 1; startI++) {
             if (checkweb > resetWeb - 1) {
                 checkweb = 0;
-                web = calStair(his_arr, loga, min, startI);
+                web = calStair(his_arr, loga, min, startI, fee, (sType === 0 ? false : (len * 3)));
                 maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
                 amount = maxAmount;
             } else {
@@ -5725,7 +5740,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         //if (is_start) {
             if (checkweb > resetWeb - 1) {
                 checkweb = 0;
-                web = calStair(his_arr, loga, min, i);
+                web = calStair(his_arr, loga, min, i, fee, (sType === 0 ? false : (len * 3)));
                 const newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
                 web.arr = newWeb.arr;
                 web.mid = newWeb.mid;
@@ -5796,12 +5811,11 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             }
             //console.log(privious);
             //console.log(his_arr[i]);
-            console.log(his_arr[i - 1]);
+            //console.log(his_arr[i - 1]);
             //console.log(i);
             //console.log(price);
-            //console.log(priviousTrade);
             //console.log(suggest);
-            console.log(suggest.str);
+            //console.log(suggest.str);
             const newPrevious = (tradeType, tradePrice, time = Math.round(new Date().getTime() / 1000)) => {
                 if (tradeType === 'buy') {
                     let is_insert = false;
@@ -6064,8 +6078,8 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
                 //console.log(priviousTrade.win);
             }
-            console.log(amount);
-            console.log(count);
+            //console.log(amount);
+            //console.log(count);
             privious = his_arr[i];
         //}
         const testAmount = amount + (his_arr[i].l * count * (1 - fee));
@@ -6108,14 +6122,15 @@ export const logArray = (max, min, pos=100) => {
     }
 }
 
-export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE) => {
+export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, len = false) => {
     const single_arr = [];
     const final_arr = [];
     for (let i = 0; i < 100; i++) {
         final_arr[i] = 0;
     }
     let volsum = 0;
-    for (let i = stair_start; i < raw_arr.length; i++) {
+    let maxlen = (len && ((stair_start + len) < raw_arr.length)) ? (stair_start + len) : raw_arr.length;
+    for (let i = stair_start; i < maxlen; i++) {
         let s = 0;
         let e = 100;
         for (let j = 0; j < 100; j++) {

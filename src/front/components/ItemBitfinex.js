@@ -1,4 +1,5 @@
 import React from 'react'
+import Dropdown from './Dropdown'
 
 const ItemBitfinex = React.createClass({
     render: function() {
@@ -19,6 +20,17 @@ const ItemBitfinex = React.createClass({
             break;
         }
         fileType = item.boost ? `${fileType} external` : fileType;
+        const dropList = item.str ? (
+            <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={[{title: item.str, onclick: () => {}, key: 0}]}>
+                <button type="button" className="btn btn-default">
+                    <span className="caret"></span>
+                </button>
+            </Dropdown>
+        ) : (
+            <button type="button" className="btn btn-default">
+                <span className="caret"></span>
+            </button>
+        );
         return (
             <tr className={fileType}>
                 <td className="text-center" style={{width: '56px'}}>
@@ -31,11 +43,7 @@ const ItemBitfinex = React.createClass({
                 <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>{item.name}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.rate}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.utime}</td>
-                <td style={{width: '50px'}}>
-                    <button type="button" className="btn btn-default">
-                        <span className="caret"></span>
-                    </button>
-                </td>
+                <td style={{width: '50px'}}>{dropList}</td>
             </tr>
         )
     }

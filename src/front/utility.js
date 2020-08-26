@@ -73,6 +73,10 @@ export function isValidString(str, type) {
         return str.match(re_weburl) || str.match(/^magnet:(\?xt=urn:btih:[a-z0-9]{20,50}|stop)/i)
         case 'email':
         return str.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,6})+$/)
+        case 'number':
+        if (Number(str) === Number(str)) {
+            return true;
+        }
     }
     return false
 }

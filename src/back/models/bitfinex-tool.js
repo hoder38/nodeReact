@@ -1,9 +1,10 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool'
 import Mongo from '../models/mongo-tool'
+import Redis from '../models/redis-tool'
 import { handleError, HoError, isValidString } from '../util/utility'
 import sendWs from '../util/sendWs'
 
@@ -14,6 +15,7 @@ let finalRate = {};
 let maxRange = {};
 let currentRate = {};
 let priceData = {};
+let order_count = 0;
 
 //user
 let userWs = {};
@@ -44,12 +46,15 @@ export const calRate = curArr => {
             return Promise.resolve();
         } else {
             return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
-                priceData[SUPPORT_PRICE[index]] = {
-                    dailyChange: ticker.dailyChangePerc * 100,
-                    lastPrice: ticker.lastPrice,
-                    time: Math.round(new Date().getTime() / 1000),
-                }
-                return recurPrice(index + 1);
+                return Redis('hgetall', `bitfinex: ${SUPPORT_PRICE[index]}`).then(item => {
+                    priceData[SUPPORT_PRICE[index]] = {
+                        dailyChange: ticker.dailyChangePerc * 100,
+                        lastPrice: ticker.lastPrice,
+                        time: Math.round(new Date().getTime() / 1000),
+                        str: item ? item.str : '',
+                    }
+                    return recurPrice(index + 1);
+                });
             });
         }
     }
@@ -160,22 +165,8 @@ export const calRate = curArr => {
 }
 
 export const calWeb = curArr => {
-    const recurPrice = index => {
-        if (index >= SUPPORT_PRICE.length) {
-            return Promise.resolve();
-        } else {
-            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
-                priceData[SUPPORT_PRICE[index]] = {
-                    dailyChange: ticker.dailyChangePerc * 100,
-                    lastPrice: ticker.lastPrice,
-                    time: Math.round(new Date().getTime() / 1000),
-                }
-                return recurPrice(index + 1);
-            });
-        }
-    }
-    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR['fUSD'].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '6h', query: {limit: 1200}}).then(entries => {
+    const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR[FUSD_SYM].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '1h', query: {limit: 3600}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
@@ -199,7 +190,7 @@ export const calWeb = curArr => {
         console.log(min);
         console.log(min_vol);
         const loga = logArray(max, min);
-        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE);
+        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE, 240 * 3);
         console.log(web);
         const month = [];
         const ret_str1 = [];
@@ -212,10 +203,10 @@ export const calWeb = curArr => {
             const testResult = [];
             const match = [];
             //let j = Math.floor((raw_arr.length - 1) / 2);
-            let j = raw_arr.length - 1;
-            console.log('start');
+            let j = raw_arr.length - (240 * 3);
+            //console.log('start');
             while (j > 239) {
-                console.log(j);
+                //console.log(j);
                 const temp = stockTest(raw_arr, loga, min, type, j, false, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1);
                 const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
                 if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
@@ -251,7 +242,7 @@ export const calWeb = curArr => {
                         maxloss = +v[7];
                     }
                 });
-                str = `${Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
+                str = `${Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
                 rate = Math.round(rate * 10000 - 10000) / 100;
                 real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                 times = Math.round(times / count * 100) / 100;
@@ -289,17 +280,65 @@ export const calWeb = curArr => {
         }
         console.log(lastest_type);
         console.log('done');
+        Redis('hmset', `bitfinex: ${curArr[index]}`, {
+            str: ret_str,
+        }).catch(err => handleError(err, 'Redis'));
+        const updateWeb = () => Mongo('find', TOTALDB, {index: curArr[index]}).then(item => {
+            console.log(item);
+            if (item.length < 1) {
+                return Mongo('insert', TOTALDB, {
+                    sType: 1,
+                    index: curArr[index],
+                    name: curArr[index].substr(1),
+                    type: FUSD_SYM,
+                    web: web.arr,
+                    wType: lastest_type,
+                    mid: web.mid,
+                }).then(items => console.log(items));
+            } else {
+                const recur_update = i => {
+                    if (i >= item.length) {
+                        return Promise.resolve();
+                    } else {
+                        if (!item[i].owner) {
+                            return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
+                                web: web.arr,
+                                wType: lastest_type,
+                                mid: web.mid,
+                            }}).then(items => {
+                                console.log(items);
+                                return recur_update(i + 1);
+                            });
+                        } else {
+                            const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                            return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
+                                web: web.arr,
+                                wType: lastest_type,
+                                mid: web.mid,
+                                times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
+                            }}).then(items => {
+                                console.log(items);
+                                return recur_update(i + 1);
+                            });
+                        }
+                    }
+                }
+                return recur_update(0);
+            }
+        });
+        return updateWeb();
     });
-    return recurPrice(0).then(() => recurType(0));
-    //return recurType(0);
+    //return recurPrice(0).then(() => recurType(0));
+    return recurType(0);
 }
 
-export const setWsOffer = (id, curArr=[]) => {
+export const setWsOffer = (id, curArr=[], uid) => {
     //檢查跟設定active
-    curArr = curArr.filter(v => (v.isActive && v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) ? true : false);
+    curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.amount >= 0 && v.pair))) ? true : false);
     if (curArr.length < 1) {
         return Promise.resolve();
     }
+
     let userKey  = null;
     let userSecret = null;
     for (let i = 0; i < curArr.length; i++) {
@@ -314,25 +353,6 @@ export const setWsOffer = (id, curArr=[]) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
-    const cancelOrder = (symbol, index, amount, time, type, is_close) => {
-        if (!order[id][symbol] || index >= order[id][symbol].length || is_close) {
-            return Promise.resolve();
-        } else {
-            console.log(amount);
-            console.log(time);
-            console.log(type);
-            console.log(order[id][symbol][index]);
-            console.log(is_close);
-            if (order[id][symbol][index].amount === amount && Math.abs(order[id][symbol][index].time - time) < 60 && ((type !== 'LIMIT' && order[id][symbol][index].type == 'LIMIT') || (type === 'LIMIT' && order[id][symbol][index].type !== 'LIMIT')) && !is_close) {
-                return userRest.cancelOrder(order[id][symbol][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(symbol, index + 1, amount, time, type, true))).catch(err => {
-                    sendWs(`${id} Bitfinex Close Order Error: ${err.message||err.msg}`, 0, 0, true);
-                    handleError(err, `${id} Bitfinex Close Order Error`);
-                });
-            } else {
-                return cancelOrder(symbol, index + 1, amount, time, type, is_close);
-            }
-        }
-    }
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         if (!updateTime[id]) {
@@ -399,6 +419,11 @@ export const setWsOffer = (id, curArr=[]) => {
                             time: Math.round(new Date().getTime() / 1000),
                             total: wallet.balance,
                         }
+                        sendWs({
+                            type: 'bitfinex',
+                            data: (i+1) * 100,
+                            user: id,
+                        });
                     }
                 }
             });
@@ -677,65 +702,18 @@ export const setWsOffer = (id, curArr=[]) => {
                     }
                 }
                 for (let i = 0; i < curArr.length; i++) {
-                    if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].interval && curArr[i].amount && curArr[i].low_point && curArr[i].loss_stop && curArr[i].pair && curArr[i].pair.length > 0) {
-                        console.log(curArr[i]);
-                        if (os.amountOrig > 0) {
-                            if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                //set oco trail priceTrailing
-                                if (curArr[i].gain_stop) {
-                                    const or = new Order({
-                                        cid: Date.now(),
-                                        type: 'LIMIT',
-                                        symbol: os.symbol,
-                                        amount: -os.amountOrig / 2 * 1.005,
-                                        price: os.price * (101 + curArr[i].gain_stop) / 100,
-                                        priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
-                                        flags: 17408,
-                                    }, userRest);
-                                    or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                        const or1 = new Order({
-                                            cid: Date.now(),
-                                            type: 'LIMIT',
-                                            symbol: os.symbol,
-                                            amount: -os.amountOrig / 2 * 1.005,
-                                            price: os.price * (101 + curArr[i].gain_stop * 2) / 100,
-                                            priceAuxLimit: os.price * (100 - curArr[i].loss_stop) / 100,
-                                            flags: 17408,
-                                        }, userRest);
-                                        return or1.submit();
-                                    }).catch(err => {
-                                        sendWs(`${id} Bitfinex Order Error: ${err.message||err.msg}`, 0, 0, true);
-                                        handleError(err, `${id} Bitfinex Order Error`);
-                                    });
-                                } else {
-                                    const or = new Order({
-                                        cid: Date.now(),
-                                        type: 'STOP',
-                                        symbol: os.symbol,
-                                        amount: -os.amountOrig / 2 * 1.005,
-                                        price: os.price * (100 - curArr[i].loss_stop) / 100,
-                                        flags: 1024,
-                                    }, userRest);
-                                    or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                        const or1 = new Order({
-                                            cid: Date.now(),
-                                            type: 'STOP',
-                                            symbol: os.symbol,
-                                            amount: -os.amountOrig / 2 * 1.005,
-                                            price: os.price * (100 - curArr[i].loss_stop) / 100,
-                                            flags: 17408,
-                                        }, userRest);
-                                        return or1.submit();
-                                    }).catch(err => {
-                                        sendWs(`${id} Bitfinex Order Error: ${err.message||err.msg}`, 0, 0, true);
-                                        handleError(err, `${id} Bitfinex Order Error`);
+                    if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].amount >= 0 && curArr[i].pair) {
+                        for (let j = 0; j < curArr[i].pair.length; j++) {
+                            if (curArr[i].pair.type === os.symbol) {
+                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
+                                    const amount = os.priceAvg * (os.amountOrig - os.amount);
+                                    return Mongo('update', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}, {$inc: {amount: -os.priceAvg * (os.amountOrig - os.amount)}}).catch(err => {
+                                        sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} Total Updata Error`);
                                     });
                                 }
+                                break;
                             }
-                        } else if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
-                        } else if (os.status.includes('CANCELED') && os.type === 'STOP') {
-                            cancelOrder(symbol, 0, os.amountOrig, Math.round(os.mtsCreate / 1000), os.type, false);
                         }
                         break;
                     }
@@ -880,6 +858,10 @@ export const setWsOffer = (id, curArr=[]) => {
     }
 
     const singleLoan = current => {
+        if (current.riskLimit > 0 && current.waitTime > 0 && current.amountLimit > 0) {
+        } else {
+            return Promise.resolve();
+        }
         const needNew = [];
         const needRetain = [];
         const finalNew = [];
@@ -919,7 +901,11 @@ export const setWsOffer = (id, curArr=[]) => {
         pushDR(current.dynamicRate2, current.dynamicDay2);
         //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
         const extremRateCheck = () => {
-            if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+            /*if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+                return false;
+            }*/
+            if (current.isTrade && current.amount >= 0 && current.pair) {
+            } else {
                 return false;
             }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
@@ -974,12 +960,12 @@ export const setWsOffer = (id, curArr=[]) => {
         //keep cash
         const calKeepCash = avail => {
             let kp = avail ? (avail[current.type] ? avail[current.type].avail : 0) : 0;
-            if (current.isKeep) {
+            /*if (current.isKeep) {
                 if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
                     const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
                     kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
-            }
+            }*/
             if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < (current.keepAmountRate1 / 100 * BITFINEX_EXP)) {
                 return kp - current.keepAmountMoney1;
             } else {
@@ -1028,9 +1014,13 @@ export const setWsOffer = (id, curArr=[]) => {
                 });
             }
             needDelete.forEach(v => {
+                const orig_risk = v.risk;
                 let risk = v.newAmount ? v.risk : (v.risk > 1) ? (v.risk - 1) : 0;
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
+                }
+                if (current.isDiff && risk < 1) {
+                    risk = orig_risk;
                 }
                 needNew.push({
                     risk,
@@ -1050,8 +1040,12 @@ export const setWsOffer = (id, curArr=[]) => {
             }
             const newLength = OFFER_MAX - needRetain.length - needNew.length;
             for (let i = 0; i < newLength; i++) {
+                const orig_risk = risk;
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
+                }
+                if (current.isDiff && risk < 1) {
+                    risk = orig_risk;
                 }
                 let miniOffer = MINIMAL_OFFER;
                 if (priceData[`t${current.type.substr(1)}USD`]) {
@@ -1164,172 +1158,35 @@ export const setWsOffer = (id, curArr=[]) => {
             }
         }
         return cancelOffer(0).then(() => submitOffer(0));
+        //return Promise.resolve();
     }
 
     const singleTrade = current => {
-        if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
+        console.log('singleTrade');
+        if (current.isTrade && current.amount >= 0 && current.pair) {
+        } else {
             return Promise.resolve();
         }
-        console.log(current);
-        //set stop
-        if (!extremRate[id][current.type].is_low || (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) > EXTREM_DURATION || extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            let is_high = false;
-            if (extremRate[id][current.type].is_high && ((Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION)) {
-                is_high = true;
-            }
-            console.log('is_high');
-            console.log(is_high);
-            const gain_stage = [];
-            const getStage = os => {
-                for (let i of gain_stage) {
-                    if (i.amount === os.amount && (Math.abs(os.time - i.time) < 60)) {
-                        return 1;
-                    }
-                }
-                return 2;
-            }
-            const transMargin = () => {
-                console.log(margin[id]);
-                if ((!order[id][current.type] || order[id][current.type].length < 1) && margin[id][current.type] && margin[id][current.type].avail > 1) {
-                    return userRest.transfer({
-                        from: 'margin',
-                        to: 'funding',
-                        amount: margin[id][current.type].avail.toString(),
-                        currency: current.type.substr(1),
-                    });
-                } else {
-                    return Promise.resolve();
-                }
-            }
-            const processing = [];
-            const checkOrder = index => {
-                if (!order[id][current.type] || index >= order[id][current.type].length) {
-                    return Promise.resolve();
-                } else {
-                    if (order[id][current.type][index].amount > 0) {
-                        processing.push({
-                            type: 1,
-                            os: order[id][current.type][index],
-                        });
-                        return checkOrder(index + 1);
-                    } else if (order[id][current.type][index].type === 'STOP') {
-                        processing.push({
-                            type: 2,
-                            os: order[id][current.type][index],
-                        });
-                        return checkOrder(index + 1);
-                    } else {
-                        if (order[id][current.type][index].type === 'TRAILING STOP' && is_high) {
-                            processing.push({
-                                type: 3,
-                                os: order[id][current.type][index],
-                            });
-                            return checkOrder(index + 1);
-                        } else {
-                            return checkOrder(index + 1);
-                        }
-                    }
-                }
-            }
-            const processOrder = index => {
-                console.log(processing)
-                if (index >= processing.length) {
-                    return Promise.resolve();
-                } else {
-                    let last_price = processing[index].os.price * 100 / (100.01 - current.loss_stop);
-                    if (SUPPORT_PRICE.indexOf(processing[index].os.symbol) !== -1) {
-                        last_price = priceData[processing[index].os.symbol].lastPrice;
-                    }
-                    switch(processing[index].type) {
-                        case 1:
-                        const amount = processing[index].os.amount * processing[index].os.price / current.leverage;
-                        return userRest.cancelOrder(processing[index].os.id).then(() => {
-                            current.used = (current.used > amount) ? (current.used - amount) : 0;
-                            console.log(current.used);
-                            return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}}).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => processOrder(index + 1)));
-                        });
-                        case 2:
-                        //close & new trail & new limit
-                        console.log(last_price * current.loss_stop / 100);
-                        console.log(last_price * current.loss_stop / 100/2);
-                        const trail = last_price * current.loss_stop / 100 / (is_high ? 2 : 1);
-                        console.log(trail);
-                        const limit = current.gain_stop ? last_price * (101 + getStage(processing[index].os) * current.gain_stop) / 100 : 0;
-                        if ((last_price - trail) < processing[index].os.price) {
-                            return processOrder(index + 1);
-                        } else {
-                            const pre_os = {
-                                amount: processing[index].os.amount,
-                                time: processing[index].os.time,
-                            };
-                            return userRest.cancelOrder(processing[index].os.id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                const or = new Order({
-                                    cid: Date.now(),
-                                    type: 'TRAILING STOP',
-                                    symbol: processing[index].os.symbol,
-                                    amount: pre_os.amount,
-                                    priceTrailing: trail,
-                                    flags: 1024,
-                                }, userRest);
-                                return or.submit().then(() => {
-                                    gain_stage.push(pre_os);
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000));
-                                });
-                            }).then(() => {
-                                if (is_high || !current.gain_stop) {
-                                    return Promise.resolve();
-                                } else {
-                                    const or1 = new Order({
-                                        cid: Date.now(),
-                                        type: 'LIMIT',
-                                        symbol: processing[index].os.symbol,
-                                        amount: pre_os.amount,
-                                        price: limit,
-                                        flags: 1024,
-                                    }, userRest);
-                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)));
-                                }
-                            }).then(() => processOrder(index + 1));
-                        }
-                        case 3:
-                        //update
-                        const trail2 = last_price * current.loss_stop / 200;
-                        if (trail2 * 1.5 > processing[index].os.trailing || (last_price - trail2) < processing[index].os.price) {
-                            return processOrder(index + 1);
-                        } else {
-                            return cancelOrder(current.type, 0, processing[index].os.amount, processing[index].os.time, processing[index].os.type, false).then(() => userRest.updateOrder({
-                                id: processing[index].os.id,
-                                price_trailing: trail2.toString(),
-                            }).then(os => {
-                                console.log(os);
-                                return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))
-                            }).then(() => processOrder(index + 1)));
-                        }
-                        default:
-                        return processOrder(index + 1);
-                    }
-                }
-            }
-            return transMargin().then(() => checkOrder(0)).then(() => processOrder(0));
+        if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
+            console.log('is low');
+            current.amount = current.amount - current.amount * current.rate_ratio;
+        } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
+            console.log('is high');
+            current.amount = current.amount + current.amount * current.rate_ratio;
         }
-        const checkExpire = () => {
-            if ((Math.round(new Date().getTime() / 1000) - current.last_trade) > (current.interval * 60)) {
-                current.used = 0;
-                return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
-            } else {
-                return Promise.resolve();
-            }
-        }
+        //add rate big small
         const getAM = () => {
             console.log(current);
-            const needAmount = (current.used > 0) ? (current.used > current.amount) ? 0 : (current.amount - current.used) : current.amount;
-            let needTrans = needAmount;
+            const needTrans = (current.used > 0) ? current.amount - current.used : current.amount;
+            //let needTrans = needAmount;
             //check need amount
-            if (margin[id][current.type]) {
-                needTrans = needTrans - margin[id][current.type].avail;
-            }
+            /*if (needTrans > 0) {
+                if (margin[id][current.type]) {
+                    needTrans = needTrans - margin[id][current.type].avail;
+                }
+            }*/
             let availableMargin = 0;
-            if (needTrans > 1) {
+            if (needTrans > 1 && current.clear !== true) {
                 if (available[id] && available[id][current.type] && available[id][current.type].avail > 0) {
                     availableMargin = available[id][current.type].avail;
                 }
@@ -1340,7 +1197,7 @@ export const setWsOffer = (id, curArr=[]) => {
                     if (offer[id] && offer[id][current.type]) {
                         const cancelOffer = index => {
                             if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
-                                return Promise.resolve([availableMargin, needAmount]);
+                                return Promise.resolve(availableMargin);
                             } else {
                                 if (offer[id][current.type][index].risk === undefined) {
                                     return cancelOffer(index + 1);
@@ -1355,82 +1212,309 @@ export const setWsOffer = (id, curArr=[]) => {
                         return cancelOffer(0);
                     }
                 }
+            } else if (needTrans < -1 || current.clear === true) {
+                if (margin[id] && margin[id][current.type] && margin[id][current.type].avail > 0) {
+                    availableMargin = -margin[id][current.type].avail;
+                }
+                if (availableMargin <= needTrans && current.clear !== true) {
+                    availableMargin = needTrans;
+                } else {
+                    //close order
+                    if (order[id] && order[id][current.type]) {
+                        const cancelOrder = index => {
+                            if ((index >= order[id][current.type].length) || (availableMargin <= needTrans && current.clear !== true)) {
+                                return Promise.resolve(availableMargin);
+                            }
+                            if (order[id][current.type][index].amount < 0) {
+                                return cancelOrder(index + 1);
+                            }
+                            availableMargin = availableMargin - order[id][current.type][index].amount * order[id][current.type][index].price;
+                            if (availableMargin <= needTrans && current.clear !== true) {
+                                availableMargin = needTrans;
+                            }
+                            return userRest.cancelOrder(order[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
+                        }
+                        return cancelOrder(0);
+                    }
+                }
             }
-            return Promise.resolve([availableMargin, needAmount]);
+            return Promise.resolve(availableMargin);
         }
-        return checkExpire().then(() => getAM()).then(([availableMargin, needAmount]) => {
+        return getAM().then(availableMargin => {
             console.log(availableMargin);
-            console.log(needAmount);
             console.log(available[id]);
+            console.log(margin[id]);
             //transform wallet
-            if (availableMargin < 1) {
-                return Promise.resolve(needAmount);
-            } else {
+            if (availableMargin < 1 && availableMargin > -1) {
+                return Promise.resolve();
+            } else if (availableMargin >= 1) {
                 return userRest.transfer({
                     from: 'funding',
                     to: 'margin',
                     amount: availableMargin.toString(),
                     currency: current.type.substr(1),
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(needAmount), 3000)));
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                    current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
+                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
+                });
+            } else {
+                return userRest.transfer({
+                    from: 'margin',
+                    to: 'funding',
+                    amount: (-availableMargin).toString(),
+                    currency: current.type.substr(1),
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                    current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
+                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
+                });
             }
-        }).then(needAmount => {
-            if (!margin[id][current.type] || margin[id][current.type].avail < 1) {
+        }).then(() => {
+            order_count++;
+            if (order_count % ORDER_INTERVAL !== 3) {
                 return Promise.resolve();
             }
-            console.log(margin[id][current.type].avail);
-            //order
-            const marginOrderAmount = (margin[id][current.type].avail > needAmount) ? needAmount : margin[id][current.type].avail;
-            if (marginOrderAmount >= 10) {
-                const getLowpoint = (index = 0, final_low_point = 0, final_last_price = 1, symbol = '') => {
-                    if (index >= current.pair.length) {
-                        return Promise.resolve([final_low_point, symbol]);
+            return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+                const reucr_status = index => {
+                    if (index >= items.length) {
+                        return Promise.resolve();
                     } else {
-                        if (SUPPORT_PAIR[current.type] && SUPPORT_PAIR[current.type].indexOf(current.pair[index]) !== -1) {
-                            return userRest.candles({symbol: current.pair[index], timeframe: '30m', query: {limit: 120}}).then(entries => {
-                                let low_point = 0;
-                                const range = (entries.length > (current.low_point / 30)) ? (current.low_point / 30) : entries.length;
-                                for (let i = 0; i < range; i++) {
-                                    if (!low_point || entries[i].low < low_point) {
-                                        low_point = entries[i].low;
+                        const item = items[index];
+                        console.log(item);
+                        const startStatus = () => {
+                            let newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+                            let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+                            while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && +priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= checkMid && +priceData[item.index].lastPrice > checkMid))) {
+                                item.newMid.pop();
+                                if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
+                                    item.previous.price = item.tmpPT.price;
+                                    item.previous.time = item.tmpPT.time;
+                                    item.previous.type = item.tmpPT.type;
+                                } else {
+                                    item.previous.time = 0;
+                                }
+                                newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+                                checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+                            }
+                            let item_count = 0;
+                            if (position[id] && position[id][FUSD_SYM]) {
+                                position[id][FUSD_SYM].forEach(v => {
+                                    if (v.symbol === item.index) {
+                                        item_count += v.amount;
+                                    }
+                                });
+                            }
+                            let suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            while(suggestion.resetWeb) {
+                                if (item.newMid.length === 0) {
+                                    item.tmpPT = {
+                                        price: item.previous.price,
+                                        time: item.previous.time,
+                                        type: item.previous.type,
+                                    };
+                                }
+                                item.previous.time = 0;
+                                item.newMid.push(suggestion.newMid);
+                                newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+                                suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            }
+                            console.log(suggestion);
+                            let count = 0;
+                            let amount = item.amount;
+                            if (suggestion.type === 7) {
+                                if (amount > item.orig * 7 / 8) {
+                                    let tmpAmount = amount - item.orig * 3 / 4;
+                                    while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                        amount -= (suggestion.buy * item.times);
+                                        tmpAmount = amount - item.orig * 3 / 4;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.bCount) {
+                                        suggestion.bCount = count * item.times;
                                     }
                                 }
-                                let last_price = 1;
-                                if (SUPPORT_PRICE.indexOf(current.pair[index]) !== -1) {
-                                    last_price = priceData[current.pair[index]].lastPrice;
+                            } else if (suggestion.type === 3) {
+                                if (amount > item.orig * 5 / 8) {
+                                    let tmpAmount = amount - item.orig / 2;
+                                    while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                        amount -= (suggestion.buy * item.times);
+                                        tmpAmount = amount - item.orig / 2;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.bCount) {
+                                        suggestion.bCount = count * item.times;
+                                    }
                                 }
-                                low_point = (low_point * 1.005 < last_price) ? low_point * 1.005 : last_price;
-                                console.log(low_point);
-                                console.log(last_price);
-                                return (final_low_point === 0 || (final_last_price / final_low_point > last_price / low_point)) ? getLowpoint(index + 1, low_point, last_price, current.pair[index]) : getLowpoint(index + 1, final_low_point, final_last_price, symbol);
+                            } else if (suggestion.type === 6) {
+                                if (amount > item.orig * 3 / 8) {
+                                    let tmpAmount = amount - item.orig / 4;
+                                    while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                        amount -= (suggestion.buy * item.times);
+                                        tmpAmount = amount - item.orig / 4;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.bCount) {
+                                        suggestion.bCount = count * item.times;
+                                    }
+                                }
+                            }
+                            count = 0;
+                            amount = item.amount;
+                            if (suggestion.type === 9) {
+                                if (amount < item.orig / 8) {
+                                    let tmpAmount = item.orig / 4 - amount;
+                                    while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                        amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                        tmpAmount = item.orig / 4 - amount;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.sCount) {
+                                        suggestion.sCount = count * item.times;
+                                    }
+                                }
+                            } else if (suggestion.type === 5) {
+                                if (amount < item.orig * 3 / 8) {
+                                    let tmpAmount = item.orig / 2 - amount;
+                                    while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                        amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                        tmpAmount = item.orig / 2 - amount;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.sCount) {
+                                        suggestion.sCount = count * item.times;
+                                    }
+                                }
+                            } else if (suggestion.type === 8) {
+                                if (amount < item.orig * 5 / 8) {
+                                    let tmpAmount = item.orig * 3 / 4 - amount;
+                                    while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                        amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                        tmpAmount = item.orig * 3 / 4 - amount;
+                                        count++;
+                                    }
+                                    if (count * item.times > suggestion.sCount) {
+                                        suggestion.sCount = count * item.times;
+                                    }
+                                }
+                            }
+                            console.log(suggestion);
+                            const submitBuy = () => {
+                                if (current.clear === true || current.clear[item.index] === true) {
+                                    return reucr_status(index + 1);
+                                }
+                                if (item.amount < suggestion.bCount * suggestion.buy) {
+                                    suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                }
+                                const order_avail = (margin[id] && margin[id][current.type] && margin[id][current.type].total) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * margin[id][current.type].avail : margin[id][current.type].avail : 0;
+                                if (order_avail < suggestion.bCount * suggestion.buy) {
+                                    suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                }
+                                if (suggestion.bCount > 0) {
+                                    console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                                    const or1 = new Order({
+                                        cid: Date.now(),
+                                        type: 'LIMIT',
+                                        symbol: item.index,
+                                        amount: suggestion.bCount,
+                                        price: suggestion.buy,
+                                    }, userRest);
+                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => reucr_status(index + 1));
+                                } else {
+                                    return reucr_status(index + 1);
+                                }
+                            }
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
+                                newMid: item.newMid,
+                                tmpPT: item.tmpPT,
+                                previous: item.previous,
+                            }}).then(result => {
+                                console.log(result);
+                                if (order[id] && order[id][current.type]) {
+                                    const cancelOrder = index => {
+                                        if (index >= order[id][current.type].length) {
+                                            return Promise.resolve();
+                                        }
+                                        if (order[id][current.type][index].symbol !== item.index) {
+                                            return cancelOrder(index + 1);
+                                        }
+                                        return userRest.cancelOrder(order[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
+                                    }
+                                    return cancelOrder(0);
+                                } else {
+                                    return Promise.resolve();
+                                }
+                            }).then(() => {
+                                if (item_count < suggestion.sCount) {
+                                    suggestion.sCount = item.count;
+                                }
+                                if (suggestion.sCount > 0) {
+                                    console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
+                                    const or = new Order({
+                                        cid: Date.now(),
+                                        type: 'LIMIT',
+                                        symbol: item.index,
+                                        amount: -suggestion.sCount,
+                                        price: suggestion.sell,
+                                        flags: 1024,
+                                    }, userRest);
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
+                                } else {
+                                    return submitBuy();
+                                }
                             });
+                        }
+                        if (item.ing === 2) {
+                            const sellAll = () => {
+                                let item_count = 0;
+                                if (position[id] && position[id][current.type]) {
+                                    position[id][current.type].forEach(v => {
+                                        if (v.symbol === item.index) {
+                                            item_count += v.amount;
+                                        }
+                                    });
+                                }
+                                const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => reucr_status(index + 1));
+                                if (item_count > 0) {
+                                    const or = new Order({
+                                        cid: Date.now(),
+                                        type: 'MARKET',
+                                        symbol: item.index,
+                                        amount: -item_count,
+                                        flags: 1024,
+                                    }, userRest);
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => delTotal());
+                                } else {
+                                    return delTotal();
+                                }
+                            }
+                            if (order[id] && order[id][current.type]) {
+                                const cancelOrder = index => {
+                                    if (index >= order[id][current.type].length) {
+                                        return sellAll();
+                                    }
+                                    if (order[id][current.type][index].symbol !== item.index) {
+                                        return cancelOrder(index + 1);
+                                    }
+                                    return userRest.cancelOrder(order[username][data.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
+                                }
+                                return cancelOrder(0);
+                            } else {
+                                return sellAll();
+                            }
+                        } else if (item.ing === 1) {
+                            return startStatus();
                         } else {
-                            return getLowpoint(index + 1, final_low_point, final_last_price, symbol);
+                            if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
+                                return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => startStatus());
+                            } else {
+                                console.log('enter_mid');
+                                console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
+                                return reucr_status(index + 1);
+                            }
                         }
                     }
                 }
-                return getLowpoint(0).then(([low_point, symbol]) => {
-                    console.log(low_point);
-                    if (low_point <= 0) {
-                        return Promise.resolve();
-                    }
-                    const orderAmount = current.leverage ? (marginOrderAmount * current.leverage * 0.985) / low_point : (marginOrderAmount * 0.985) / low_point
-                    console.log(orderAmount);
-                    const or = new Order({
-                        cid: Date.now(),
-                        type: 'LIMIT',
-                        symbol,
-                        amount: orderAmount,
-                        price: low_point,
-                        flags: 0,
-                        lev: current.leverage ? current.leverage : 1,
-                    }, userRest);
-                    return or.submit().then(() => {
-                        current.used = current.used? current.used + marginOrderAmount : marginOrderAmount;
-                        current.last_trade = Math.round(new Date().getTime() / 1000);
-                        return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used, "bitfinex.$.last_trade": current.last_trade}}).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)));
-                    });
-                });
-            }
+                return reucr_status(0);
+            });
         });
     }
     const getLegder = current => {
@@ -1456,58 +1540,14 @@ export const setWsOffer = (id, curArr=[]) => {
                 time: Math.round(e.mts / 1000),
                 amount: Math.round(e.amount * 100) / 100,
                 rate: e.amount / e.balance,
-                type: 0,
+                //type: 0,
             }));
-        }).then(() => userRest.ledgers({ccy: current.type.substr(1), category: 51}).then(entries => {
-            let previous = null;
-            let pamount = 0;
-            let pbalance = 0;
-            entries.forEach(e => {
-                if (e.wallet === 'funding') {
-                    if (!previous) {
-                        previous = {
-                            id: e.id,
-                            time: Math.round(e.mts / 1000),
-                            amount: e.amount,
-                            type: 1,
-                        }
-                        pamount = e.amount;
-                        pbalance = e.balance;
-                    } else if (pamount < 0 && e.amount > 0) {
-                        previous.rate = previous.amount / pbalance;
-                        previous.amount = Math.round(previous.amount * 100) / 100;
-                        ledger[id][current.type].push(previous);
-                        previous = {
-                            id: e.id,
-                            time: Math.round(e.mts / 1000),
-                            amount: e.amount,
-                            type: 1,
-                        }
-                        pamount = e.amount;
-                        pbalance = e.balance;
-                    } else {
-                        previous = {
-                            id: e.id,
-                            time: Math.round(e.mts / 1000),
-                            amount: previous.amount + e.amount,
-                            type: 1,
-                        }
-                        pamount = e.amount;
-                        pbalance = e.balance;
-                    }
-                }
-            });
-            if (previous) {
-                previous.rate = previous.amount / pbalance;
-                previous.amount = Math.round(previous.amount * 100) / 100;
-                ledger[id][current.type].push(previous);
-            }
             sendWs({
                 type: 'bitfinex',
                 data: -1,
                 user: id,
             });
-        }));
+        });
     }
     const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => singleTrade(curArr[index]).then(() => recurLoan(index + 1)))) : recurLoan(index + 1);
     return initialBook().then(() => recurLoan(0));
@@ -1617,8 +1657,8 @@ export default {
             }
             data['keepAmount'] = keepAmount;
         }
-        if (set.hasOwnProperty('keep')) {
-            data['isKeep'] = set.keep;
+        if (set.hasOwnProperty('diff')) {
+            data['isDiff'] = set.diff;
         }
         if (set.hasOwnProperty('active')) {
             data['isActive'] = set.active;
@@ -1669,13 +1709,6 @@ export default {
             if (set.hasOwnProperty('trade')) {
                 data['isTrade'] = set.trade;
             }
-            if (set.low_point) {
-                const low_point = isValidString(set.low_point, 'int');
-                if (low_point === false) {
-                    return handleError(new HoError('Low Point is not valid'));
-                }
-                data['low_point'] = low_point;
-            }
             if (set.amount) {
                 const amount = isValidString(set.amount, 'int');
                 if (amount === false) {
@@ -1683,48 +1716,65 @@ export default {
                 }
                 data['amount'] = amount;
             }
-            if (set.interval) {
-                const interval = isValidString(set.interval, 'int');
-                if (interval === false) {
-                    return handleError(new HoError('Trade Interval is not valid'));
+            if (set.enter_mid) {
+                const enter_mid = Number(set.enter_mid);
+                if (isNaN(enter_mid)) {
+                    return handleError(new HoError('Enter Mid is not valid'));
                 }
-                data['interval'] = interval;
+                data['enter_mid'] = enter_mid;
             }
-            if (set.loss_stop) {
-                const loss_stop = isValidString(set.loss_stop, 'int');
-                if (loss_stop === false) {
-                    return handleError(new HoError('Loss Stop is not valid'));
+            if (set.rate_ratio) {
+                const rate_ratio = Number(set.rate_ratio);
+                if (isNaN(rate_ratio)) {
+                    return handleError(new HoError('Rate Ratio is not valid'));
                 }
-                data['loss_stop'] = loss_stop;
+                data['rate_ratio'] = rate_ratio;
             }
-            if (set.gain_stop) {
-                const gain_stop = isValidString(set.gain_stop, 'zeroint');
-                if (gain_stop === false) {
-                    return handleError(new HoError('Gain Stop is not valid'));
-                }
-                data['gain_stop'] = gain_stop;
-            }
-            if (set.leverage) {
-                const leverage = isValidString(set.leverage, 'zeroint');
-                if (leverage === false) {
-                    return handleError(new HoError('Leverage is not valid'));
-                }
-                data['leverage'] = leverage;
-            }
-            if (set.pair) {
-                const pair = isValidString(set.pair, 'name');
-                if (pair === false) {
-                    return handleError(new HoError('Trade Pair is not valid'));
-                }
-                const pairArr = [];
-                pair.split(',').forEach(v => {
-                    const p = v.trim();
-                    if (SUPPORT_PAIR[set.type].indexOf(p) !== -1) {
-                        pairArr.push(p);
+            if (set.hasOwnProperty('pair')) {
+                if (set.pair) {
+                    const pair = isValidString(set.pair, 'name');
+                    if (pair === false) {
+                        return handleError(new HoError('Trade Pair is not valid'));
                     }
-                });
-                if (pairArr.length > 0) {
+                    const pairArr = [];
+                    pair.split(',').forEach(v => {
+                        const p = v.trim();
+                        const m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                        if (m && SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
+                            pairArr.push({
+                                type: m[1],
+                                amount: Number(m[2]),
+                            });
+                        }
+                    });
                     data['pair'] = pairArr;
+                } else {
+                    data['pair'] = [];
+                }
+            }
+            if (set.hasOwnProperty('clear')) {
+                if (set.clear) {
+                    let allClear = false;
+                    const clear = isValidString(set.clear, 'name');
+                    if (clear === false) {
+                        return handleError(new HoError('Trade Clear is not valid'));
+                    }
+                    const clearArr = {};
+                    clear.split(',').forEach(v => {
+                        const c = v.trim();
+                        if (c === 'ALL') {
+                            allClear = true;
+                        } else if (SUPPORT_PAIR[set.type].indexOf(c) !== -1) {
+                            clearArr[c] = true;
+                        }
+                    });
+                    if (allClear) {
+                        data['clear'] = true;
+                    } else {
+                        data['clear'] = clearArr;
+                    }
+                } else {
+                    data['clear'] = {};
                 }
             }
         }
@@ -1752,7 +1802,77 @@ export default {
             }
             return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
                 console.log(user);
-                return returnSupport(bitfinex);
+                //處理市價出單
+                return Mongo('find', TOTALDB, {owner: id, sType: 1, type: set.type}).then(item => {
+                    console.log(item);
+                    if (data['pair']) {
+                        for (let i = 0; i < data['pair'].length; i++) {
+                            let exist = false;
+                            for (let j = 0; j < item.length; j++) {
+                                if (item[j].index === data['pair'][i].type) {
+                                    exist = true;
+                                    break;
+                                }
+                            }
+                            if (!exist) {
+                                item.push(data['pair'][i]);
+                            }
+                        }
+                        const recur_update = index => {
+                            if (index >= item.length) {
+                                return returnSupport(bitfinex);
+                            } else {
+                                if (item[index]._id) {
+                                    for (let i = 0; i < data['pair'].length; i++) {
+                                        if (item[index].index === data['pair'][i].type) {
+                                            return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
+                                                times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
+                                                amount: item[index].amount + data['pair'][i].amount - item[index].orig,
+                                                orig: data['pair'][i].amount,
+                                            }}).then(item => {
+                                                console.log(item);
+                                                return recur_update(index + 1);
+                                            });
+                                        }
+                                    }
+                                    return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {ing: 2}}).then(result => {
+                                        console.log(result);
+                                        return recur_update(index + 1);
+                                    });
+                                } else {
+                                    return Mongo('find', TOTALDB, {index: item[index].type, sType: 1}).then(webitem => {
+                                        if (webitem.length < 1) {
+                                            return handleError(new HoError(`miss ${item[index].type} web`));
+                                        }
+                                        const maxAmount = webitem[0].mid * (webitem[0].web.length - 1) / 3 * 2;
+                                        return Mongo('insert', TOTALDB, {
+                                            owner: id,
+                                            index: item[index].type,
+                                            name: item[index].type.substr(1),
+                                            type: set.type,
+                                            sType: 1,
+                                            web: webitem[0].web,
+                                            wType: webitem[0].wType,
+                                            mid: webitem[0].mid,
+                                            times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
+                                            amount: item[index].amount,
+                                            orig: item[index].amount,
+                                            previous: {buy: [], sell: []},
+                                            newMid: [],
+                                            ing: 0,
+                                        }).then(item => {
+                                            console.log(item);
+                                            return recur_update(index + 1);
+                                        })
+                                    });
+                                }
+                            }
+                        }
+                        return recur_update(0);
+                    } else {
+                        return returnSupport(bitfinex);
+                    }
+                });
             });
         });
     },
@@ -1871,6 +1991,33 @@ export default {
                         })
                     }
                 }
+                if (margin[id] && margin[id][v]) {
+                    if (uid === (i+1) * 100) {
+                        return {
+                            item: [
+                                {
+                                    name: `交易閒置 ${v.substr(1)} $${Math.round(margin[id][v].avail * 100) / 100}`,
+                                    id: (i+1) * 100,
+                                    tags: [v.substr(1).toLowerCase(), 'wallet', '錢包', '交易'],
+                                    rate: `$${Math.round(margin[id][v].total * 100) / 100}`,
+                                    count: margin[id][v].total,
+                                    utime: margin[id][v].time,
+                                    type: 0,
+                                }
+                            ],
+                        };
+                    } else {
+                        itemList.push({
+                            name: `交易閒置 ${v.substr(1)} $${Math.round(margin[id][v].avail * 100) / 100}`,
+                            id: (i+1) * 100,
+                            tags: [v.substr(1).toLowerCase(), 'wallet', '錢包', '交易'],
+                            rate: `$${Math.round(margin[id][v].total * 100) / 100}`,
+                            count: margin[id][v].total,
+                            utime: margin[id][v].time,
+                            type: 0,
+                        })
+                    }
+                }
             }
         }
         if (type === 0 || type === 2) {
@@ -1903,6 +2050,7 @@ export default {
                     count: priceData[i].dilyChange,
                     utime: priceData[i].time,
                     type: 1,
+                    str: priceData[i].str,
                 })
             }
         }
@@ -1993,33 +2141,16 @@ export default {
                 }
                 if (ledger[id] && ledger[id][v]) {
                     ledger[id][v].forEach(o => {
-                        switch (o.type) {
-                            case 0:
-                            const rate = Math.round(o.rate * 10000000) / 100000;
-                            itemList.push({
-                                name: `利息收入 ${v.substr(1)} $${o.amount}`,
-                                id: o.id,
-                                tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
-                                rate: `${rate}%`,
-                                count: rate,
-                                utime: o.time,
-                                type: 4,
-                            })
-                            break;
-                            case 1:
-                            const rate1 = Math.round(o.rate * 10000000) / 100000;
-                            itemList.push({
-                                name: `交易收入 ${v.substr(1)} $${o.amount}`,
-                                id: o.id,
-                                tags: [v.substr(1).toLowerCase(), 'profit', '交易收入'],
-                                rate: `${rate1}%`,
-                                count: rate1,
-                                utime: o.time,
-                                type: 4,
-                                boost: (o.rate < 0) ? true : false,
-                            })
-                            break;
-                        }
+                        const rate = Math.round(o.rate * 10000000) / 100000;
+                        itemList.push({
+                            name: `利息收入 ${v.substr(1)} $${o.amount}`,
+                            id: o.id,
+                            tags: [v.substr(1).toLowerCase(), 'payment', '利息收入'],
+                            rate: `${rate}%`,
+                            count: rate,
+                            utime: o.time,
+                            type: 4,
+                        })
                     })
                 }
             });
@@ -2054,7 +2185,26 @@ const returnSupport = bitfinex => bitfinex ? SUPPORT_COIN.map(v => {
     for (let i of bitfinex) {
         if (i.type === v) {
             if (i.pair) {
-                i.pair = i.pair.toString();
+                let p = '';
+                i.pair.forEach(v => {
+                    if (p) {
+                        p = `${p},${v.type}=${v.amount}`;
+                    } else {
+                        p =`${v.type}=${v.amount}`;
+                    }
+                })
+                i.pair = p;
+            } else {
+                i.pair = '';
+            }
+            if (i.clear) {
+                if (i.clear === true) {
+                    i.clear = 'ALL';
+                } else {
+                    i.clear = Object.keys(i.clear).toString();
+                }
+            } else {
+                i.clear = '';
             }
             if (SUPPORT_PAIR[v]) {
                 i.tradable = true;
@@ -2064,5 +2214,3 @@ const returnSupport = bitfinex => bitfinex ? SUPPORT_COIN.map(v => {
     }
     return {type: v};
 }) : SUPPORT_COIN.map(v => ({type: v}));
-
-//calWeb([TBTC_SYM, TETH_SYM, TOMG_SYM]);
