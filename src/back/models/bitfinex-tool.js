@@ -1219,22 +1219,21 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 if (availableMargin <= needTrans && current.clear !== true) {
                     availableMargin = needTrans;
                 } else {
-                    //close order
                     if (order[id] && order[id][current.type]) {
-                        const cancelOrder = index => {
-                            if ((index >= order[id][current.type].length) || (availableMargin <= needTrans && current.clear !== true)) {
+                        const real_id = order[id][current.type].filter(v => v.amount > 0);
+                        const real_delete = index => {
+                            if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
                                 return Promise.resolve(availableMargin);
                             }
-                            if (order[id][current.type][index].amount < 0) {
-                                return cancelOrder(index + 1);
-                            }
-                            availableMargin = availableMargin - order[id][current.type][index].amount * order[id][current.type][index].price;
-                            if (availableMargin <= needTrans && current.clear !== true) {
-                                availableMargin = needTrans;
-                            }
-                            return userRest.cancelOrder(order[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
+                            return userRest.cancelOrder(real_id[index].id).then(() => {
+                                availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                if (availableMargin <= needTrans && current.clear !== true) {
+                                    availableMargin = needTrans;
+                                }
+                                return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1))
+                            });
                         }
-                        return cancelOrder(0);
+                        return real_delete(0);
                     }
                 }
             }
@@ -1283,6 +1282,20 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     } else {
                         const item = items[index];
                         console.log(item);
+                        const cancelOrder = rest => {
+                            if (order[id] && order[id][current.type]) {
+                                const real_id = order[id][current.type].filter(v => v.symbol === item.index);
+                                const real_delete = index => {
+                                    if (index >= real_id.length) {
+                                        return rest ? rest() : Promise.resolve();
+                                    }
+                                    return userRest.cancelOrder(real_id[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1)));
+                                }
+                                return real_delete(0);
+                            } else {
+                                return rest ? rest() : Promise.resolve();
+                            }
+                        }
                         const startStatus = () => {
                             let newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
                             let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -1431,20 +1444,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 previous: item.previous,
                             }}).then(result => {
                                 console.log(result);
-                                if (order[id] && order[id][current.type]) {
-                                    const cancelOrder = index => {
-                                        if (index >= order[id][current.type].length) {
-                                            return Promise.resolve();
-                                        }
-                                        if (order[id][current.type][index].symbol !== item.index) {
-                                            return cancelOrder(index + 1);
-                                        }
-                                        return userRest.cancelOrder(order[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
-                                    }
-                                    return cancelOrder(0);
-                                } else {
-                                    return Promise.resolve();
-                                }
+                                return cancelOrder();
                             }).then(() => {
                                 if (item_count < suggestion.sCount) {
                                     suggestion.sCount = item.count;
@@ -1489,20 +1489,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return delTotal();
                                 }
                             }
-                            if (order[id] && order[id][current.type]) {
-                                const cancelOrder = index => {
-                                    if (index >= order[id][current.type].length) {
-                                        return sellAll();
-                                    }
-                                    if (order[id][current.type][index].symbol !== item.index) {
-                                        return cancelOrder(index + 1);
-                                    }
-                                    return userRest.cancelOrder(order[username][data.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOrder(index + 1)));
-                                }
-                                return cancelOrder(0);
-                            } else {
-                                return sellAll();
-                            }
+                            return cancelOrder(sellAll());
                         } else if (item.ing === 1) {
                             return startStatus();
                         } else {

@@ -1406,32 +1406,31 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (availableMargin <= needTrans && current.clear !== true) {
                     availableMargin = needTrans;
                 } else {
-                    //close order
                     if (order[id] && order[id][current.type]) {
                         var _ret5 = function () {
-                            var cancelOrder = function cancelOrder(index) {
-                                if (index >= order[id][current.type].length || availableMargin <= needTrans && current.clear !== true) {
+                            var real_id = order[id][current.type].filter(function (v) {
+                                return v.amount > 0;
+                            });
+                            var real_delete = function real_delete(index) {
+                                if (index >= real_id.length || availableMargin <= needTrans && current.clear !== true) {
                                     return _promise2.default.resolve(availableMargin);
                                 }
-                                if (order[id][current.type][index].amount < 0) {
-                                    return cancelOrder(index + 1);
-                                }
-                                availableMargin = availableMargin - order[id][current.type][index].amount * order[id][current.type][index].price;
-                                if (availableMargin <= needTrans && current.clear !== true) {
-                                    availableMargin = needTrans;
-                                }
-                                return userRest.cancelOrder(order[id][current.type][index].id).then(function () {
+                                return userRest.cancelOrder(real_id[index].id).then(function () {
+                                    availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                    if (availableMargin <= needTrans && current.clear !== true) {
+                                        availableMargin = needTrans;
+                                    }
                                     return new _promise2.default(function (resolve, reject) {
                                         return setTimeout(function () {
                                             return resolve();
                                         }, 3000);
                                     }).then(function () {
-                                        return cancelOrder(index + 1);
+                                        return real_delete(index + 1);
                                     });
                                 });
                             };
                             return {
-                                v: cancelOrder(0)
+                                v: real_delete(0)
                             };
                         }();
 
@@ -1497,6 +1496,36 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         var _ret6 = function () {
                             var item = items[index];
                             console.log(item);
+                            var cancelOrder = function cancelOrder(rest) {
+                                if (order[id] && order[id][current.type]) {
+                                    var _ret7 = function () {
+                                        var real_id = order[id][current.type].filter(function (v) {
+                                            return v.symbol === item.index;
+                                        });
+                                        var real_delete = function real_delete(index) {
+                                            if (index >= real_id.length) {
+                                                return rest ? rest() : _promise2.default.resolve();
+                                            }
+                                            return userRest.cancelOrder(real_id[index].id).then(function () {
+                                                return new _promise2.default(function (resolve, reject) {
+                                                    return setTimeout(function () {
+                                                        return resolve();
+                                                    }, 3000);
+                                                }).then(function () {
+                                                    return real_delete(index + 1);
+                                                });
+                                            });
+                                        };
+                                        return {
+                                            v: real_delete(0)
+                                        };
+                                    }();
+
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                } else {
+                                    return rest ? rest() : _promise2.default.resolve();
+                                }
+                            };
                             var startStatus = function startStatus() {
                                 var newArr = item.web.map(function (v) {
                                     return v * item.newMid[item.newMid.length - 1] / item.mid;
@@ -1659,34 +1688,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         previous: item.previous
                                     } }).then(function (result) {
                                     console.log(result);
-                                    if (order[id] && order[id][current.type]) {
-                                        var _ret7 = function () {
-                                            var cancelOrder = function cancelOrder(index) {
-                                                if (index >= order[id][current.type].length) {
-                                                    return _promise2.default.resolve();
-                                                }
-                                                if (order[id][current.type][index].symbol !== item.index) {
-                                                    return cancelOrder(index + 1);
-                                                }
-                                                return userRest.cancelOrder(order[id][current.type][index].id).then(function () {
-                                                    return new _promise2.default(function (resolve, reject) {
-                                                        return setTimeout(function () {
-                                                            return resolve();
-                                                        }, 3000);
-                                                    }).then(function () {
-                                                        return cancelOrder(index + 1);
-                                                    });
-                                                });
-                                            };
-                                            return {
-                                                v: cancelOrder(0)
-                                            };
-                                        }();
-
-                                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
-                                    } else {
-                                        return _promise2.default.resolve();
-                                    }
+                                    return cancelOrder();
                                 }).then(function () {
                                     if (item_count < suggestion.sCount) {
                                         suggestion.sCount = item.count;
@@ -1716,81 +1718,44 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 });
                             };
                             if (item.ing === 2) {
-                                var _ret8 = function () {
-                                    var sellAll = function sellAll() {
-                                        var item_count = 0;
-                                        if (position[id] && position[id][current.type]) {
-                                            position[id][current.type].forEach(function (v) {
-                                                if (v.symbol === item.index) {
-                                                    item_count += v.amount;
-                                                }
-                                            });
-                                        }
-                                        var delTotal = function delTotal() {
-                                            return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
-                                                return reucr_status(index + 1);
-                                            });
-                                        };
-                                        if (item_count > 0) {
-                                            var or = new _bfxApiNodeModels.Order({
-                                                cid: Date.now(),
-                                                type: 'MARKET',
-                                                symbol: item.index,
-                                                amount: -item_count,
-                                                flags: 1024
-                                            }, userRest);
-                                            return or.submit().then(function () {
-                                                return new _promise2.default(function (resolve, reject) {
-                                                    return setTimeout(function () {
-                                                        return resolve();
-                                                    }, 3000);
-                                                });
-                                            }).then(function () {
-                                                return delTotal();
-                                            });
-                                        } else {
-                                            return delTotal();
-                                        }
-                                    };
-                                    if (order[id] && order[id][current.type]) {
-                                        var _ret9 = function () {
-                                            var cancelOrder = function cancelOrder(index) {
-                                                if (index >= order[id][current.type].length) {
-                                                    return sellAll();
-                                                }
-                                                if (order[id][current.type][index].symbol !== item.index) {
-                                                    return cancelOrder(index + 1);
-                                                }
-                                                return userRest.cancelOrder(order[username][data.type][index].id).then(function () {
-                                                    return new _promise2.default(function (resolve, reject) {
-                                                        return setTimeout(function () {
-                                                            return resolve();
-                                                        }, 3000);
-                                                    }).then(function () {
-                                                        return cancelOrder(index + 1);
-                                                    });
-                                                });
-                                            };
-                                            return {
-                                                v: {
-                                                    v: {
-                                                        v: cancelOrder(0)
-                                                    }
-                                                }
-                                            };
-                                        }();
-
-                                        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
-                                    } else {
-                                        return {
-                                            v: {
-                                                v: sellAll()
+                                var sellAll = function sellAll() {
+                                    var item_count = 0;
+                                    if (position[id] && position[id][current.type]) {
+                                        position[id][current.type].forEach(function (v) {
+                                            if (v.symbol === item.index) {
+                                                item_count += v.amount;
                                             }
-                                        };
+                                        });
                                     }
-                                }();
-
-                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    var delTotal = function delTotal() {
+                                        return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
+                                            return reucr_status(index + 1);
+                                        });
+                                    };
+                                    if (item_count > 0) {
+                                        var or = new _bfxApiNodeModels.Order({
+                                            cid: Date.now(),
+                                            type: 'MARKET',
+                                            symbol: item.index,
+                                            amount: -item_count,
+                                            flags: 1024
+                                        }, userRest);
+                                        return or.submit().then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            return delTotal();
+                                        });
+                                    } else {
+                                        return delTotal();
+                                    }
+                                };
+                                return {
+                                    v: cancelOrder(sellAll())
+                                };
                             } else if (item.ing === 1) {
                                 return {
                                     v: startStatus()
@@ -2069,7 +2034,7 @@ exports.default = {
             }
             if (set.hasOwnProperty('pair')) {
                 if (set.pair) {
-                    var _ret10 = function () {
+                    var _ret8 = function () {
                         var pair = (0, _utility.isValidString)(set.pair, 'name');
                         if (pair === false) {
                             return {
@@ -2090,14 +2055,14 @@ exports.default = {
                         data['pair'] = pairArr;
                     }();
 
-                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                 } else {
                     data['pair'] = [];
                 }
             }
             if (set.hasOwnProperty('clear')) {
                 if (set.clear) {
-                    var _ret11 = function () {
+                    var _ret9 = function () {
                         var allClear = false;
                         var clear = (0, _utility.isValidString)(set.clear, 'name');
                         if (clear === false) {
@@ -2121,7 +2086,7 @@ exports.default = {
                         }
                     }();
 
-                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                 } else {
                     data['clear'] = {};
                 }
@@ -2155,7 +2120,7 @@ exports.default = {
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
                     if (data['pair']) {
-                        var _ret12 = function () {
+                        var _ret10 = function () {
                             for (var _i10 = 0; _i10 < data['pair'].length; _i10++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
@@ -2223,7 +2188,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                     } else {
                         return returnSupport(bitfinex);
                     }
@@ -2237,7 +2202,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret13 = function () {
+                var _ret11 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -2250,7 +2215,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
             } else {
                 return returnSupport();
             }
