@@ -1170,10 +1170,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
         //return Promise.resolve();
         if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
             console.log('is low');
-            current.amount = current.amount - current.amount * current.rate_ratio;
+            current.amount = current.amount + current.amount * current.rate_ratio;
         } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
             console.log('is high');
-            current.amount = current.amount + current.amount * current.rate_ratio;
+            current.amount = current.amount - current.amount * current.rate_ratio;
         }
         const getAM = () => {
             console.log(current);

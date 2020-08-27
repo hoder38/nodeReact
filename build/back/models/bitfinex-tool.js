@@ -1343,10 +1343,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         //return Promise.resolve();
         if (extremRate[id][current.type].is_low && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
             console.log('is low');
-            current.amount = current.amount - current.amount * current.rate_ratio;
+            current.amount = current.amount + current.amount * current.rate_ratio;
         } else if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
             console.log('is high');
-            current.amount = current.amount + current.amount * current.rate_ratio;
+            current.amount = current.amount - current.amount * current.rate_ratio;
         }
         var getAM = function getAM() {
             console.log(current);
