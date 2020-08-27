@@ -1167,6 +1167,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         } else {
             return Promise.resolve();
         }
+        //return Promise.resolve();
         if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
             console.log('is low');
             current.amount = current.amount - current.amount * current.rate_ratio;
@@ -1174,7 +1175,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
             console.log('is high');
             current.amount = current.amount + current.amount * current.rate_ratio;
         }
-        //add rate big small
         const getAM = () => {
             console.log(current);
             const needTrans = (current.used > 0) ? current.amount - current.used : current.amount;

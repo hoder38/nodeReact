@@ -29,7 +29,7 @@ import { handleError, HoError, showLog } from '../util/utility'
 import { mainInit } from '../util/sendWs'
 
 //background
-import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex } from '../cmd/background'
+import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, checkSetOffer } from '../cmd/background'
 
 //global
 const credentials = {
@@ -71,6 +71,7 @@ dbBackup();
 checkStock();
 rateCalculator();
 setUserOffer();
+checkSetOffer();
 filterBitfinex();
 
 app.use(BodyParserUrlencoded({ extended: true }))

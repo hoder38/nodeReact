@@ -16,6 +16,8 @@ import sendWs from '../util/sendWs'
 let stock_batch_list = [];
 let stock_batch_list_2 = [];
 
+let lastSetOffer = 0;
+
 function bgError(err, type) {
     sendWs(`${type}: ${err.message||err.msg}`, 0, 0, true);
     handleError(err, type);
@@ -225,17 +227,38 @@ export const rateCalculator = () => {
 }
 
 export const setUserOffer = () => {
+    console.log('setUserOffer');
+    console.log(new Date());
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(() => checkUser(index + 1, userlist));
-        const setO = () => Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
-            if ((err.message||err.msg).includes('Maximum call stack size exceeded')) {
-                return resetBFX();
-            } else {
-                resetBFX(true);
-                return bgError(err, 'Loop set offer')
+        const setO = () => {
+            lastSetOffer = Math.round(new Date().getTime() / 1000);
+            return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
+                if ((err.message||err.msg).includes('Maximum call stack size exceeded')) {
+                    return resetBFX();
+                } else {
+                    resetBFX(true);
+                    return bgError(err, 'Loop set offer')
+                }
+            })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+        }
+        if (lastSetOffer) {
+            return setO();
+        } else {
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 90000)).then(() => setO());
+        }
+    }
+}
+
+export const checkSetOffer = () => {
+    if (BITFINEX_LOAN(ENV_TYPE)) {
+        const cso = () => {
+            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 120) {
+                setUserOffer();
             }
-        })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 90000)).then(() => setO());
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => cso());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => cso());
     }
 }
 

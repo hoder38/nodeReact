@@ -1340,6 +1340,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         if (current.isTrade && current.amount >= 0 && current.pair) {} else {
             return _promise2.default.resolve();
         }
+        //return Promise.resolve();
         if (extremRate[id][current.type].is_low && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
             console.log('is low');
             current.amount = current.amount - current.amount * current.rate_ratio;
@@ -1347,7 +1348,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             console.log('is high');
             current.amount = current.amount + current.amount * current.rate_ratio;
         }
-        //add rate big small
         var getAM = function getAM() {
             console.log(current);
             var needTrans = current.used > 0 ? current.amount - current.used : current.amount;
