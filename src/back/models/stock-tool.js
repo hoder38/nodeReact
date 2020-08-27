@@ -2610,7 +2610,12 @@ export default {
                                         if (!netValue) {
                                             netValue = getParameterV2(raw_data, '3XXX', '權益總額');
                                             if (!netValue) {
-                                                return handleError(new HoError('cannot find stock net value'));
+                                                netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
+                                                if (!netValue) {
+                                                    return handleError(new HoError('cannot find stock net value'));
+                                                } else {
+                                                    netValue = netValue[0];
+                                                }
                                             } else {
                                                 netValue = netValue[0];
                                             }
