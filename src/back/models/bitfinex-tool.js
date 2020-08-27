@@ -1265,6 +1265,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     currency: current.type.substr(1),
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                     current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
+                    if (margin[id] && margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
+                        current.used = 0;
+                    }
                     return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
                 });
             }

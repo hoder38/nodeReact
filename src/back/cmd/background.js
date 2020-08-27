@@ -218,10 +218,10 @@ export const checkStock = () => {
 }
 
 export const rateCalculator = () => {
-    //if (BITFINEX_LOAN(ENV_TYPE)) {
+    if (BITFINEX_LOAN(ENV_TYPE)) {
         const calR = () => calRate([FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM]).catch(err => bgError(err, 'Loop rate calculator')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => calR());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => calR());
-    //}
+    }
 }
 
 export const setUserOffer = () => {

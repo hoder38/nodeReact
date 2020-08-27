@@ -1478,6 +1478,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     });
                 }).then(function () {
                     current.used = current.used > 0 && current.used + availableMargin > 1 ? current.used + availableMargin : 0;
+                    if (margin[id] && margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
+                        current.used = 0;
+                    }
                     return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } });
                 });
             }
