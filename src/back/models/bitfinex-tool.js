@@ -711,7 +711,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             sendWs(`${id} Total Updata Error: miss ${os.symbol}`, 0, 0, true);
                                             handleError(new HoError(`miss ${os.symbol}`), `${id} Total Updata Error`);
                                         } else {
-                                            const amount = os.amountOrig - os.amount;
+                                            const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                                             if (amount === 0) {
                                                 return false;
                                             }

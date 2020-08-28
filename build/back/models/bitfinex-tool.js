@@ -812,7 +812,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 (0, _utility.handleError)(new _utility.HoError('miss ' + os.symbol), id + ' Total Updata Error');
                                             } else {
                                                 var _ret4 = function () {
-                                                    var amount = os.amountOrig - os.amount;
+                                                    var amount = os.amountOrig - os.amount < 0 ? (1 - _constants.BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                                                     if (amount === 0) {
                                                         return {
                                                             v: false
