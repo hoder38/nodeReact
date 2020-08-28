@@ -706,10 +706,65 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         for (let j = 0; j < curArr[i].pair.length; j++) {
                             if (curArr[i].pair.type === os.symbol) {
                                 if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                    const amount = os.priceAvg * (os.amountOrig - os.amount);
-                                    return Mongo('update', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}, {$inc: {amount: -os.priceAvg * (os.amountOrig - os.amount)}}).catch(err => {
-                                        sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                        handleError(err, `${id} Total Updata Error`);
+                                    return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}).then(item => {
+                                        if (item.length < 1) {
+                                            sendWs(`${id} Total Updata Error: miss ${os.symbol}`, 0, 0, true);
+                                            handleError(new HoError(`miss ${os.symbol}`), `${id} Total Updata Error`);
+                                        } else {
+                                            const amount = os.amountOrig - os.amount;
+                                            if (amount === 0) {
+                                                return false;
+                                            }
+                                            const price = os.priceAvg;
+                                            const time = Math.round(new Date().getTime() / 1000);
+                                            const tradeType = amount > 0 ? 'buy' : 'sell';
+                                            if (tradeType === 'buy') {
+                                                let is_insert = false;
+                                                for (let k = 0; k < item.previous.buy.length; k++) {
+                                                    if (price < item.previous.buy[k].price) {
+                                                        item.previous.buy.splice(k, 0, {price, time});
+                                                        is_insert = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!is_insert) {
+                                                    item.previous.buy.push({price, time});
+                                                }
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'buy',
+                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                                                    sell: item.previous.sell,
+                                                }
+                                            } else if (tradeType === 'sell') {
+                                                let is_insert = false;
+                                                for (let k = 0; k < item.previous.sell.length; k++) {
+                                                    if (price > item.previous.sell[k].price) {
+                                                        item.previous.sell.splice(k, 0, {price, time});
+                                                        is_insert = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!is_insert) {
+                                                    item.previous.sell.push({price, time});
+                                                }
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'sell',
+                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                                                    buy: item.previous.buy,
+                                                }
+                                            }
+                                            return Mongo('update', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}, {$set: {
+                                                amount: item.amount - price * amount,
+                                                previous: item.previous,
+                                            }}).catch(err => {
+                                                sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                                handleError(err, `${id} Total Updata Error`);
+                                            });
+                                        }
                                     });
                                 }
                                 break;
