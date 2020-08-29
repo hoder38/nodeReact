@@ -1739,6 +1739,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                                     }
                                     var order_avail = margin[id] && margin[id][current.type] && margin[id][current.type].total ? _constants.SUPPORT_LEVERAGE[item.index] ? _constants.SUPPORT_LEVERAGE[item.index] * margin[id][current.type].avail : margin[id][current.type].avail : 0;
+                                    order_avail = order_avail - 1 > 0 ? order_avail - 1 : 0;
                                     if (order_avail < suggestion.bCount * suggestion.buy) {
                                         suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                                     }
