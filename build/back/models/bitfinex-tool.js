@@ -776,7 +776,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 for (var _i2 = 0; _i2 < order[id][symbol].length; _i2++) {
                     if (os.id === order[id][symbol][_i2].id) {
                         order[id][symbol][_i2].time = Math.round(os.mtsCreate / 1000);
-                        order[id][symbol][_i2].status = os.status;
                         isExist = true;
                         break;
                     }
@@ -789,7 +788,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         type: os.type,
                         symbol: os.symbol,
                         price: os.price,
-                        flags: os.flags
+                        flags: os.flags,
+                        code: true
                     });
                 }
                 (0, _sendWs2.default)({

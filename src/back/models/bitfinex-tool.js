@@ -678,7 +678,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 for (let i = 0; i < order[id][symbol].length; i++) {
                     if (os.id === order[id][symbol][i].id) {
                         order[id][symbol][i].time = Math.round(os.mtsCreate / 1000);
-                        order[id][symbol][i].status = os.status;
                         isExist = true;
                         break;
                     }
@@ -692,6 +691,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         symbol: os.symbol,
                         price: os.price,
                         flags: os.flags,
+                        code: true,
                     });
                 }
                 sendWs({
