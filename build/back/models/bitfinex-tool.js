@@ -60,7 +60,6 @@ var finalRate = {};
 var maxRange = {};
 var currentRate = {};
 var priceData = {};
-var order_count = 0;
 
 //user
 var userWs = {};
@@ -458,6 +457,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             updateTime[id]['credit'] = 0;
             updateTime[id]['position'] = 0;
             updateTime[id]['order'] = 0;
+            updateTime[id]['trade'] = 0;
         }
         if (!available[id]) {
             available[id] = {};
@@ -1587,8 +1587,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 });
             }
         }).then(function () {
-            order_count++;
-            if (order_count % _constants.ORDER_INTERVAL !== 3) {
+            updateTime[id]['trade']++;
+            updateTime[id]['trade']++;
+            if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 3) {
                 return _promise2.default.resolve();
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
@@ -2043,6 +2044,7 @@ var resetBFX = exports.resetBFX = function resetBFX() {
             updateTime[i]['credit'] = 0;
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
+            updateTime[i]['trade'] = 0;
         }
     } else {
         return closeWs(0);

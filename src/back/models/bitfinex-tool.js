@@ -15,7 +15,6 @@ let finalRate = {};
 let maxRange = {};
 let currentRate = {};
 let priceData = {};
-let order_count = 0;
 
 //user
 let userWs = {};
@@ -362,6 +361,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             updateTime[id]['credit'] = 0;
             updateTime[id]['position'] = 0;
             updateTime[id]['order'] = 0;
+            updateTime[id]['trade'] = 0;
         }
         if (!available[id]) {
             available[id] = {}
@@ -1348,8 +1348,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 });
             }
         }).then(() => {
-            order_count++;
-            if (order_count % ORDER_INTERVAL !== 3) {
+            updateTime[id]['trade']++;
+            updateTime[id]['trade']++;
+            if (updateTime[id]['trade'] % ORDER_INTERVAL !== 3) {
                 return Promise.resolve();
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
@@ -1715,6 +1716,7 @@ export const resetBFX = (update=false) => {
             updateTime[i]['credit'] = 0;
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
+            updateTime[i]['trade'] = 0;
         }
     } else {
         return closeWs(0);
