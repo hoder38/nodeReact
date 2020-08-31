@@ -334,7 +334,7 @@ export const calWeb = curArr => {
 
 export const setWsOffer = (id, curArr=[], uid) => {
     //檢查跟設定active
-    curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.amount >= 0 && v.pair))) ? true : false);
+    curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.pair))) ? true : false);
     if (curArr.length < 1) {
         return Promise.resolve();
     }
@@ -647,7 +647,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         order[id][symbol][j].type = os.type;
                         order[id][symbol][j].symbol = os.symbol;
                         order[id][symbol][j].price = os.price;
-                        order[id][symbol][j].trailing = os.priceTrailing;
                         order[id][symbol][j].flags = os.flags;
                         break;
                     }
@@ -671,16 +670,26 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
-                order[id][symbol].push({
-                    id: os.id,
-                    time: Math.round(os.mtsCreate / 1000),
-                    amount: os.amountOrig,
-                    type: os.type,
-                    symbol: os.symbol,
-                    price: os.price,
-                    trailing: os.priceTrailing,
-                    flags: os.flags,
-                });
+                let isExist = false;
+                for (let i = 0; i < order[id][os.symbol].length; i++) {
+                    if (os.id === order[id][os.symbol][i].id) {
+                        order[id][os.symbol][i].time = Math.round(os.mtsCreate / 1000);
+                        order[id][os.symbol][i].status = os.status;
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    order[id][symbol].push({
+                        id: os.id,
+                        time: Math.round(os.mtsCreate / 1000),
+                        amount: os.amountOrig,
+                        type: os.type,
+                        symbol: os.symbol,
+                        price: os.price,
+                        flags: os.flags,
+                    });
+                }
                 sendWs({
                     type: 'bitfinex',
                     data: -1,
@@ -693,24 +702,31 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
                 console.log(`${symbol} ${id} order close`);
                 console.log(os);
+                let is_code = false;
                 if (order[id][symbol]) {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
+                            if (order[id][symbol][j].code) {
+                                is_code = true;
+                            }
                             order[id][symbol].splice(j, 1);
                             break;
                         }
                     }
                 }
-                for (let i = 0; i < curArr.length; i++) {
-                    if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].amount >= 0 && curArr[i].pair) {
-                        for (let j = 0; j < curArr[i].pair.length; j++) {
-                            if (curArr[i].pair.type === os.symbol) {
-                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
-                                    return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}).then(item => {
-                                        if (item.length < 1) {
+                if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+                    for (let i = 0; i < curArr.length; i++) {
+                        if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].pair) {
+                            for (let j = 0; j < curArr[i].pair.length; j++) {
+                                if (curArr[i].pair.type === os.symbol) {
+                                    console.log(`${os.symbol} order executed`);
+                                    return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}).then(items => {
+                                        console.log(items);
+                                        if (items.length < 1) {
                                             sendWs(`${id} Total Updata Error: miss ${os.symbol}`, 0, 0, true);
                                             handleError(new HoError(`miss ${os.symbol}`), `${id} Total Updata Error`);
                                         } else {
+                                            const item = items[0];
                                             const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                                             if (amount === 0) {
                                                 return false;
@@ -759,6 +775,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             }
                                             return Mongo('update', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}, {$set: {
                                                 amount: item.amount - price * amount,
+                                                count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
                                                 previous: item.previous,
                                             }}).catch(err => {
                                                 sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
@@ -766,11 +783,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             });
                                         }
                                     });
+                                    break;
                                 }
-                                break;
                             }
+                            break;
                         }
-                        break;
                     }
                 }
             }
@@ -860,8 +877,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             symbol: v.symbol,
                             type: v.type,
                             price: v.price,
-                            trailing: v.priceTrailing,
                             flags: v.flags,
+                            code: !v.type.includes('EXCHANGE') ? true : false,
                         });
                     }
                 });
@@ -959,7 +976,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             /*if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
                 return false;
             }*/
-            if (current.isTrade && current.amount >= 0 && current.pair) {
+            if (current.isTrade && current.pair) {
             } else {
                 return false;
             }
@@ -1218,17 +1235,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
 
     const singleTrade = current => {
         console.log('singleTrade');
-        if (current.isTrade && current.amount >= 0 && current.pair) {
+        if (current.isTrade && current.pair) {
         } else {
             return Promise.resolve();
         }
         //return Promise.resolve();
-        if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
-            console.log('is low');
-            current.amount = current.amount + current.amount * current.rate_ratio;
-        } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            console.log('is high');
-            current.amount = current.amount - current.amount * current.rate_ratio;
+        if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
+            if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
+                console.log('is low');
+                current.amount = current.amount + current.amount * current.rate_ratio;
+            } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
+                console.log('is high');
+                current.amount = current.amount - current.amount * current.rate_ratio;
+            }
         }
         const getAM = () => {
             console.log(current);
@@ -1488,7 +1507,29 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: suggestion.bCount,
                                         price: suggestion.buy,
                                     }, userRest);
-                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => reucr_status(index + 1));
+                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                        let isExist = false;
+                                        for (let i = 0; i < order[id][current.type].length; i++) {
+                                            if (or1.id === order[id][current.type][i].id) {
+                                                order[id][current.type][i].code = true;
+                                                isExist = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!isExist) {
+                                            order[id][current.type].push({
+                                                id: or1.id,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                amount: or1.amount,
+                                                type: or1.type,
+                                                symbol: or1.symbol,
+                                                price: or1.price,
+                                                flags: or1.flags,
+                                                code: true,
+                                            });
+                                        }
+                                        return reucr_status(index + 1);
+                                    });
                                 } else {
                                     return reucr_status(index + 1);
                                 }
@@ -1501,8 +1542,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 console.log(result);
                                 return cancelOrder();
                             }).then(() => {
-                                if (item_count < suggestion.sCount) {
+                                if (item.count < suggestion.sCount) {
                                     suggestion.sCount = item.count;
+                                }
+                                if (item_count < suggestion.sCount) {
+                                    suggestion.sCount = item_count;
                                 }
                                 if (suggestion.sCount > 0) {
                                     console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
@@ -1514,7 +1558,29 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         price: suggestion.sell,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                        let isExist = false;
+                                        for (let i = 0; i < order[id][current.type].length; i++) {
+                                            if (or1.id === order[id][current.type][i].id) {
+                                                order[id][current.type][i].code = true;
+                                                isExist = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!isExist) {
+                                            order[id][current.type].push({
+                                                id: or1.id,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                amount: or1.amount,
+                                                type: or1.type,
+                                                symbol: or1.symbol,
+                                                price: or1.price,
+                                                flags: or1.flags,
+                                                code: true,
+                                            });
+                                        }
+                                        return submitBuy();
+                                    });
                                 } else {
                                     return submitBuy();
                                 }
@@ -1548,6 +1614,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         } else if (item.ing === 1) {
                             return startStatus();
                         } else {
+                            current.enter_mid = current.enter_mid ? current.enter_mid : 0;
                             if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
                                 return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => startStatus());
                             } else {
@@ -1905,6 +1972,7 @@ export default {
                                             previous: {buy: [], sell: []},
                                             newMid: [],
                                             ing: 0,
+                                            count: 0,
                                         }).then(item => {
                                             console.log(item);
                                             return recur_update(index + 1);
@@ -2111,8 +2179,9 @@ export default {
                 }
                 if (order[id] && order[id][v]) {
                     order[id][v].forEach(o => {
+                        const code = !o.code ? ' 手動' : '';
                         itemList.push({
-                            name: `交易掛單 ${o.symbol.substr(1)} ${Math.floor(o.amount * 10000) / 10000}枚 ${o.type}`,
+                            name: `交易掛單 ${o.symbol.substr(1)} ${Math.floor(o.amount * 10000) / 10000}枚 ${o.type}${code}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'order', '交易掛單'],
                             rate: `$${o.price}`,

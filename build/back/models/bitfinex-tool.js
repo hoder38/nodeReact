@@ -429,7 +429,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
     //檢查跟設定active
     curArr = curArr.filter(function (v) {
-        return v.isActive && (v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0 || v.isTrade && v.amount >= 0 && v.pair) ? true : false;
+        return v.isActive && (v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0 || v.isTrade && v.pair) ? true : false;
     });
     if (curArr.length < 1) {
         return _promise2.default.resolve();
@@ -745,7 +745,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         order[id][symbol][j].type = os.type;
                         order[id][symbol][j].symbol = os.symbol;
                         order[id][symbol][j].price = os.price;
-                        order[id][symbol][j].trailing = os.priceTrailing;
                         order[id][symbol][j].flags = os.flags;
                         break;
                     }
@@ -769,16 +768,26 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (!order[id][symbol]) {
                     order[id][symbol] = [];
                 }
-                order[id][symbol].push({
-                    id: os.id,
-                    time: Math.round(os.mtsCreate / 1000),
-                    amount: os.amountOrig,
-                    type: os.type,
-                    symbol: os.symbol,
-                    price: os.price,
-                    trailing: os.priceTrailing,
-                    flags: os.flags
-                });
+                var isExist = false;
+                for (var _i2 = 0; _i2 < order[id][os.symbol].length; _i2++) {
+                    if (os.id === order[id][os.symbol][_i2].id) {
+                        order[id][os.symbol][_i2].time = Math.round(os.mtsCreate / 1000);
+                        order[id][os.symbol][_i2].status = os.status;
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    order[id][symbol].push({
+                        id: os.id,
+                        time: Math.round(os.mtsCreate / 1000),
+                        amount: os.amountOrig,
+                        type: os.type,
+                        symbol: os.symbol,
+                        price: os.price,
+                        flags: os.flags
+                    });
+                }
                 (0, _sendWs2.default)({
                     type: 'bitfinex',
                     data: -1,
@@ -791,27 +800,33 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
                 console.log(symbol + ' ' + id + ' order close');
                 console.log(os);
+                var is_code = false;
                 if (order[id][symbol]) {
                     for (var j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
+                            if (order[id][symbol][j].code) {
+                                is_code = true;
+                            }
                             order[id][symbol].splice(j, 1);
                             break;
                         }
                     }
                 }
-
-                var _loop = function _loop(_i2) {
-                    if (curArr[_i2].type === symbol && curArr[_i2].isTrade && curArr[_i2].amount >= 0 && curArr[_i2].pair) {
-                        for (var _j = 0; _j < curArr[_i2].pair.length; _j++) {
-                            if (curArr[_i2].pair.type === os.symbol) {
-                                if (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) {
+                if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+                    var _loop = function _loop(_i3) {
+                        if (curArr[_i3].type === symbol && curArr[_i3].isTrade && curArr[_i3].pair) {
+                            for (var _j = 0; _j < curArr[_i3].pair.length; _j++) {
+                                if (curArr[_i3].pair.type === os.symbol) {
+                                    console.log(os.symbol + ' order executed');
                                     return {
-                                        v: (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: curArr[_i2].type }).then(function (item) {
-                                            if (item.length < 1) {
+                                        v: (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: curArr[_i3].type }).then(function (items) {
+                                            console.log(items);
+                                            if (items.length < 1) {
                                                 (0, _sendWs2.default)(id + ' Total Updata Error: miss ' + os.symbol, 0, 0, true);
                                                 (0, _utility.handleError)(new _utility.HoError('miss ' + os.symbol), id + ' Total Updata Error');
                                             } else {
                                                 var _ret4 = function () {
+                                                    var item = items[0];
                                                     var amount = os.amountOrig - os.amount < 0 ? (1 - _constants.BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                                                     if (amount === 0) {
                                                         return {
@@ -865,8 +880,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                         };
                                                     }
                                                     return {
-                                                        v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { owner: uid, sType: 1, type: curArr[_i2].type }, { $set: {
+                                                        v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { owner: uid, sType: 1, type: curArr[_i3].type }, { $set: {
                                                                 amount: item.amount - price * amount,
+                                                                count: item.count ? item.count + amount : amount > 0 ? amount : 0,
                                                                 previous: item.previous
                                                             } }).catch(function (err) {
                                                             (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
@@ -879,23 +895,23 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             }
                                         })
                                     };
+                                    break;
                                 }
-                                break;
                             }
+                            return 'break';
                         }
-                        return 'break';
-                    }
-                };
+                    };
 
-                _loop2: for (var _i2 = 0; _i2 < curArr.length; _i2++) {
-                    var _ret3 = _loop(_i2);
+                    _loop2: for (var _i3 = 0; _i3 < curArr.length; _i3++) {
+                        var _ret3 = _loop(_i3);
 
-                    switch (_ret3) {
-                        case 'break':
-                            break _loop2;
+                        switch (_ret3) {
+                            case 'break':
+                                break _loop2;
 
-                        default:
-                            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                            default:
+                                if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                        }
                     }
                 }
             }
@@ -991,8 +1007,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             symbol: v.symbol,
                             type: v.type,
                             price: v.price,
-                            trailing: v.priceTrailing,
-                            flags: v.flags
+                            flags: v.flags,
+                            code: !v.type.includes('EXCHANGE') ? true : false
                         });
                     }
                 });
@@ -1052,9 +1068,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
                 try {
                     for (var _iterator2 = (0, _getIterator3.default)(j), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var _i3 = _step2.value;
+                        var _i4 = _step2.value;
 
-                        if (risk === _i3.risk) {
+                        if (risk === _i4.risk) {
                             return true;
                         }
                     }
@@ -1110,9 +1126,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     day: day,
                     speed: (58 - day) / 56
                 };
-                for (var _i4 = DR.length; _i4 >= 0; _i4--) {
-                    if (_i4 === 0 || DRT.rate < DR[_i4 - 1].rate) {
-                        DR.splice(_i4, 0, DRT);
+                for (var _i5 = DR.length; _i5 >= 0; _i5--) {
+                    if (_i5 === 0 || DRT.rate < DR[_i5 - 1].rate) {
+                        DR.splice(_i5, 0, DRT);
                         break;
                     }
                 }
@@ -1122,9 +1138,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             if (DR.length === 0) {
                 return false;
             }
-            for (var _i5 = 0; _i5 < DR.length; _i5++) {
-                if (rate >= DR[_i5].rate) {
-                    return DR[_i5];
+            for (var _i6 = 0; _i6 < DR.length; _i6++) {
+                if (rate >= DR[_i6].rate) {
+                    return DR[_i6];
                 }
             }
             return false;
@@ -1137,7 +1153,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             /*if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
                 return false;
             }*/
-            if (current.isTrade && current.amount >= 0 && current.pair) {} else {
+            if (current.isTrade && current.pair) {} else {
                 return false;
             }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
@@ -1271,7 +1287,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 risk = _constants.RISK_MAX;
             }
             var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
-            for (var _i6 = 0; _i6 < newLength; _i6++) {
+            for (var _i7 = 0; _i7 < newLength; _i7++) {
                 var orig_risk = risk;
                 while (checkRisk(risk, needRetain, needNew)) {
                     risk--;
@@ -1308,9 +1324,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         //merge new & delete
         var mergeOffer = function mergeOffer() {
             var checkDelete = function checkDelete(rate, amount) {
-                for (var _i7 = 0; _i7 < needDelete.length; _i7++) {
-                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i7].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i7].amount) {
-                        return _i7;
+                for (var _i8 = 0; _i8 < needDelete.length; _i8++) {
+                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i8].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i8].amount) {
+                        return _i8;
                     }
                 }
                 return -1;
@@ -1318,10 +1334,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             needNew.forEach(function (v) {
                 var notDelete = checkDelete(v.rate, v.amount);
                 if (notDelete !== -1) {
-                    for (var _i8 = 0; _i8 < offer[id][current.type].length; _i8++) {
-                        if (needDelete[notDelete].id === offer[id][current.type][_i8].id) {
-                            offer[id][current.type][_i8].time = Math.round(new Date().getTime() / 1000);
-                            offer[id][current.type][_i8].risk = v.risk;
+                    for (var _i9 = 0; _i9 < offer[id][current.type].length; _i9++) {
+                        if (needDelete[notDelete].id === offer[id][current.type][_i9].id) {
+                            offer[id][current.type][_i9].time = Math.round(new Date().getTime() / 1000);
+                            offer[id][current.type][_i9].risk = v.risk;
                             break;
                         }
                     }
@@ -1384,9 +1400,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 }, 3000);
                             }).then(function () {
                                 var isExist = false;
-                                for (var _i9 = 0; _i9 < offer[id][current.type].length; _i9++) {
-                                    if (fo.id === offer[id][current.type][_i9].id) {
-                                        offer[id][current.type][_i9].risk = finalNew[index].risk;
+                                for (var _i10 = 0; _i10 < offer[id][current.type].length; _i10++) {
+                                    if (fo.id === offer[id][current.type][_i10].id) {
+                                        offer[id][current.type][_i10].risk = finalNew[index].risk;
                                         //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
                                         isExist = true;
                                         break;
@@ -1419,16 +1435,18 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
     var singleTrade = function singleTrade(current) {
         console.log('singleTrade');
-        if (current.isTrade && current.amount >= 0 && current.pair) {} else {
+        if (current.isTrade && current.pair) {} else {
             return _promise2.default.resolve();
         }
         //return Promise.resolve();
-        if (extremRate[id][current.type].is_low && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
-            console.log('is low');
-            current.amount = current.amount + current.amount * current.rate_ratio;
-        } else if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
-            console.log('is high');
-            current.amount = current.amount - current.amount * current.rate_ratio;
+        if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
+            if (extremRate[id][current.type].is_low && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
+                console.log('is low');
+                current.amount = current.amount + current.amount * current.rate_ratio;
+            } else if (extremRate[id][current.type].is_high && Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high <= _constants.EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
+                console.log('is high');
+                current.amount = current.amount - current.amount * current.rate_ratio;
+            }
         }
         var getAM = function getAM() {
             console.log(current);
@@ -1743,23 +1761,49 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                                     }
                                     if (suggestion.bCount > 0) {
-                                        console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
-                                        var or1 = new _bfxApiNodeModels.Order({
-                                            cid: Date.now(),
-                                            type: 'LIMIT',
-                                            symbol: item.index,
-                                            amount: suggestion.bCount,
-                                            price: suggestion.buy
-                                        }, userRest);
-                                        return or1.submit().then(function () {
-                                            return new _promise2.default(function (resolve, reject) {
-                                                return setTimeout(function () {
-                                                    return resolve();
-                                                }, 3000);
-                                            });
-                                        }).then(function () {
-                                            return reucr_status(index + 1);
-                                        });
+                                        var _ret10 = function () {
+                                            console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
+                                            var or1 = new _bfxApiNodeModels.Order({
+                                                cid: Date.now(),
+                                                type: 'LIMIT',
+                                                symbol: item.index,
+                                                amount: suggestion.bCount,
+                                                price: suggestion.buy
+                                            }, userRest);
+                                            return {
+                                                v: or1.submit().then(function () {
+                                                    return new _promise2.default(function (resolve, reject) {
+                                                        return setTimeout(function () {
+                                                            return resolve();
+                                                        }, 3000);
+                                                    });
+                                                }).then(function () {
+                                                    var isExist = false;
+                                                    for (var _i11 = 0; _i11 < order[id][current.type].length; _i11++) {
+                                                        if (or1.id === order[id][current.type][_i11].id) {
+                                                            order[id][current.type][_i11].code = true;
+                                                            isExist = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (!isExist) {
+                                                        order[id][current.type].push({
+                                                            id: or1.id,
+                                                            time: Math.round(new Date().getTime() / 1000),
+                                                            amount: or1.amount,
+                                                            type: or1.type,
+                                                            symbol: or1.symbol,
+                                                            price: or1.price,
+                                                            flags: or1.flags,
+                                                            code: true
+                                                        });
+                                                    }
+                                                    return reucr_status(index + 1);
+                                                })
+                                            };
+                                        }();
+
+                                        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                                     } else {
                                         return reucr_status(index + 1);
                                     }
@@ -1772,8 +1816,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     console.log(result);
                                     return cancelOrder();
                                 }).then(function () {
-                                    if (item_count < suggestion.sCount) {
+                                    if (item.count < suggestion.sCount) {
                                         suggestion.sCount = item.count;
+                                    }
+                                    if (item_count < suggestion.sCount) {
+                                        suggestion.sCount = item_count;
                                     }
                                     if (suggestion.sCount > 0) {
                                         console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
@@ -1792,6 +1839,26 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 }, 3000);
                                             });
                                         }).then(function () {
+                                            var isExist = false;
+                                            for (var _i12 = 0; _i12 < order[id][current.type].length; _i12++) {
+                                                if (or1.id === order[id][current.type][_i12].id) {
+                                                    order[id][current.type][_i12].code = true;
+                                                    isExist = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!isExist) {
+                                                order[id][current.type].push({
+                                                    id: or1.id,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    amount: or1.amount,
+                                                    type: or1.type,
+                                                    symbol: or1.symbol,
+                                                    price: or1.price,
+                                                    flags: or1.flags,
+                                                    code: true
+                                                });
+                                            }
                                             return submitBuy();
                                         });
                                     } else {
@@ -1843,6 +1910,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     v: startStatus()
                                 };
                             } else {
+                                current.enter_mid = current.enter_mid ? current.enter_mid : 0;
                                 if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
                                     return {
                                         v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { ing: 1 } }).then(function (result) {
@@ -2116,7 +2184,7 @@ exports.default = {
             }
             if (set.hasOwnProperty('pair')) {
                 if (set.pair) {
-                    var _ret10 = function () {
+                    var _ret11 = function () {
                         var pair = (0, _utility.isValidString)(set.pair, 'name');
                         if (pair === false) {
                             return {
@@ -2137,14 +2205,14 @@ exports.default = {
                         data['pair'] = pairArr;
                     }();
 
-                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                 } else {
                     data['pair'] = [];
                 }
             }
             if (set.hasOwnProperty('clear')) {
                 if (set.clear) {
-                    var _ret11 = function () {
+                    var _ret12 = function () {
                         var allClear = false;
                         var clear = (0, _utility.isValidString)(set.clear, 'name');
                         if (clear === false) {
@@ -2168,7 +2236,7 @@ exports.default = {
                         }
                     }();
 
-                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                 } else {
                     data['clear'] = {};
                 }
@@ -2202,17 +2270,17 @@ exports.default = {
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
                     if (data['pair']) {
-                        var _ret12 = function () {
-                            for (var _i10 = 0; _i10 < data['pair'].length; _i10++) {
+                        var _ret13 = function () {
+                            for (var _i13 = 0; _i13 < data['pair'].length; _i13++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
-                                    if (item[j].index === data['pair'][_i10].type) {
+                                    if (item[j].index === data['pair'][_i13].type) {
                                         exist = true;
                                         break;
                                     }
                                 }
                                 if (!exist) {
-                                    item.push(data['pair'][_i10]);
+                                    item.push(data['pair'][_i13]);
                                 }
                             }
                             var recur_update = function recur_update(index) {
@@ -2220,12 +2288,12 @@ exports.default = {
                                     return returnSupport(bitfinex);
                                 } else {
                                     if (item[index]._id) {
-                                        for (var _i11 = 0; _i11 < data['pair'].length; _i11++) {
-                                            if (item[index].index === data['pair'][_i11].type) {
+                                        for (var _i14 = 0; _i14 < data['pair'].length; _i14++) {
+                                            if (item[index].index === data['pair'][_i14].type) {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
-                                                        times: Math.floor(item[index].times * data['pair'][_i11].amount / item[index].orig * 10000) / 10000,
-                                                        amount: item[index].amount + data['pair'][_i11].amount - item[index].orig,
-                                                        orig: data['pair'][_i11].amount
+                                                        times: Math.floor(item[index].times * data['pair'][_i14].amount / item[index].orig * 10000) / 10000,
+                                                        amount: item[index].amount + data['pair'][_i14].amount - item[index].orig,
+                                                        orig: data['pair'][_i14].amount
                                                     } }).then(function (item) {
                                                     console.log(item);
                                                     return recur_update(index + 1);
@@ -2256,7 +2324,8 @@ exports.default = {
                                                 orig: item[index].amount,
                                                 previous: { buy: [], sell: [] },
                                                 newMid: [],
-                                                ing: 0
+                                                ing: 0,
+                                                count: 0
                                             }).then(function (item) {
                                                 console.log(item);
                                                 return recur_update(index + 1);
@@ -2270,7 +2339,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
                     } else {
                         return returnSupport(bitfinex);
                     }
@@ -2284,7 +2353,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret13 = function () {
+                var _ret14 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -2297,7 +2366,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
             } else {
                 return returnSupport();
             }
@@ -2430,8 +2499,8 @@ exports.default = {
         }
         if (type === 0 || type === 2) {
             var tempList = uid === 0 ? rateList : itemList;
-            for (var _i12 = 0; _i12 < _constants.SUPPORT_COIN.length; _i12++) {
-                var _v = _constants.SUPPORT_COIN[_i12];
+            for (var _i15 = 0; _i15 < _constants.SUPPORT_COIN.length; _i15++) {
+                var _v = _constants.SUPPORT_COIN[_i15];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
@@ -2439,7 +2508,7 @@ exports.default = {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     tempList.push({
                         name: _v.substr(1) + ' Rate',
-                        id: _i12,
+                        id: _i15,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: rate + '%',
                         count: rate,
@@ -2449,16 +2518,16 @@ exports.default = {
                 }
             }
             var vid = _constants.SUPPORT_COIN.length;
-            for (var _i13 in priceData) {
+            for (var _i16 in priceData) {
                 tempList.push({
-                    name: _i13.substr(1) + ' $' + Math.floor(priceData[_i13].lastPrice * 10000) / 10000,
+                    name: _i16.substr(1) + ' $' + Math.floor(priceData[_i16].lastPrice * 10000) / 10000,
                     id: vid++,
-                    tags: [_i13.substr(1, 4), _i13.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i13].dailyChange * 100) / 100 + '%',
-                    count: priceData[_i13].dilyChange,
-                    utime: priceData[_i13].time,
+                    tags: [_i16.substr(1, 4), _i16.substr(-3), 'rate', '利率'],
+                    rate: Math.floor(priceData[_i16].dailyChange * 100) / 100 + '%',
+                    count: priceData[_i16].dilyChange,
+                    utime: priceData[_i16].time,
                     type: 1,
-                    str: priceData[_i13].str
+                    str: priceData[_i16].str
                 });
             }
         }
@@ -2474,8 +2543,9 @@ exports.default = {
                 }
                 if (order[id] && order[id][v]) {
                     order[id][v].forEach(function (o) {
+                        var code = !o.code ? ' 手動' : '';
                         itemList.push({
-                            name: '\u4EA4\u6613\u639B\u55AE ' + o.symbol.substr(1) + ' ' + Math.floor(o.amount * 10000) / 10000 + '\u679A ' + o.type,
+                            name: '\u4EA4\u6613\u639B\u55AE ' + o.symbol.substr(1) + ' ' + Math.floor(o.amount * 10000) / 10000 + '\u679A ' + o.type + code,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'order', '交易掛單'],
                             rate: '$' + o.price,
