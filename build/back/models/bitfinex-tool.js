@@ -1588,7 +1588,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         }).then(function () {
             updateTime[id]['trade']++;
-            updateTime[id]['trade']++;
             if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 3) {
                 return _promise2.default.resolve();
             }

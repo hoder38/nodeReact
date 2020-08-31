@@ -1349,7 +1349,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
         }).then(() => {
             updateTime[id]['trade']++;
-            updateTime[id]['trade']++;
             if (updateTime[id]['trade'] % ORDER_INTERVAL !== 3) {
                 return Promise.resolve();
             }
