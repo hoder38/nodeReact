@@ -1594,6 +1594,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
                 var reucr_status = function reucr_status(index) {
                     if (index >= items.length) {
+                        (0, _sendWs2.default)({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id
+                        });
                         return _promise2.default.resolve();
                     } else {
                         var _ret8 = function () {

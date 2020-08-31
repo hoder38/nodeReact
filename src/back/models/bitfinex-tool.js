@@ -1355,6 +1355,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const reucr_status = index => {
                     if (index >= items.length) {
+                        sendWs({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id,
+                        });
                         return Promise.resolve();
                     } else {
                         const item = items[index];
