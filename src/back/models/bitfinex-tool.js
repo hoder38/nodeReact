@@ -389,8 +389,12 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
         userWs[id] = userBfx.ws(2,{ transform: true });
         userWs[id].on('error', err => {
-            if (!(err.message||err.msg).includes('auth: dup')) {
-                sendWs(`${id} Bitfinex Ws Error: ${err.message||err.msg}`, 0, 0, true);
+            const msg = (err.message||err.msg) ? (err.message||err.msg) : false;
+            if (!msg) {
+                console.log(msg);
+            }
+            if (!msg.includes('auth: dup')) {
+                sendWs(`${id} Bitfinex Ws Error: ${msg}`, 0, 0, true);
                 handleError(err, `${id} Bitfinex Ws Error`);
             }
         });
@@ -1822,7 +1826,7 @@ export default {
                 data['isTrade'] = set.trade;
             }
             if (set.amount) {
-                const amount = isValidString(set.amount, 'int');
+                const amount = isValidString(set.amount, 'zeroint');
                 if (amount === false) {
                     return handleError(new HoError('Trade Amount is not valid'));
                 }

@@ -70,7 +70,7 @@ const BitfinexInfo = React.createClass({
             checkInput('miniRate', this.state, this.props.addalert, item.miniRate, 'zeroint'),
             checkInput('dynamic', this.state, this.props.addalert, item.dynamic, 'zeroint'),
             checkInput('keepAmount', this.state, this.props.addalert, item.keepAmount, 'zeroint'),
-            checkInput('amount', this.state, this.props.addalert, item.amount, 'int'),
+            checkInput('amount', this.state, this.props.addalert, item.amount, 'zeroint'),
             checkInput('enter_mid', this.state, this.props.addalert, item.enter_mid, 'number'),
             checkInput('rate_ratio', this.state, this.props.addalert, item.rate_ratio, 'number'),
             (item.pair && !this.state['pair']) ? {pair: ''} : checkInput('pair', this.state, this.props.addalert, item.pair, 'name'),

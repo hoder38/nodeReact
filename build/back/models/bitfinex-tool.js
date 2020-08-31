@@ -485,8 +485,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
         userWs[id] = userBfx.ws(2, { transform: true });
         userWs[id].on('error', function (err) {
-            if (!(err.message || err.msg).includes('auth: dup')) {
-                (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + (err.message || err.msg), 0, 0, true);
+            var msg = err.message || err.msg ? err.message || err.msg : false;
+            if (!msg) {
+                console.log(msg);
+            }
+            if (!msg.includes('auth: dup')) {
+                (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + msg, 0, 0, true);
                 (0, _utility.handleError)(err, id + ' Bitfinex Ws Error');
             }
         });
@@ -2162,7 +2166,7 @@ exports.default = {
                 data['isTrade'] = set.trade;
             }
             if (set.amount) {
-                var amount = (0, _utility.isValidString)(set.amount, 'int');
+                var amount = (0, _utility.isValidString)(set.amount, 'zeroint');
                 if (amount === false) {
                     return (0, _utility.handleError)(new _utility.HoError('Trade Amount is not valid'));
                 }
