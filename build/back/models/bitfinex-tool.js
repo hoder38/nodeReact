@@ -788,8 +788,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         type: os.type,
                         symbol: os.symbol,
                         price: os.price,
-                        flags: os.flags,
-                        code: true
+                        flags: os.flags
                     });
                 }
                 (0, _sendWs2.default)({
@@ -1431,10 +1430,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
             }
         };
-        return cancelOffer(0).then(function () {
-            return submitOffer(0);
-        });
-        //return Promise.resolve();
+        //return cancelOffer(0).then(() => submitOffer(0));
+        return _promise2.default.resolve();
     };
 
     var singleTrade = function singleTrade(current) {
@@ -1779,12 +1776,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 3000);
+                                                        }, 5000);
                                                     });
                                                 }).then(function () {
+                                                    console.log(or1);
                                                     var isExist = false;
                                                     for (var _i11 = 0; _i11 < order[id][current.type].length; _i11++) {
-                                                        if (or1.id === order[id][current.type][_i11].id) {
+                                                        if (or1[0].id === order[id][current.type][_i11].id) {
                                                             order[id][current.type][_i11].code = true;
                                                             isExist = true;
                                                             break;
@@ -1792,13 +1790,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     }
                                                     if (!isExist) {
                                                         order[id][current.type].push({
-                                                            id: or1.id,
+                                                            id: or1[0].id,
                                                             time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or1.amount,
-                                                            type: or1.type,
-                                                            symbol: or1.symbol,
-                                                            price: or1.price,
-                                                            flags: or1.flags,
+                                                            amount: or1[0].amount,
+                                                            type: or1[0].type,
+                                                            symbol: or1[0].symbol,
+                                                            price: or1[0].price,
+                                                            flags: or1[0].flags,
                                                             code: true
                                                         });
                                                     }
@@ -1842,12 +1840,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 3000);
+                                                        }, 5000);
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
                                                     for (var _i12 = 0; _i12 < order[id][current.type].length; _i12++) {
-                                                        if (or.id === order[id][current.type][_i12].id) {
+                                                        if (or[0].id === order[id][current.type][_i12].id) {
                                                             order[id][current.type][_i12].code = true;
                                                             isExist = true;
                                                             break;
@@ -1855,13 +1853,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     }
                                                     if (!isExist) {
                                                         order[id][current.type].push({
-                                                            id: or.id,
+                                                            id: or[0].id,
                                                             time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or.amount,
-                                                            type: or.type,
-                                                            symbol: or.symbol,
-                                                            price: or.price,
-                                                            flags: or.flags,
+                                                            amount: or[0].amount,
+                                                            type: or[0].type,
+                                                            symbol: or[0].symbol,
+                                                            price: or[0].price,
+                                                            flags: or[0].flags,
                                                             code: true
                                                         });
                                                     }
@@ -1905,12 +1903,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 3000);
+                                                        }, 5000);
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
                                                     for (var _i13 = 0; _i13 < order[id][current.type].length; _i13++) {
-                                                        if (or.id === order[id][current.type][_i13].id) {
+                                                        if (or[0].id === order[id][current.type][_i13].id) {
                                                             order[id][current.type][_i13].code = true;
                                                             isExist = true;
                                                             break;
@@ -1918,13 +1916,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     }
                                                     if (!isExist) {
                                                         order[id][current.type].push({
-                                                            id: or.id,
+                                                            id: or[0].id,
                                                             time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or.amount,
-                                                            type: or.type,
-                                                            symbol: or.symbol,
-                                                            price: or.price,
-                                                            flags: or.flags,
+                                                            amount: or[0].amount,
+                                                            type: or[0].type,
+                                                            symbol: or[0].symbol,
+                                                            price: or[0].price,
+                                                            flags: or[0].flags,
                                                             code: true
                                                         });
                                                     }

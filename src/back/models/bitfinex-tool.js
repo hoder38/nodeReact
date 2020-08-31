@@ -691,7 +691,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         symbol: os.symbol,
                         price: os.price,
                         flags: os.flags,
-                        code: true,
                     });
                 }
                 sendWs({
@@ -1233,8 +1232,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }));
             }
         }
-        return cancelOffer(0).then(() => submitOffer(0));
-        //return Promise.resolve();
+        //return cancelOffer(0).then(() => submitOffer(0));
+        return Promise.resolve();
     }
 
     const singleTrade = current => {
@@ -1511,10 +1510,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: suggestion.bCount,
                                         price: suggestion.buy,
                                     }, userRest);
-                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
+                                        console.log(or1);
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or1.id === order[id][current.type][i].id) {
+                                            if (or1[0].id === order[id][current.type][i].id) {
                                                 order[id][current.type][i].code = true;
                                                 isExist = true;
                                                 break;
@@ -1522,13 +1522,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         if (!isExist) {
                                             order[id][current.type].push({
-                                                id: or1.id,
+                                                id: or1[0].id,
                                                 time: Math.round(new Date().getTime() / 1000),
-                                                amount: or1.amount,
-                                                type: or1.type,
-                                                symbol: or1.symbol,
-                                                price: or1.price,
-                                                flags: or1.flags,
+                                                amount: or1[0].amount,
+                                                type: or1[0].type,
+                                                symbol: or1[0].symbol,
+                                                price: or1[0].price,
+                                                flags: or1[0].flags,
                                                 code: true,
                                             });
                                         }
@@ -1562,10 +1562,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         price: suggestion.sell,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or.id === order[id][current.type][i].id) {
+                                            if (or[0].id === order[id][current.type][i].id) {
                                                 order[id][current.type][i].code = true;
                                                 isExist = true;
                                                 break;
@@ -1573,13 +1573,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         if (!isExist) {
                                             order[id][current.type].push({
-                                                id: or.id,
+                                                id: or[0].id,
                                                 time: Math.round(new Date().getTime() / 1000),
-                                                amount: or.amount,
-                                                type: or.type,
-                                                symbol: or.symbol,
-                                                price: or.price,
-                                                flags: or.flags,
+                                                amount: or[0].amount,
+                                                type: or[0].type,
+                                                symbol: or[0].symbol,
+                                                price: or[0].price,
+                                                flags: or[0].flags,
                                                 code: true,
                                             });
                                         }
@@ -1609,10 +1609,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: -item_count,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or.id === order[id][current.type][i].id) {
+                                            if (or[0].id === order[id][current.type][i].id) {
                                                 order[id][current.type][i].code = true;
                                                 isExist = true;
                                                 break;
@@ -1620,13 +1620,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         if (!isExist) {
                                             order[id][current.type].push({
-                                                id: or.id,
+                                                id: or[0].id,
                                                 time: Math.round(new Date().getTime() / 1000),
-                                                amount: or.amount,
-                                                type: or.type,
-                                                symbol: or.symbol,
-                                                price: or.price,
-                                                flags: or.flags,
+                                                amount: or[0].amount,
+                                                type: or[0].type,
+                                                symbol: or[0].symbol,
+                                                price: or[0].price,
+                                                flags: or[0].flags,
                                                 code: true,
                                             });
                                         }
