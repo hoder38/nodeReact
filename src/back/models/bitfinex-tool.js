@@ -675,10 +675,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     order[id][symbol] = [];
                 }
                 let isExist = false;
-                for (let i = 0; i < order[id][os.symbol].length; i++) {
-                    if (os.id === order[id][os.symbol][i].id) {
-                        order[id][os.symbol][i].time = Math.round(os.mtsCreate / 1000);
-                        order[id][os.symbol][i].status = os.status;
+                for (let i = 0; i < order[id][symbol].length; i++) {
+                    if (os.id === order[id][symbol][i].id) {
+                        order[id][symbol][i].time = Math.round(os.mtsCreate / 1000);
+                        order[id][symbol][i].status = os.status;
                         isExist = true;
                         break;
                     }
@@ -1565,7 +1565,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or1.id === order[id][current.type][i].id) {
+                                            if (or.id === order[id][current.type][i].id) {
                                                 order[id][current.type][i].code = true;
                                                 isExist = true;
                                                 break;
@@ -1573,13 +1573,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         if (!isExist) {
                                             order[id][current.type].push({
-                                                id: or1.id,
+                                                id: or.id,
                                                 time: Math.round(new Date().getTime() / 1000),
-                                                amount: or1.amount,
-                                                type: or1.type,
-                                                symbol: or1.symbol,
-                                                price: or1.price,
-                                                flags: or1.flags,
+                                                amount: or.amount,
+                                                type: or.type,
+                                                symbol: or.symbol,
+                                                price: or.price,
+                                                flags: or.flags,
                                                 code: true,
                                             });
                                         }
@@ -1609,7 +1609,29 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: -item_count,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => delTotal());
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                        let isExist = false;
+                                        for (let i = 0; i < order[id][current.type].length; i++) {
+                                            if (or.id === order[id][current.type][i].id) {
+                                                order[id][current.type][i].code = true;
+                                                isExist = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!isExist) {
+                                            order[id][current.type].push({
+                                                id: or.id,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                amount: or.amount,
+                                                type: or.type,
+                                                symbol: or.symbol,
+                                                price: or.price,
+                                                flags: or.flags,
+                                                code: true,
+                                            });
+                                        }
+                                        return delTotal()
+                                    });
                                 } else {
                                     return delTotal();
                                 }
