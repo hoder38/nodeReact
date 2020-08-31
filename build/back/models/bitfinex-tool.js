@@ -1430,8 +1430,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
             }
         };
-        //return cancelOffer(0).then(() => submitOffer(0));
-        return _promise2.default.resolve();
+        return cancelOffer(0).then(function () {
+            return submitOffer(0);
+        });
+        //return Promise.resolve();
     };
 
     var singleTrade = function singleTrade(current) {
@@ -1776,10 +1778,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 5000);
+                                                        }, 3000);
                                                     });
                                                 }).then(function () {
-                                                    console.log(or1);
                                                     var isExist = false;
                                                     for (var _i11 = 0; _i11 < order[id][current.type].length; _i11++) {
                                                         if (or1[0].id === order[id][current.type][_i11].id) {
@@ -1840,7 +1841,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 5000);
+                                                        }, 3000);
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
@@ -1903,7 +1904,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 5000);
+                                                        }, 3000);
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;

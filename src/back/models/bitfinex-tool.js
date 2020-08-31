@@ -1232,8 +1232,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }));
             }
         }
-        //return cancelOffer(0).then(() => submitOffer(0));
-        return Promise.resolve();
+        return cancelOffer(0).then(() => submitOffer(0));
+        //return Promise.resolve();
     }
 
     const singleTrade = current => {
@@ -1510,8 +1510,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: suggestion.bCount,
                                         price: suggestion.buy,
                                     }, userRest);
-                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
-                                        console.log(or1);
+                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or1[0].id === order[id][current.type][i].id) {
@@ -1562,7 +1561,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         price: suggestion.sell,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
@@ -1609,7 +1608,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: -item_count,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => {
+                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
