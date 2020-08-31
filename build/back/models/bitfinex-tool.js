@@ -1903,7 +1903,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }
                                 };
                                 return {
-                                    v: cancelOrder(sellAll())
+                                    v: cancelOrder(sellAll)
                                 };
                             } else if (item.ing === 1) {
                                 return {

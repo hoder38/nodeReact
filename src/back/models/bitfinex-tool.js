@@ -1610,7 +1610,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return delTotal();
                                 }
                             }
-                            return cancelOrder(sellAll());
+                            return cancelOrder(sellAll);
                         } else if (item.ing === 1) {
                             return startStatus();
                         } else {
