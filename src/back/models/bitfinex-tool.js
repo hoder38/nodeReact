@@ -389,9 +389,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
         userWs[id] = userBfx.ws(2,{ transform: true });
         userWs[id].on('error', err => {
-            const msg = (err.message||err.msg) ? (err.message||err.msg) : false;
+            const msg = (err.message||err.msg) ? (err.message||err.msg) : '';
             if (!msg) {
-                console.log(msg);
+                console.log(err);
             }
             if (!msg.includes('auth: dup')) {
                 sendWs(`${id} Bitfinex Ws Error: ${msg}`, 0, 0, true);

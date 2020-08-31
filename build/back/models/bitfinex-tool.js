@@ -485,9 +485,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
         userWs[id] = userBfx.ws(2, { transform: true });
         userWs[id].on('error', function (err) {
-            var msg = err.message || err.msg ? err.message || err.msg : false;
+            var msg = err.message || err.msg ? err.message || err.msg : '';
             if (!msg) {
-                console.log(msg);
+                console.log(err);
             }
             if (!msg.includes('auth: dup')) {
                 (0, _sendWs2.default)(id + ' Bitfinex Ws Error: ' + msg, 0, 0, true);
