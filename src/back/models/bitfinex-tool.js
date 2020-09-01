@@ -1503,7 +1503,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (order_avail < suggestion.bCount * suggestion.buy) {
                                     suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                                 }
-                                if (suggestion.bCount > 0) {
+                                if (suggestion.bCount > 0 && suggestion.buy) {
                                     console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
                                     const or1 = new Order({
                                         cid: Date.now(),
@@ -1553,7 +1553,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (item_count < suggestion.sCount) {
                                     suggestion.sCount = item_count;
                                 }
-                                if (suggestion.sCount > 0) {
+                                if (suggestion.sCount > 0 && suggestion.sell) {
                                     console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
                                     const or = new Order({
                                         cid: Date.now(),

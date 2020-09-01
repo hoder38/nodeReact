@@ -1749,7 +1749,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     if (order_avail < suggestion.bCount * suggestion.buy) {
                                         suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                                     }
-                                    if (suggestion.bCount > 0) {
+                                    if (suggestion.bCount > 0 && suggestion.buy) {
                                         var _ret9 = function () {
                                             console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
                                             var or1 = new _bfxApiNodeModels.Order({
@@ -1811,7 +1811,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     if (item_count < suggestion.sCount) {
                                         suggestion.sCount = item_count;
                                     }
-                                    if (suggestion.sCount > 0) {
+                                    if (suggestion.sCount > 0 && suggestion.sell) {
                                         var _ret10 = function () {
                                             console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
                                             var or = new _bfxApiNodeModels.Order({
