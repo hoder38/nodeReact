@@ -719,21 +719,18 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
                     for (let i = 0; i < curArr.length; i++) {
-                        if (curArr[i].type === symbol && curArr[i].isTrade && curArr[i].pair) {
+                        if (curArr[i].type === symbol && curArr[i].pair) {
                             for (let j = 0; j < curArr[i].pair.length; j++) {
-                                if (curArr[i].pair.type === os.symbol) {
+                                if (curArr[i].pair[j].type === os.symbol) {
                                     console.log(`${os.symbol} order executed`);
-                                    return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}).then(items => {
+                                    Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
                                         console.log(items);
                                         if (items.length < 1) {
-                                            sendWs(`${id} Total Updata Error: miss ${os.symbol}`, 0, 0, true);
-                                            handleError(new HoError(`miss ${os.symbol}`), `${id} Total Updata Error`);
-                                        } else {
-                                            const item = items[0];
-                                            const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
-                                            if (amount === 0) {
-                                                return false;
-                                            }
+                                            return handleError(new HoError(`miss ${os.symbol}`));
+                                        }
+                                        const item = items[0];
+                                        const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                                        if (amount !== 0) {
                                             const price = os.priceAvg;
                                             const time = Math.round(new Date().getTime() / 1000);
                                             const tradeType = amount > 0 ? 'buy' : 'sell';
@@ -750,10 +747,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                     item.previous.buy.push({price, time});
                                                 }
                                                 item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'buy',
-                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                                                price,
+                                                time,
+                                                type: 'buy',
+                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                                                     sell: item.previous.sell,
                                                 }
                                             } else if (tradeType === 'sell') {
@@ -776,15 +773,15 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                     buy: item.previous.buy,
                                                 }
                                             }
-                                            return Mongo('update', TOTALDB, {owner: uid, sType: 1, type: curArr[i].type}, {$set: {
+                                            return Mongo('update', TOTALDB, {owner: uid, sType: 1, index: os.symbol}, {$set: {
                                                 amount: item.amount - price * amount,
                                                 count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
                                                 previous: item.previous,
-                                            }}).catch(err => {
-                                                sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                                handleError(err, `${id} Total Updata Error`);
-                                            });
+                                            }});
                                         }
+                                    }).catch(err => {
+                                        sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} Total Updata Error`);
                                     });
                                     break;
                                 }
@@ -1604,6 +1601,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                     });
                                 }
+                                item_count = (item.count < item_count) ? item.count : item_count;
                                 const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => reucr_status(index + 1));
                                 if (item_count > 0) {
                                     const or = new Order({

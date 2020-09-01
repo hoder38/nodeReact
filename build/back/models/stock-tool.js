@@ -6342,7 +6342,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     is_buy = false;
                 }
             } else if (previous.type === 'sell') {
-                if (now - previous.time >= tinterval) {
+                if (now - previous.time >= ttime) {
                     is_sell = true;
                 } else {
                     is_sell = false;
@@ -6385,7 +6385,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     is_sell = false;
                 }
             } else if (previous.type === 'buy') {
-                if (now - previous.time >= tinterval) {
+                if (now - previous.time >= ttime) {
                     is_buy = true;
                 } else {
                     is_buy = false;

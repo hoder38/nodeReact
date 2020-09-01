@@ -5335,7 +5335,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = false;
                 }
             } else if (previous.type === 'sell') {
-                if ((now - previous.time) >= tinterval) {
+                if ((now - previous.time) >= ttime) {
                     is_sell = true;
                 } else {
                     is_sell = false;
@@ -5378,7 +5378,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                 }
             } else if (previous.type === 'buy') {
-                if ((now - previous.time) >= tinterval) {
+                if ((now - previous.time) >= ttime) {
                     is_buy = true;
                 } else {
                     is_buy = false;
