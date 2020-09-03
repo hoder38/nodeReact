@@ -444,6 +444,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
     }
     if (!userKey || !userSecret) {
+        console.log(id + ' Bitfinex Error: Api key or secret Missing');
         (0, _sendWs2.default)(id + ' Bitfinex Error: Api key or secret Missing', 0, 0, true);
         return _promise2.default.resolve();
     }
