@@ -444,7 +444,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }
     }
     if (!userKey || !userSecret) {
-        return (0, _utility.handleError)(new _utility.HoError('Api key or secret Missing'));
+        (0, _sendWs2.default)(id + ' Bitfinex Error: Api key or secret Missing', 0, 0, true);
+        return _promise2.default.resolve();
     }
     var userBfx = new _bitfinexApiNode2.default({ apiKey: userKey, apiSecret: userSecret });
     var userRest = userBfx.rest(2, { transform: true });
