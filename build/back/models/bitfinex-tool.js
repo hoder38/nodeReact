@@ -5,13 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.resetBFX = exports.setWsOffer = exports.calWeb = exports.calRate = undefined;
 
-var _assign = require('babel-runtime/core-js/object/assign');
-
-var _assign2 = _interopRequireDefault(_assign);
-
 var _keys = require('babel-runtime/core-js/object/keys');
 
 var _keys2 = _interopRequireDefault(_keys);
+
+var _assign = require('babel-runtime/core-js/object/assign');
+
+var _assign2 = _interopRequireDefault(_assign);
 
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
@@ -1634,15 +1634,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     });
                                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                                 }
-                                var item_count = 0;
-                                if (position[id] && position[id][_constants.FUSD_SYM]) {
-                                    position[id][_constants.FUSD_SYM].forEach(function (v) {
-                                        if (v.symbol === item.index) {
-                                            item_count += v.amount;
-                                        }
-                                    });
-                                }
-                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 while (suggestion.resetWeb) {
                                     if (item.newMid.length === 0) {
                                         item.tmpPT = {
@@ -1656,7 +1648,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     newArr = item.web.map(function (v) {
                                         return v * item.newMid[item.newMid.length - 1] / item.mid;
                                     });
-                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 }
                                 console.log(suggestion);
                                 var count = 0;
@@ -1797,20 +1789,28 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         return reucr_status(index + 1);
                                     }
                                 };
-                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                                var item_count = 0;
+                                if (position[id] && position[id][_constants.FUSD_SYM]) {
+                                    position[id][_constants.FUSD_SYM].forEach(function (v) {
+                                        if (v.symbol === item.index) {
+                                            item_count += v.amount;
+                                        }
+                                    });
+                                }
+                                if (item.count < suggestion.sCount) {
+                                    suggestion.sCount = item.count;
+                                }
+                                if (item_count < suggestion.sCount) {
+                                    suggestion.sCount = item_count;
+                                }
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: (0, _assign2.default)({
                                         newMid: item.newMid,
                                         tmpPT: item.tmpPT,
                                         previous: item.previous
-                                    } }).then(function (result) {
+                                    }, item.count < item_count ? { count: item_count } : {}) }).then(function (result) {
                                     console.log(result);
                                     return cancelOrder();
                                 }).then(function () {
-                                    if (item.count < suggestion.sCount) {
-                                        suggestion.sCount = item.count;
-                                    }
-                                    if (item_count < suggestion.sCount) {
-                                        suggestion.sCount = item_count;
-                                    }
                                     if (suggestion.sCount > 0 && suggestion.sell) {
                                         var _ret10 = function () {
                                             console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
@@ -2025,7 +2025,8 @@ var resetBFX = exports.resetBFX = function resetBFX() {
             updateTime[i]['credit'] = 0;
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
-            updateTime[i]['trade'] = 0;
+            //先不reset
+            //updateTime[i]['trade'] = 0;
         }
     } else {
         return closeWs(0);
@@ -2075,6 +2076,7 @@ exports.default = {
             return (0, _utility.handleError)(new _utility.HoError(set.type + ' is not support!!!'));
         }
         var data = {};
+        var rest_total = false;
         if (set.key) {
             var key = (0, _utility.isValidString)(set.key, 'name');
             if (!key) {
@@ -2207,28 +2209,34 @@ exports.default = {
             }
             if (set.hasOwnProperty('pair')) {
                 if (set.pair) {
-                    var _ret12 = function () {
-                        var pair = (0, _utility.isValidString)(set.pair, 'name');
-                        if (pair === false) {
-                            return {
-                                v: (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'))
+                    var pair = (0, _utility.isValidString)(set.pair, 'name');
+                    if (pair === false) {
+                        return (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'));
+                    }
+                    var mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d+?)([a|c]\d+\.?\d+?)?$/);
+                    if (mPair) {
+                        if (_constants.SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
+                            rest_total = {
+                                index: mPair[1],
+                                data: (0, _assign2.default)(mPair[2][0] === 'a' ? { amount: Number(mPair[2].substr(1)) } : mPair[2][0] === 'c' ? { count: Number(mPair[2].substr(1)) } : {}, mPair[3] && mPair[3][0] === 'a' ? { amount: Number(mPair[3].substr(1)) } : mPair[3] && mPair[3][0] === 'c' ? { count: Number(mPair[3].substr(1)) } : {})
                             };
                         }
-                        var pairArr = [];
-                        pair.split(',').forEach(function (v) {
-                            var p = v.trim();
-                            var m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
-                            if (m && _constants.SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
-                                pairArr.push({
-                                    type: m[1],
-                                    amount: Number(m[2])
-                                });
-                            }
-                        });
-                        data['pair'] = pairArr;
-                    }();
-
-                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                    } else {
+                        (function () {
+                            var pairArr = [];
+                            pair.split(',').forEach(function (v) {
+                                var p = v.trim();
+                                var m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                                if (m && _constants.SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
+                                    pairArr.push({
+                                        type: m[1],
+                                        amount: Number(m[2])
+                                    });
+                                }
+                            });
+                            data['pair'] = pairArr;
+                        })();
+                    }
                 } else {
                     data['pair'] = [];
                 }
@@ -2292,18 +2300,29 @@ exports.default = {
                 //處理市價出單
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
-                    if (data['pair']) {
+                    if (rest_total) {
+                        for (var _i14 = 0; _i14 < item.length; _i14++) {
+                            if (item[_i14].index === rest_total.index) {
+                                rest_total.data.amount = rest_total.data.amount ? item[_i14].amount - rest_total.data.amount > 0 ? item[_i14].amount - rest_total.data.amount : 0 : item[_i14].amount;
+                                console.log(rest_total);
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i14]._id }, { $set: rest_total.data }).then(function (result) {
+                                    console.log(result);
+                                    return returnSupport(bitfinex);
+                                });
+                            }
+                        }
+                    } else if (data['pair']) {
                         var _ret14 = function () {
-                            for (var _i14 = 0; _i14 < data['pair'].length; _i14++) {
+                            for (var _i15 = 0; _i15 < data['pair'].length; _i15++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
-                                    if (item[j].index === data['pair'][_i14].type) {
+                                    if (item[j].index === data['pair'][_i15].type) {
                                         exist = true;
                                         break;
                                     }
                                 }
                                 if (!exist) {
-                                    item.push(data['pair'][_i14]);
+                                    item.push(data['pair'][_i15]);
                                 }
                             }
                             var recur_update = function recur_update(index) {
@@ -2311,12 +2330,12 @@ exports.default = {
                                     return returnSupport(bitfinex);
                                 } else {
                                     if (item[index]._id) {
-                                        for (var _i15 = 0; _i15 < data['pair'].length; _i15++) {
-                                            if (item[index].index === data['pair'][_i15].type) {
+                                        for (var _i16 = 0; _i16 < data['pair'].length; _i16++) {
+                                            if (item[index].index === data['pair'][_i16].type) {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
-                                                        times: Math.floor(item[index].times * data['pair'][_i15].amount / item[index].orig * 10000) / 10000,
-                                                        amount: item[index].amount + data['pair'][_i15].amount - item[index].orig,
-                                                        orig: data['pair'][_i15].amount
+                                                        times: Math.floor(item[index].times * data['pair'][_i16].amount / item[index].orig * 10000) / 10000,
+                                                        amount: item[index].amount + data['pair'][_i16].amount - item[index].orig,
+                                                        orig: data['pair'][_i16].amount
                                                     } }).then(function (item) {
                                                     console.log(item);
                                                     return recur_update(index + 1);
@@ -2522,8 +2541,8 @@ exports.default = {
         }
         if (type === 0 || type === 2) {
             var tempList = uid === 0 ? rateList : itemList;
-            for (var _i16 = 0; _i16 < _constants.SUPPORT_COIN.length; _i16++) {
-                var _v = _constants.SUPPORT_COIN[_i16];
+            for (var _i17 = 0; _i17 < _constants.SUPPORT_COIN.length; _i17++) {
+                var _v = _constants.SUPPORT_COIN[_i17];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
@@ -2531,7 +2550,7 @@ exports.default = {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     tempList.push({
                         name: _v.substr(1) + ' Rate',
-                        id: _i16,
+                        id: _i17,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: rate + '%',
                         count: rate,
@@ -2541,16 +2560,16 @@ exports.default = {
                 }
             }
             var vid = _constants.SUPPORT_COIN.length;
-            for (var _i17 in priceData) {
+            for (var _i18 in priceData) {
                 tempList.push({
-                    name: _i17.substr(1) + ' $' + Math.floor(priceData[_i17].lastPrice * 10000) / 10000,
+                    name: _i18.substr(1) + ' $' + Math.floor(priceData[_i18].lastPrice * 10000) / 10000,
                     id: vid++,
-                    tags: [_i17.substr(1, 4), _i17.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i17].dailyChange * 100) / 100 + '%',
-                    count: priceData[_i17].dilyChange,
-                    utime: priceData[_i17].time,
+                    tags: [_i18.substr(1, 4), _i18.substr(-3), 'rate', '利率'],
+                    rate: Math.floor(priceData[_i18].dailyChange * 100) / 100 + '%',
+                    count: priceData[_i18].dilyChange,
+                    utime: priceData[_i18].time,
                     type: 1,
-                    str: priceData[_i17].str
+                    str: priceData[_i18].str
                 });
             }
         }

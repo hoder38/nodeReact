@@ -6237,9 +6237,10 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
     var pCount = arguments[5];
     var pType = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
     var sType = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var ttime = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_TIME;
-    var tinterval = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_INTERVAL;
-    var now = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : Math.round(new Date().getTime() / 1000);
+    var fee = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_FEE;
+    var ttime = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_TIME;
+    var tinterval = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : _constants.TRADE_INTERVAL;
+    var now = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : Math.round(new Date().getTime() / 1000);
 
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
@@ -6318,11 +6319,12 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         };
     }
     if (previous.time) {
-        if (previous.price >= price) {
+        var pPrice = previous.type === 'buy' ? previous.price * (1 + fee) * (1 + fee) : previous.price * (2 - (1 + fee) * (1 + fee));
+        if (pPrice >= price) {
             var previousP = priceArray.length - 1;
             var pP = 8;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -6351,7 +6353,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -6361,11 +6363,11 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             nowSP = previousP;
             sP = pP;
         }
-        if (previous.price < price) {
+        if (pPrice < price) {
             var _previousP = 0;
             var _pP = 0;
             for (; _previousP < priceArray.length; _previousP++) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
                     break;
                 }
                 if (priceArray[_previousP] < 0) {
@@ -6394,7 +6396,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             _previousP = priceArray.length - 1;
             _pP = 8;
             for (; _previousP >= 0; _previousP--) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
                     break;
                 }
                 if (priceArray[_previousP] < 0) {
@@ -6817,7 +6819,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             });
             checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         }
-        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, ttime, tinterval, now - i * tinterval);
+        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
         while (suggest.resetWeb) {
             if (newMid.length === 0) {
                 tmpPT = {
@@ -6836,7 +6838,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             newArr = web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             });
-            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, ttime, tinterval, now - i * tinterval);
+            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
             //console.log(price);
             //console.log(suggest);
             //console.log(newArr);

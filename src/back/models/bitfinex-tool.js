@@ -1390,15 +1390,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
-                            let item_count = 0;
-                            if (position[id] && position[id][FUSD_SYM]) {
-                                position[id][FUSD_SYM].forEach(v => {
-                                    if (v.symbol === item.index) {
-                                        item_count += v.amount;
-                                    }
-                                });
-                            }
-                            let suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            let suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -1410,7 +1402,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 item.previous.time = 0;
                                 item.newMid.push(suggestion.newMid);
                                 newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-                                suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item_count, item.wType, 1, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                                suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             console.log(suggestion);
                             let count = 0;
@@ -1539,20 +1531,28 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return reucr_status(index + 1);
                                 }
                             }
-                            return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
+                            let item_count = 0;
+                            if (position[id] && position[id][FUSD_SYM]) {
+                                position[id][FUSD_SYM].forEach(v => {
+                                    if (v.symbol === item.index) {
+                                        item_count += v.amount;
+                                    }
+                                });
+                            }
+                            if (item.count < suggestion.sCount) {
+                                suggestion.sCount = item.count;
+                            }
+                            if (item_count < suggestion.sCount) {
+                                suggestion.sCount = item_count;
+                            }
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set : Object.assign({
                                 newMid: item.newMid,
                                 tmpPT: item.tmpPT,
                                 previous: item.previous,
-                            }}).then(result => {
+                            }, (item.count < item_count) ? {count: item_count} : {})}).then(result => {
                                 console.log(result);
                                 return cancelOrder();
                             }).then(() => {
-                                if (item.count < suggestion.sCount) {
-                                    suggestion.sCount = item.count;
-                                }
-                                if (item_count < suggestion.sCount) {
-                                    suggestion.sCount = item_count;
-                                }
                                 if (suggestion.sCount > 0 && suggestion.sell) {
                                     console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
                                     const or = new Order({
@@ -1713,7 +1713,8 @@ export const resetBFX = (update=false) => {
             updateTime[i]['credit'] = 0;
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
-            updateTime[i]['trade'] = 0;
+            //先不reset
+            //updateTime[i]['trade'] = 0;
         }
     } else {
         return closeWs(0);
@@ -1741,6 +1742,7 @@ export default {
             return handleError(new HoError(`${set.type} is not support!!!`));
         }
         const data = {};
+        let rest_total = false;
         if (set.key) {
             const key = isValidString(set.key, 'name');
             if (!key) {
@@ -1877,18 +1879,28 @@ export default {
                     if (pair === false) {
                         return handleError(new HoError('Trade Pair is not valid'));
                     }
-                    const pairArr = [];
-                    pair.split(',').forEach(v => {
-                        const p = v.trim();
-                        const m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
-                        if (m && SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
-                            pairArr.push({
-                                type: m[1],
-                                amount: Number(m[2]),
-                            });
+                    const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d+?)([a|c]\d+\.?\d+?)?$/);
+                    if (mPair) {
+                        if (SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
+                            rest_total = {
+                                index: mPair[1],
+                                data: Object.assign(mPair[2][0] === 'a' ? {amount: Number(mPair[2].substr(1))} : mPair[2][0] === 'c' ? {count: Number(mPair[2].substr(1))} : {}, (mPair[3] && mPair[3][0] === 'a') ? {amount: Number(mPair[3].substr(1))} : (mPair[3] && mPair[3][0] === 'c') ? {count: Number(mPair[3].substr(1))} : {},),
+                            };
                         }
-                    });
-                    data['pair'] = pairArr;
+                    } else {
+                        const pairArr = [];
+                        pair.split(',').forEach(v => {
+                            const p = v.trim();
+                            const m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                            if (m && SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
+                                pairArr.push({
+                                    type: m[1],
+                                    amount: Number(m[2]),
+                                });
+                            }
+                        });
+                        data['pair'] = pairArr;
+                    }
                 } else {
                     data['pair'] = [];
                 }
@@ -1946,7 +1958,18 @@ export default {
                 //處理市價出單
                 return Mongo('find', TOTALDB, {owner: id, sType: 1, type: set.type}).then(item => {
                     console.log(item);
-                    if (data['pair']) {
+                    if (rest_total) {
+                        for (let i = 0; i < item.length; i++) {
+                            if (item[i].index === rest_total.index) {
+                                rest_total.data.amount = (rest_total.data.amount) ? item[i].amount - rest_total.data.amount > 0 ? item[i].amount - rest_total.data.amount : 0 : item[i].amount;
+                                console.log(rest_total);
+                                return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set : rest_total.data}).then(result => {
+                                    console.log(result);
+                                    return returnSupport(bitfinex);
+                                });
+                            }
+                        }
+                    } else if (data['pair']) {
                         for (let i = 0; i < data['pair'].length; i++) {
                             let exist = false;
                             for (let j = 0; j < item.length; j++) {
