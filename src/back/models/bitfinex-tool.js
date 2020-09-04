@@ -1348,6 +1348,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
         }).then(() => {
             updateTime[id]['trade']++;
+            console.log(updateTime[id]['trade']);
             if (updateTime[id]['trade'] % ORDER_INTERVAL !== 3) {
                 return Promise.resolve();
             }
@@ -1709,6 +1710,7 @@ export const resetBFX = (update=false) => {
     }
     if (update) {
         for (let i in updateTime) {
+            const trade_count = updateTime[i]['trade'];
             updateTime[i] = {};
             updateTime[i]['book'] = 0;
             updateTime[i]['offer'] = 0;
@@ -1716,7 +1718,7 @@ export const resetBFX = (update=false) => {
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
             //先不reset
-            //updateTime[i]['trade'] = 0;
+            updateTime[i]['trade'] = trade_count;
         }
     } else {
         return closeWs(0);

@@ -1571,6 +1571,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         }).then(function () {
             updateTime[id]['trade']++;
+            console.log(updateTime[id]['trade']);
             if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 3) {
                 return _promise2.default.resolve();
             }
@@ -2021,6 +2022,7 @@ var resetBFX = exports.resetBFX = function resetBFX() {
     };
     if (update) {
         for (var i in updateTime) {
+            var trade_count = updateTime[i]['trade'];
             updateTime[i] = {};
             updateTime[i]['book'] = 0;
             updateTime[i]['offer'] = 0;
@@ -2028,7 +2030,7 @@ var resetBFX = exports.resetBFX = function resetBFX() {
             updateTime[i]['position'] = 0;
             updateTime[i]['order'] = 0;
             //先不reset
-            //updateTime[i]['trade'] = 0;
+            updateTime[i]['trade'] = trade_count;
         }
     } else {
         return closeWs(0);
