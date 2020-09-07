@@ -1478,7 +1478,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         availableMargin = needTrans;
                     } else {
                         //close offer
-                        if (offer[id] && offer[id][current.type]) {
+                        if (offer[id][current.type]) {
                             var _ret4 = function () {
                                 var cancelOffer = function cancelOffer(index) {
                                     if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
@@ -1530,7 +1530,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     if (availableMargin <= needTrans && current.clear !== true) {
                         availableMargin = needTrans;
                     } else {
-                        if (order[id] && order[id][current.type]) {
+                        if (order[id][current.type]) {
                             var _ret5 = function () {
                                 var real_id = order[id][current.type].filter(function (v) {
                                     return v.amount > 0;
@@ -1626,7 +1626,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             var item = items[index];
                             console.log(item);
                             var cancelOrder = function cancelOrder(rest) {
-                                if (order[id] && order[id][current.type]) {
+                                if (order[id][current.type]) {
                                     var _ret7 = function () {
                                         var real_id = order[id][current.type].filter(function (v) {
                                             return v.symbol === item.index;
@@ -1843,8 +1843,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     });
                                 };
                                 var item_count = 0;
-                                if (position[id] && position[id][_constants.FUSD_SYM]) {
-                                    position[id][_constants.FUSD_SYM].forEach(function (v) {
+                                if (position[id][current.type]) {
+                                    position[id][current.type].forEach(function (v) {
                                         if (v.symbol === item.index) {
                                             item_count += v.amount;
                                         }
@@ -1917,7 +1917,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             if (item.ing === 2) {
                                 var sellAll = function sellAll() {
                                     var item_count = 0;
-                                    if (position[id] && position[id][current.type]) {
+                                    if (position[id][current.type]) {
                                         position[id][current.type].forEach(function (v) {
                                             if (v.symbol === item.index) {
                                                 item_count += v.amount;
@@ -2541,7 +2541,7 @@ exports.default = {
                 if (coin !== 'all' && coin !== v) {
                     continue;
                 }
-                if (available[id][v]) {
+                if (available[id] && available[id][v]) {
                     if (uid === (i + 1) * 10000) {
                         return {
                             item: [{
@@ -2566,7 +2566,7 @@ exports.default = {
                         });
                     }
                 }
-                if (margin[id][v]) {
+                if (margin[id] && margin[id][v]) {
                     if (uid === (i + 1) * 100) {
                         return {
                             item: [{

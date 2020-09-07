@@ -1299,7 +1299,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         availableMargin = needTrans;
                     } else {
                         //close offer
-                        if (offer[id] && offer[id][current.type]) {
+                        if (offer[id][current.type]) {
                             const cancelOffer = index => {
                                 if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
                                     return Promise.resolve(availableMargin);
@@ -1337,7 +1337,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (availableMargin <= needTrans && current.clear !== true) {
                         availableMargin = needTrans;
                     } else {
-                        if (order[id] && order[id][current.type]) {
+                        if (order[id][current.type]) {
                             const real_id = order[id][current.type].filter(v => v.amount > 0);
                             const real_delete = index => {
                                 if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
@@ -1406,7 +1406,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const item = items[index];
                         console.log(item);
                         const cancelOrder = rest => {
-                            if (order[id] && order[id][current.type]) {
+                            if (order[id][current.type]) {
                                 const real_id = order[id][current.type].filter(v => v.symbol === item.index);
                                 const real_delete = index => {
                                     if (index >= real_id.length) {
@@ -1589,8 +1589,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 });
                             }
                             let item_count = 0;
-                            if (position[id] && position[id][FUSD_SYM]) {
-                                position[id][FUSD_SYM].forEach(v => {
+                            if (position[id][current.type]) {
+                                position[id][current.type].forEach(v => {
                                     if (v.symbol === item.index) {
                                         item_count += v.amount;
                                     }
@@ -1651,7 +1651,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         if (item.ing === 2) {
                             const sellAll = () => {
                                 let item_count = 0;
-                                if (position[id] && position[id][current.type]) {
+                                if (position[id][current.type]) {
                                     position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {
                                             item_count += v.amount;
@@ -2187,7 +2187,7 @@ export default {
                 if (coin !== 'all' && coin !== v) {
                     continue;
                 }
-                if (available[id][v]) {
+                if (available[id] && available[id][v]) {
                     if (uid === (i+1) * 10000) {
                         return {
                             item: [
@@ -2214,7 +2214,7 @@ export default {
                         })
                     }
                 }
-                if (margin[id][v]) {
+                if (margin[id] && margin[id][v]) {
                     if (uid === (i+1) * 100) {
                         return {
                             item: [
