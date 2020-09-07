@@ -6320,11 +6320,11 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
     }
     if (previous.time) {
         var pPrice = previous.type === 'buy' ? previous.price * (1 + fee) * (1 + fee) : previous.price * (2 - (1 + fee) * (1 + fee));
-        if (pPrice >= price) {
+        if (previous.price >= price) {
             var previousP = priceArray.length - 1;
             var pP = 8;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -6363,11 +6363,11 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             nowSP = previousP;
             sP = pP;
         }
-        if (pPrice < price) {
+        if (previous.price < price) {
             var _previousP = 0;
             var _pP = 0;
             for (; _previousP < priceArray.length; _previousP++) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
                     break;
                 }
                 if (priceArray[_previousP] < 0) {

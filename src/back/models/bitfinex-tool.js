@@ -1032,8 +1032,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
         // adjust offer & history
         //keep cash
-        const calKeepCash = avail => {
-            let kp = avail ? (avail[current.type] ? avail[current.type].avail : 0) : 0;
+        const calKeepCash = () => userRest.wallets().then(wallet => {
+            for (let i = 0; i < wallet.length; i++){
+                if (wallet[i].type === 'funding' && wallet[i].currency === current.type.substr(1)) {
+                    available[id][current.type] = {
+                        avail: wallet[i].balanceAvailable,
+                        time: Math.round(new Date().getTime() / 1000),
+                        total: wallet[i].balance,
+                    }
+                    break;
+                }
+            }
+            console.log(available[id]);
+            let kp = available[id][current.type] ? available[id][current.type].avail : 0;
             /*if (current.isKeep) {
                 if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
                     const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
@@ -1045,194 +1056,200 @@ export const setWsOffer = (id, curArr=[], uid) => {
             } else {
                 return current.keepAmount ? kp - current.keepAmount : kp;
             }
-        }
-        let keep_available = calKeepCash(available[id]);
-        console.log(keep_available);
-        const adjustOffer = () => {
-            console.log(`${id} ${current.type}`);
-            if (offer[id][current.type]) {
-                //console.log(offer[current.type]);
-                //produce retain delete
-                offer[id][current.type].forEach(v => {
-                    if (v.risk === undefined) {
-                        console.log('manual');
-                        return false;
-                    }
-                    if (keep_available > 1 && v.amount < current.amountLimit) {
-                        console.log(keep_available);
-                        console.log(v.amount);
-                        const sum = keep_available + v.amount;
-                        let newAmount = 0;
-                        if (sum <= (current.amountLimit * 1.2)) {
-                            keep_available = 0;
-                            newAmount = sum;
-                        } else {
-                            keep_available = sum - current.amountLimit;
-                            newAmount = current.amountLimit;
+        });
+        return calKeepCash().then(keep_available => {
+            console.log(keep_available);
+            const adjustOffer = () => {
+                console.log(`${id} ${current.type}`);
+                if (offer[id][current.type]) {
+                    //console.log(offer[current.type]);
+                    //produce retain delete
+                    offer[id][current.type].forEach(v => {
+                        if (v.risk === undefined) {
+                            console.log('manual');
+                            return false;
                         }
-                        console.log(keep_available);
-                        console.log(newAmount);
-                        needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id, newAmount});
-                    } else if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
-                        needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
-                    } else {
-                        const DRT = getDR(v.rate * BITFINEX_EXP);
-                        console.log(DRT);
-                        const waitTime = (DRT === false) ? current.waitTime : (DRT.speed * current.waitTime);
-                        if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
+                        if (keep_available > 1 && v.amount < current.amountLimit) {
+                            console.log(keep_available);
+                            console.log(v.amount);
+                            const sum = keep_available + v.amount;
+                            let newAmount = 0;
+                            if (sum <= (current.amountLimit * 1.2)) {
+                                keep_available = 0;
+                                newAmount = sum;
+                            } else {
+                                keep_available = sum - current.amountLimit;
+                                newAmount = current.amountLimit;
+                            }
+                            console.log(keep_available);
+                            console.log(newAmount);
+                            needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id, newAmount});
+                        } else if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                         } else {
-                            needRetain.push({risk: v.risk, rate: v.rate * BITFINEX_EXP});
+                            const DRT = getDR(v.rate * BITFINEX_EXP);
+                            console.log(DRT);
+                            const waitTime = (DRT === false) ? current.waitTime : (DRT.speed * current.waitTime);
+                            if ((Math.round(new Date().getTime() / 1000) - v.time) >= (waitTime * 60)) {
+                                needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
+                            } else {
+                                needRetain.push({risk: v.risk, rate: v.rate * BITFINEX_EXP});
+                            }
                         }
-                    }
-                });
-            }
-            needDelete.forEach(v => {
-                const orig_risk = v.risk;
-                let risk = v.newAmount ? v.risk : (v.risk > 1) ? (v.risk - 1) : 0;
-                while (checkRisk(risk, needRetain, needNew)) {
-                    risk--;
-                }
-                if (current.isDiff && risk < 1) {
-                    risk = orig_risk;
-                }
-                needNew.push({
-                    risk,
-                    amount: v.newAmount ? v.newAmount : v.amount,
-                    rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
-                })
-            });
-            //console.log('needdelete');
-            //console.log(needDelete);
-        }
-        //produce new
-        const newOffer = risk => {
-            //console.log('keep available');
-            //console.log(keep_available);
-            if (risk > RISK_MAX) {
-                risk = RISK_MAX;
-            }
-            const newLength = OFFER_MAX - needRetain.length - needNew.length;
-            for (let i = 0; i < newLength; i++) {
-                const orig_risk = risk;
-                while (checkRisk(risk, needRetain, needNew)) {
-                    risk--;
-                }
-                if (current.isDiff && risk < 1) {
-                    risk = orig_risk;
-                }
-                let miniOffer = MINIMAL_OFFER;
-                if (priceData[`t${current.type.substr(1)}USD`]) {
-                    miniOffer = MINIMAL_OFFER / priceData[`t${current.type.substr(1)}USD`].lastPrice;
-                }
-                if (finalRate[current.type].length <= 0 || keep_available < miniOffer) {
-                    break;
-                }
-                if (risk < 0) {
-                    break;
-                }
-                let amount = current.amountLimit;
-                if (keep_available <= current.amountLimit * 1.2) {
-                    amount = keep_available;
-                }
-                needNew.push({
-                    risk,
-                    amount,
-                    rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
-                });
-                keep_available = keep_available - amount;
-                //risk = risk < 1 ? 0 : risk-1;
-                risk--;
-            }
-            //console.log('needNew');
-            //console.log(needNew);
-        }
-        //merge new & delete
-        const mergeOffer = () => {
-            const checkDelete = (rate, amount) => {
-                for (let i = 0; i < needDelete.length; i++) {
-                    if (Math.ceil(rate / BITFINEX_MIN) === Math.ceil(needDelete[i].rate / BITFINEX_MIN) && amount === needDelete[i].amount) {
-                        return i;
-                    }
-                }
-                return -1;
-            }
-            needNew.forEach(v => {
-                const notDelete = checkDelete(v.rate, v.amount);
-                if (notDelete !== -1) {
-                    for (let i = 0; i < offer[id][current.type].length; i++) {
-                        if (needDelete[notDelete].id === offer[id][current.type][i].id) {
-                            offer[id][current.type][i].time = Math.round(new Date().getTime() / 1000);
-                            offer[id][current.type][i].risk = v.risk;
-                            break;
-                        }
-                    }
-                    needDelete.splice(notDelete, 1);
-                } else {
-                    finalNew.push(v);
-                }
-            });
-            console.log('retain');
-            console.log(needRetain);
-            console.log('delete');
-            console.log(needDelete);
-            console.log('final');
-            console.log(finalNew);
-        }
-        extremRateCheck();
-        adjustOffer();
-        newOffer(current.riskLimit);
-        mergeOffer();
-        const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
-        const submitOffer = index => {
-            if (index >= finalNew.length) {
-                if ((finalNew.length + needDelete.length) > 0) {
-                    sendWs({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id,
                     });
                 }
-                return Promise.resolve();
-            } else {
-                const DRT = getDR(finalNew[index].rate);
-                console.log(DRT);
-                const fo = new FundingOffer({
-                    symbol: current.type,
-                    amount: finalNew[index].amount,
-                    rate: finalNew[index].rate / BITFINEX_EXP,
-                    period: (DRT === false) ? 2 : DRT.day,
-                    type: 'LIMIT',
-                }, userRest);
-                console.log(finalNew[index].amount);
-                console.log(keep_available);
-                console.log(available[id]);
-                return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
-                    let isExist = false;
-                    for (let i = 0; i < offer[id][current.type].length; i++) {
-                        if (fo.id === offer[id][current.type][i].id) {
-                            offer[id][current.type][i].risk = finalNew[index].risk;
-                            //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
-                            isExist = true;
-                            break;
+                needDelete.forEach(v => {
+                    const orig_risk = v.risk;
+                    let risk = v.newAmount ? v.risk : (v.risk > 1) ? (v.risk - 1) : 0;
+                    while (checkRisk(risk, needRetain, needNew)) {
+                        risk--;
+                    }
+                    if (current.isDiff && risk < 1) {
+                        risk = orig_risk;
+                    }
+                    needNew.push({
+                        risk,
+                        amount: v.newAmount ? v.newAmount : v.amount,
+                        rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                    })
+                });
+                //console.log('needdelete');
+                //console.log(needDelete);
+            }
+            //produce new
+            const newOffer = risk => {
+                //console.log('keep available');
+                //console.log(keep_available);
+                if (risk > RISK_MAX) {
+                    risk = RISK_MAX;
+                }
+                const newLength = OFFER_MAX - needRetain.length - needNew.length;
+                for (let i = 0; i < newLength; i++) {
+                    const orig_risk = risk;
+                    while (checkRisk(risk, needRetain, needNew)) {
+                        risk--;
+                    }
+                    if (current.isDiff && risk < 1) {
+                        risk = orig_risk;
+                    }
+                    let miniOffer = MINIMAL_OFFER;
+                    if (priceData[`t${current.type.substr(1)}USD`]) {
+                        miniOffer = MINIMAL_OFFER / priceData[`t${current.type.substr(1)}USD`].lastPrice;
+                    }
+                    if (finalRate[current.type].length <= 0 || keep_available < miniOffer) {
+                        break;
+                    }
+                    if (risk < 0) {
+                        break;
+                    }
+                    let amount = current.amountLimit;
+                    if (keep_available <= current.amountLimit * 1.2) {
+                        amount = Math.floor(keep_available * 10000) / 10000;
+                    }
+                    needNew.push({
+                        risk,
+                        amount,
+                        rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                    });
+                    keep_available = keep_available - amount;
+                    //risk = risk < 1 ? 0 : risk-1;
+                    risk--;
+                }
+                //console.log('needNew');
+                //console.log(needNew);
+            }
+            //merge new & delete
+            const mergeOffer = () => {
+                const checkDelete = (rate, amount) => {
+                    for (let i = 0; i < needDelete.length; i++) {
+                        if (Math.ceil(rate / BITFINEX_MIN) === Math.ceil(needDelete[i].rate / BITFINEX_MIN) && amount === needDelete[i].amount) {
+                            return i;
                         }
                     }
-                    if (!isExist) {
-                        offer[id][current.type].push({
-                            id: fo.id,
-                            time: Math.round(new Date().getTime() / 1000),
-                            amount: fo.amount,
-                            rate: fo.rate,
-                            period: fo.period,
-                            risk: finalNew[index].risk,
+                    return -1;
+                }
+                needNew.forEach(v => {
+                    const notDelete = checkDelete(v.rate, v.amount);
+                    if (notDelete !== -1) {
+                        for (let i = 0; i < offer[id][current.type].length; i++) {
+                            if (needDelete[notDelete].id === offer[id][current.type][i].id) {
+                                offer[id][current.type][i].time = Math.round(new Date().getTime() / 1000);
+                                offer[id][current.type][i].risk = v.risk;
+                                break;
+                            }
+                        }
+                        needDelete.splice(notDelete, 1);
+                    } else {
+                        finalNew.push(v);
+                    }
+                });
+                console.log('retain');
+                console.log(needRetain);
+                console.log('delete');
+                console.log(needDelete);
+                console.log('final');
+                console.log(finalNew);
+            }
+            extremRateCheck();
+            adjustOffer();
+            newOffer(current.riskLimit);
+            mergeOffer();
+            const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+            const submitOffer = index => {
+                if (index >= finalNew.length) {
+                    if ((finalNew.length + needDelete.length) > 0) {
+                        sendWs({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id,
                         });
                     }
-                    return submitOffer(index + 1);
-                }));
+                    return Promise.resolve();
+                } else {
+                    return calKeepCash().then(kp => {
+                        const DRT = getDR(finalNew[index].rate);
+                        console.log(DRT);
+                        if (kp < finalNew[index].amount) {
+                            return Promise.resolve();
+                        }
+                        const fo = new FundingOffer({
+                            symbol: current.type,
+                            amount: finalNew[index].amount,
+                            rate: finalNew[index].rate / BITFINEX_EXP,
+                            period: (DRT === false) ? 2 : DRT.day,
+                            type: 'LIMIT',
+                        }, userRest);
+                        console.log(finalNew[index].amount);
+                        console.log(keep_available);
+                        console.log(available[id]);
+                        return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
+                            let isExist = false;
+                            for (let i = 0; i < offer[id][current.type].length; i++) {
+                                if (fo.id === offer[id][current.type][i].id) {
+                                    offer[id][current.type][i].risk = finalNew[index].risk;
+                                    //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
+                                    isExist = true;
+                                    break;
+                                }
+                            }
+                            if (!isExist) {
+                                offer[id][current.type].push({
+                                    id: fo.id,
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    amount: fo.amount,
+                                    rate: fo.rate,
+                                    period: fo.period,
+                                    risk: finalNew[index].risk,
+                                });
+                            }
+                            return submitOffer(index + 1);
+                        }));
+                    });
+                }
             }
-        }
-        return cancelOffer(0).then(() => submitOffer(0));
-        //return Promise.resolve();
+            return cancelOffer(0).then(() => submitOffer(0));
+            //return Promise.resolve();
+        });
     }
 
     const singleTrade = current => {
@@ -1263,62 +1280,86 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }*/
             let availableMargin = 0;
             if (needTrans > 1 && current.clear !== true) {
-                if (available[id] && available[id][current.type] && available[id][current.type].avail > 0) {
-                    availableMargin = available[id][current.type].avail;
-                }
-                if (availableMargin >= needTrans) {
-                    availableMargin = needTrans;
-                } else {
-                    //close offer
-                    if (offer[id] && offer[id][current.type]) {
-                        const cancelOffer = index => {
-                            if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
-                                return Promise.resolve(availableMargin);
-                            } else {
-                                if (offer[id][current.type][index].risk === undefined) {
-                                    return cancelOffer(index + 1);
-                                }
-                                availableMargin = availableMargin + offer[id][current.type][index].amount;
-                                if (availableMargin >= needTrans) {
-                                    availableMargin = needTrans;
-                                }
-                                return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+                return userRest.wallets().then(wallet => {
+                    for (let i = 0; i < wallet.length; i++){
+                        if (wallet[i].type === 'funding' && wallet[i].currency === current.type.substr(1)) {
+                            available[id][current.type] = {
+                                avail: wallet[i].balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet[i].balance,
                             }
+                            break;
                         }
-                        return cancelOffer(0);
                     }
-                }
+                    console.log(available[id]);
+                    if (available[id][current.type] && available[id][current.type].avail > 0) {
+                        availableMargin = available[id][current.type].avail;
+                    }
+                    if (availableMargin >= needTrans) {
+                        availableMargin = needTrans;
+                    } else {
+                        //close offer
+                        if (offer[id] && offer[id][current.type]) {
+                            const cancelOffer = index => {
+                                if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
+                                    return Promise.resolve(availableMargin);
+                                } else {
+                                    if (offer[id][current.type][index].risk === undefined) {
+                                        return cancelOffer(index + 1);
+                                    }
+                                    availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                    if (availableMargin >= needTrans) {
+                                        availableMargin = needTrans;
+                                    }
+                                    return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+                                }
+                            }
+                            return cancelOffer(0);
+                        }
+                    }
+                });
             } else if (needTrans < -1 || current.clear === true) {
-                if (margin[id] && margin[id][current.type] && margin[id][current.type].avail > 0) {
-                    availableMargin = -margin[id][current.type].avail;
-                }
-                if (availableMargin <= needTrans && current.clear !== true) {
-                    availableMargin = needTrans;
-                } else {
-                    if (order[id] && order[id][current.type]) {
-                        const real_id = order[id][current.type].filter(v => v.amount > 0);
-                        const real_delete = index => {
-                            if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
-                                return Promise.resolve(availableMargin);
+                return userRest.wallets().then(wallet => {
+                    for (let i = 0; i < wallet.length; i++){
+                        if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {
+                            margin[id][current.type] = {
+                                avail: wallet[i].balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet[i].balance,
                             }
-                            return userRest.cancelOrder(real_id[index].id).then(() => {
-                                availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                if (availableMargin <= needTrans && current.clear !== true) {
-                                    availableMargin = needTrans;
-                                }
-                                return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1))
-                            });
+                            break;
                         }
-                        return real_delete(0);
                     }
-                }
+                    console.log(margin[id]);
+                    if (margin[id][current.type] && margin[id][current.type].avail > 0) {
+                        availableMargin = -margin[id][current.type].avail;
+                    }
+                    if (availableMargin <= needTrans && current.clear !== true) {
+                        availableMargin = needTrans;
+                    } else {
+                        if (order[id] && order[id][current.type]) {
+                            const real_id = order[id][current.type].filter(v => v.amount > 0);
+                            const real_delete = index => {
+                                if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
+                                    return Promise.resolve(availableMargin);
+                                }
+                                return userRest.cancelOrder(real_id[index].id).then(() => {
+                                    availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                    if (availableMargin <= needTrans && current.clear !== true) {
+                                        availableMargin = needTrans;
+                                    }
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1))
+                                });
+                            }
+                            return real_delete(0);
+                        }
+                    }
+                });
             }
             return Promise.resolve(availableMargin);
         }
         return getAM().then(availableMargin => {
             console.log(availableMargin);
-            console.log(available[id]);
-            console.log(margin[id]);
             //transform wallet
             if (availableMargin < 1 && availableMargin > -1) {
                 return Promise.resolve();
@@ -1340,7 +1381,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     currency: current.type.substr(1),
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                     current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
-                    if (margin[id] && margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
+                    if (margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
                         current.used = 0;
                     }
                     return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
@@ -1494,45 +1535,58 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (item.amount < suggestion.bCount * suggestion.buy) {
                                     suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                                 }
-                                const order_avail = (margin[id] && margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
-                                if (order_avail < suggestion.bCount * suggestion.buy) {
-                                    suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
-                                }
-                                if (suggestion.bCount > 0 && suggestion.buy) {
-                                    console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
-                                    const or1 = new Order({
-                                        cid: Date.now(),
-                                        type: 'LIMIT',
-                                        symbol: item.index,
-                                        amount: suggestion.bCount,
-                                        price: suggestion.buy,
-                                    }, userRest);
-                                    return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                        let isExist = false;
-                                        for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or1[0].id === order[id][current.type][i].id) {
-                                                order[id][current.type][i].code = true;
-                                                isExist = true;
-                                                break;
-                                            }
-                                        }
-                                        if (!isExist) {
-                                            order[id][current.type].push({
-                                                id: or1[0].id,
+                                return userRest.wallets().then(wallet => {
+                                    for (let i = 0; i < wallet.length; i++){
+                                        if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {
+                                            margin[id][current.type] = {
+                                                avail: wallet[i].balanceAvailable,
                                                 time: Math.round(new Date().getTime() / 1000),
-                                                amount: or1[0].amount,
-                                                type: or1[0].type,
-                                                symbol: or1[0].symbol,
-                                                price: or1[0].price,
-                                                flags: or1[0].flags,
-                                                code: true,
-                                            });
+                                                total: wallet[i].balance,
+                                            }
+                                            break;
                                         }
+                                    }
+                                    console.log(margin[id]);
+                                    const order_avail = (margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
+                                    if (order_avail < suggestion.bCount * suggestion.buy) {
+                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                    }
+                                    if (suggestion.bCount > 0 && suggestion.buy) {
+                                        console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                                        const or1 = new Order({
+                                            cid: Date.now(),
+                                            type: 'LIMIT',
+                                            symbol: item.index,
+                                            amount: suggestion.bCount,
+                                            price: suggestion.buy,
+                                        }, userRest);
+                                        return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                            let isExist = false;
+                                            for (let i = 0; i < order[id][current.type].length; i++) {
+                                                if (or1[0].id === order[id][current.type][i].id) {
+                                                    order[id][current.type][i].code = true;
+                                                    isExist = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!isExist) {
+                                                order[id][current.type].push({
+                                                    id: or1[0].id,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    amount: or1[0].amount,
+                                                    type: or1[0].type,
+                                                    symbol: or1[0].symbol,
+                                                    price: or1[0].price,
+                                                    flags: or1[0].flags,
+                                                    code: true,
+                                                });
+                                            }
+                                            return reucr_status(index + 1);
+                                        });
+                                    } else {
                                         return reucr_status(index + 1);
-                                    });
-                                } else {
-                                    return reucr_status(index + 1);
-                                }
+                                    }
+                                });
                             }
                             let item_count = 0;
                             if (position[id] && position[id][FUSD_SYM]) {
@@ -2133,7 +2187,7 @@ export default {
                 if (coin !== 'all' && coin !== v) {
                     continue;
                 }
-                if (available[id] && available[id][v]) {
+                if (available[id][v]) {
                     if (uid === (i+1) * 10000) {
                         return {
                             item: [
@@ -2160,7 +2214,7 @@ export default {
                         })
                     }
                 }
-                if (margin[id] && margin[id][v]) {
+                if (margin[id][v]) {
                     if (uid === (i+1) * 100) {
                         return {
                             item: [

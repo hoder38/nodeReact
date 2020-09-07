@@ -5312,11 +5312,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     if (previous.time) {
         const pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price * (2 - (1 + fee) * (1 + fee));
-        if (pPrice >= price) {
+        if (previous.price >= price) {
             let previousP = priceArray.length - 1;
             let pP = 8;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
@@ -5355,11 +5355,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             nowSP = previousP;
             sP = pP;
         }
-        if (pPrice < price) {
+        if (previous.price < price) {
             let previousP = 0;
             let pP = 0;
             for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {

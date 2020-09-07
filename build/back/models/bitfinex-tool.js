@@ -1192,203 +1192,218 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         };
         // adjust offer & history
         //keep cash
-        var calKeepCash = function calKeepCash(avail) {
-            var kp = avail ? avail[current.type] ? avail[current.type].avail : 0 : 0;
-            /*if (current.isKeep) {
-                if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
-                    const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
-                    kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
-                }
-            }*/
-            if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < current.keepAmountRate1 / 100 * _constants.BITFINEX_EXP) {
-                return kp - current.keepAmountMoney1;
-            } else {
-                return current.keepAmount ? kp - current.keepAmount : kp;
-            }
-        };
-        var keep_available = calKeepCash(available[id]);
-        console.log(keep_available);
-        var adjustOffer = function adjustOffer() {
-            console.log(id + ' ' + current.type);
-            if (offer[id][current.type]) {
-                //console.log(offer[current.type]);
-                //produce retain delete
-                offer[id][current.type].forEach(function (v) {
-                    if (v.risk === undefined) {
-                        console.log('manual');
-                        return false;
+        var calKeepCash = function calKeepCash() {
+            return userRest.wallets().then(function (wallet) {
+                for (var _i7 = 0; _i7 < wallet.length; _i7++) {
+                    if (wallet[_i7].type === 'funding' && wallet[_i7].currency === current.type.substr(1)) {
+                        available[id][current.type] = {
+                            avail: wallet[_i7].balanceAvailable,
+                            time: Math.round(new Date().getTime() / 1000),
+                            total: wallet[_i7].balance
+                        };
+                        break;
                     }
-                    if (keep_available > 1 && v.amount < current.amountLimit) {
-                        console.log(keep_available);
-                        console.log(v.amount);
-                        var sum = keep_available + v.amount;
-                        var newAmount = 0;
-                        if (sum <= current.amountLimit * 1.2) {
-                            keep_available = 0;
-                            newAmount = sum;
-                        } else {
-                            keep_available = sum - current.amountLimit;
-                            newAmount = current.amountLimit;
+                }
+                console.log(available[id]);
+                var kp = available[id][current.type] ? available[id][current.type].avail : 0;
+                /*if (current.isKeep) {
+                    if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
+                        const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
+                        kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
+                    }
+                }*/
+                if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < current.keepAmountRate1 / 100 * _constants.BITFINEX_EXP) {
+                    return kp - current.keepAmountMoney1;
+                } else {
+                    return current.keepAmount ? kp - current.keepAmount : kp;
+                }
+            });
+        };
+        return calKeepCash().then(function (keep_available) {
+            console.log(keep_available);
+            var adjustOffer = function adjustOffer() {
+                console.log(id + ' ' + current.type);
+                if (offer[id][current.type]) {
+                    //console.log(offer[current.type]);
+                    //produce retain delete
+                    offer[id][current.type].forEach(function (v) {
+                        if (v.risk === undefined) {
+                            console.log('manual');
+                            return false;
                         }
-                        console.log(keep_available);
-                        console.log(newAmount);
-                        needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id, newAmount: newAmount });
-                    } else if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
-                        needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
-                    } else {
-                        var DRT = getDR(v.rate * _constants.BITFINEX_EXP);
-                        console.log(DRT);
-                        var waitTime = DRT === false ? current.waitTime : DRT.speed * current.waitTime;
-                        if (Math.round(new Date().getTime() / 1000) - v.time >= waitTime * 60) {
+                        if (keep_available > 1 && v.amount < current.amountLimit) {
+                            console.log(keep_available);
+                            console.log(v.amount);
+                            var sum = keep_available + v.amount;
+                            var newAmount = 0;
+                            if (sum <= current.amountLimit * 1.2) {
+                                keep_available = 0;
+                                newAmount = sum;
+                            } else {
+                                keep_available = sum - current.amountLimit;
+                                newAmount = current.amountLimit;
+                            }
+                            console.log(keep_available);
+                            console.log(newAmount);
+                            needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id, newAmount: newAmount });
+                        } else if (v.rate - currentRate[current.type].rate > maxRange[current.type]) {
                             needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
                         } else {
-                            needRetain.push({ risk: v.risk, rate: v.rate * _constants.BITFINEX_EXP });
+                            var DRT = getDR(v.rate * _constants.BITFINEX_EXP);
+                            console.log(DRT);
+                            var waitTime = DRT === false ? current.waitTime : DRT.speed * current.waitTime;
+                            if (Math.round(new Date().getTime() / 1000) - v.time >= waitTime * 60) {
+                                needDelete.push({ risk: v.risk, amount: v.amount, rate: v.rate * _constants.BITFINEX_EXP, id: v.id });
+                            } else {
+                                needRetain.push({ risk: v.risk, rate: v.rate * _constants.BITFINEX_EXP });
+                            }
                         }
-                    }
-                });
-            }
-            needDelete.forEach(function (v) {
-                var orig_risk = v.risk;
-                var risk = v.newAmount ? v.risk : v.risk > 1 ? v.risk - 1 : 0;
-                while (checkRisk(risk, needRetain, needNew)) {
-                    risk--;
-                }
-                if (current.isDiff && risk < 1) {
-                    risk = orig_risk;
-                }
-                needNew.push({
-                    risk: risk,
-                    amount: v.newAmount ? v.newAmount : v.amount,
-                    rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
-                });
-            });
-            //console.log('needdelete');
-            //console.log(needDelete);
-        };
-        //produce new
-        var newOffer = function newOffer(risk) {
-            //console.log('keep available');
-            //console.log(keep_available);
-            if (risk > _constants.RISK_MAX) {
-                risk = _constants.RISK_MAX;
-            }
-            var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
-            for (var _i7 = 0; _i7 < newLength; _i7++) {
-                var orig_risk = risk;
-                while (checkRisk(risk, needRetain, needNew)) {
-                    risk--;
-                }
-                if (current.isDiff && risk < 1) {
-                    risk = orig_risk;
-                }
-                var miniOffer = _constants.MINIMAL_OFFER;
-                if (priceData['t' + current.type.substr(1) + 'USD']) {
-                    miniOffer = _constants.MINIMAL_OFFER / priceData['t' + current.type.substr(1) + 'USD'].lastPrice;
-                }
-                if (finalRate[current.type].length <= 0 || keep_available < miniOffer) {
-                    break;
-                }
-                if (risk < 0) {
-                    break;
-                }
-                var amount = current.amountLimit;
-                if (keep_available <= current.amountLimit * 1.2) {
-                    amount = keep_available;
-                }
-                needNew.push({
-                    risk: risk,
-                    amount: amount,
-                    rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
-                });
-                keep_available = keep_available - amount;
-                //risk = risk < 1 ? 0 : risk-1;
-                risk--;
-            }
-            //console.log('needNew');
-            //console.log(needNew);
-        };
-        //merge new & delete
-        var mergeOffer = function mergeOffer() {
-            var checkDelete = function checkDelete(rate, amount) {
-                for (var _i8 = 0; _i8 < needDelete.length; _i8++) {
-                    if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i8].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i8].amount) {
-                        return _i8;
-                    }
-                }
-                return -1;
-            };
-            needNew.forEach(function (v) {
-                var notDelete = checkDelete(v.rate, v.amount);
-                if (notDelete !== -1) {
-                    for (var _i9 = 0; _i9 < offer[id][current.type].length; _i9++) {
-                        if (needDelete[notDelete].id === offer[id][current.type][_i9].id) {
-                            offer[id][current.type][_i9].time = Math.round(new Date().getTime() / 1000);
-                            offer[id][current.type][_i9].risk = v.risk;
-                            break;
-                        }
-                    }
-                    needDelete.splice(notDelete, 1);
-                } else {
-                    finalNew.push(v);
-                }
-            });
-            console.log('retain');
-            console.log(needRetain);
-            console.log('delete');
-            console.log(needDelete);
-            console.log('final');
-            console.log(finalNew);
-        };
-        extremRateCheck();
-        adjustOffer();
-        newOffer(current.riskLimit);
-        mergeOffer();
-        var cancelOffer = function cancelOffer(index) {
-            return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
-                return new _promise2.default(function (resolve, reject) {
-                    return setTimeout(function () {
-                        return resolve();
-                    }, 3000);
-                }).then(function () {
-                    return cancelOffer(index + 1);
-                });
-            });
-        };
-        var submitOffer = function submitOffer(index) {
-            if (index >= finalNew.length) {
-                if (finalNew.length + needDelete.length > 0) {
-                    (0, _sendWs2.default)({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id
                     });
                 }
-                return _promise2.default.resolve();
-            } else {
-                var _ret4 = function () {
-                    var DRT = getDR(finalNew[index].rate);
-                    console.log(DRT);
-                    var fo = new _bfxApiNodeModels.FundingOffer({
-                        symbol: current.type,
-                        amount: finalNew[index].amount,
-                        rate: finalNew[index].rate / _constants.BITFINEX_EXP,
-                        period: DRT === false ? 2 : DRT.day,
-                        type: 'LIMIT'
-                    }, userRest);
-                    console.log(finalNew[index].amount);
-                    console.log(keep_available);
-                    console.log(available[id]);
-                    return {
-                        v: fo.submit().then(function () {
+                needDelete.forEach(function (v) {
+                    var orig_risk = v.risk;
+                    var risk = v.newAmount ? v.risk : v.risk > 1 ? v.risk - 1 : 0;
+                    while (checkRisk(risk, needRetain, needNew)) {
+                        risk--;
+                    }
+                    if (current.isDiff && risk < 1) {
+                        risk = orig_risk;
+                    }
+                    needNew.push({
+                        risk: risk,
+                        amount: v.newAmount ? v.newAmount : v.amount,
+                        rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
+                    });
+                });
+                //console.log('needdelete');
+                //console.log(needDelete);
+            };
+            //produce new
+            var newOffer = function newOffer(risk) {
+                //console.log('keep available');
+                //console.log(keep_available);
+                if (risk > _constants.RISK_MAX) {
+                    risk = _constants.RISK_MAX;
+                }
+                var newLength = _constants.OFFER_MAX - needRetain.length - needNew.length;
+                for (var _i8 = 0; _i8 < newLength; _i8++) {
+                    var orig_risk = risk;
+                    while (checkRisk(risk, needRetain, needNew)) {
+                        risk--;
+                    }
+                    if (current.isDiff && risk < 1) {
+                        risk = orig_risk;
+                    }
+                    var miniOffer = _constants.MINIMAL_OFFER;
+                    if (priceData['t' + current.type.substr(1) + 'USD']) {
+                        miniOffer = _constants.MINIMAL_OFFER / priceData['t' + current.type.substr(1) + 'USD'].lastPrice;
+                    }
+                    if (finalRate[current.type].length <= 0 || keep_available < miniOffer) {
+                        break;
+                    }
+                    if (risk < 0) {
+                        break;
+                    }
+                    var amount = current.amountLimit;
+                    if (keep_available <= current.amountLimit * 1.2) {
+                        amount = Math.floor(keep_available * 10000) / 10000;
+                    }
+                    needNew.push({
+                        risk: risk,
+                        amount: amount,
+                        rate: MR > 0 && finalRate[current.type][10 - risk] < MR ? MR : finalRate[current.type][10 - risk]
+                    });
+                    keep_available = keep_available - amount;
+                    //risk = risk < 1 ? 0 : risk-1;
+                    risk--;
+                }
+                //console.log('needNew');
+                //console.log(needNew);
+            };
+            //merge new & delete
+            var mergeOffer = function mergeOffer() {
+                var checkDelete = function checkDelete(rate, amount) {
+                    for (var _i9 = 0; _i9 < needDelete.length; _i9++) {
+                        if (Math.ceil(rate / _constants.BITFINEX_MIN) === Math.ceil(needDelete[_i9].rate / _constants.BITFINEX_MIN) && amount === needDelete[_i9].amount) {
+                            return _i9;
+                        }
+                    }
+                    return -1;
+                };
+                needNew.forEach(function (v) {
+                    var notDelete = checkDelete(v.rate, v.amount);
+                    if (notDelete !== -1) {
+                        for (var _i10 = 0; _i10 < offer[id][current.type].length; _i10++) {
+                            if (needDelete[notDelete].id === offer[id][current.type][_i10].id) {
+                                offer[id][current.type][_i10].time = Math.round(new Date().getTime() / 1000);
+                                offer[id][current.type][_i10].risk = v.risk;
+                                break;
+                            }
+                        }
+                        needDelete.splice(notDelete, 1);
+                    } else {
+                        finalNew.push(v);
+                    }
+                });
+                console.log('retain');
+                console.log(needRetain);
+                console.log('delete');
+                console.log(needDelete);
+                console.log('final');
+                console.log(finalNew);
+            };
+            extremRateCheck();
+            adjustOffer();
+            newOffer(current.riskLimit);
+            mergeOffer();
+            var cancelOffer = function cancelOffer(index) {
+                return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, 3000);
+                    }).then(function () {
+                        return cancelOffer(index + 1);
+                    });
+                });
+            };
+            var submitOffer = function submitOffer(index) {
+                if (index >= finalNew.length) {
+                    if (finalNew.length + needDelete.length > 0) {
+                        (0, _sendWs2.default)({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id
+                        });
+                    }
+                    return _promise2.default.resolve();
+                } else {
+                    return calKeepCash().then(function (kp) {
+                        var DRT = getDR(finalNew[index].rate);
+                        console.log(DRT);
+                        if (kp < finalNew[index].amount) {
+                            return _promise2.default.resolve();
+                        }
+                        var fo = new _bfxApiNodeModels.FundingOffer({
+                            symbol: current.type,
+                            amount: finalNew[index].amount,
+                            rate: finalNew[index].rate / _constants.BITFINEX_EXP,
+                            period: DRT === false ? 2 : DRT.day,
+                            type: 'LIMIT'
+                        }, userRest);
+                        console.log(finalNew[index].amount);
+                        console.log(keep_available);
+                        console.log(available[id]);
+                        return fo.submit().then(function () {
                             return new _promise2.default(function (resolve, reject) {
                                 return setTimeout(function () {
                                     return resolve();
                                 }, 3000);
                             }).then(function () {
                                 var isExist = false;
-                                for (var _i10 = 0; _i10 < offer[id][current.type].length; _i10++) {
-                                    if (fo.id === offer[id][current.type][_i10].id) {
-                                        offer[id][current.type][_i10].risk = finalNew[index].risk;
+                                for (var _i11 = 0; _i11 < offer[id][current.type].length; _i11++) {
+                                    if (fo.id === offer[id][current.type][_i11].id) {
+                                        offer[id][current.type][_i11].risk = finalNew[index].risk;
                                         //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
                                         isExist = true;
                                         break;
@@ -1406,17 +1421,15 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 }
                                 return submitOffer(index + 1);
                             });
-                        })
-                    };
-                }();
-
-                if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
-            }
-        };
-        return cancelOffer(0).then(function () {
-            return submitOffer(0);
+                        });
+                    });
+                }
+            };
+            return cancelOffer(0).then(function () {
+                return submitOffer(0);
+            });
+            //return Promise.resolve();
         });
-        //return Promise.resolve();
     };
 
     var singleTrade = function singleTrade(current) {
@@ -1446,90 +1459,114 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }*/
             var availableMargin = 0;
             if (needTrans > 1 && current.clear !== true) {
-                if (available[id] && available[id][current.type] && available[id][current.type].avail > 0) {
-                    availableMargin = available[id][current.type].avail;
-                }
-                if (availableMargin >= needTrans) {
-                    availableMargin = needTrans;
-                } else {
-                    //close offer
-                    if (offer[id] && offer[id][current.type]) {
-                        var _ret5 = function () {
-                            var cancelOffer = function cancelOffer(index) {
-                                if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
-                                    return _promise2.default.resolve(availableMargin);
-                                } else {
-                                    if (offer[id][current.type][index].risk === undefined) {
-                                        return cancelOffer(index + 1);
+                return userRest.wallets().then(function (wallet) {
+                    for (var _i12 = 0; _i12 < wallet.length; _i12++) {
+                        if (wallet[_i12].type === 'funding' && wallet[_i12].currency === current.type.substr(1)) {
+                            available[id][current.type] = {
+                                avail: wallet[_i12].balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet[_i12].balance
+                            };
+                            break;
+                        }
+                    }
+                    console.log(available[id]);
+                    if (available[id][current.type] && available[id][current.type].avail > 0) {
+                        availableMargin = available[id][current.type].avail;
+                    }
+                    if (availableMargin >= needTrans) {
+                        availableMargin = needTrans;
+                    } else {
+                        //close offer
+                        if (offer[id] && offer[id][current.type]) {
+                            var _ret4 = function () {
+                                var cancelOffer = function cancelOffer(index) {
+                                    if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
+                                        return _promise2.default.resolve(availableMargin);
+                                    } else {
+                                        if (offer[id][current.type][index].risk === undefined) {
+                                            return cancelOffer(index + 1);
+                                        }
+                                        availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                        if (availableMargin >= needTrans) {
+                                            availableMargin = needTrans;
+                                        }
+                                        return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            }).then(function () {
+                                                return cancelOffer(index + 1);
+                                            });
+                                        });
                                     }
-                                    availableMargin = availableMargin + offer[id][current.type][index].amount;
-                                    if (availableMargin >= needTrans) {
-                                        availableMargin = needTrans;
+                                };
+                                return {
+                                    v: cancelOffer(0)
+                                };
+                            }();
+
+                            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                        }
+                    }
+                });
+            } else if (needTrans < -1 || current.clear === true) {
+                return userRest.wallets().then(function (wallet) {
+                    for (var _i13 = 0; _i13 < wallet.length; _i13++) {
+                        if (wallet[_i13].type === 'margin' && wallet[_i13].currency === current.type.substr(1)) {
+                            margin[id][current.type] = {
+                                avail: wallet[_i13].balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet[_i13].balance
+                            };
+                            break;
+                        }
+                    }
+                    console.log(margin[id]);
+                    if (margin[id][current.type] && margin[id][current.type].avail > 0) {
+                        availableMargin = -margin[id][current.type].avail;
+                    }
+                    if (availableMargin <= needTrans && current.clear !== true) {
+                        availableMargin = needTrans;
+                    } else {
+                        if (order[id] && order[id][current.type]) {
+                            var _ret5 = function () {
+                                var real_id = order[id][current.type].filter(function (v) {
+                                    return v.amount > 0;
+                                });
+                                var real_delete = function real_delete(index) {
+                                    if (index >= real_id.length || availableMargin <= needTrans && current.clear !== true) {
+                                        return _promise2.default.resolve(availableMargin);
                                     }
-                                    return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(function () {
+                                    return userRest.cancelOrder(real_id[index].id).then(function () {
+                                        availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                        if (availableMargin <= needTrans && current.clear !== true) {
+                                            availableMargin = needTrans;
+                                        }
                                         return new _promise2.default(function (resolve, reject) {
                                             return setTimeout(function () {
                                                 return resolve();
                                             }, 3000);
                                         }).then(function () {
-                                            return cancelOffer(index + 1);
+                                            return real_delete(index + 1);
                                         });
                                     });
-                                }
-                            };
-                            return {
-                                v: cancelOffer(0)
-                            };
-                        }();
+                                };
+                                return {
+                                    v: real_delete(0)
+                                };
+                            }();
 
-                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                        }
                     }
-                }
-            } else if (needTrans < -1 || current.clear === true) {
-                if (margin[id] && margin[id][current.type] && margin[id][current.type].avail > 0) {
-                    availableMargin = -margin[id][current.type].avail;
-                }
-                if (availableMargin <= needTrans && current.clear !== true) {
-                    availableMargin = needTrans;
-                } else {
-                    if (order[id] && order[id][current.type]) {
-                        var _ret6 = function () {
-                            var real_id = order[id][current.type].filter(function (v) {
-                                return v.amount > 0;
-                            });
-                            var real_delete = function real_delete(index) {
-                                if (index >= real_id.length || availableMargin <= needTrans && current.clear !== true) {
-                                    return _promise2.default.resolve(availableMargin);
-                                }
-                                return userRest.cancelOrder(real_id[index].id).then(function () {
-                                    availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                    if (availableMargin <= needTrans && current.clear !== true) {
-                                        availableMargin = needTrans;
-                                    }
-                                    return new _promise2.default(function (resolve, reject) {
-                                        return setTimeout(function () {
-                                            return resolve();
-                                        }, 3000);
-                                    }).then(function () {
-                                        return real_delete(index + 1);
-                                    });
-                                });
-                            };
-                            return {
-                                v: real_delete(0)
-                            };
-                        }();
-
-                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
-                    }
-                }
+                });
             }
             return _promise2.default.resolve(availableMargin);
         };
         return getAM().then(function (availableMargin) {
             console.log(availableMargin);
-            console.log(available[id]);
-            console.log(margin[id]);
             //transform wallet
             if (availableMargin < 1 && availableMargin > -1) {
                 return _promise2.default.resolve();
@@ -1563,7 +1600,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     });
                 }).then(function () {
                     current.used = current.used > 0 && current.used + availableMargin > 1 ? current.used + availableMargin : 0;
-                    if (margin[id] && margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
+                    if (margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
                         current.used = 0;
                     }
                     return (0, _mongoTool2.default)('update', _constants.USERDB, { "username": id, "bitfinex.type": current.type }, { $set: { "bitfinex.$.used": current.used } });
@@ -1585,12 +1622,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         });
                         return _promise2.default.resolve();
                     } else {
-                        var _ret7 = function () {
+                        var _ret6 = function () {
                             var item = items[index];
                             console.log(item);
                             var cancelOrder = function cancelOrder(rest) {
                                 if (order[id] && order[id][current.type]) {
-                                    var _ret8 = function () {
+                                    var _ret7 = function () {
                                         var real_id = order[id][current.type].filter(function (v) {
                                             return v.symbol === item.index;
                                         });
@@ -1613,7 +1650,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         };
                                     }();
 
-                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                 } else {
                                     return rest ? rest() : _promise2.default.resolve();
                                 }
@@ -1740,57 +1777,70 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     if (item.amount < suggestion.bCount * suggestion.buy) {
                                         suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                                     }
-                                    var order_avail = margin[id] && margin[id][current.type] && margin[id][current.type].avail && margin[id][current.type].avail - 1 > 0 ? _constants.SUPPORT_LEVERAGE[item.index] ? _constants.SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
-                                    if (order_avail < suggestion.bCount * suggestion.buy) {
-                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
-                                    }
-                                    if (suggestion.bCount > 0 && suggestion.buy) {
-                                        var _ret9 = function () {
-                                            console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
-                                            var or1 = new _bfxApiNodeModels.Order({
-                                                cid: Date.now(),
-                                                type: 'LIMIT',
-                                                symbol: item.index,
-                                                amount: suggestion.bCount,
-                                                price: suggestion.buy
-                                            }, userRest);
-                                            return {
-                                                v: or1.submit().then(function () {
-                                                    return new _promise2.default(function (resolve, reject) {
-                                                        return setTimeout(function () {
-                                                            return resolve();
-                                                        }, 3000);
-                                                    });
-                                                }).then(function () {
-                                                    var isExist = false;
-                                                    for (var _i11 = 0; _i11 < order[id][current.type].length; _i11++) {
-                                                        if (or1[0].id === order[id][current.type][_i11].id) {
-                                                            order[id][current.type][_i11].code = true;
-                                                            isExist = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!isExist) {
-                                                        order[id][current.type].push({
-                                                            id: or1[0].id,
-                                                            time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or1[0].amount,
-                                                            type: or1[0].type,
-                                                            symbol: or1[0].symbol,
-                                                            price: or1[0].price,
-                                                            flags: or1[0].flags,
-                                                            code: true
+                                    return userRest.wallets().then(function (wallet) {
+                                        for (var _i14 = 0; _i14 < wallet.length; _i14++) {
+                                            if (wallet[_i14].type === 'margin' && wallet[_i14].currency === current.type.substr(1)) {
+                                                margin[id][current.type] = {
+                                                    avail: wallet[_i14].balanceAvailable,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    total: wallet[_i14].balance
+                                                };
+                                                break;
+                                            }
+                                        }
+                                        console.log(margin[id]);
+                                        var order_avail = margin[id][current.type] && margin[id][current.type].avail && margin[id][current.type].avail - 1 > 0 ? _constants.SUPPORT_LEVERAGE[item.index] ? _constants.SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
+                                        if (order_avail < suggestion.bCount * suggestion.buy) {
+                                            suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                        }
+                                        if (suggestion.bCount > 0 && suggestion.buy) {
+                                            var _ret8 = function () {
+                                                console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
+                                                var or1 = new _bfxApiNodeModels.Order({
+                                                    cid: Date.now(),
+                                                    type: 'LIMIT',
+                                                    symbol: item.index,
+                                                    amount: suggestion.bCount,
+                                                    price: suggestion.buy
+                                                }, userRest);
+                                                return {
+                                                    v: or1.submit().then(function () {
+                                                        return new _promise2.default(function (resolve, reject) {
+                                                            return setTimeout(function () {
+                                                                return resolve();
+                                                            }, 3000);
                                                         });
-                                                    }
-                                                    return reucr_status(index + 1);
-                                                })
-                                            };
-                                        }();
+                                                    }).then(function () {
+                                                        var isExist = false;
+                                                        for (var _i15 = 0; _i15 < order[id][current.type].length; _i15++) {
+                                                            if (or1[0].id === order[id][current.type][_i15].id) {
+                                                                order[id][current.type][_i15].code = true;
+                                                                isExist = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!isExist) {
+                                                            order[id][current.type].push({
+                                                                id: or1[0].id,
+                                                                time: Math.round(new Date().getTime() / 1000),
+                                                                amount: or1[0].amount,
+                                                                type: or1[0].type,
+                                                                symbol: or1[0].symbol,
+                                                                price: or1[0].price,
+                                                                flags: or1[0].flags,
+                                                                code: true
+                                                            });
+                                                        }
+                                                        return reucr_status(index + 1);
+                                                    })
+                                                };
+                                            }();
 
-                                        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
-                                    } else {
-                                        return reucr_status(index + 1);
-                                    }
+                                            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                        } else {
+                                            return reucr_status(index + 1);
+                                        }
+                                    });
                                 };
                                 var item_count = 0;
                                 if (position[id] && position[id][_constants.FUSD_SYM]) {
@@ -1815,7 +1865,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     return cancelOrder();
                                 }).then(function () {
                                     if (suggestion.sCount > 0 && suggestion.sell) {
-                                        var _ret10 = function () {
+                                        var _ret9 = function () {
                                             console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
                                             var or = new _bfxApiNodeModels.Order({
                                                 cid: Date.now(),
@@ -1834,9 +1884,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
-                                                    for (var _i12 = 0; _i12 < order[id][current.type].length; _i12++) {
-                                                        if (or[0].id === order[id][current.type][_i12].id) {
-                                                            order[id][current.type][_i12].code = true;
+                                                    for (var _i16 = 0; _i16 < order[id][current.type].length; _i16++) {
+                                                        if (or[0].id === order[id][current.type][_i16].id) {
+                                                            order[id][current.type][_i16].code = true;
                                                             isExist = true;
                                                             break;
                                                         }
@@ -1858,7 +1908,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             };
                                         }();
 
-                                        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                        if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                                     } else {
                                         return submitBuy();
                                     }
@@ -1881,7 +1931,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         });
                                     };
                                     if (item_count > 0) {
-                                        var _ret11 = function () {
+                                        var _ret10 = function () {
                                             var or = new _bfxApiNodeModels.Order({
                                                 cid: Date.now(),
                                                 type: 'MARKET',
@@ -1898,9 +1948,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
-                                                    for (var _i13 = 0; _i13 < order[id][current.type].length; _i13++) {
-                                                        if (or[0].id === order[id][current.type][_i13].id) {
-                                                            order[id][current.type][_i13].code = true;
+                                                    for (var _i17 = 0; _i17 < order[id][current.type].length; _i17++) {
+                                                        if (or[0].id === order[id][current.type][_i17].id) {
+                                                            order[id][current.type][_i17].code = true;
                                                             isExist = true;
                                                             break;
                                                         }
@@ -1922,7 +1972,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             };
                                         }();
 
-                                        if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                                        if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                                     } else {
                                         return delTotal();
                                     }
@@ -1952,7 +2002,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             }
                         }();
 
-                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                     }
                 };
                 return reucr_status(0);
@@ -2247,7 +2297,7 @@ exports.default = {
             }
             if (set.hasOwnProperty('clear')) {
                 if (set.clear) {
-                    var _ret13 = function () {
+                    var _ret12 = function () {
                         var allClear = false;
                         var clear = (0, _utility.isValidString)(set.clear, 'name');
                         if (clear === false) {
@@ -2271,7 +2321,7 @@ exports.default = {
                         }
                     }();
 
-                    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                 } else {
                     data['clear'] = {};
                 }
@@ -2305,28 +2355,28 @@ exports.default = {
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
                     if (rest_total) {
-                        for (var _i14 = 0; _i14 < item.length; _i14++) {
-                            if (item[_i14].index === rest_total.index) {
-                                rest_total.data.amount = rest_total.data.amount ? item[_i14].amount - rest_total.data.amount > 0 ? item[_i14].amount - rest_total.data.amount : 0 : item[_i14].amount;
+                        for (var _i18 = 0; _i18 < item.length; _i18++) {
+                            if (item[_i18].index === rest_total.index) {
+                                rest_total.data.amount = rest_total.data.amount ? item[_i18].amount - rest_total.data.amount > 0 ? item[_i18].amount - rest_total.data.amount : 0 : item[_i18].amount;
                                 console.log(rest_total);
-                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i14]._id }, { $set: rest_total.data }).then(function (result) {
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i18]._id }, { $set: rest_total.data }).then(function (result) {
                                     console.log(result);
                                     return returnSupport(bitfinex);
                                 });
                             }
                         }
                     } else if (data['pair']) {
-                        var _ret14 = function () {
-                            for (var _i15 = 0; _i15 < data['pair'].length; _i15++) {
+                        var _ret13 = function () {
+                            for (var _i19 = 0; _i19 < data['pair'].length; _i19++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
-                                    if (item[j].index === data['pair'][_i15].type) {
+                                    if (item[j].index === data['pair'][_i19].type) {
                                         exist = true;
                                         break;
                                     }
                                 }
                                 if (!exist) {
-                                    item.push(data['pair'][_i15]);
+                                    item.push(data['pair'][_i19]);
                                 }
                             }
                             var recur_update = function recur_update(index) {
@@ -2334,12 +2384,12 @@ exports.default = {
                                     return returnSupport(bitfinex);
                                 } else {
                                     if (item[index]._id) {
-                                        for (var _i16 = 0; _i16 < data['pair'].length; _i16++) {
-                                            if (item[index].index === data['pair'][_i16].type) {
+                                        for (var _i20 = 0; _i20 < data['pair'].length; _i20++) {
+                                            if (item[index].index === data['pair'][_i20].type) {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
-                                                        times: Math.floor(item[index].times * data['pair'][_i16].amount / item[index].orig * 10000) / 10000,
-                                                        amount: item[index].amount + data['pair'][_i16].amount - item[index].orig,
-                                                        orig: data['pair'][_i16].amount
+                                                        times: Math.floor(item[index].times * data['pair'][_i20].amount / item[index].orig * 10000) / 10000,
+                                                        amount: item[index].amount + data['pair'][_i20].amount - item[index].orig,
+                                                        orig: data['pair'][_i20].amount
                                                     } }).then(function (item) {
                                                     console.log(item);
                                                     return recur_update(index + 1);
@@ -2385,7 +2435,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
+                        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
                     } else {
                         return returnSupport(bitfinex);
                     }
@@ -2399,7 +2449,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('User does not exist!!!'));
             }
             if (items[0].bitfinex) {
-                var _ret15 = function () {
+                var _ret14 = function () {
                     var bitfinex = items[0].bitfinex.filter(function (v) {
                         return v.type === type ? false : true;
                     });
@@ -2412,7 +2462,7 @@ exports.default = {
                     };
                 }();
 
-                if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
+                if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
             } else {
                 return returnSupport();
             }
@@ -2491,7 +2541,7 @@ exports.default = {
                 if (coin !== 'all' && coin !== v) {
                     continue;
                 }
-                if (available[id] && available[id][v]) {
+                if (available[id][v]) {
                     if (uid === (i + 1) * 10000) {
                         return {
                             item: [{
@@ -2516,7 +2566,7 @@ exports.default = {
                         });
                     }
                 }
-                if (margin[id] && margin[id][v]) {
+                if (margin[id][v]) {
                     if (uid === (i + 1) * 100) {
                         return {
                             item: [{
@@ -2545,8 +2595,8 @@ exports.default = {
         }
         if (type === 0 || type === 2) {
             var tempList = uid === 0 ? rateList : itemList;
-            for (var _i17 = 0; _i17 < _constants.SUPPORT_COIN.length; _i17++) {
-                var _v = _constants.SUPPORT_COIN[_i17];
+            for (var _i21 = 0; _i21 < _constants.SUPPORT_COIN.length; _i21++) {
+                var _v = _constants.SUPPORT_COIN[_i21];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
@@ -2554,7 +2604,7 @@ exports.default = {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     tempList.push({
                         name: _v.substr(1) + ' Rate',
-                        id: _i17,
+                        id: _i21,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: rate + '%',
                         count: rate,
@@ -2564,16 +2614,16 @@ exports.default = {
                 }
             }
             var vid = _constants.SUPPORT_COIN.length;
-            for (var _i18 in priceData) {
+            for (var _i22 in priceData) {
                 tempList.push({
-                    name: _i18.substr(1) + ' $' + Math.floor(priceData[_i18].lastPrice * 10000) / 10000,
+                    name: _i22.substr(1) + ' $' + Math.floor(priceData[_i22].lastPrice * 10000) / 10000,
                     id: vid++,
-                    tags: [_i18.substr(1, 4), _i18.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i18].dailyChange * 100) / 100 + '%',
-                    count: priceData[_i18].dilyChange,
-                    utime: priceData[_i18].time,
+                    tags: [_i22.substr(1, 4), _i22.substr(-3), 'rate', '利率'],
+                    rate: Math.floor(priceData[_i22].dailyChange * 100) / 100 + '%',
+                    count: priceData[_i22].dilyChange,
+                    utime: priceData[_i22].time,
                     type: 1,
-                    str: priceData[_i18].str
+                    str: priceData[_i22].str
                 });
             }
         }
