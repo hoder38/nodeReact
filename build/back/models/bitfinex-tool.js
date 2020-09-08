@@ -314,7 +314,7 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                         rate = Math.round(rate * 10000 - 10000) / 100;
                         real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                         times = Math.round(times / count * 100) / 100;
-                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
+                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + Math.round(min_vol * 100) / 100;
                         if (!best_rate || rate > best_rate) {
                             best_rate = rate;
                             ret_str = str;
