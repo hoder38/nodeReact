@@ -541,7 +541,8 @@ var checkSetOffer = exports.checkSetOffer = function checkSetOffer() {
     if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
         var _ret11 = function () {
             var cso = function cso() {
-                if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 120) {
+                if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 600) {
+                    (0, _sendWs2.default)('restart set offer', 0, 0, true);
                     setUserOffer();
                 }
                 return new _promise2.default(function (resolve, reject) {

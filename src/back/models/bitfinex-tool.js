@@ -1221,7 +1221,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }, userRest);
                         console.log(finalNew[index].amount);
                         console.log(keep_available);
-                        console.log(available[id]);
                         return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
                             let isExist = false;
                             for (let i = 0; i < offer[id][current.type].length; i++) {

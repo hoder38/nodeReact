@@ -1393,7 +1393,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         }, userRest);
                         console.log(finalNew[index].amount);
                         console.log(keep_available);
-                        console.log(available[id]);
                         return fo.submit().then(function () {
                             return new _promise2.default(function (resolve, reject) {
                                 return setTimeout(function () {

@@ -253,7 +253,8 @@ export const setUserOffer = () => {
 export const checkSetOffer = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const cso = () => {
-            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 120) {
+            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 600) {
+                sendWs('restart set offer', 0, 0, true);
                 setUserOffer();
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => cso());
