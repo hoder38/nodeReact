@@ -832,10 +832,12 @@ export default {
                             }
                         }
                     }
-                    return Api('url', 'https://www.federalreserve.gov/releases/g19/current/default.htm').then(raw_data => {
-                        if (findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
+                    return Api('url', 'https://www.federalreserve.gov/releases/g19/Current/default.htm').then(raw_data => {
+                        let body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                        body = body ? body : findTag(Htmlparser.parseDOM(raw_data), 'body')[0];
+                        if (findTag(findTag(findTag(body, 'div', 'content')[0], 'div', 'dates')[0])[1].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                             list.push({
-                                url: 'https://www.federalreserve.gov/releases/g19/current/default.htm',
+                                url: 'https://www.federalreserve.gov/releases/g19/Current/default.htm',
                                 name: toValidName('Consumer Credit'),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
