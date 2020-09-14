@@ -1316,6 +1316,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             return cancelOffer(0);
                         }
                     }
+                    return Promise.resolve(availableMargin);
                 });
             } else if (needTrans < -1 || current.clear === true) {
                 return userRest.wallets().then(wallet => {
@@ -1353,6 +1354,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             return real_delete(0);
                         }
                     }
+                    return Promise.resolve(availableMargin);
                 });
             }
             return Promise.resolve(availableMargin);

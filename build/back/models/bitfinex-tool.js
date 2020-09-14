@@ -1509,6 +1509,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                         }
                     }
+                    return _promise2.default.resolve(availableMargin);
                 });
             } else if (needTrans < -1 || current.clear === true) {
                 return userRest.wallets().then(function (wallet) {
@@ -1560,6 +1561,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                         }
                     }
+                    return _promise2.default.resolve(availableMargin);
                 });
             }
             return _promise2.default.resolve(availableMargin);
