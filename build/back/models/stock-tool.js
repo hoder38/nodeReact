@@ -5949,9 +5949,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                 var item = items[index];
                 console.log(item);
                 //new mid
-                var newArr = item.web.map(function (v) {
+                var newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                     return v * item.newMid[item.newMid.length - 1] / item.mid;
-                });
+                }) : item.web;
                 var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                 while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && price < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid)) {
                     item.newMid.pop();
@@ -5962,12 +5962,12 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     } else {
                         item.previous.time = 0;
                     }
-                    newArr = item.web.map(function (v) {
+                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                         return v * item.newMid[item.newMid.length - 1] / item.mid;
-                    });
+                    }) : item.web;
                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                 }
-                var suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
+                var suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
                 while (suggestion.resetWeb) {
                     if (item.newMid.length === 0) {
                         item.tmpPT = {
@@ -5978,10 +5978,10 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     }
                     item.previous.time = 0;
                     item.newMid.push(suggestion.newMid);
-                    newArr = item.web.map(function (v) {
+                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                         return v * item.newMid[item.newMid.length - 1] / item.mid;
-                    });
-                    suggestion = stockProcess(price, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
+                    }) : item.web;
+                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
                 }
                 var count = 0;
                 var amount = item.amount;
@@ -6279,6 +6279,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 }
             }
         }
+        console.log('newMid ' + newMid + ' ' + price);
         return {
             resetWeb: 1,
             newMid: newMid
@@ -6663,7 +6664,6 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
     var sellTrade = 0;
     var stopLoss = 0;
     var newMid = [];
-    var newArr = [];
     var price = 0;
     //console.log('stock test');
     //console.log(amount);
@@ -6804,6 +6804,9 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
         }
         var suggest = null;
         var checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
+        var newArr = newMid.length > 0 ? web.arr.map(function (v) {
+            return v * newMid[newMid.length - 1] / web.mid;
+        }) : web.arr;
         while (newMid.length > 0 && (newMid[newMid.length - 1] > checkMid && price < checkMid || newMid[newMid.length - 1] <= checkMid && price > checkMid)) {
             newMid.pop();
             if (newMid.length === 0 && now - tmpPT.time < rinterval) {
@@ -6814,12 +6817,12 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                 priviousTrade.time = 0;
             }
             stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
-            newArr = web.arr.map(function (v) {
+            newArr = newMid.length > 0 ? web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
-            });
+            }) : web.arr;
             checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         }
-        suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
+        suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
         while (suggest.resetWeb) {
             if (newMid.length === 0) {
                 tmpPT = {
@@ -6835,10 +6838,10 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
                 stopLoss++;
             }
             newMid.push(suggest.newMid);
-            newArr = web.arr.map(function (v) {
+            newArr = newMid.length > 0 ? web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
-            });
-            suggest = stockProcess(price, newMid.length > 0 ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
+            }) : web.arr;
+            suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
             //console.log(price);
             //console.log(suggest);
             //console.log(newArr);

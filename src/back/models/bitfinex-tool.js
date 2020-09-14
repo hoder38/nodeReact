@@ -1194,7 +1194,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
             adjustOffer();
             newOffer(current.riskLimit);
             mergeOffer();
-            const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+            const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
+                sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
+                handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
             const submitOffer = index => {
                 if (index >= finalNew.length) {
                     if ((finalNew.length + needDelete.length) > 0) {
@@ -1299,21 +1302,28 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     } else {
                         //close offer
                         if (offer[id][current.type]) {
-                            const cancelOffer = index => {
-                                if ((index >= offer[id][current.type].length) || availableMargin >= needTrans) {
+                            const real_id = offer[id][current.type].filter(v => o.risk !== undefined);
+                            const real_delete = index => {
+                                let is_error = false;
+                                if ((index >= real_id.length) || availableMargin >= needTrans) {
                                     return Promise.resolve(availableMargin);
                                 } else {
-                                    if (offer[id][current.type][index].risk === undefined) {
-                                        return cancelOffer(index + 1);
-                                    }
-                                    availableMargin = availableMargin + offer[id][current.type][index].amount;
-                                    if (availableMargin >= needTrans) {
-                                        availableMargin = needTrans;
-                                    }
-                                    return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+                                    return userRest.cancelFundingOffer(offer[id][current.type][index].id).catch(err => {
+                                        is_error = true;
+                                        sendWs(`${id} ${offer[id][current.type][index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} ${offer[id][current.type][index].id} cancelFundingOffer Error`);
+                                    }).then(() => {
+                                        if (!is_error) {
+                                            availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                            if (availableMargin >= needTrans) {
+                                                availableMargin = needTrans;
+                                            }
+                                        }
+                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1));
+                                    });
                                 }
                             }
-                            return cancelOffer(0);
+                            return real_delete(0);
                         }
                     }
                     return Promise.resolve(availableMargin);
@@ -1338,15 +1348,22 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         availableMargin = needTrans;
                     } else {
                         if (order[id][current.type]) {
-                            const real_id = order[id][current.type].filter(v => v.amount > 0);
+                            const real_id = order[id][current.type].filter(v => v.amount > 0 && v.code);
                             const real_delete = index => {
+                                let is_error = false;
                                 if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
                                     return Promise.resolve(availableMargin);
                                 }
-                                return userRest.cancelOrder(real_id[index].id).then(() => {
-                                    availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                    if (availableMargin <= needTrans && current.clear !== true) {
-                                        availableMargin = needTrans;
+                                return userRest.cancelOrder(real_id[index].id).catch(err => {
+                                    is_error = true;
+                                    sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
+                                    handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
+                                }).then(() => {
+                                    if (!is_error) {
+                                        availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                        if (availableMargin <= needTrans && current.clear !== true) {
+                                            availableMargin = needTrans;
+                                        }
                                     }
                                     return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1))
                                 });
@@ -1408,12 +1425,15 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         console.log(item);
                         const cancelOrder = rest => {
                             if (order[id][current.type]) {
-                                const real_id = order[id][current.type].filter(v => v.symbol === item.index);
+                                const real_id = order[id][current.type].filter(v => (v.symbol === item.index && v.code));
                                 const real_delete = index => {
                                     if (index >= real_id.length) {
                                         return rest ? rest() : Promise.resolve();
                                     }
-                                    return userRest.cancelOrder(real_id[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1)));
+                                    return userRest.cancelOrder(real_id[index].id).catch(err => {
+                                        sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1)));
                                 }
                                 return real_delete(0);
                             } else {
@@ -1421,7 +1441,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                         }
                         const startStatus = () => {
-                            let newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+                            let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                             let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && +priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= checkMid && +priceData[item.index].lastPrice > checkMid))) {
                                 item.newMid.pop();
@@ -1432,10 +1452,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 } else {
                                     item.previous.time = 0;
                                 }
-                                newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+                                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
-                            let suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -1446,8 +1466,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                                 item.previous.time = 0;
                                 item.newMid.push(suggestion.newMid);
-                                newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-                                suggestion = stockProcess(+priceData[item.index].lastPrice, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+                                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             console.log(suggestion);
                             let count = 0;
@@ -1561,7 +1581,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             amount: suggestion.bCount,
                                             price: suggestion.buy,
                                         }, userRest);
-                                        return or1.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                        return or1.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                             let isExist = false;
                                             for (let i = 0; i < order[id][current.type].length; i++) {
                                                 if (or1[0].id === order[id][current.type][i].id) {

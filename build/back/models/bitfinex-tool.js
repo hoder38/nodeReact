@@ -1357,7 +1357,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             newOffer(current.riskLimit);
             mergeOffer();
             var cancelOffer = function cancelOffer(index) {
-                return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).then(function () {
+                return index >= needDelete.length ? _promise2.default.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(function (err) {
+                    (0, _sendWs2.default)(id + ' ' + needDelete[index].id + ' cancelFundingOffer Error: ' + (err.message || err.msg), 0, 0, true);
+                    (0, _utility.handleError)(err, id + ' ' + needDelete[index].id + ' cancelFundingOffer Error');
+                }).then(function () {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
@@ -1479,30 +1482,37 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         //close offer
                         if (offer[id][current.type]) {
                             var _ret4 = function () {
-                                var cancelOffer = function cancelOffer(index) {
-                                    if (index >= offer[id][current.type].length || availableMargin >= needTrans) {
+                                var real_id = offer[id][current.type].filter(function (v) {
+                                    return o.risk !== undefined;
+                                });
+                                var real_delete = function real_delete(index) {
+                                    var is_error = false;
+                                    if (index >= real_id.length || availableMargin >= needTrans) {
                                         return _promise2.default.resolve(availableMargin);
                                     } else {
-                                        if (offer[id][current.type][index].risk === undefined) {
-                                            return cancelOffer(index + 1);
-                                        }
-                                        availableMargin = availableMargin + offer[id][current.type][index].amount;
-                                        if (availableMargin >= needTrans) {
-                                            availableMargin = needTrans;
-                                        }
-                                        return userRest.cancelFundingOffer(offer[id][current.type][index].id).then(function () {
+                                        return userRest.cancelFundingOffer(offer[id][current.type][index].id).catch(function (err) {
+                                            is_error = true;
+                                            (0, _sendWs2.default)(id + ' ' + offer[id][current.type][index].id + ' cancelFundingOffer Error: ' + (err.message || err.msg), 0, 0, true);
+                                            (0, _utility.handleError)(err, id + ' ' + offer[id][current.type][index].id + ' cancelFundingOffer Error');
+                                        }).then(function () {
+                                            if (!is_error) {
+                                                availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                                if (availableMargin >= needTrans) {
+                                                    availableMargin = needTrans;
+                                                }
+                                            }
                                             return new _promise2.default(function (resolve, reject) {
                                                 return setTimeout(function () {
                                                     return resolve();
                                                 }, 3000);
                                             }).then(function () {
-                                                return cancelOffer(index + 1);
+                                                return real_delete(index + 1);
                                             });
                                         });
                                     }
                                 };
                                 return {
-                                    v: cancelOffer(0)
+                                    v: real_delete(0)
                                 };
                             }();
 
@@ -1533,16 +1543,23 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         if (order[id][current.type]) {
                             var _ret5 = function () {
                                 var real_id = order[id][current.type].filter(function (v) {
-                                    return v.amount > 0;
+                                    return v.amount > 0 && v.code;
                                 });
                                 var real_delete = function real_delete(index) {
+                                    var is_error = false;
                                     if (index >= real_id.length || availableMargin <= needTrans && current.clear !== true) {
                                         return _promise2.default.resolve(availableMargin);
                                     }
-                                    return userRest.cancelOrder(real_id[index].id).then(function () {
-                                        availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                        if (availableMargin <= needTrans && current.clear !== true) {
-                                            availableMargin = needTrans;
+                                    return userRest.cancelOrder(real_id[index].id).catch(function (err) {
+                                        is_error = true;
+                                        (0, _sendWs2.default)(id + ' ' + real_id[index].id + ' cancelOrder Error: ' + (err.message || err.msg), 0, 0, true);
+                                        (0, _utility.handleError)(err, id + ' ' + real_id[index].id + ' cancelOrder Error');
+                                    }).then(function () {
+                                        if (!is_error) {
+                                            availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                            if (availableMargin <= needTrans && current.clear !== true) {
+                                                availableMargin = needTrans;
+                                            }
                                         }
                                         return new _promise2.default(function (resolve, reject) {
                                             return setTimeout(function () {
@@ -1630,13 +1647,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 if (order[id][current.type]) {
                                     var _ret7 = function () {
                                         var real_id = order[id][current.type].filter(function (v) {
-                                            return v.symbol === item.index;
+                                            return v.symbol === item.index && v.code;
                                         });
                                         var real_delete = function real_delete(index) {
                                             if (index >= real_id.length) {
                                                 return rest ? rest() : _promise2.default.resolve();
                                             }
-                                            return userRest.cancelOrder(real_id[index].id).then(function () {
+                                            return userRest.cancelOrder(real_id[index].id).catch(function (err) {
+                                                (0, _sendWs2.default)(id + ' ' + real_id[index].id + ' cancelOrder Error: ' + (err.message || err.msg), 0, 0, true);
+                                                (0, _utility.handleError)(err, id + ' ' + real_id[index].id + ' cancelOrder Error');
+                                            }).then(function () {
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
                                                         return resolve();
@@ -1657,9 +1677,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 }
                             };
                             var startStatus = function startStatus() {
-                                var newArr = item.web.map(function (v) {
+                                var newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                                     return v * item.newMid[item.newMid.length - 1] / item.mid;
-                                });
+                                }) : item.web;
                                 var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                                 while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && +priceData[item.index].lastPrice < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && +priceData[item.index].lastPrice > checkMid)) {
                                     item.newMid.pop();
@@ -1670,12 +1690,12 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     } else {
                                         item.previous.time = 0;
                                     }
-                                    newArr = item.web.map(function (v) {
+                                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                                         return v * item.newMid[item.newMid.length - 1] / item.mid;
-                                    });
+                                    }) : item.web;
                                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                                 }
-                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 while (suggestion.resetWeb) {
                                     if (item.newMid.length === 0) {
                                         item.tmpPT = {
@@ -1686,10 +1706,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }
                                     item.previous.time = 0;
                                     item.newMid.push(suggestion.newMid);
-                                    newArr = item.web.map(function (v) {
+                                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                                         return v * item.newMid[item.newMid.length - 1] / item.mid;
-                                    });
-                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, item.newMid.length > 0 ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                    }) : item.web;
+                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 }
                                 console.log(suggestion);
                                 var count = 0;

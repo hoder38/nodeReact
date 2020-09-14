@@ -4981,7 +4981,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         const item = items[index];
         console.log(item);
         //new mid
-        let newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+        let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
         let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && price < checkMid) || (item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid))) {
             item.newMid.pop();
@@ -4992,10 +4992,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             } else {
                 item.previous.time = 0;
             }
-            newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
+            newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
             checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         }
-        let suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
+        let suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
         while(suggestion.resetWeb) {
             if (item.newMid.length === 0) {
                 item.tmpPT = {
@@ -5006,8 +5006,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             }
             item.previous.time = 0;
             item.newMid.push(suggestion.newMid);
-            newArr = item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid);
-            suggestion = stockProcess(price, (item.newMid.length > 0) ? newArr : item.web, item.times, item.previous, item.amount, item.count, item.wType);
+            newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+            suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
         }
         let count = 0;
         let amount = item.amount;
@@ -5271,6 +5271,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 }
             }
         }
+        console.log(`newMid ${newMid} ${price}`)
         return {
             resetWeb: 1,
             newMid,
@@ -5644,7 +5645,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     let sellTrade = 0;
     let stopLoss = 0;
     let newMid = [];
-    let newArr = [];
     let price = 0;
     //console.log('stock test');
     //console.log(amount);
@@ -5785,6 +5785,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             }
             let suggest = null;
             let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
+            let newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
             while ((newMid.length > 0) && ((newMid[newMid.length - 1] > checkMid && price < checkMid) || (newMid[newMid.length - 1] <= checkMid && price > checkMid))) {
                 newMid.pop();
                 if (newMid.length === 0 && now - tmpPT.time < rinterval) {
@@ -5795,10 +5796,10 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     priviousTrade.time = 0;
                 }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
-                newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
+                newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
                 checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             }
-            suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - (i * tinterval));
+            suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - (i * tinterval));
             while(suggest.resetWeb) {
                 if (newMid.length === 0) {
                     tmpPT = {
@@ -5814,8 +5815,8 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     stopLoss++;
                 }
                 newMid.push(suggest.newMid);
-                newArr = web.arr.map(v => v * newMid[newMid.length - 1] / web.mid);
-                suggest = stockProcess(price, (newMid.length > 0) ? newArr : web.arr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - (i * tinterval));
+                newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
+                suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - (i * tinterval));
                 //console.log(price);
                 //console.log(suggest);
                 //console.log(newArr);
