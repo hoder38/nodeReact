@@ -206,9 +206,9 @@ rl.on('line', line => {
         console.log('randomsend');
         return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         case 'resetnewmid':
-        return Mongo('update', TOTALDB, {}, {$pull: {newMid: {$exist: true}}}).then(count => {
+        return Mongo('update', TOTALDB, {newMid: {$exists: true}}, {$set: {newMid: []}}, {multi: true}).then(count => {
             console.log(count);
-            return Mongo('find', TOTALDB, {}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+            return Mongo('find', TOTALDB, {newMid: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
         })
         default:
         console.log('help:');

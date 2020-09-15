@@ -354,9 +354,9 @@ rl.on('line', function (line) {
                 return (0, _utility.handleError)(err, 'Random send');
             });
         case 'resetnewmid':
-            return (0, _mongoTool2.default)('update', _constants.TOTALDB, {}, { $pull: { newMid: { $exist: true } } }).then(function (count) {
+            return (0, _mongoTool2.default)('update', _constants.TOTALDB, { newMid: { $exists: true } }, { $set: { newMid: [] } }, { multi: true }).then(function (count) {
                 console.log(count);
-                return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
+                return (0, _mongoTool2.default)('find', _constants.TOTALDB, { newMid: { $exists: true } }).then(function (items) {
                     return console.log(items);
                 }).catch(function (err) {
                     return (0, _utility.handleError)(err, 'Reset new mid');
