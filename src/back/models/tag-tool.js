@@ -1013,7 +1013,7 @@ export default function process(collection) {
             if (!validId) {
                 return handleError(new HoError('parent is not vaild!!!'));
             }
-            return Mongo('find', `${collection}Dir` ,{_id: validId}, {limit: 1}).then(parents => {
+            return Mongo('find', `${collection}Dir`, {_id: validId}, {limit: 1}).then(parents => {
                 if (parents.length < 1) {
                     return handleError(new HoError('can not find dir'));
                 }

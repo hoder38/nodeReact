@@ -353,6 +353,15 @@ rl.on('line', function (line) {
             }).catch(function (err) {
                 return (0, _utility.handleError)(err, 'Random send');
             });
+        case 'resetnewmid':
+            return (0, _mongoTool2.default)('update', _constants.TOTALDB, {}, { $pull: { newMid: { $exist: true } } }).then(function (count) {
+                console.log(count);
+                return (0, _mongoTool2.default)('find', _constants.TOTALDB, {}).then(function (items) {
+                    return console.log(items);
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Reset new mid');
+                });
+            });
         default:
             console.log('help:');
             console.log('stock index mode');
@@ -365,5 +374,6 @@ rl.on('line', function (line) {
             console.log('dbrestore collection');
             console.log('randomsend list|edit|send [name:email|append]');
             console.log('testdata');
+            console.log('resetnewmid');
     }
 });

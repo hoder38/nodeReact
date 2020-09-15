@@ -45,15 +45,19 @@ export const calRate = curArr => {
             return Promise.resolve();
         } else {
             return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
-                return Redis('hgetall', `bitfinex: ${SUPPORT_PRICE[index]}`).then(item => {
-                    priceData[SUPPORT_PRICE[index]] = {
-                        dailyChange: ticker.dailyChangePerc * 100,
-                        lastPrice: ticker.lastPrice,
-                        time: Math.round(new Date().getTime() / 1000),
-                        str: item ? item.str : '',
-                    }
+                if (ticker && ticker.lastPrice) {
+                    return Redis('hgetall', `bitfinex: ${SUPPORT_PRICE[index]}`).then(item => {
+                        priceData[SUPPORT_PRICE[index]] = {
+                            dailyChange: ticker.dailyChangePerc * 100,
+                            lastPrice: ticker.lastPrice,
+                            time: Math.round(new Date().getTime() / 1000),
+                            str: item ? item.str : '',
+                        }
+                        return recurPrice(index + 1);
+                    });
+                } else {
                     return recurPrice(index + 1);
-                });
+                }
             });
         }
     }
@@ -1718,11 +1722,21 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                             return cancelOrder(sellAll);
                         } else if (item.ing === 1) {
-                            return startStatus();
+                            if (+priceData[item.index].lastPrice) {
+                                return startStatus();
+                            } else {
+                                return reucr_status(index + 1);
+                            }
                         } else {
                             current.enter_mid = current.enter_mid ? current.enter_mid : 0;
                             if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
-                                return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => startStatus());
+                                return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
+                                    if (+priceData[item.index].lastPrice) {
+                                        return startStatus();
+                                    } else {
+                                        return reucr_status(index + 1);
+                                    }
+                                });
                             } else {
                                 console.log('enter_mid');
                                 console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);

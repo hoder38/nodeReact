@@ -90,15 +90,19 @@ var calRate = exports.calRate = function calRate(curArr) {
             return _promise2.default.resolve();
         } else {
             return rest.ticker(_constants.SUPPORT_PRICE[index]).then(function (ticker) {
-                return (0, _redisTool2.default)('hgetall', 'bitfinex: ' + _constants.SUPPORT_PRICE[index]).then(function (item) {
-                    priceData[_constants.SUPPORT_PRICE[index]] = {
-                        dailyChange: ticker.dailyChangePerc * 100,
-                        lastPrice: ticker.lastPrice,
-                        time: Math.round(new Date().getTime() / 1000),
-                        str: item ? item.str : ''
-                    };
+                if (ticker && ticker.lastPrice) {
+                    return (0, _redisTool2.default)('hgetall', 'bitfinex: ' + _constants.SUPPORT_PRICE[index]).then(function (item) {
+                        priceData[_constants.SUPPORT_PRICE[index]] = {
+                            dailyChange: ticker.dailyChangePerc * 100,
+                            lastPrice: ticker.lastPrice,
+                            time: Math.round(new Date().getTime() / 1000),
+                            str: item ? item.str : ''
+                        };
+                        return recurPrice(index + 1);
+                    });
+                } else {
                     return recurPrice(index + 1);
-                });
+                }
             });
         }
     };
@@ -2002,15 +2006,25 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     v: cancelOrder(sellAll)
                                 };
                             } else if (item.ing === 1) {
-                                return {
-                                    v: startStatus()
-                                };
+                                if (+priceData[item.index].lastPrice) {
+                                    return {
+                                        v: startStatus()
+                                    };
+                                } else {
+                                    return {
+                                        v: reucr_status(index + 1)
+                                    };
+                                }
                             } else {
                                 current.enter_mid = current.enter_mid ? current.enter_mid : 0;
                                 if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
                                     return {
                                         v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { ing: 1 } }).then(function (result) {
-                                            return startStatus();
+                                            if (+priceData[item.index].lastPrice) {
+                                                return startStatus();
+                                            } else {
+                                                return reucr_status(index + 1);
+                                            }
                                         })
                                     };
                                 } else {

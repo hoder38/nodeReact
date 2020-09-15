@@ -1,4 +1,4 @@
-import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT } from '../constants'
+import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants'
 import { ENV_TYPE } from '../../../ver'
 import { BACKUP_PATH } from '../config'
 import { createInterface } from 'readline'
@@ -205,6 +205,11 @@ rl.on('line', line => {
         case 'randomsend':
         console.log('randomsend');
         return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
+        case 'resetnewmid':
+        return Mongo('update', TOTALDB, {}, {$pull: {newMid: {$exist: true}}}).then(count => {
+            console.log(count);
+            return Mongo('find', TOTALDB, {}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+        })
         default:
         console.log('help:');
         console.log('stock index mode');
@@ -217,5 +222,6 @@ rl.on('line', line => {
         console.log('dbrestore collection');
         console.log('randomsend list|edit|send [name:email|append]');
         console.log('testdata');
+        console.log('resetnewmid');
     }
 });
