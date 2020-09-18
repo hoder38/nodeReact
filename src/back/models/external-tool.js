@@ -2768,10 +2768,23 @@ export default {
             case 'dm5':
             url = `http://www.dm5.com/${id}/`;
             return Api('url', url, {is_dm5: true,}).then(raw_data => {
-                const info = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                const divs = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div');
+                let info = null;
+                for (let i = 0; i < divs.length; i++) {
+                    if (divs[i].attribs.class === '') {
+                        info = findTag(findTag(divs[i], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                        break;
+                    }
+                }
+                if (!info) {
+                    return handleError(new HoError('dm5 misses info'));
+                }
                 let setTag = new Set(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
                 findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(a)[0])));
-                findTag(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(findTag(a, 'span')[0])[0])));
+                const block = findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1];
+                if (block) {
+                    findTag(block, 'a').forEach(a => setTag.add(opencc.convertSync(findTag(findTag(a, 'span')[0])[0])));
+                }
                 let newTag = new Set();
                 setTag.forEach(i => newTag.add(DM5_ORI_LIST.includes(i) ? DM5_CH_LIST[DM5_ORI_LIST.indexOf(i)] : i));
                 return [

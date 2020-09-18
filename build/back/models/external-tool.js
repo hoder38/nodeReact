@@ -3956,14 +3956,27 @@ exports.default = {
             case 'dm5':
                 url = 'http://www.dm5.com/' + id + '/';
                 return (0, _apiTool2.default)('url', url, { is_dm5: true }).then(function (raw_data) {
-                    var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                    var divs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div');
+                    var info = null;
+                    for (var _i7 = 0; _i7 < divs.length; _i7++) {
+                        if (divs[_i7].attribs.class === '') {
+                            info = (0, _utility.findTag)((0, _utility.findTag)(divs[_i7], 'section', 'banner_detail')[0], 'div', 'banner_detail_form')[0];
+                            break;
+                        }
+                    }
+                    if (!info) {
+                        return (0, _utility.handleError)(new _utility.HoError('dm5 misses info'));
+                    }
                     var setTag = new _set2.default(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(function (a) {
                         return setTag.add(opencc.convertSync((0, _utility.findTag)(a)[0]));
                     });
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1], 'a').forEach(function (a) {
-                        return setTag.add(opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[0])[0]));
-                    });
+                    var block = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1];
+                    if (block) {
+                        (0, _utility.findTag)(block, 'a').forEach(function (a) {
+                            return setTag.add(opencc.convertSync((0, _utility.findTag)((0, _utility.findTag)(a, 'span')[0])[0]));
+                        });
+                    }
                     var newTag = new _set2.default();
                     setTag.forEach(function (i) {
                         return newTag.add(_constants.DM5_ORI_LIST.includes(i) ? _constants.DM5_CH_LIST[_constants.DM5_ORI_LIST.indexOf(i)] : i);
