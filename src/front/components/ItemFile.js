@@ -72,7 +72,7 @@ const ItemFile = React.createClass({
                 url = `https://yts.ag/movie/${extId}`
                 break
                 case 'kub_':
-                url = `http://www.iwatchme2u.com/vod-read-id-${extId}.html`
+                url = `http://www.99kubo.tv/vod-read-id-${extId}.html`
                 break
                 case 'mad_':
                 url = `http://www.dm5.com/${extId}/`

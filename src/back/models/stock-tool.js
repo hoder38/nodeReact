@@ -8,7 +8,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
-import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString } from '../util/utility'
+import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility'
 import { getExtname } from '../util/mime'
 import sendWs from '../util/sendWs'
 
@@ -5228,11 +5228,27 @@ export const getStockListV2 = (type, year, month) => {
             console.log(stock_list);
             return stock_list;
         });
+        /*case 'usse':
+        const list = ['dowjones', 'nasdaq100', 'sp500'];
+        return Api('url', `https://www.slickcharts.com/${list[0]}`).then(raw_data => {
+            const stock_list = [];
+            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                const index = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
+                const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                stock_list.push({
+                    index,
+                    tag: [name, list[0] === 'dowjones' ? 'dow jones' : list[0] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                });
+            });
+            console.log(stock_list);
+            return stock_list;
+        });
+        break;*/
         default:
         return handleError(new HoError('stock type unknown!!!'));
     }
 }
-
+//getStockListV2('usse');
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pAmount, pCount, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
@@ -5353,8 +5369,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            nowSP = previousP;
-            sP = pP;
+            nowSP = previousP < nowSP ? previousP : nowSP;
+            sP = pP < sP ? pP : sP;
         }
         if (previous.price < price) {
             let previousP = 0;
@@ -5396,8 +5412,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP--;
                 }
             }
-            nowBP = previousP;
-            bP = pP;
+            nowBP = previousP > nowBP ? previousP : nowBP;
+            bP = pP > bP ? pP : bP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
@@ -5414,14 +5430,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 }*/
             } else {
                 /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                    bAdd++;
+                    bAdd--;
                 } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
                 } /*else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                    sAdd++;
+                    sAdd--;
                 }*/
             }
             //console.log(previous);

@@ -438,7 +438,7 @@ export default function process(collection) {
             if (search) {
                 query_term = a18 ? null : query_term;
                 if (query_term) {
-                    const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${query_term}`;
+                    const url = `http://www.dm5.com/search.ashx?d=1549960254987&language=1&t=${encodeURIComponent(query_term)}`;
                     console.log(url);
                     return url;
                 } else {
@@ -503,8 +503,11 @@ export default function process(collection) {
                 }
             });
             if (type) {
-                const order = (sortName === 'mtime') ? 'addtime' : 'hits_month';
-                const url = searchWord ? `http://www.iwatchme2u.com/vod-search-wd-${searchWord}-p-${page}.html` : `http://www.iwatchme2u.com/list-select-id-${type}-cid--type--area-${country}-year-${year}-star--state--order-${order}-p-${page}.html`
+                //const order = (sortName === 'mtime') ? 'addtime' : 'hits_month';
+                //const url = searchWord ? `http://www.iwatchme2u.com/vod-search-wd-${searchWord}-p-${page}.html` : `http://www.iwatchme2u.com/list-select-id-${type}-cid--type--area-${country}-year-${year}-star--state--order-${order}-p-${page}.html`
+                const order = (sortName === 'mtime') ? 'vod_addtime' : 'vod_hits_month';
+                const sOrder = (sortName === 'mtime') ? 1 : 2;
+                const url = searchWord ? `http://www.99kubo.tv/index.php?s=Vod-innersearch-q-${encodeURIComponent(searchWord)}-order-${sOrder}-page-${page}` : `http://www.99kubo.tv/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
                 console.log(url);
                 return url;
             } else {

@@ -452,7 +452,173 @@ export default {
                 });
             }
             case 'kubo':
-            return Api('url', url, {referer: 'http://www.iwatchme2u.com/',}).then(raw_data => {
+            return Api('url', url, {referer: 'http://www.99kubo.tv/',}).then(raw_data => {
+                const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                const main = findTag(body, 'div', 'main')[0];
+                if (main) {
+                    const type_id = url.match(/vod-search-id-(\d+)/);
+                    if (!type_id) {
+                        return handleError(new HoError('unknown kubo type'));
+                    }
+                    return findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'list')[0], 'div', 'listlf')[0], 'ul')[0], 'li').map(l => {
+                        const a = findTag(l, 'a')[0];
+                        const img = findTag(a, 'img')[0];
+                        let tags = new Set();
+                        if (type_id[1] === '1') {
+                            tags = new Set(['電影', 'movie']);
+                        } else if (type_id[1] === '3') {
+                            tags = new Set(['動畫', 'animation']);
+                        } else {
+                            tags = new Set(['電視劇', 'tv show']);
+                            if (type_id[1] === '41') {
+                                tags.add('綜藝節目');
+                            }
+                        }
+                        let count = 0;
+                        let date = '1970-01-01';
+                        findTag(l, 'p').forEach(p => {
+                            const t = findTag(p)[0];
+                            if (t) {
+                                if (t === '主演：') {
+                                    findTag(p, 'a').forEach(b => tags.add(findTag(b)[0]));
+                                } else {
+                                    let match = t.match(/^地區\/年份：([^\/]+)\/(\d+)$/);
+                                    if (match) {
+                                        tags.add(match[1]).add(match[2]);
+                                    } else {
+                                        match = t.match(/^月熱度：(\d+)/);
+                                        if (match) {
+                                            count = Number(match[1]);
+                                        } else {
+                                            match = t.match(/^更新：(\d\d\d\d\-\d\d\-\d\d)/);
+                                            if (match) {
+                                                date = match[1];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        return {
+                            name: opencc.convertSync(img.attribs.alt),
+                            id: a.attribs.href.match(/\d+/)[0],
+                            thumb: img.attribs['data-original'],
+                            tags,
+                            count,
+                            date,
+                        };
+                    });
+                } else {
+                    return findTag(findTag(findTag(findTag(findTag(findTag(findTag(body, 'div')[0], 'div', 'wrapper_wrapper')[0], 'div', 'container')[0], 'div', 'content_left')[0], 'div', 'ires')[0], 'ol')[0], 'li', 'g').map(g => {
+                        const tr = findTag(findTag(g, 'table')[0], 'tr')[0];
+                        const a = findTag(findTag(findTag(tr, 'td')[0], 'div')[0], 'a')[0];
+                        const td = findTag(tr, 'td')[1];
+                        const a1 = findTag(findTag(td, 'h3')[0], 'a')[0];
+                        let name = '';
+                        a1.children.forEach(c => {
+                            if (c.data) {
+                                name = `${name}${c.data}`;
+                            } else {
+                                const t = findTag(c)[0];
+                                name = t ? `${name}${t}` : `${name}${findTag(findTag(c, 'font')[0])[0]}`;
+                            }
+                        });
+                        name = name.match(/^(.*)-([^\-]+)?$/);
+                        let count = 0;
+                        let date = '1970-01-01';
+                        let tags = new Set();
+                        if (name[2]) {
+                            tags.add(normalize(name[2]));
+                            for (let i in KUBO_TYPE) {
+                                const index = KUBO_TYPE[i].indexOf(name[2]);
+                                if (index !== -1) {
+                                    if (i === '0') {
+                                        tags.add('movie').add('電影');
+                                        switch (index) {
+                                            case 0:
+                                            tags.add('action').add('動作');
+                                            break;
+                                            case 1:
+                                            tags.add('comedy').add('喜劇');
+                                            break;
+                                            case 2:
+                                            tags.add('romance').add('浪漫');
+                                            break;
+                                            case 3:
+                                            tags.add('sci-fi').add('科幻');
+                                            break;
+                                            case 4:
+                                            tags.add('horror').add('恐怖');
+                                            break;
+                                            case 5:
+                                            tags.add('drama').add('劇情');
+                                            break;
+                                            case 6:
+                                            tags.add('war').add('戰爭');
+                                            break;
+                                            case 7:
+                                            tags.add('animation').add('動畫');
+                                            break;
+                                        }
+                                    } else if (i === '1') {
+                                        tags.add('tv show').add('電視劇');
+                                    } else if (i === '2') {
+                                        tags.add('tv show').add('電視劇').add('綜藝節目');
+                                    } else if (i === '3') {
+                                        tags.add('animation').add('動畫');
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        const div = findTag(td, 'div')[0];
+                        const span = findTag(findTag(div, 'div', 'kv')[0], 'span')[0];
+                        for (let t of findTag(span)) {
+                            const match = t.match(/月熱度:(\d+)/);
+                            if (match) {
+                                count = Number(match[1]);
+                                break;
+                            }
+                        }
+                        findTag(span, 'a').forEach(s => {
+                            if (findTag(s)[0]) {
+                                tags.add(normalize(findTag(s)[0]));
+                            }
+                        });
+                        findTag(div, 'div', 'osl').forEach(o => {
+                            const ot = findTag(o)[0];
+                            if (ot) {
+                                const matcho = ot.match(/别名:(.*)/);
+                                if (matcho) {
+                                    tags.add(normalize(matcho[1]));
+                                }
+                            }
+                            findTag(o, 'a').forEach(s => {
+                                const st = findTag(s)[0];
+                                if (st) {
+                                    tags.add(normalize(findTag(s)[0]));
+                                }
+                            });
+                        });
+                        const cite = findTag(span, 'cite')[0];
+                        if (cite) {
+                            const matchDate = findTag(cite)[0].match(/(\d\d\d\d)年(\d\d)月(\d\d)日/);
+                            if (matchDate) {
+                                date = `${matchDate[1]}-${matchDate[2]}-${matchDate[3]}`;
+                            }
+                        }
+                        return {
+                            id: a.attribs.href.match(/\d+/)[0],
+                            name: opencc.convertSync(name[1]),
+                            thumb: findTag(a, 'img')[0].attribs.src,
+                            date,
+                            tags,
+                            count,
+                        }
+                    });
+                }
+            });
+            /*return Api('url', url, {referer: 'http://www.99kubo.tv/',}).then(raw_data => {
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                 if (body.attribs.class === 'vod-type') {
                     const type_id = url.match(/list-select-id-(\d+)/);
@@ -526,7 +692,7 @@ export default {
                         }
                     });
                 }
-            });
+            });*/
             case 'dm5':
             return Api('url', url, {
                 referer: 'http://www.dm5.com/',
@@ -2196,6 +2362,117 @@ export default {
             case 'kubo':
             const kuboGetlist = () => Api('url', url).then(raw_data => {
                 let list = [];
+                let is_end = false;
+                const main = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0];
+                for (let p of findTag(findTag(findTag(findTag(main, 'div', 'datal')[0], 'div', 'vmain')[0], 'div', 'vshow')[0], 'p')) {
+                    for (let pt of findTag(p)) {
+                        if (pt.match(/完結/)) {
+                            is_end = true;
+                            break;
+                        }
+                    }
+                    if (is_end) {
+                        break;
+                    }
+                }
+                let flvUrl = null;
+                let listY = [];
+                findTag(findTag(main, 'div', 'topRow')[0], 'div', 'hideCont').forEach(h => {
+                    let ul = findTag(findTag(findTag(findTag(h, 'ul')[0], 'div', 'vmain')[0], 'div', 'vpl')[0], 'ul')[0];
+                    const div = findTag(ul, 'div')[0];
+                    if (div) {
+                        ul = div;
+                    }
+                    for (let l of findTag(ul, 'li')) {
+                        const a = findTag(l, 'a')[0];
+                        list.push({
+                            name: opencc.convertSync(findTag(a)[0]),
+                            id: `kur_${new Buffer(a.attribs.href).toString('base64')}}`,
+                        });
+                        /*const a = findTag(l, 'a')[0];
+                        let urlMatch = addPre(a.attribs.href, 'http://www.99kubo.tv').match(/youtube\.php\?(.*)$/);
+                        if (urlMatch) {
+                            listY.push({
+                                name: findTag(a)[0],
+                                id: `kdy_${urlMatch[1]}`,
+                            });
+                        } else {
+                            if (a.attribs.href.match(/vod\-play\-id\-/)) {
+                                flvUrl = addPre(a.attribs.href, 'http://www.99kubo.tv');
+                                break;
+                            }
+                        }*/
+                    }
+                });
+                return [list, is_end];
+                /*return flvUrl ? Api('url', flvUrl).then(raw_data => {
+                    let ff_urls = '';
+                    const jM = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'playmar')[0], 'div', 'play')[0], 'div')[0], 'script')[0])[0].match(/^\s*var\s*ff_urls\s*=\s*['"](.*)['"];?\s*$/);
+                    if (jM) {
+                        ff_urls = getJson(jM[1].replace(/\\\"/g, '"'));
+                    }
+                    let list1 = [];
+                    let list2 = [];
+                    let lists = [];
+                    let listO = [];
+                    ff_urls.Data.forEach(f => {
+                        if (f.playname === 'bj58') {
+                            list = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        } else if (f.playname === 'bj') {
+                            list1 = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kyu_${p[1].match(/^(.*)_wd1$/)[1]}`,
+                            }));
+                        } else if (f.playname === 'bj2') {
+                            list2 = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        } else if (f.playname.match(/^bj/)) {
+                            lists = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        } else {
+                            listO = f.playurls.map(p => ({
+                                name: p[0],
+                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                            }));
+                        }
+                    });
+                    list = list.concat(listY);
+                    list = list.concat(list1);
+                    list = list.concat(list2);
+                    list = list.concat(lists);
+                    list = list.concat(listO);
+                    return [list, is_end];
+                }) : [listY, is_end];*/
+            });
+            return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
+                const sendList = (raw_list, is_end, etime) => {
+                    const choose = raw_list[index - 1];
+                    if (!choose) {
+                        return handleError(new HoError('cannot find external index'));
+                    }
+                    saveList(kuboGetlist, raw_list, is_end, etime);
+                    return [Object.assign({
+                        index,
+                        showId: index,
+                        id: choose.id,
+                        title: choose.name,
+                    }, choose.id.match(/^(kdy|kyu)_/) ? {
+                        index: (index * 1000 + sub_index) / 1000,
+                        showId: (index * 1000 + sub_index) / 1000,
+                        id: `${choose.id}_${sub_index}`,
+                    } : {}), is_end, raw_list.length];
+                };
+                return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : kuboGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
+            });
+            /*const kuboGetlist = () => Api('url', url).then(raw_data => {
+                let list = [];
                 const container = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container ff-bg')[1];
                 const is_end = findTag(findTag(findTag(findTag(findTag(findTag(findTag(container, 'div', 'row')[0], 'div', 'col-md-8 col-xs-12')[0], 'div', 'media')[0], 'div', 'media-body')[0], 'h4')[0], 'small', 'text-red')[0])[0].includes('全') ? true : false;
                 findTag(findTag(container, 'div', 'tab-content ff-playurl-tab')[0], 'ul').forEach(u => findTag(u, 'li').forEach(l => {
@@ -2226,7 +2503,7 @@ export default {
                     } : {}), is_end, raw_list.length];
                 };
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : kuboGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
-            });
+            });*/
             case 'dm5':
             const madGetlist = () => Api('url', url, {
                 referer: 'http://www.dm5.com/',
@@ -2325,8 +2602,8 @@ export default {
                 });
             });
             case 'kubo':
-            url = `http://www.iwatchme2u.com/vod-read-id-${id}.html`
-            return Api('url', url, {referer: 'http://www.iwatchme2u.com/'}).then(raw_data => {
+            /*url = `http://www.99kubo.tv/vod-read-id-${id}.html`
+            return Api('url', url, {referer: 'http://www.99kubo.tv/'}).then(raw_data => {
                 const media = findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container ff-bg')[1], 'div', 'row')[0], 'div', 'col-md-8 col-xs-12')[0], 'div', 'media')[0]
                 const img = findTag(findTag(findTag(media, 'div', 'media-left')[0], 'a')[0], 'img')[0];
                 const mediaBody = findTag(media, 'div', 'media-body')[0];
@@ -2391,6 +2668,100 @@ export default {
                     new Set(),
                     'kubo',
                     img.attribs['data-original'],
+                    url,
+                ];
+            });*/
+            url = `http://www.99kubo.tv/vod-read-id-${id}.html`
+            return Api('url', url, {referer: 'http://www.99kubo.tv/'}).then(raw_data => {
+                const vmain = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main')[0], 'div', 'datal')[0], 'div', 'vmain')[0];
+                const img = findTag(findTag(vmain, 'div', 'vpic')[0], 'img')[0];
+                const name = img.attribs.alt;
+                const thumb = img.attribs.src;
+                let tags = new Set(['kubo', '酷播', '影片', 'video']);
+                findTag(findTag(vmain, 'div', 'vshow')[0], 'p').forEach(p => {
+                    const t = findTag(p)[0];
+                    if (t) {
+                        const match = findTag(p)[0].match(/^別名:(.*)$/);
+                        if (match) {
+                            match[1].split('/').forEach(m => {
+                                if (m){
+                                    tags.add(m);
+                                }
+                            });
+                        } else {
+                            if (t === '類型：') {
+                                findTag(p, 'a').forEach(a => {
+                                    if (a) {
+                                        tags.add(findTag(a)[0]);
+                                    }
+                                });
+                            } else if (t === '分類：') {
+                                findTag(p, 'font').forEach(a => {
+                                    if (a) {
+                                        tags.add(findTag(a)[0]);
+                                    }
+                                });
+                                const type = findTag(findTag(p, 'a')[0])[0];
+                                if (type) {
+                                    tags.add(type);
+                                    for (let i in KUBO_TYPE) {
+                                        const index = KUBO_TYPE[i].indexOf(type);
+                                        if (index !== -1) {
+                                            if (i === '0') {
+                                                tags.add('movie').add('電影');
+                                                switch (index) {
+                                                    case 0:
+                                                    tags.add('action').add('動作');
+                                                    break;
+                                                    case 1:
+                                                    tags.add('comedy').add('喜劇');
+                                                    break;
+                                                    case 2:
+                                                    tags.add('romance').add('浪漫');
+                                                    break;
+                                                    case 3:
+                                                    tags.add('sci-fi').add('科幻');
+                                                    break;
+                                                    case 4:
+                                                    tags.add('horror').add('恐怖');
+                                                    break;
+                                                    case 5:
+                                                    tags.add('drama').add('劇情');
+                                                    break;
+                                                    case 6:
+                                                    tags.add('war').add('戰爭');
+                                                    break;
+                                                    case 7:
+                                                    tags.add('animation').add('動畫');
+                                                    break;
+                                                }
+                                            } else if (i === '1') {
+                                                tags.add('tv show').add('電視劇');
+                                            } else if (i === '2') {
+                                                tags.add('tv show').add('電視劇').add('綜藝節目');
+                                            } else if (i === '3') {
+                                                tags.add('animation').add('動畫');
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                let newTag = new Set();
+                tags.forEach(t => {
+                    t = opencc.convertSync(t);
+                    const index = DM5_ORI_LIST.indexOf(t);
+                    newTag.add((index !== -1) ? DM5_CH_LIST[index] : t);
+                });
+                return [
+                    opencc.convertSync(img.attribs.alt),
+                    newTag,
+                    new Set(),
+                    'kubo',
+                    img.attribs.src,
                     url,
                 ];
             });

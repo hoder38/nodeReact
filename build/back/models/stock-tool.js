@@ -6225,11 +6225,27 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                 console.log(stock_list);
                 return stock_list;
             });
+        /*case 'usse':
+        const list = ['dowjones', 'nasdaq100', 'sp500'];
+        return Api('url', `https://www.slickcharts.com/${list[0]}`).then(raw_data => {
+            const stock_list = [];
+            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                const index = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
+                const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                stock_list.push({
+                    index,
+                    tag: [name, list[0] === 'dowjones' ? 'dow jones' : list[0] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                });
+            });
+            console.log(stock_list);
+            return stock_list;
+        });
+        break;*/
         default:
             return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
     }
 };
-
+//getStockListV2('usse');
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
     var priceTimes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : { buy: [], sell: [] };
@@ -6361,8 +6377,8 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     pP++;
                 }
             }
-            nowSP = previousP;
-            sP = pP;
+            nowSP = previousP < nowSP ? previousP : nowSP;
+            sP = pP < sP ? pP : sP;
         }
         if (previous.price < price) {
             var _previousP = 0;
@@ -6404,8 +6420,8 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     _pP--;
                 }
             }
-            nowBP = _previousP;
-            bP = _pP;
+            nowBP = _previousP > nowBP ? _previousP : nowBP;
+            bP = _pP > bP ? _pP : bP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
@@ -6422,14 +6438,14 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                   }*/
             } else {
                 /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                    bAdd++;
+                    bAdd--;
                 } else*/if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
                 } /*else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                    sAdd++;
+                    sAdd--;
                   }*/
             }
             //console.log(previous);
