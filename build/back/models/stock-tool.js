@@ -6367,6 +6367,18 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     is_sell = false;
                 }
             }
+            previousP = priceArray.length - 1;
+            pP = 8;
+            for (; previousP >= 0; previousP--) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
+                    break;
+                }
+                if (priceArray[previousP] < 0) {
+                    pP--;
+                }
+            }
+            nowBP = previousP > nowBP ? previousP : nowBP;
+            bP = pP > bP ? pP : bP;
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
@@ -6422,6 +6434,18 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
             nowBP = _previousP > nowBP ? _previousP : nowBP;
             bP = _pP > bP ? _pP : bP;
+            _previousP = 0;
+            _pP = 0;
+            for (; _previousP < priceArray.length; _previousP++) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
+                    break;
+                }
+                if (priceArray[_previousP] < 0) {
+                    _pP++;
+                }
+            }
+            nowSP = _previousP < nowSP ? _previousP : nowSP;
+            sP = _pP < sP ? _pP : sP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {

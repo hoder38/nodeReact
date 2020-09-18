@@ -5359,6 +5359,18 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                 }
             }
+            previousP = priceArray.length - 1;
+            pP = 8;
+            for (; previousP >= 0; previousP--) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
+                    break;
+                }
+                if (priceArray[previousP] < 0) {
+                    pP--;
+                }
+            }
+            nowBP = previousP > nowBP ? previousP : nowBP;
+            bP = pP > bP ? pP : bP;
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
@@ -5414,6 +5426,18 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             }
             nowBP = previousP > nowBP ? previousP : nowBP;
             bP = pP > bP ? pP : bP;
+            previousP = 0;
+            pP = 0;
+            for (; previousP < priceArray.length; previousP++) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
+                    break;
+                }
+                if (priceArray[previousP] < 0) {
+                    pP++;
+                }
+            }
+            nowSP = previousP < nowSP ? previousP : nowSP;
+            sP = pP < sP ? pP : sP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
