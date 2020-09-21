@@ -1989,7 +1989,7 @@ export default {
                     if (pair === false) {
                         return handleError(new HoError('Trade Pair is not valid'));
                     }
-                    const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d+?)([a|c]\d+\.?\d+?)?$/);
+                    const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
                     if (mPair) {
                         if (SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
                             rest_total = {

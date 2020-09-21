@@ -2319,7 +2319,7 @@ exports.default = {
                     if (pair === false) {
                         return (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'));
                     }
-                    var mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d+?)([a|c]\d+\.?\d+?)?$/);
+                    var mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
                     if (mPair) {
                         if (_constants.SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
                             rest_total = {
