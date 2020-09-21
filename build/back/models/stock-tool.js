@@ -2582,223 +2582,237 @@ exports.default = {
     getSingleStockV2: function getSingleStockV2(type, obj) {
         var stage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 
-        var index = obj.index;
-        var date = new Date();
-        var year = date.getFullYear();
-        var month = date.getMonth() + 1;
-        var reportType = 'C';
-        var quarter = 3;
-        if (month < 4) {
-            quarter = 4;
-            year--;
-        } else if (month < 7) {
-            quarter = 1;
-        } else if (month < 10) {
-            quarter = 2;
-        }
-        var latestQuarter = 0;
-        var latestYear = 0;
-        if (stage === 0) {
-            return (0, _utility.handleError)(new _utility.HoError('no finance data'));
-        } else {
-            var _ret3 = function () {
-                var id_db = null;
-                var normal_tags = [];
-                var not = 0;
-                var profit = 0;
-                var equity = 0;
-                var netValue = 0;
-                var dividends = 0;
-                var needDividends = false;
-                var final_stage = function final_stage(price) {
-                    return handleStockTagV2(type, index, obj.tag).then(function (_ref) {
-                        var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
-                            name = _ref2[0],
-                            tags = _ref2[1];
-
-                        var stock_default = [];
-                        var _iteratorNormalCompletion2 = true;
-                        var _didIteratorError2 = false;
-                        var _iteratorError2 = undefined;
-
-                        try {
-                            for (var _iterator2 = (0, _getIterator3.default)(tags), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                                var t = _step2.value;
-
-                                var normal = (0, _tagTool.normalize)(t);
-                                if (!(0, _tagTool.isDefaultTag)(normal)) {
-                                    if (normal_tags.indexOf(normal) === -1) {
-                                        normal_tags.push(normal);
-                                        stock_default.push(normal);
-                                    }
-                                }
-                            }
-                        } catch (err) {
-                            _didIteratorError2 = true;
-                            _iteratorError2 = err;
-                        } finally {
-                            try {
-                                if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                                    _iterator2.return();
-                                }
-                            } finally {
-                                if (_didIteratorError2) {
-                                    throw _iteratorError2;
-                                }
-                            }
-                        }
-
-                        var per = profit === 0 ? 0 : Math.round(price / profit * equity * 10) / 100;
-                        var pdr = dividends === 0 ? 0 : Math.round(price / dividends * equity * 10) / 100;
-                        var pbr = netValue === 0 ? 0 : Math.round(price / netValue * equity * 10) / 100;
-                        console.log(per);
-                        console.log(pdr);
-                        console.log(pbr);
-                        var retObj = function retObj() {
-                            return id_db ? (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id_db }, { $set: {
-                                    price: price,
-                                    profit: profit,
-                                    equity: equity,
-                                    dividends: dividends,
-                                    netValue: netValue,
-                                    per: per,
-                                    pdr: pdr,
-                                    pbr: pbr,
-                                    latestQuarter: latestQuarter,
-                                    latestYear: latestYear,
-                                    tags: normal_tags,
-                                    name: name,
-                                    stock_default: stock_default
-                                } }).then(function (item) {
-                                return id_db;
-                            }) : (0, _mongoTool2.default)('insert', _constants.STOCKDB, {
-                                type: type,
-                                index: index,
-                                name: name,
-                                price: price,
-                                profit: profit,
-                                equity: equity,
-                                dividends: dividends,
-                                netValue: netValue,
-                                per: per,
-                                pdr: pdr,
-                                pbr: pbr,
-                                latestQuarter: latestQuarter,
-                                latestYear: latestYear,
-                                //tags: normal_tags,
-                                important: 0,
-                                stock_default: stock_default
-                            }).then(function (item) {
-                                return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: item[0]._id }, { $set: { tags: normal_tags } }).then(function () {
-                                    return item[0]._id;
-                                });
-                            });
+        var _ret3 = function () {
+            switch (type) {
+                case 'twse':
+                    var index = obj.index;
+                    var date = new Date();
+                    var year = date.getFullYear();
+                    var month = date.getMonth() + 1;
+                    var reportType = 'C';
+                    var quarter = 3;
+                    if (month < 4) {
+                        quarter = 4;
+                        year--;
+                    } else if (month < 7) {
+                        quarter = 1;
+                    } else if (month < 10) {
+                        quarter = 2;
+                    }
+                    var latestQuarter = 0;
+                    var latestYear = 0;
+                    if (stage === 0) {
+                        return {
+                            v: (0, _utility.handleError)(new _utility.HoError('no finance data'))
                         };
-                        return retObj().then(function (id) {
-                            return {
-                                per: per,
-                                pdr: pdr,
-                                pbr: pbr,
-                                latestQuarter: latestQuarter,
-                                latestYear: latestYear,
-                                stockName: '' + type + index + name,
-                                id: id
-                            };
-                        });
-                    });
-                };
-                var wait_count = 0;
-                var recur_getTwseProfit = function recur_getTwseProfit() {
-                    console.log(year);
-                    console.log(quarter);
-                    return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=' + index + '&SYEAR=' + year + '&SSEASON=' + quarter + '&REPORT_ID=' + reportType).then(function (raw_data) {
-                        if ((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'h4')[0]) {
-                            if (latestQuarter) {
-                                return (0, _utility.handleError)(new _utility.HoError('too short stock data'));
-                            } else {
-                                not++;
-                                if (not > 8) {
-                                    return (0, _utility.handleError)(new _utility.HoError('cannot find stock data'));
-                                } else {
-                                    if (reportType === 'C') {
-                                        reportType = 'A';
-                                        return recur_getTwseProfit();
-                                    } else {
-                                        quarter--;
-                                        if (quarter < 1) {
-                                            quarter = 4;
-                                            year--;
+                    } else {
+                        var _ret4 = function () {
+                            var id_db = null;
+                            var normal_tags = [];
+                            var not = 0;
+                            var profit = 0;
+                            var equity = 0;
+                            var netValue = 0;
+                            var dividends = 0;
+                            var needDividends = false;
+                            var final_stage = function final_stage(price) {
+                                return handleStockTagV2(type, index, obj.tag).then(function (_ref) {
+                                    var _ref2 = (0, _slicedToArray3.default)(_ref, 2),
+                                        name = _ref2[0],
+                                        tags = _ref2[1];
+
+                                    var stock_default = [];
+                                    var _iteratorNormalCompletion2 = true;
+                                    var _didIteratorError2 = false;
+                                    var _iteratorError2 = undefined;
+
+                                    try {
+                                        for (var _iterator2 = (0, _getIterator3.default)(tags), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                                            var t = _step2.value;
+
+                                            var normal = (0, _tagTool.normalize)(t);
+                                            if (!(0, _tagTool.isDefaultTag)(normal)) {
+                                                if (normal_tags.indexOf(normal) === -1) {
+                                                    normal_tags.push(normal);
+                                                    stock_default.push(normal);
+                                                }
+                                            }
                                         }
-                                        reportType = 'C';
-                                        return recur_getTwseProfit();
-                                    }
-                                }
-                            }
-                        } else if (raw_data.match(/\>Overrun \- /)) {
-                            if (wait_count >= 10) {
-                                return (0, _utility.handleError)(new _utility.HoError('too much wait'));
-                            } else {
-                                wait_count++;
-                                console.log('wait');
-                                console.log(wait_count);
-                                return new _promise2.default(function (resolve, reject) {
-                                    return setTimeout(function () {
-                                        return resolve(recur_getTwseProfit());
-                                    }, 20000);
-                                });
-                            }
-                        } else {
-                            wait_count = 0;
-                            var profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
-                            if (!profitArr) {
-                                profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
-                                if (!profitArr) {
-                                    profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
-                                    if (!profitArr) {
-                                        profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
-                                        if (!profitArr) {
-                                            profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
-                                            if (!profitArr) {
-                                                return (0, _utility.handleError)(new _utility.HoError('cannot find stock profit'));
+                                    } catch (err) {
+                                        _didIteratorError2 = true;
+                                        _iteratorError2 = err;
+                                    } finally {
+                                        try {
+                                            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                                                _iterator2.return();
+                                            }
+                                        } finally {
+                                            if (_didIteratorError2) {
+                                                throw _iteratorError2;
                                             }
                                         }
                                     }
-                                }
-                            }
-                            if (!equity) {
-                                equity = getParameterV2(raw_data, 3100, '股本合計');
-                                if (!equity) {
-                                    equity = getParameterV2(raw_data, 31100, '股本合計');
-                                    if (!equity) {
-                                        equity = getParameterV2(raw_data, 31000, '股本合計');
-                                        if (!equity) {
-                                            return (0, _utility.handleError)(new _utility.HoError('cannot find stock equity'));
+
+                                    var per = profit === 0 ? 0 : Math.round(price / profit * equity * 10) / 100;
+                                    var pdr = dividends === 0 ? 0 : Math.round(price / dividends * equity * 10) / 100;
+                                    var pbr = netValue === 0 ? 0 : Math.round(price / netValue * equity * 10) / 100;
+                                    console.log(per);
+                                    console.log(pdr);
+                                    console.log(pbr);
+                                    var retObj = function retObj() {
+                                        return id_db ? (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id_db }, { $set: {
+                                                price: price,
+                                                profit: profit,
+                                                equity: equity,
+                                                dividends: dividends,
+                                                netValue: netValue,
+                                                per: per,
+                                                pdr: pdr,
+                                                pbr: pbr,
+                                                latestQuarter: latestQuarter,
+                                                latestYear: latestYear,
+                                                tags: normal_tags,
+                                                name: name,
+                                                stock_default: stock_default
+                                            } }).then(function (item) {
+                                            return id_db;
+                                        }) : (0, _mongoTool2.default)('insert', _constants.STOCKDB, {
+                                            type: type,
+                                            index: index,
+                                            name: name,
+                                            price: price,
+                                            profit: profit,
+                                            equity: equity,
+                                            dividends: dividends,
+                                            netValue: netValue,
+                                            per: per,
+                                            pdr: pdr,
+                                            pbr: pbr,
+                                            latestQuarter: latestQuarter,
+                                            latestYear: latestYear,
+                                            //tags: normal_tags,
+                                            important: 0,
+                                            stock_default: stock_default
+                                        }).then(function (item) {
+                                            return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: item[0]._id }, { $set: { tags: normal_tags } }).then(function () {
+                                                return item[0]._id;
+                                            });
+                                        });
+                                    };
+                                    return retObj().then(function (id) {
+                                        return {
+                                            per: per,
+                                            pdr: pdr,
+                                            pbr: pbr,
+                                            latestQuarter: latestQuarter,
+                                            latestYear: latestYear,
+                                            stockName: '' + type + index + name,
+                                            id: id
+                                        };
+                                    });
+                                });
+                            };
+                            var wait_count = 0;
+                            var recur_getTwseProfit = function recur_getTwseProfit() {
+                                console.log(year);
+                                console.log(quarter);
+                                return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=' + index + '&SYEAR=' + year + '&SSEASON=' + quarter + '&REPORT_ID=' + reportType).then(function (raw_data) {
+                                    if ((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'h4')[0]) {
+                                        if (latestQuarter) {
+                                            return (0, _utility.handleError)(new _utility.HoError('too short stock data'));
                                         } else {
-                                            equity = equity[0];
+                                            not++;
+                                            if (not > 8) {
+                                                return (0, _utility.handleError)(new _utility.HoError('cannot find stock data'));
+                                            } else {
+                                                if (reportType === 'C') {
+                                                    reportType = 'A';
+                                                    return recur_getTwseProfit();
+                                                } else {
+                                                    quarter--;
+                                                    if (quarter < 1) {
+                                                        quarter = 4;
+                                                        year--;
+                                                    }
+                                                    reportType = 'C';
+                                                    return recur_getTwseProfit();
+                                                }
+                                            }
+                                        }
+                                    } else if (raw_data.match(/\>Overrun \- /)) {
+                                        if (wait_count >= 10) {
+                                            return (0, _utility.handleError)(new _utility.HoError('too much wait'));
+                                        } else {
+                                            wait_count++;
+                                            console.log('wait');
+                                            console.log(wait_count);
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve(recur_getTwseProfit());
+                                                }, 20000);
+                                            });
                                         }
                                     } else {
-                                        equity = equity[0];
-                                    }
-                                } else {
-                                    equity = equity[0];
-                                }
-                            }
-                            if (!netValue) {
-                                netValue = getParameterV2(raw_data, '3XXX', '權益總計');
-                                if (!netValue) {
-                                    netValue = getParameterV2(raw_data, 30000, '權益總計');
-                                    if (!netValue) {
-                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
+                                        wait_count = 0;
+                                        var profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
+                                        if (!profitArr) {
+                                            profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
+                                            if (!profitArr) {
+                                                profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
+                                                if (!profitArr) {
+                                                    profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
+                                                    if (!profitArr) {
+                                                        profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
+                                                        if (!profitArr) {
+                                                            return (0, _utility.handleError)(new _utility.HoError('cannot find stock profit'));
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (!equity) {
+                                            equity = getParameterV2(raw_data, 3100, '股本合計');
+                                            if (!equity) {
+                                                equity = getParameterV2(raw_data, 31100, '股本合計');
+                                                if (!equity) {
+                                                    equity = getParameterV2(raw_data, 31000, '股本合計');
+                                                    if (!equity) {
+                                                        return (0, _utility.handleError)(new _utility.HoError('cannot find stock equity'));
+                                                    } else {
+                                                        equity = equity[0];
+                                                    }
+                                                } else {
+                                                    equity = equity[0];
+                                                }
+                                            } else {
+                                                equity = equity[0];
+                                            }
+                                        }
                                         if (!netValue) {
-                                            netValue = getParameterV2(raw_data, 39999, '權益總計');
+                                            netValue = getParameterV2(raw_data, '3XXX', '權益總計');
                                             if (!netValue) {
-                                                netValue = getParameterV2(raw_data, 39999, '權益總額');
+                                                netValue = getParameterV2(raw_data, 30000, '權益總計');
                                                 if (!netValue) {
-                                                    netValue = getParameterV2(raw_data, '3XXX', '權益總額');
+                                                    netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
                                                     if (!netValue) {
-                                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
+                                                        netValue = getParameterV2(raw_data, 39999, '權益總計');
                                                         if (!netValue) {
-                                                            return (0, _utility.handleError)(new _utility.HoError('cannot find stock net value'));
+                                                            netValue = getParameterV2(raw_data, 39999, '權益總額');
+                                                            if (!netValue) {
+                                                                netValue = getParameterV2(raw_data, '3XXX', '權益總額');
+                                                                if (!netValue) {
+                                                                    netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
+                                                                    if (!netValue) {
+                                                                        return (0, _utility.handleError)(new _utility.HoError('cannot find stock net value'));
+                                                                    } else {
+                                                                        netValue = netValue[0];
+                                                                    }
+                                                                } else {
+                                                                    netValue = netValue[0];
+                                                                }
+                                                            } else {
+                                                                netValue = netValue[0];
+                                                            }
                                                         } else {
                                                             netValue = netValue[0];
                                                         }
@@ -2811,110 +2825,114 @@ exports.default = {
                                             } else {
                                                 netValue = netValue[0];
                                             }
-                                        } else {
-                                            netValue = netValue[0];
                                         }
-                                    } else {
-                                        netValue = netValue[0];
-                                    }
-                                } else {
-                                    netValue = netValue[0];
-                                }
-                            }
-                            var matchDividends = getParameterV2(raw_data, 'C04500');
-                            if (matchDividends && matchDividends[0] > dividends) {
-                                dividends = matchDividends[0];
-                            }
-                            switch (quarter) {
-                                case 4:
-                                    profit += profitArr[0];
-                                    console.log(profit);
-                                    console.log(equity);
-                                    console.log(netValue);
-                                    console.log(dividends);
-                                    if (!latestQuarter) {
+                                        var matchDividends = getParameterV2(raw_data, 'C04500');
+                                        if (matchDividends && matchDividends[0] > dividends) {
+                                            dividends = matchDividends[0];
+                                        }
+                                        switch (quarter) {
+                                            case 4:
+                                                profit += profitArr[0];
+                                                console.log(profit);
+                                                console.log(equity);
+                                                console.log(netValue);
+                                                console.log(dividends);
+                                                if (!latestQuarter) {
+                                                    latestQuarter = quarter;
+                                                    latestYear = year;
+                                                }
+                                                if (dividends === 0) {
+                                                    quarter = 3;
+                                                    needDividends = true;
+                                                    return recur_getTwseProfit();
+                                                } else {
+                                                    return getStockPrice(type, index).then(function (price) {
+                                                        return final_stage(price);
+                                                    });
+                                                }
+                                                break;
+                                            case 3:
+                                            case 2:
+                                                if (needDividends) {
+                                                    console.log(profit);
+                                                    console.log(equity);
+                                                    console.log(netValue);
+                                                    console.log(dividends);
+                                                    return getStockPrice(type, index).then(function (price) {
+                                                        return final_stage(price);
+                                                    });
+                                                }
+                                                profit += profitArr[2];
+                                                profit -= profitArr[3];
+                                                break;
+                                            case 1:
+                                                profit += profitArr[0];
+                                                profit -= profitArr[1];
+                                                break;
+                                        }
                                         latestQuarter = quarter;
                                         latestYear = year;
-                                    }
-                                    if (dividends === 0) {
-                                        quarter = 3;
-                                        needDividends = true;
+                                        quarter = 4;
+                                        year--;
                                         return recur_getTwseProfit();
-                                    } else {
-                                        return getStockPrice(type, index).then(function (price) {
-                                            return final_stage(price);
-                                        });
                                     }
-                                    break;
-                                case 3:
-                                case 2:
-                                    if (needDividends) {
-                                        console.log(profit);
-                                        console.log(equity);
-                                        console.log(netValue);
-                                        console.log(dividends);
-                                        return getStockPrice(type, index).then(function (price) {
-                                            return final_stage(price);
-                                        });
-                                    }
-                                    profit += profitArr[2];
-                                    profit -= profitArr[3];
-                                    break;
-                                case 1:
-                                    profit += profitArr[0];
-                                    profit -= profitArr[1];
-                                    break;
-                            }
-                            latestQuarter = quarter;
-                            latestYear = year;
-                            quarter = 4;
-                            year--;
-                            return recur_getTwseProfit();
-                        }
-                    });
-                };
-                return {
-                    v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: type, index: index }, { limit: 1 }).then(function (items) {
-                        if (items.length > 0) {
-                            id_db = items[0]._id;
-                            var _iteratorNormalCompletion3 = true;
-                            var _didIteratorError3 = false;
-                            var _iteratorError3 = undefined;
+                                });
+                            };
+                            return {
+                                v: {
+                                    v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: type, index: index }, { limit: 1 }).then(function (items) {
+                                        if (items.length > 0) {
+                                            id_db = items[0]._id;
+                                            var _iteratorNormalCompletion3 = true;
+                                            var _didIteratorError3 = false;
+                                            var _iteratorError3 = undefined;
 
-                            try {
-                                for (var _iterator3 = (0, _getIterator3.default)(items[0].tags), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                                    var i = _step3.value;
+                                            try {
+                                                for (var _iterator3 = (0, _getIterator3.default)(items[0].tags), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                                                    var i = _step3.value;
 
-                                    if (items[0].stock_default) {
-                                        if (!items[0].stock_default.includes(i)) {
-                                            normal_tags.push(i);
+                                                    if (items[0].stock_default) {
+                                                        if (!items[0].stock_default.includes(i)) {
+                                                            normal_tags.push(i);
+                                                        }
+                                                    } else {
+                                                        normal_tags.push(i);
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                _didIteratorError3 = true;
+                                                _iteratorError3 = err;
+                                            } finally {
+                                                try {
+                                                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                                                        _iterator3.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError3) {
+                                                        throw _iteratorError3;
+                                                    }
+                                                }
+                                            }
                                         }
-                                    } else {
-                                        normal_tags.push(i);
-                                    }
+                                        return recur_getTwseProfit();
+                                    })
                                 }
-                            } catch (err) {
-                                _didIteratorError3 = true;
-                                _iteratorError3 = err;
-                            } finally {
-                                try {
-                                    if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                                        _iterator3.return();
-                                    }
-                                } finally {
-                                    if (_didIteratorError3) {
-                                        throw _iteratorError3;
-                                    }
-                                }
-                            }
-                        }
-                        return recur_getTwseProfit();
-                    })
-                };
-            }();
+                            };
+                        }();
 
-            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
-        }
+                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+                    }
+                    break;
+                case 'usse':
+                    break;
+                default:
+                    return {
+                        v: (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'))
+                    };
+            }
+        }();
+
+        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
     },
     getSingleStock: function getSingleStock(type, index) {
         var stage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
@@ -2986,7 +3004,7 @@ exports.default = {
                 };
             });
         } else {
-            var _ret4 = function () {
+            var _ret5 = function () {
                 var id_db = null;
                 var normal_tags = [];
                 var is_start = false;
@@ -3271,7 +3289,7 @@ exports.default = {
                 };
             }();
 
-            if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
         }
     },
     getStockPERV2: function getStockPERV2(id) {
@@ -3305,7 +3323,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
 
-            var _ret5 = function () {
+            var _ret6 = function () {
                 switch (items[0].type) {
                     case 'twse':
                         var count = 0;
@@ -3358,7 +3376,7 @@ exports.default = {
                 }
             }();
 
-            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -3485,7 +3503,7 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                var _ret6 = function () {
+                                var _ret7 = function () {
                                     var count = 0;
                                     var getTable = function getTable() {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
@@ -3570,7 +3588,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -3810,7 +3828,7 @@ exports.default = {
                                                 j = _temp12.start + 1;
                                             }
                                             if (testResult.length > 0) {
-                                                var _ret7 = function () {
+                                                var _ret8 = function () {
                                                     testResult.forEach(function (v, i) {
                                                         if (!year[i]) {
                                                             year[i] = [];
@@ -3861,7 +3879,7 @@ exports.default = {
                                                     }
                                                 }();
 
-                                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                                             } else {
                                                 str = 'no less than mid point';
                                             }
@@ -5405,14 +5423,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret8 = _loop(i);
+                            var _ret9 = _loop(i);
 
-                            switch (_ret8) {
+                            switch (_ret9) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                             }
                         }
                     } else {
@@ -5559,14 +5577,14 @@ exports.default = {
                         };
 
                         _loop4: for (var _i31 in items) {
-                            var _ret9 = _loop3(_i31);
+                            var _ret10 = _loop3(_i31);
 
-                            switch (_ret9) {
+                            switch (_ret10) {
                                 case 'break':
                                     break _loop4;
 
                                 default:
-                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                             }
                         }
 
@@ -5743,7 +5761,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret10 = function () {
+    var _ret11 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -5775,7 +5793,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -5843,7 +5861,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret11 = function () {
+            var _ret12 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -5890,7 +5908,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+            if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -6151,7 +6169,7 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    var _ret12 = function () {
+    var _ret13 = function () {
         switch (type) {
             case 'twse':
                 var quarter = 3;
@@ -6206,9 +6224,9 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                                 };
 
                                                 for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
-                                                    var _ret13 = _loop5(_i32);
+                                                    var _ret14 = _loop5(_i32);
 
-                                                    if (_ret13 === 'break') break;
+                                                    if (_ret14 === 'break') break;
                                                 }
                                                 if (!exist) {
                                                     stock_list.push({
@@ -6230,7 +6248,8 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                 };
                 break;
             case 'usse':
-                var list = ['dowjones', 'nasdaq100', 'sp500'];
+                //const list = ['dowjones', 'nasdaq100', 'sp500'];
+                var list = ['dowjones'];
                 var stock_list = [];
                 var recur_get = function recur_get(index) {
                     if (index >= list.length) {
@@ -6272,9 +6291,9 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         }
     }();
 
-    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
 };
-//getStockListV2('usse');
+
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
     var priceTimes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : { buy: [], sell: [] };

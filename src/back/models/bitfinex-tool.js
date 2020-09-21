@@ -2103,6 +2103,7 @@ export default {
                                                 times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
                                                 amount: item[index].amount + data['pair'][i].amount - item[index].orig,
                                                 orig: data['pair'][i].amount,
+                                                ing: (item[index].ing === 2) ? 0 : item[index].ing,
                                             }}).then(item => {
                                                 console.log(item);
                                                 return recur_update(index + 1);

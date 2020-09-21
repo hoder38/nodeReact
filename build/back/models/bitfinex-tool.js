@@ -2441,7 +2441,8 @@ exports.default = {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
                                                         times: Math.floor(item[index].times * data['pair'][_i20].amount / item[index].orig * 10000) / 10000,
                                                         amount: item[index].amount + data['pair'][_i20].amount - item[index].orig,
-                                                        orig: data['pair'][_i20].amount
+                                                        orig: data['pair'][_i20].amount,
+                                                        ing: item[index].ing === 2 ? 0 : item[index].ing
                                                     } }).then(function (item) {
                                                     console.log(item);
                                                     return recur_update(index + 1);

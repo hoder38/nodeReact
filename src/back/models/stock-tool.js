@@ -2437,184 +2437,189 @@ const getParameterV2 = (data, type, text = null) => {
 
 export default {
     getSingleStockV2: function(type, obj, stage=0) {
-        const index = obj.index;
-        const date = new Date();
-        let year = date.getFullYear();
-        let month = date.getMonth() + 1;
-        let reportType = 'C';
-        let quarter = 3;
-        if (month < 4) {
-            quarter = 4;
-            year--;
-        } else if (month < 7) {
-            quarter = 1;
-        } else if (month < 10) {
-            quarter = 2;
-        }
-        let latestQuarter = 0;
-        let latestYear = 0;
-        if (stage === 0) {
-            return handleError(new HoError('no finance data'));
-        } else {
-            let id_db = null;
-            let normal_tags = [];
-            let not = 0;
-            let profit = 0;
-            let equity = 0;
-            let netValue = 0;
-            let dividends = 0;
-            let needDividends = false;
-            const final_stage = price => {
-                return handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
-                    let stock_default = [];
-                    for (let t of tags) {
-                        const normal = normalize(t);
-                        if (!isDefaultTag(normal)) {
-                            if (normal_tags.indexOf(normal) === -1) {
-                                normal_tags.push(normal);
-                                stock_default.push(normal);
+        switch(type) {
+            case 'twse':
+            const index = obj.index;
+            const date = new Date();
+            let year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            let reportType = 'C';
+            let quarter = 3;
+            if (month < 4) {
+                quarter = 4;
+                year--;
+            } else if (month < 7) {
+                quarter = 1;
+            } else if (month < 10) {
+                quarter = 2;
+            }
+            let latestQuarter = 0;
+            let latestYear = 0;
+            if (stage === 0) {
+                return handleError(new HoError('no finance data'));
+            } else {
+                let id_db = null;
+                let normal_tags = [];
+                let not = 0;
+                let profit = 0;
+                let equity = 0;
+                let netValue = 0;
+                let dividends = 0;
+                let needDividends = false;
+                const final_stage = price => {
+                    return handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
+                        let stock_default = [];
+                        for (let t of tags) {
+                            const normal = normalize(t);
+                            if (!isDefaultTag(normal)) {
+                                if (normal_tags.indexOf(normal) === -1) {
+                                    normal_tags.push(normal);
+                                    stock_default.push(normal);
+                                }
                             }
                         }
-                    }
-                    const per = (profit === 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
-                    const pdr = (dividends === 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
-                    const pbr = (netValue === 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
-                    console.log(per);
-                    console.log(pdr);
-                    console.log(pbr);
-                    const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
-                        price,
-                        profit,
-                        equity,
-                        dividends,
-                        netValue,
-                        per,
-                        pdr,
-                        pbr,
-                        latestQuarter,
-                        latestYear,
-                        tags: normal_tags,
-                        name,
-                        stock_default,
-                    }}).then(item => id_db) : Mongo('insert', STOCKDB, {
-                        type,
-                        index,
-                        name,
-                        price,
-                        profit,
-                        equity,
-                        dividends,
-                        netValue,
-                        per,
-                        pdr,
-                        pbr,
-                        latestQuarter,
-                        latestYear,
-                        //tags: normal_tags,
-                        important: 0,
-                        stock_default,
-                    }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
-                    return retObj().then(id => {
-                        return {
+                        const per = (profit === 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
+                        const pdr = (dividends === 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
+                        const pbr = (netValue === 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
+                        console.log(per);
+                        console.log(pdr);
+                        console.log(pbr);
+                        const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
+                            price,
+                            profit,
+                            equity,
+                            dividends,
+                            netValue,
                             per,
                             pdr,
                             pbr,
                             latestQuarter,
                             latestYear,
-                            stockName: `${type}${index}${name}`,
-                            id,
-                        }
+                            tags: normal_tags,
+                            name,
+                            stock_default,
+                        }}).then(item => id_db) : Mongo('insert', STOCKDB, {
+                            type,
+                            index,
+                            name,
+                            price,
+                            profit,
+                            equity,
+                            dividends,
+                            netValue,
+                            per,
+                            pdr,
+                            pbr,
+                            latestQuarter,
+                            latestYear,
+                            //tags: normal_tags,
+                            important: 0,
+                            stock_default,
+                        }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
+                        return retObj().then(id => {
+                            return {
+                                per,
+                                pdr,
+                                pbr,
+                                latestQuarter,
+                                latestYear,
+                                stockName: `${type}${index}${name}`,
+                                id,
+                            }
+                        });
                     });
-                });
-            }
-            let wait_count = 0;
-            const recur_getTwseProfit = () => {
-                console.log(year);
-                console.log(quarter);
-                return Api('url', `https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
-                    if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
-                        if (latestQuarter) {
-                            return handleError(new HoError('too short stock data'));
-                        } else {
-                            not++;
-                            if (not > 8) {
-                                return handleError(new HoError('cannot find stock data'));
+                }
+                let wait_count = 0;
+                const recur_getTwseProfit = () => {
+                    console.log(year);
+                    console.log(quarter);
+                    return Api('url', `https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
+                        if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
+                            if (latestQuarter) {
+                                return handleError(new HoError('too short stock data'));
                             } else {
-                                if (reportType === 'C') {
-                                    reportType = 'A';
-                                    return recur_getTwseProfit();
+                                not++;
+                                if (not > 8) {
+                                    return handleError(new HoError('cannot find stock data'));
                                 } else {
-                                    quarter--;
-                                    if (quarter < 1) {
-                                        quarter = 4;
-                                        year--;
+                                    if (reportType === 'C') {
+                                        reportType = 'A';
+                                        return recur_getTwseProfit();
+                                    } else {
+                                        quarter--;
+                                        if (quarter < 1) {
+                                            quarter = 4;
+                                            year--;
+                                        }
+                                        reportType = 'C';
+                                        return recur_getTwseProfit();
                                     }
-                                    reportType = 'C';
-                                    return recur_getTwseProfit();
                                 }
                             }
-                        }
-                    } else if (raw_data.match(/\>Overrun \- /)) {
-                        if (wait_count >= 10) {
-                            return handleError(new HoError('too much wait'));
+                        } else if (raw_data.match(/\>Overrun \- /)) {
+                            if (wait_count >= 10) {
+                                return handleError(new HoError('too much wait'));
+                            } else {
+                                wait_count++;
+                                console.log('wait');
+                                console.log(wait_count);
+                                return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), 20000));
+                            }
                         } else {
-                            wait_count++;
-                            console.log('wait');
-                            console.log(wait_count);
-                            return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), 20000));
-                        }
-                    } else {
-                        wait_count = 0;
-                        let profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
-                        if (!profitArr) {
-                            profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
+                            wait_count = 0;
+                            let profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
                             if (!profitArr) {
-                                profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
+                                profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
                                 if (!profitArr) {
-                                    profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
+                                    profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
                                     if (!profitArr) {
-                                        profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
+                                        profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
                                         if (!profitArr) {
-                                            return handleError(new HoError('cannot find stock profit'));
+                                            profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
+                                            if (!profitArr) {
+                                                return handleError(new HoError('cannot find stock profit'));
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if (!equity) {
-                            equity = getParameterV2(raw_data, 3100, '股本合計');
                             if (!equity) {
-                                equity = getParameterV2(raw_data, 31100, '股本合計');
+                                equity = getParameterV2(raw_data, 3100, '股本合計');
                                 if (!equity) {
-                                    equity = getParameterV2(raw_data, 31000, '股本合計');
+                                    equity = getParameterV2(raw_data, 31100, '股本合計');
                                     if (!equity) {
-                                        return handleError(new HoError('cannot find stock equity'));
+                                        equity = getParameterV2(raw_data, 31000, '股本合計');
+                                        if (!equity) {
+                                            return handleError(new HoError('cannot find stock equity'));
+                                        } else {
+                                            equity = equity[0];
+                                        }
                                     } else {
                                         equity = equity[0];
                                     }
                                 } else {
                                     equity = equity[0];
                                 }
-                            } else {
-                                equity = equity[0];
                             }
-                        }
-                        if (!netValue) {
-                            netValue = getParameterV2(raw_data, '3XXX', '權益總計');
                             if (!netValue) {
-                                netValue = getParameterV2(raw_data, 30000, '權益總計');
+                                netValue = getParameterV2(raw_data, '3XXX', '權益總計');
                                 if (!netValue) {
-                                    netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
+                                    netValue = getParameterV2(raw_data, 30000, '權益總計');
                                     if (!netValue) {
-                                        netValue = getParameterV2(raw_data, 39999, '權益總計');
+                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
                                         if (!netValue) {
-                                            netValue = getParameterV2(raw_data, 39999, '權益總額');
+                                            netValue = getParameterV2(raw_data, 39999, '權益總計');
                                             if (!netValue) {
-                                                netValue = getParameterV2(raw_data, '3XXX', '權益總額');
+                                                netValue = getParameterV2(raw_data, 39999, '權益總額');
                                                 if (!netValue) {
-                                                    netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
+                                                    netValue = getParameterV2(raw_data, '3XXX', '權益總額');
                                                     if (!netValue) {
-                                                        return handleError(new HoError('cannot find stock net value'));
+                                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
+                                                        if (!netValue) {
+                                                            return handleError(new HoError('cannot find stock net value'));
+                                                        } else {
+                                                            netValue = netValue[0];
+                                                        }
                                                     } else {
                                                         netValue = netValue[0];
                                                     }
@@ -2633,73 +2638,76 @@ export default {
                                 } else {
                                     netValue = netValue[0];
                                 }
-                            } else {
-                                netValue = netValue[0];
                             }
-                        }
-                        const matchDividends = getParameterV2(raw_data, 'C04500');
-                        if (matchDividends && matchDividends[0] > dividends) {
-                            dividends = matchDividends[0];
-                        }
-                        switch (quarter) {
-                            case 4:
-                            profit += profitArr[0];
-                            console.log(profit);
-                            console.log(equity);
-                            console.log(netValue);
-                            console.log(dividends);
-                            if (!latestQuarter) {
-                                latestQuarter = quarter;
-                                latestYear = year;
+                            const matchDividends = getParameterV2(raw_data, 'C04500');
+                            if (matchDividends && matchDividends[0] > dividends) {
+                                dividends = matchDividends[0];
                             }
-                            if (dividends === 0) {
-                                quarter = 3;
-                                needDividends = true;
-                                return recur_getTwseProfit();
-                            } else {
-                                return getStockPrice(type, index).then(price => final_stage(price));
-                            }
-                            break;
-                            case 3:
-                            case 2:
-                            if (needDividends) {
+                            switch (quarter) {
+                                case 4:
+                                profit += profitArr[0];
                                 console.log(profit);
                                 console.log(equity);
                                 console.log(netValue);
                                 console.log(dividends);
-                                return getStockPrice(type, index).then(price => final_stage(price));
+                                if (!latestQuarter) {
+                                    latestQuarter = quarter;
+                                    latestYear = year;
+                                }
+                                if (dividends === 0) {
+                                    quarter = 3;
+                                    needDividends = true;
+                                    return recur_getTwseProfit();
+                                } else {
+                                    return getStockPrice(type, index).then(price => final_stage(price));
+                                }
+                                break;
+                                case 3:
+                                case 2:
+                                if (needDividends) {
+                                    console.log(profit);
+                                    console.log(equity);
+                                    console.log(netValue);
+                                    console.log(dividends);
+                                    return getStockPrice(type, index).then(price => final_stage(price));
+                                }
+                                profit += profitArr[2];
+                                profit -= profitArr[3];
+                                break;
+                                case 1:
+                                profit += profitArr[0];
+                                profit -= profitArr[1];
+                                break;
                             }
-                            profit += profitArr[2];
-                            profit -= profitArr[3];
-                            break;
-                            case 1:
-                            profit += profitArr[0];
-                            profit -= profitArr[1];
-                            break;
+                            latestQuarter = quarter;
+                            latestYear = year;
+                            quarter = 4;
+                            year--;
+                            return recur_getTwseProfit();
                         }
-                        latestQuarter = quarter;
-                        latestYear = year;
-                        quarter = 4;
-                        year--;
-                        return recur_getTwseProfit();
-                    }
-                });
-            }
-            return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
-                if (items.length > 0) {
-                    id_db = items[0]._id;
-                    for (let i of items[0].tags) {
-                        if (items[0].stock_default) {
-                            if (!items[0].stock_default.includes(i)) {
+                    });
+                }
+                return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
+                    if (items.length > 0) {
+                        id_db = items[0]._id;
+                        for (let i of items[0].tags) {
+                            if (items[0].stock_default) {
+                                if (!items[0].stock_default.includes(i)) {
+                                    normal_tags.push(i);
+                                }
+                            } else {
                                 normal_tags.push(i);
                             }
-                        } else {
-                            normal_tags.push(i);
                         }
                     }
-                }
-                return recur_getTwseProfit();
-            });
+                    return recur_getTwseProfit();
+                });
+            }
+            break;
+            case 'usse':
+            break;
+            default:
+            return handleError(new HoError('stock type unknown!!!'));
         }
     },
     getSingleStock: function(type, index, stage=0) {
@@ -5230,7 +5238,8 @@ export const getStockListV2 = (type, year, month) => {
         });
         break;
         case 'usse':
-        const list = ['dowjones', 'nasdaq100', 'sp500'];
+        //const list = ['dowjones', 'nasdaq100', 'sp500'];
+        const list = ['dowjones'];
         const stock_list = [];
         const recur_get = index => {
             if (index >= list.length) {
@@ -5267,7 +5276,7 @@ export const getStockListV2 = (type, year, month) => {
         return handleError(new HoError('stock type unknown!!!'));
     }
 }
-//getStockListV2('usse');
+
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pAmount, pCount, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
