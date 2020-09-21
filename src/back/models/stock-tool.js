@@ -5228,22 +5228,41 @@ export const getStockListV2 = (type, year, month) => {
             console.log(stock_list);
             return stock_list;
         });
-        /*case 'usse':
+        break;
+        case 'usse':
         const list = ['dowjones', 'nasdaq100', 'sp500'];
-        return Api('url', `https://www.slickcharts.com/${list[0]}`).then(raw_data => {
-            const stock_list = [];
-            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                const index = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
-                const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
-                stock_list.push({
-                    index,
-                    tag: [name, list[0] === 'dowjones' ? 'dow jones' : list[0] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+        const stock_list = [];
+        const recur_get = index => {
+            if (index >= list.length) {
+                console.log(stock_list.length);
+                console.log(stock_list);
+                return stock_list;
+            } else {
+                return Api('url', `https://www.slickcharts.com/${list[index]}`).then(raw_data => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                        const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
+                        const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                        let is_exit = false;
+                        for (let i = 0; i < stock_list.length; i++) {
+                            if (stock_list[i].index === sIndex) {
+                                is_exit = true;
+                                stock_list[i].tag.push(list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500');
+                                break;
+                            }
+                        }
+                        if (!is_exit) {
+                            stock_list.push({
+                                index: sIndex,
+                                tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                            });
+                        }
+                    });
+                    return recur_get(index + 1);
                 });
-            });
-            console.log(stock_list);
-            return stock_list;
-        });
-        break;*/
+            }
+        }
+        return recur_get(0);
+        break;
         default:
         return handleError(new HoError('stock type unknown!!!'));
     }

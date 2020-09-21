@@ -6151,99 +6151,128 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    switch (type) {
-        case 'twse':
-            var quarter = 3;
-            if (month < 4) {
-                quarter = 4;
-            } else if (month < 7) {
-                quarter = 1;
-            } else if (month < 10) {
-                quarter = 2;
-            }
-            return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t78sb04', { post: {
-                    encodeURIComponent: '1',
-                    TYPEK: 'all',
-                    step: '1',
-                    run: 'Y',
-                    firstin: 'true',
-                    FUNTYPE: '02',
-                    year: year - 1911,
-                    season: (0, _utility.completeZero)(quarter, 2),
-                    fund_no: '0'
-                } }).then(function (raw_data) {
-                var stock_list = [];
-                var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table');
-                var tag = false;
-                tables.forEach(function (table) {
-                    if (table.attribs.class === 'noBorder') {
-                        var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[0], 'td')[1])[0];
-                        tag = false;
-                        for (var i = 0; i < _constants.STOCK_INDEX[type].length; i++) {
-                            if (name === _constants.STOCK_INDEX[type][i].name) {
-                                tag = _constants.STOCK_INDEX[type][i].tag;
-                                break;
-                            }
-                        }
-                    } else {
-                        if (tag) {
-                            (0, _utility.findTag)(table, 'tr').forEach(function (tr) {
-                                if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
-                                    var index = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0])[0];
-                                    if (Number(index)) {
-                                        var exist = false;
-
-                                        var _loop5 = function _loop5(_i32) {
-                                            if (stock_list[_i32].index === index) {
-                                                exist = true;
-                                                tag.forEach(function (v) {
-                                                    return stock_list[_i32].tag.push(v);
-                                                });
-                                                return 'break';
-                                            }
-                                        };
-
-                                        for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
-                                            var _ret12 = _loop5(_i32);
-
-                                            if (_ret12 === 'break') break;
-                                        }
-                                        if (!exist) {
-                                            stock_list.push({
-                                                index: index,
-                                                tag: tag.map(function (v) {
-                                                    return v;
-                                                })
-                                            });
-                                        }
+    var _ret12 = function () {
+        switch (type) {
+            case 'twse':
+                var quarter = 3;
+                if (month < 4) {
+                    quarter = 4;
+                } else if (month < 7) {
+                    quarter = 1;
+                } else if (month < 10) {
+                    quarter = 2;
+                }
+                return {
+                    v: (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t78sb04', { post: {
+                            encodeURIComponent: '1',
+                            TYPEK: 'all',
+                            step: '1',
+                            run: 'Y',
+                            firstin: 'true',
+                            FUNTYPE: '02',
+                            year: year - 1911,
+                            season: (0, _utility.completeZero)(quarter, 2),
+                            fund_no: '0'
+                        } }).then(function (raw_data) {
+                        var stock_list = [];
+                        var tables = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'table');
+                        var tag = false;
+                        tables.forEach(function (table) {
+                            if (table.attribs.class === 'noBorder') {
+                                var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[0], 'td')[1])[0];
+                                tag = false;
+                                for (var i = 0; i < _constants.STOCK_INDEX[type].length; i++) {
+                                    if (name === _constants.STOCK_INDEX[type][i].name) {
+                                        tag = _constants.STOCK_INDEX[type][i].tag;
+                                        break;
                                     }
                                 }
+                            } else {
+                                if (tag) {
+                                    (0, _utility.findTag)(table, 'tr').forEach(function (tr) {
+                                        if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
+                                            var index = (0, _utility.findTag)((0, _utility.findTag)(tr, 'td')[0])[0];
+                                            if (Number(index)) {
+                                                var exist = false;
+
+                                                var _loop5 = function _loop5(_i32) {
+                                                    if (stock_list[_i32].index === index) {
+                                                        exist = true;
+                                                        tag.forEach(function (v) {
+                                                            return stock_list[_i32].tag.push(v);
+                                                        });
+                                                        return 'break';
+                                                    }
+                                                };
+
+                                                for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
+                                                    var _ret13 = _loop5(_i32);
+
+                                                    if (_ret13 === 'break') break;
+                                                }
+                                                if (!exist) {
+                                                    stock_list.push({
+                                                        index: index,
+                                                        tag: tag.map(function (v) {
+                                                            return v;
+                                                        })
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                        console.log(stock_list);
+                        return stock_list;
+                    })
+                };
+                break;
+            case 'usse':
+                var list = ['dowjones', 'nasdaq100', 'sp500'];
+                var stock_list = [];
+                var recur_get = function recur_get(index) {
+                    if (index >= list.length) {
+                        console.log(stock_list.length);
+                        console.log(stock_list);
+                        return stock_list;
+                    } else {
+                        return (0, _apiTool2.default)('url', 'https://www.slickcharts.com/' + list[index]).then(function (raw_data) {
+                            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
+                                var sIndex = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[2], 'a')[0])[0];
+                                var name = (0, _utility.toValidName)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                                var is_exit = false;
+                                for (var i = 0; i < stock_list.length; i++) {
+                                    if (stock_list[i].index === sIndex) {
+                                        is_exit = true;
+                                        stock_list[i].tag.push(list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500');
+                                        break;
+                                    }
+                                }
+                                if (!is_exit) {
+                                    stock_list.push({
+                                        index: sIndex,
+                                        tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500']
+                                    });
+                                }
                             });
-                        }
+                            return recur_get(index + 1);
+                        });
                     }
-                });
-                console.log(stock_list);
-                return stock_list;
-            });
-        /*case 'usse':
-        const list = ['dowjones', 'nasdaq100', 'sp500'];
-        return Api('url', `https://www.slickcharts.com/${list[0]}`).then(raw_data => {
-            const stock_list = [];
-            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                const index = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
-                const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
-                stock_list.push({
-                    index,
-                    tag: [name, list[0] === 'dowjones' ? 'dow jones' : list[0] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
-                });
-            });
-            console.log(stock_list);
-            return stock_list;
-        });
-        break;*/
-        default:
-            return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
-    }
+                };
+                return {
+                    v: recur_get(0)
+                };
+                break;
+            default:
+                return {
+                    v: (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'))
+                };
+        }
+    }();
+
+    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
 };
 //getStockListV2('usse');
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {

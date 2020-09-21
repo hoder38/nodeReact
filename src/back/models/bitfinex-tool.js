@@ -715,6 +715,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 if (order[id][symbol]) {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
+                            console.log(`delete ${os.id}`);
                             if (order[id][symbol][j].code) {
                                 is_code = true;
                             }
@@ -1360,6 +1361,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                                 return userRest.cancelOrder(real_id[index].id).catch(err => {
                                     is_error = true;
+                                    console.log(order[id][current.type]);
+                                    for (let j = 0; j < order[id][current.type].length; j++) {
+                                        if (order[id][current.type][j].id === real_id[index].id) {
+                                            console.log(`delete ${real_id[index].id}`);
+                                            order[id][current.type].splice(j, 1);
+                                            break;
+                                        }
+                                    }
                                     sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                     handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
                                 }).then(() => {
@@ -1435,6 +1444,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         return rest ? rest() : Promise.resolve();
                                     }
                                     return userRest.cancelOrder(real_id[index].id).catch(err => {
+                                        console.log(order[id][current.type]);
+                                        for (let j = 0; j < order[id][current.type].length; j++) {
+                                            if (order[id][current.type][j].id === real_id[index].id) {
+                                                console.log(`delete ${real_id[index].id}`);
+                                                order[id][current.type].splice(j, 1);
+                                                break;
+                                            }
+                                        }
                                         sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                         handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
                                     }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1)));

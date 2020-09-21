@@ -813,6 +813,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 if (order[id][symbol]) {
                     for (var j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
+                            console.log('delete ' + os.id);
                             if (order[id][symbol][j].code) {
                                 is_code = true;
                             }
@@ -1556,6 +1557,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }
                                     return userRest.cancelOrder(real_id[index].id).catch(function (err) {
                                         is_error = true;
+                                        console.log(order[id][current.type]);
+                                        for (var j = 0; j < order[id][current.type].length; j++) {
+                                            if (order[id][current.type][j].id === real_id[index].id) {
+                                                console.log('delete ' + real_id[index].id);
+                                                order[id][current.type].splice(j, 1);
+                                                break;
+                                            }
+                                        }
                                         (0, _sendWs2.default)(id + ' ' + real_id[index].id + ' cancelOrder Error: ' + (err.message || err.msg), 0, 0, true);
                                         (0, _utility.handleError)(err, id + ' ' + real_id[index].id + ' cancelOrder Error');
                                     }).then(function () {
@@ -1658,6 +1667,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 return rest ? rest() : _promise2.default.resolve();
                                             }
                                             return userRest.cancelOrder(real_id[index].id).catch(function (err) {
+                                                console.log(order[id][current.type]);
+                                                for (var j = 0; j < order[id][current.type].length; j++) {
+                                                    if (order[id][current.type][j].id === real_id[index].id) {
+                                                        console.log('delete ' + real_id[index].id);
+                                                        order[id][current.type].splice(j, 1);
+                                                        break;
+                                                    }
+                                                }
                                                 (0, _sendWs2.default)(id + ' ' + real_id[index].id + ' cancelOrder Error: ' + (err.message || err.msg), 0, 0, true);
                                                 (0, _utility.handleError)(err, id + ' ' + real_id[index].id + ' cancelOrder Error');
                                             }).then(function () {
