@@ -27,6 +27,8 @@ let margin = {};
 
 let offer = {};
 let order = {};
+const deleteOffer = [];
+const deleteOrder = [];
 
 let credit = {};
 let ledger = {};
@@ -358,6 +360,54 @@ export const setWsOffer = (id, curArr=[], uid) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
+    const processOrderRest = (amount, price, item) => {
+        const time = Math.round(new Date().getTime() / 1000);
+        const tradeType = amount > 0 ? 'buy' : 'sell';
+        if (tradeType === 'buy') {
+            let is_insert = false;
+            for (let k = 0; k < item.previous.buy.length; k++) {
+                if (price < item.previous.buy[k].price) {
+                    item.previous.buy.splice(k, 0, {price, time});
+                    is_insert = true;
+                    break;
+                }
+            }
+            if (!is_insert) {
+                item.previous.buy.push({price, time});
+            }
+            item.previous = {
+                price,
+                time,
+                type: 'buy',
+                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                sell: item.previous.sell,
+            }
+        } else if (tradeType === 'sell') {
+            let is_insert = false;
+            for (let k = 0; k < item.previous.sell.length; k++) {
+                if (price > item.previous.sell[k].price) {
+                    item.previous.sell.splice(k, 0, {price, time});
+                    is_insert = true;
+                    break;
+                }
+            }
+            if (!is_insert) {
+                item.previous.sell.push({price, time});
+            }
+            item.previous = {
+                price,
+                time,
+                type: 'sell',
+                sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                buy: item.previous.buy,
+            }
+        }
+        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
+            amount: item.amount - price * amount,
+            count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
+            previous: item.previous,
+        }});
+    }
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         if (!updateTime[id]) {
@@ -500,11 +550,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
                 console.log(`${fo.symbol} ${id} offer close`);
                 if (offer[id][fo.symbol]) {
+                    let is_exist = false;
                     for (let j = 0; j < offer[id][fo.symbol].length; j++) {
                         if (offer[id][fo.symbol][j].id === fo.id) {
                             offer[id][fo.symbol].splice(j, 1);
+                            is_exist = true;
                             break;
                         }
+                    }
+                    if (!is_exist) {
+                        deleteOffer.push(fo.id);
                     }
                 }
             }
@@ -712,6 +767,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 console.log(`${symbol} ${id} order close`);
                 console.log(os);
                 let is_code = false;
+                let is_exist = false;
                 if (order[id][symbol]) {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
@@ -719,9 +775,21 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if (order[id][symbol][j].code) {
                                 is_code = true;
                             }
+                            is_exist = true;
                             order[id][symbol].splice(j, 1);
                             break;
                         }
+                    }
+                }
+                if (!is_exist) {
+                    const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                    if (amount !== 0) {
+                        deleteOrder.push({
+                            id: os.id,
+                            amount,
+                            price: os.priceAvg,
+                            process: (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) ? true : false,
+                        });
                     }
                 }
                 if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
@@ -730,66 +798,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             for (let j = 0; j < curArr[i].pair.length; j++) {
                                 if (curArr[i].pair[j].type === os.symbol) {
                                     console.log(`${os.symbol} order executed`);
-                                    Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
-                                        console.log(items);
-                                        if (items.length < 1) {
-                                            return handleError(new HoError(`miss ${os.symbol}`));
-                                        }
-                                        const item = items[0];
-                                        const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
-                                        if (amount !== 0) {
-                                            const price = os.priceAvg;
-                                            const time = Math.round(new Date().getTime() / 1000);
-                                            const tradeType = amount > 0 ? 'buy' : 'sell';
-                                            if (tradeType === 'buy') {
-                                                let is_insert = false;
-                                                for (let k = 0; k < item.previous.buy.length; k++) {
-                                                    if (price < item.previous.buy[k].price) {
-                                                        item.previous.buy.splice(k, 0, {price, time});
-                                                        is_insert = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!is_insert) {
-                                                    item.previous.buy.push({price, time});
-                                                }
-                                                item.previous = {
-                                                price,
-                                                time,
-                                                type: 'buy',
-                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                                                    sell: item.previous.sell,
-                                                }
-                                            } else if (tradeType === 'sell') {
-                                                let is_insert = false;
-                                                for (let k = 0; k < item.previous.sell.length; k++) {
-                                                    if (price > item.previous.sell[k].price) {
-                                                        item.previous.sell.splice(k, 0, {price, time});
-                                                        is_insert = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!is_insert) {
-                                                    item.previous.sell.push({price, time});
-                                                }
-                                                item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'sell',
-                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                                                    buy: item.previous.buy,
-                                                }
+                                    const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                                    if (amount !== 0) {
+                                        Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
+                                            console.log(items);
+                                            if (items.length < 1) {
+                                                return handleError(new HoError(`miss ${os.symbol}`));
                                             }
-                                            return Mongo('update', TOTALDB, {owner: uid, sType: 1, index: os.symbol}, {$set: {
-                                                amount: item.amount - price * amount,
-                                                count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
-                                                previous: item.previous,
-                                            }});
-                                        }
-                                    }).catch(err => {
-                                        sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                        handleError(err, `${id} Total Updata Error`);
-                                    });
+                                            return processOrderRest(amount, os.priceAvg, items[0]);
+                                        }).catch(err => {
+                                            sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                            handleError(err, `${id} Total Updata Error`);
+                                        });
+                                    }
                                     break;
                                 }
                             }
@@ -1229,7 +1250,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }, userRest);
                         console.log(finalNew[index].amount);
                         console.log(keep_available);
-                        return fo.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
+                        return fo.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => {
                             let isExist = false;
                             for (let i = 0; i < offer[id][current.type].length; i++) {
                                 if (fo.id === offer[id][current.type][i].id) {
@@ -1240,14 +1261,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                             }
                             if (!isExist) {
-                                offer[id][current.type].push({
-                                    id: fo.id,
-                                    time: Math.round(new Date().getTime() / 1000),
-                                    amount: fo.amount,
-                                    rate: fo.rate,
-                                    period: fo.period,
-                                    risk: finalNew[index].risk,
-                                });
+                                const isDelete = deleteOffer.indexOf(fo.id);
+                                if (isDelete === -1) {
+                                    offer[id][current.type].push({
+                                        id: fo.id,
+                                        time: Math.round(new Date().getTime() / 1000),
+                                        amount: fo.amount,
+                                        rate: fo.rate,
+                                        period: fo.period,
+                                        risk: finalNew[index].risk,
+                                    });
+                                } else {
+                                    deleteOffer.splice(isDelete, 1);
+                                }
                             }
                             return submitOffer(index + 1);
                         }));
@@ -1595,36 +1621,64 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     }
                                     if (suggestion.bCount > 0 && suggestion.buy) {
                                         console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
-                                        const or1 = new Order({
-                                            cid: Date.now(),
-                                            type: 'LIMIT',
-                                            symbol: item.index,
-                                            amount: suggestion.bCount,
-                                            price: suggestion.buy,
-                                        }, userRest);
-                                        return or1.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                            let isExist = false;
-                                            for (let i = 0; i < order[id][current.type].length; i++) {
-                                                if (or1[0].id === order[id][current.type][i].id) {
-                                                    order[id][current.type][i].code = true;
-                                                    isExist = true;
-                                                    break;
+                                        const submitOrderBuy = quotaChk => {
+                                            if (quotaChk <= 0) {
+                                                return reucr_status(index + 1);
+                                            }
+                                            const or1 = new Order({
+                                                cid: Date.now(),
+                                                type: 'LIMIT',
+                                                symbol: item.index,
+                                                amount: suggestion.bCount * quotaChk / 10,
+                                                price: suggestion.buy,
+                                            }, userRest);
+                                            return or1.submit().catch(err => {
+                                                const msg = err.message || err.msg;
+                                                if (msg.includes('not enough tradable balance')) {
+                                                    sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                                    handleError(err, `${id} Total Updata Error`);
+                                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => submitOrderBuy(quotaChk - 1));
+                                                } else {
+                                                    throw err;
                                                 }
-                                            }
-                                            if (!isExist) {
-                                                order[id][current.type].push({
-                                                    id: or1[0].id,
-                                                    time: Math.round(new Date().getTime() / 1000),
-                                                    amount: or1[0].amount,
-                                                    type: or1[0].type,
-                                                    symbol: or1[0].symbol,
-                                                    price: or1[0].price,
-                                                    flags: or1[0].flags,
-                                                    code: true,
-                                                });
-                                            }
-                                            return reucr_status(index + 1);
-                                        });
+                                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                                let isExist = false;
+                                                for (let i = 0; i < order[id][current.type].length; i++) {
+                                                    if (or1[0].id === order[id][current.type][i].id) {
+                                                        order[id][current.type][i].code = true;
+                                                        isExist = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!isExist) {
+                                                    let isDelete = false;
+                                                    for (let i = 0; i < deleteOrder.length; i++) {
+                                                        if (deleteOrder[i].id === or1[0].id) {
+                                                            isDelete = true;
+                                                            const delobj = deleteOrder.splice(i, 1);
+                                                            if (delobj.process){
+                                                                return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (!isDelete) {
+                                                        order[id][current.type].push({
+                                                            id: or1[0].id,
+                                                            time: Math.round(new Date().getTime() / 1000),
+                                                            amount: or1[0].amount,
+                                                            type: or1[0].type,
+                                                            symbol: or1[0].symbol,
+                                                            price: or1[0].price,
+                                                            flags: or1[0].flags,
+                                                            code: true,
+                                                        });
+                                                    }
+                                                }
+                                                return reucr_status(index + 1);
+                                            });
+                                        }
+                                        return submitOrderBuy(10);
                                     } else {
                                         return reucr_status(index + 1);
                                     }
@@ -1662,7 +1716,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         price: suggestion.sell,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                    return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
@@ -1672,16 +1726,29 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             }
                                         }
                                         if (!isExist) {
-                                            order[id][current.type].push({
-                                                id: or[0].id,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                amount: or[0].amount,
-                                                type: or[0].type,
-                                                symbol: or[0].symbol,
-                                                price: or[0].price,
-                                                flags: or[0].flags,
-                                                code: true,
-                                            });
+                                            let isDelete = false;
+                                            for (let i = 0; i < deleteOrder.length; i++) {
+                                                if (deleteOrder[i].id === or[0].id) {
+                                                    isDelete = true;
+                                                    const delobj = deleteOrder.splice(i, 1);
+                                                    if (delobj.process){
+                                                        return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
+                                                    }
+                                                    break;
+                                                }
+                                            }
+                                            if (!isDelete) {
+                                                order[id][current.type].push({
+                                                    id: or[0].id,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    amount: or[0].amount,
+                                                    type: or[0].type,
+                                                    symbol: or[0].symbol,
+                                                    price: or[0].price,
+                                                    flags: or[0].flags,
+                                                    code: true,
+                                                });
+                                            }
                                         }
                                         return submitBuy();
                                     });
@@ -1720,16 +1787,26 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             }
                                         }
                                         if (!isExist) {
-                                            order[id][current.type].push({
-                                                id: or[0].id,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                amount: or[0].amount,
-                                                type: or[0].type,
-                                                symbol: or[0].symbol,
-                                                price: or[0].price,
-                                                flags: or[0].flags,
-                                                code: true,
-                                            });
+                                            let isDelete = false;
+                                            for (let i = 0; i < deleteOrder.length; i++) {
+                                                if (deleteOrder[i].id === or[0].id) {
+                                                    isDelete = true;
+                                                    deleteOrder.splice(i, 1);
+                                                    break;
+                                                }
+                                            }
+                                            if (!isDelete) {
+                                                order[id][current.type].push({
+                                                    id: or[0].id,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    amount: or[0].amount,
+                                                    type: or[0].type,
+                                                    symbol: or[0].symbol,
+                                                    price: or[0].price,
+                                                    flags: or[0].flags,
+                                                    code: true,
+                                                });
+                                            }
                                         }
                                         return delTotal()
                                     });

@@ -72,6 +72,8 @@ var margin = {};
 
 var offer = {};
 var order = {};
+var deleteOffer = [];
+var deleteOrder = [];
 
 var credit = {};
 var ledger = {};
@@ -454,6 +456,58 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     }
     var userBfx = new _bitfinexApiNode2.default({ apiKey: userKey, apiSecret: userSecret });
     var userRest = userBfx.rest(2, { transform: true });
+    var processOrderRest = function processOrderRest(amount, price, item) {
+        var time = Math.round(new Date().getTime() / 1000);
+        var tradeType = amount > 0 ? 'buy' : 'sell';
+        if (tradeType === 'buy') {
+            var is_insert = false;
+            for (var k = 0; k < item.previous.buy.length; k++) {
+                if (price < item.previous.buy[k].price) {
+                    item.previous.buy.splice(k, 0, { price: price, time: time });
+                    is_insert = true;
+                    break;
+                }
+            }
+            if (!is_insert) {
+                item.previous.buy.push({ price: price, time: time });
+            }
+            item.previous = {
+                price: price,
+                time: time,
+                type: 'buy',
+                buy: item.previous.buy.filter(function (v) {
+                    return time - v.time < _constants.RANGE_BITFINEX_INTERVAL ? true : false;
+                }),
+                sell: item.previous.sell
+            };
+        } else if (tradeType === 'sell') {
+            var _is_insert = false;
+            for (var _k = 0; _k < item.previous.sell.length; _k++) {
+                if (price > item.previous.sell[_k].price) {
+                    item.previous.sell.splice(_k, 0, { price: price, time: time });
+                    _is_insert = true;
+                    break;
+                }
+            }
+            if (!_is_insert) {
+                item.previous.sell.push({ price: price, time: time });
+            }
+            item.previous = {
+                price: price,
+                time: time,
+                type: 'sell',
+                sell: item.previous.sell.filter(function (v) {
+                    return time - v.time < _constants.RANGE_BITFINEX_INTERVAL ? true : false;
+                }),
+                buy: item.previous.buy
+            };
+        }
+        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                amount: item.amount - price * amount,
+                count: item.count ? item.count + amount : amount > 0 ? amount : 0,
+                previous: item.previous
+            } });
+    };
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         if (!updateTime[id]) {
@@ -598,11 +652,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             if (_constants.SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
                 console.log(fo.symbol + ' ' + id + ' offer close');
                 if (offer[id][fo.symbol]) {
+                    var is_exist = false;
                     for (var j = 0; j < offer[id][fo.symbol].length; j++) {
                         if (offer[id][fo.symbol][j].id === fo.id) {
                             offer[id][fo.symbol].splice(j, 1);
+                            is_exist = true;
                             break;
                         }
+                    }
+                    if (!is_exist) {
+                        deleteOffer.push(fo.id);
                     }
                 }
             }
@@ -810,6 +869,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 console.log(symbol + ' ' + id + ' order close');
                 console.log(os);
                 var is_code = false;
+                var is_exist = false;
                 if (order[id][symbol]) {
                     for (var j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
@@ -817,9 +877,21 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             if (order[id][symbol][j].code) {
                                 is_code = true;
                             }
+                            is_exist = true;
                             order[id][symbol].splice(j, 1);
                             break;
                         }
+                    }
+                }
+                if (!is_exist) {
+                    var amount = os.amountOrig - os.amount < 0 ? (1 - _constants.BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                    if (amount !== 0) {
+                        deleteOrder.push({
+                            id: os.id,
+                            amount: amount,
+                            price: os.priceAvg,
+                            process: os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE') ? true : false
+                        });
                     }
                 }
                 if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
@@ -827,78 +899,25 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         if (curArr[_i3].type === symbol && curArr[_i3].pair) {
                             for (var _j = 0; _j < curArr[_i3].pair.length; _j++) {
                                 if (curArr[_i3].pair[_j].type === os.symbol) {
-                                    console.log(os.symbol + ' order executed');
-                                    (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, index: os.symbol }).then(function (items) {
-                                        console.log(items);
-                                        if (items.length < 1) {
-                                            return (0, _utility.handleError)(new _utility.HoError('miss ' + os.symbol));
-                                        }
-                                        var item = items[0];
+                                    var _ret3 = function () {
+                                        console.log(os.symbol + ' order executed');
                                         var amount = os.amountOrig - os.amount < 0 ? (1 - _constants.BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
                                         if (amount !== 0) {
-                                            var _ret3 = function () {
-                                                var price = os.priceAvg;
-                                                var time = Math.round(new Date().getTime() / 1000);
-                                                var tradeType = amount > 0 ? 'buy' : 'sell';
-                                                if (tradeType === 'buy') {
-                                                    var is_insert = false;
-                                                    for (var k = 0; k < item.previous.buy.length; k++) {
-                                                        if (price < item.previous.buy[k].price) {
-                                                            item.previous.buy.splice(k, 0, { price: price, time: time });
-                                                            is_insert = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!is_insert) {
-                                                        item.previous.buy.push({ price: price, time: time });
-                                                    }
-                                                    item.previous = {
-                                                        price: price,
-                                                        time: time,
-                                                        type: 'buy',
-                                                        buy: item.previous.buy.filter(function (v) {
-                                                            return time - v.time < _constants.RANGE_BITFINEX_INTERVAL ? true : false;
-                                                        }),
-                                                        sell: item.previous.sell
-                                                    };
-                                                } else if (tradeType === 'sell') {
-                                                    var _is_insert = false;
-                                                    for (var _k = 0; _k < item.previous.sell.length; _k++) {
-                                                        if (price > item.previous.sell[_k].price) {
-                                                            item.previous.sell.splice(_k, 0, { price: price, time: time });
-                                                            _is_insert = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!_is_insert) {
-                                                        item.previous.sell.push({ price: price, time: time });
-                                                    }
-                                                    item.previous = {
-                                                        price: price,
-                                                        time: time,
-                                                        type: 'sell',
-                                                        sell: item.previous.sell.filter(function (v) {
-                                                            return time - v.time < _constants.RANGE_BITFINEX_INTERVAL ? true : false;
-                                                        }),
-                                                        buy: item.previous.buy
-                                                    };
+                                            (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, index: os.symbol }).then(function (items) {
+                                                console.log(items);
+                                                if (items.length < 1) {
+                                                    return (0, _utility.handleError)(new _utility.HoError('miss ' + os.symbol));
                                                 }
-                                                return {
-                                                    v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { owner: uid, sType: 1, index: os.symbol }, { $set: {
-                                                            amount: item.amount - price * amount,
-                                                            count: item.count ? item.count + amount : amount > 0 ? amount : 0,
-                                                            previous: item.previous
-                                                        } })
-                                                };
-                                            }();
-
-                                            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                                return processOrderRest(amount, os.priceAvg, items[0]);
+                                            }).catch(function (err) {
+                                                (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
+                                                (0, _utility.handleError)(err, id + ' Total Updata Error');
+                                            });
                                         }
-                                    }).catch(function (err) {
-                                        (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
-                                        (0, _utility.handleError)(err, id + ' Total Updata Error');
-                                    });
-                                    break;
+                                        return 'break';
+                                    }();
+
+                                    if (_ret3 === 'break') break;
                                 }
                             }
                             break;
@@ -1417,14 +1436,19 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }
                                 }
                                 if (!isExist) {
-                                    offer[id][current.type].push({
-                                        id: fo.id,
-                                        time: Math.round(new Date().getTime() / 1000),
-                                        amount: fo.amount,
-                                        rate: fo.rate,
-                                        period: fo.period,
-                                        risk: finalNew[index].risk
-                                    });
+                                    var isDelete = deleteOffer.indexOf(fo.id);
+                                    if (isDelete === -1) {
+                                        offer[id][current.type].push({
+                                            id: fo.id,
+                                            time: Math.round(new Date().getTime() / 1000),
+                                            amount: fo.amount,
+                                            rate: fo.rate,
+                                            period: fo.period,
+                                            risk: finalNew[index].risk
+                                        });
+                                    } else {
+                                        deleteOffer.splice(isDelete, 1);
+                                    }
                                 }
                                 return submitOffer(index + 1);
                             });
@@ -1838,15 +1862,33 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         if (suggestion.bCount > 0 && suggestion.buy) {
                                             var _ret8 = function () {
                                                 console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
-                                                var or1 = new _bfxApiNodeModels.Order({
-                                                    cid: Date.now(),
-                                                    type: 'LIMIT',
-                                                    symbol: item.index,
-                                                    amount: suggestion.bCount,
-                                                    price: suggestion.buy
-                                                }, userRest);
-                                                return {
-                                                    v: or1.submit().then(function () {
+                                                var submitOrderBuy = function submitOrderBuy(quotaChk) {
+                                                    if (quotaChk <= 0) {
+                                                        return reucr_status(index + 1);
+                                                    }
+                                                    var or1 = new _bfxApiNodeModels.Order({
+                                                        cid: Date.now(),
+                                                        type: 'LIMIT',
+                                                        symbol: item.index,
+                                                        amount: suggestion.bCount * quotaChk / 10,
+                                                        price: suggestion.buy
+                                                    }, userRest);
+                                                    return or1.submit().catch(function (err) {
+                                                        var msg = err.message || err.msg;
+                                                        if (msg.includes('not enough tradable balance')) {
+                                                            (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
+                                                            (0, _utility.handleError)(err, id + ' Total Updata Error');
+                                                            return new _promise2.default(function (resolve, reject) {
+                                                                return setTimeout(function () {
+                                                                    return resolve();
+                                                                }, 3000);
+                                                            }).then(function () {
+                                                                return submitOrderBuy(quotaChk - 1);
+                                                            });
+                                                        } else {
+                                                            throw err;
+                                                        }
+                                                    }).then(function () {
                                                         return new _promise2.default(function (resolve, reject) {
                                                             return setTimeout(function () {
                                                                 return resolve();
@@ -1862,19 +1904,37 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                             }
                                                         }
                                                         if (!isExist) {
-                                                            order[id][current.type].push({
-                                                                id: or1[0].id,
-                                                                time: Math.round(new Date().getTime() / 1000),
-                                                                amount: or1[0].amount,
-                                                                type: or1[0].type,
-                                                                symbol: or1[0].symbol,
-                                                                price: or1[0].price,
-                                                                flags: or1[0].flags,
-                                                                code: true
-                                                            });
+                                                            var isDelete = false;
+                                                            for (var _i16 = 0; _i16 < deleteOrder.length; _i16++) {
+                                                                if (deleteOrder[_i16].id === or1[0].id) {
+                                                                    isDelete = true;
+                                                                    var delobj = deleteOrder.splice(_i16, 1);
+                                                                    if (delobj.process) {
+                                                                        return processOrderRest(delobj.amount, delobj.price, item).then(function () {
+                                                                            return reucr_status(index + 1);
+                                                                        });
+                                                                    }
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!isDelete) {
+                                                                order[id][current.type].push({
+                                                                    id: or1[0].id,
+                                                                    time: Math.round(new Date().getTime() / 1000),
+                                                                    amount: or1[0].amount,
+                                                                    type: or1[0].type,
+                                                                    symbol: or1[0].symbol,
+                                                                    price: or1[0].price,
+                                                                    flags: or1[0].flags,
+                                                                    code: true
+                                                                });
+                                                            }
                                                         }
                                                         return reucr_status(index + 1);
-                                                    })
+                                                    });
+                                                };
+                                                return {
+                                                    v: submitOrderBuy(10)
                                                 };
                                             }();
 
@@ -1926,24 +1986,39 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
-                                                    for (var _i16 = 0; _i16 < order[id][current.type].length; _i16++) {
-                                                        if (or[0].id === order[id][current.type][_i16].id) {
-                                                            order[id][current.type][_i16].code = true;
+                                                    for (var _i17 = 0; _i17 < order[id][current.type].length; _i17++) {
+                                                        if (or[0].id === order[id][current.type][_i17].id) {
+                                                            order[id][current.type][_i17].code = true;
                                                             isExist = true;
                                                             break;
                                                         }
                                                     }
                                                     if (!isExist) {
-                                                        order[id][current.type].push({
-                                                            id: or[0].id,
-                                                            time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or[0].amount,
-                                                            type: or[0].type,
-                                                            symbol: or[0].symbol,
-                                                            price: or[0].price,
-                                                            flags: or[0].flags,
-                                                            code: true
-                                                        });
+                                                        var isDelete = false;
+                                                        for (var _i18 = 0; _i18 < deleteOrder.length; _i18++) {
+                                                            if (deleteOrder[_i18].id === or[0].id) {
+                                                                isDelete = true;
+                                                                var delobj = deleteOrder.splice(_i18, 1);
+                                                                if (delobj.process) {
+                                                                    return processOrderRest(delobj.amount, delobj.price, item).then(function () {
+                                                                        return reucr_status(index + 1);
+                                                                    });
+                                                                }
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!isDelete) {
+                                                            order[id][current.type].push({
+                                                                id: or[0].id,
+                                                                time: Math.round(new Date().getTime() / 1000),
+                                                                amount: or[0].amount,
+                                                                type: or[0].type,
+                                                                symbol: or[0].symbol,
+                                                                price: or[0].price,
+                                                                flags: or[0].flags,
+                                                                code: true
+                                                            });
+                                                        }
                                                     }
                                                     return submitBuy();
                                                 })
@@ -1990,24 +2065,34 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
-                                                    for (var _i17 = 0; _i17 < order[id][current.type].length; _i17++) {
-                                                        if (or[0].id === order[id][current.type][_i17].id) {
-                                                            order[id][current.type][_i17].code = true;
+                                                    for (var _i19 = 0; _i19 < order[id][current.type].length; _i19++) {
+                                                        if (or[0].id === order[id][current.type][_i19].id) {
+                                                            order[id][current.type][_i19].code = true;
                                                             isExist = true;
                                                             break;
                                                         }
                                                     }
                                                     if (!isExist) {
-                                                        order[id][current.type].push({
-                                                            id: or[0].id,
-                                                            time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or[0].amount,
-                                                            type: or[0].type,
-                                                            symbol: or[0].symbol,
-                                                            price: or[0].price,
-                                                            flags: or[0].flags,
-                                                            code: true
-                                                        });
+                                                        var isDelete = false;
+                                                        for (var _i20 = 0; _i20 < deleteOrder.length; _i20++) {
+                                                            if (deleteOrder[_i20].id === or[0].id) {
+                                                                isDelete = true;
+                                                                deleteOrder.splice(_i20, 1);
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!isDelete) {
+                                                            order[id][current.type].push({
+                                                                id: or[0].id,
+                                                                time: Math.round(new Date().getTime() / 1000),
+                                                                amount: or[0].amount,
+                                                                type: or[0].type,
+                                                                symbol: or[0].symbol,
+                                                                price: or[0].price,
+                                                                flags: or[0].flags,
+                                                                code: true
+                                                            });
+                                                        }
                                                     }
                                                     return delTotal();
                                                 })
@@ -2407,11 +2492,11 @@ exports.default = {
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
                     if (rest_total) {
-                        for (var _i18 = 0; _i18 < item.length; _i18++) {
-                            if (item[_i18].index === rest_total.index) {
-                                rest_total.data.amount = rest_total.data.amount ? item[_i18].amount - rest_total.data.amount > 0 ? item[_i18].amount - rest_total.data.amount : 0 : item[_i18].amount;
+                        for (var _i21 = 0; _i21 < item.length; _i21++) {
+                            if (item[_i21].index === rest_total.index) {
+                                rest_total.data.amount = rest_total.data.amount ? item[_i21].amount - rest_total.data.amount > 0 ? item[_i21].amount - rest_total.data.amount : 0 : item[_i21].amount;
                                 console.log(rest_total);
-                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i18]._id }, { $set: rest_total.data }).then(function (result) {
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i21]._id }, { $set: rest_total.data }).then(function (result) {
                                     console.log(result);
                                     return returnSupport(bitfinex);
                                 });
@@ -2419,16 +2504,16 @@ exports.default = {
                         }
                     } else if (data['pair']) {
                         var _ret13 = function () {
-                            for (var _i19 = 0; _i19 < data['pair'].length; _i19++) {
+                            for (var _i22 = 0; _i22 < data['pair'].length; _i22++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
-                                    if (item[j].index === data['pair'][_i19].type) {
+                                    if (item[j].index === data['pair'][_i22].type) {
                                         exist = true;
                                         break;
                                     }
                                 }
                                 if (!exist) {
-                                    item.push(data['pair'][_i19]);
+                                    item.push(data['pair'][_i22]);
                                 }
                             }
                             var recur_update = function recur_update(index) {
@@ -2436,12 +2521,12 @@ exports.default = {
                                     return returnSupport(bitfinex);
                                 } else {
                                     if (item[index]._id) {
-                                        for (var _i20 = 0; _i20 < data['pair'].length; _i20++) {
-                                            if (item[index].index === data['pair'][_i20].type) {
+                                        for (var _i23 = 0; _i23 < data['pair'].length; _i23++) {
+                                            if (item[index].index === data['pair'][_i23].type) {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
-                                                        times: Math.floor(item[index].times * data['pair'][_i20].amount / item[index].orig * 10000) / 10000,
-                                                        amount: item[index].amount + data['pair'][_i20].amount - item[index].orig,
-                                                        orig: data['pair'][_i20].amount,
+                                                        times: Math.floor(item[index].times * data['pair'][_i23].amount / item[index].orig * 10000) / 10000,
+                                                        amount: item[index].amount + data['pair'][_i23].amount - item[index].orig,
+                                                        orig: data['pair'][_i23].amount,
                                                         ing: item[index].ing === 2 ? 0 : item[index].ing
                                                     } }).then(function (item) {
                                                     console.log(item);
@@ -2648,8 +2733,8 @@ exports.default = {
         }
         if (type === 0 || type === 2) {
             var tempList = uid === 0 ? rateList : itemList;
-            for (var _i21 = 0; _i21 < _constants.SUPPORT_COIN.length; _i21++) {
-                var _v = _constants.SUPPORT_COIN[_i21];
+            for (var _i24 = 0; _i24 < _constants.SUPPORT_COIN.length; _i24++) {
+                var _v = _constants.SUPPORT_COIN[_i24];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
@@ -2657,7 +2742,7 @@ exports.default = {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     tempList.push({
                         name: _v.substr(1) + ' Rate',
-                        id: _i21,
+                        id: _i24,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: rate + '%',
                         count: rate,
@@ -2667,16 +2752,16 @@ exports.default = {
                 }
             }
             var vid = _constants.SUPPORT_COIN.length;
-            for (var _i22 in priceData) {
+            for (var _i25 in priceData) {
                 tempList.push({
-                    name: _i22.substr(1) + ' $' + Math.floor(priceData[_i22].lastPrice * 10000) / 10000,
+                    name: _i25.substr(1) + ' $' + Math.floor(priceData[_i25].lastPrice * 10000) / 10000,
                     id: vid++,
-                    tags: [_i22.substr(1, 4), _i22.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i22].dailyChange * 100) / 100 + '%',
-                    count: priceData[_i22].dilyChange,
-                    utime: priceData[_i22].time,
+                    tags: [_i25.substr(1, 4), _i25.substr(-3), 'rate', '利率'],
+                    rate: Math.floor(priceData[_i25].dailyChange * 100) / 100 + '%',
+                    count: priceData[_i25].dilyChange,
+                    utime: priceData[_i25].time,
                     type: 1,
-                    str: priceData[_i22].str
+                    str: priceData[_i25].str
                 });
             }
         }
