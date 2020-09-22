@@ -1864,7 +1864,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
                                                 var submitOrderBuy = function submitOrderBuy(quotaChk) {
                                                     if (quotaChk <= 0) {
-                                                        return reucr_status(index + 1);
+                                                        return _promise2.default.resolve();
                                                     }
                                                     var or1 = new _bfxApiNodeModels.Order({
                                                         cid: Date.now(),
@@ -1895,39 +1895,41 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                             }, 3000);
                                                         });
                                                     }).then(function () {
-                                                        var isExist = false;
-                                                        for (var _i15 = 0; _i15 < order[id][current.type].length; _i15++) {
-                                                            if (or1[0].id === order[id][current.type][_i15].id) {
-                                                                order[id][current.type][_i15].code = true;
-                                                                isExist = true;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (!isExist) {
-                                                            var isDelete = false;
-                                                            for (var _i16 = 0; _i16 < deleteOrder.length; _i16++) {
-                                                                if (deleteOrder[_i16].id === or1[0].id) {
-                                                                    isDelete = true;
-                                                                    var delobj = deleteOrder.splice(_i16, 1);
-                                                                    if (delobj.process) {
-                                                                        return processOrderRest(delobj.amount, delobj.price, item).then(function () {
-                                                                            return reucr_status(index + 1);
-                                                                        });
-                                                                    }
+                                                        if (quotaChk > 0) {
+                                                            var isExist = false;
+                                                            for (var _i15 = 0; _i15 < order[id][current.type].length; _i15++) {
+                                                                if (or1[0].id === order[id][current.type][_i15].id) {
+                                                                    order[id][current.type][_i15].code = true;
+                                                                    isExist = true;
                                                                     break;
                                                                 }
                                                             }
-                                                            if (!isDelete) {
-                                                                order[id][current.type].push({
-                                                                    id: or1[0].id,
-                                                                    time: Math.round(new Date().getTime() / 1000),
-                                                                    amount: or1[0].amount,
-                                                                    type: or1[0].type,
-                                                                    symbol: or1[0].symbol,
-                                                                    price: or1[0].price,
-                                                                    flags: or1[0].flags,
-                                                                    code: true
-                                                                });
+                                                            if (!isExist) {
+                                                                var isDelete = false;
+                                                                for (var _i16 = 0; _i16 < deleteOrder.length; _i16++) {
+                                                                    if (deleteOrder[_i16].id === or1[0].id) {
+                                                                        isDelete = true;
+                                                                        var delobj = deleteOrder.splice(_i16, 1);
+                                                                        if (delobj.process) {
+                                                                            return processOrderRest(delobj.amount, delobj.price, item).then(function () {
+                                                                                return reucr_status(index + 1);
+                                                                            });
+                                                                        }
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (!isDelete) {
+                                                                    order[id][current.type].push({
+                                                                        id: or1[0].id,
+                                                                        time: Math.round(new Date().getTime() / 1000),
+                                                                        amount: or1[0].amount,
+                                                                        type: or1[0].type,
+                                                                        symbol: or1[0].symbol,
+                                                                        price: or1[0].price,
+                                                                        flags: or1[0].flags,
+                                                                        code: true
+                                                                    });
+                                                                }
                                                             }
                                                         }
                                                         return reucr_status(index + 1);

@@ -1623,7 +1623,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
                                         const submitOrderBuy = quotaChk => {
                                             if (quotaChk <= 0) {
-                                                return reucr_status(index + 1);
+                                                return Promise.resolve();
                                             }
                                             const or1 = new Order({
                                                 cid: Date.now(),
@@ -1642,37 +1642,39 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                     throw err;
                                                 }
                                             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                                let isExist = false;
-                                                for (let i = 0; i < order[id][current.type].length; i++) {
-                                                    if (or1[0].id === order[id][current.type][i].id) {
-                                                        order[id][current.type][i].code = true;
-                                                        isExist = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!isExist) {
-                                                    let isDelete = false;
-                                                    for (let i = 0; i < deleteOrder.length; i++) {
-                                                        if (deleteOrder[i].id === or1[0].id) {
-                                                            isDelete = true;
-                                                            const delobj = deleteOrder.splice(i, 1);
-                                                            if (delobj.process){
-                                                                return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
-                                                            }
+                                                if (quotaChk > 0) {
+                                                    let isExist = false;
+                                                    for (let i = 0; i < order[id][current.type].length; i++) {
+                                                        if (or1[0].id === order[id][current.type][i].id) {
+                                                            order[id][current.type][i].code = true;
+                                                            isExist = true;
                                                             break;
                                                         }
                                                     }
-                                                    if (!isDelete) {
-                                                        order[id][current.type].push({
-                                                            id: or1[0].id,
-                                                            time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or1[0].amount,
-                                                            type: or1[0].type,
-                                                            symbol: or1[0].symbol,
-                                                            price: or1[0].price,
-                                                            flags: or1[0].flags,
-                                                            code: true,
-                                                        });
+                                                    if (!isExist) {
+                                                        let isDelete = false;
+                                                        for (let i = 0; i < deleteOrder.length; i++) {
+                                                            if (deleteOrder[i].id === or1[0].id) {
+                                                                isDelete = true;
+                                                                const delobj = deleteOrder.splice(i, 1);
+                                                                if (delobj.process){
+                                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
+                                                                }
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!isDelete) {
+                                                            order[id][current.type].push({
+                                                                id: or1[0].id,
+                                                                time: Math.round(new Date().getTime() / 1000),
+                                                                amount: or1[0].amount,
+                                                                type: or1[0].type,
+                                                                symbol: or1[0].symbol,
+                                                                price: or1[0].price,
+                                                                flags: or1[0].flags,
+                                                                code: true,
+                                                            });
+                                                        }
                                                     }
                                                 }
                                                 return reucr_status(index + 1);
