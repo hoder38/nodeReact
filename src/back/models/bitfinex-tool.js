@@ -1223,7 +1223,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
                 sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
                 handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
-            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => cancelOffer(index + 1)));
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => cancelOffer(index + 1)));
             const submitOffer = index => {
                 if (index >= finalNew.length) {
                     if ((finalNew.length + needDelete.length) > 0) {
@@ -1350,7 +1350,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 availableMargin = needTrans;
                                             }
                                         }
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1));
+                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => real_delete(index + 1));
                                     });
                                 }
                             }
@@ -1404,7 +1404,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             availableMargin = needTrans;
                                         }
                                     }
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1))
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => real_delete(index + 1))
                                 });
                             }
                             return real_delete(0);
@@ -1480,7 +1480,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                         handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
-                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => real_delete(index + 1)));
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => real_delete(index + 1)));
                                 }
                                 return real_delete(0);
                             } else {
@@ -1621,11 +1621,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     }
                                     if (suggestion.bCount > 0 && suggestion.buy) {
                                         console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                                        let or1 = null;
                                         const submitOrderBuy = quotaChk => {
                                             if (quotaChk <= 0) {
+                                                or1 = null;
                                                 return Promise.resolve();
                                             }
-                                            const or1 = new Order({
+                                            or1 = new Order({
                                                 cid: Date.now(),
                                                 type: 'LIMIT',
                                                 symbol: item.index,
@@ -1641,46 +1643,46 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 } else {
                                                     throw err;
                                                 }
-                                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                                if (quotaChk > 0) {
-                                                    let isExist = false;
-                                                    for (let i = 0; i < order[id][current.type].length; i++) {
-                                                        if (or1[0].id === order[id][current.type][i].id) {
-                                                            order[id][current.type][i].code = true;
-                                                            isExist = true;
+                                            });
+                                        }
+                                        return submitOrderBuy(10).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                            if (or1) {
+                                                let isExist = false;
+                                                for (let i = 0; i < order[id][current.type].length; i++) {
+                                                    if (or1[0].id === order[id][current.type][i].id) {
+                                                        order[id][current.type][i].code = true;
+                                                        isExist = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!isExist) {
+                                                    let isDelete = false;
+                                                    for (let i = 0; i < deleteOrder.length; i++) {
+                                                        if (deleteOrder[i].id === or1[0].id) {
+                                                            isDelete = true;
+                                                            const delobj = deleteOrder.splice(i, 1);
+                                                            if (delobj.process){
+                                                                return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
+                                                            }
                                                             break;
                                                         }
                                                     }
-                                                    if (!isExist) {
-                                                        let isDelete = false;
-                                                        for (let i = 0; i < deleteOrder.length; i++) {
-                                                            if (deleteOrder[i].id === or1[0].id) {
-                                                                isDelete = true;
-                                                                const delobj = deleteOrder.splice(i, 1);
-                                                                if (delobj.process){
-                                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => reucr_status(index + 1));
-                                                                }
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (!isDelete) {
-                                                            order[id][current.type].push({
-                                                                id: or1[0].id,
-                                                                time: Math.round(new Date().getTime() / 1000),
-                                                                amount: or1[0].amount,
-                                                                type: or1[0].type,
-                                                                symbol: or1[0].symbol,
-                                                                price: or1[0].price,
-                                                                flags: or1[0].flags,
-                                                                code: true,
-                                                            });
-                                                        }
+                                                    if (!isDelete) {
+                                                        order[id][current.type].push({
+                                                            id: or1[0].id,
+                                                            time: Math.round(new Date().getTime() / 1000),
+                                                            amount: or1[0].amount,
+                                                            type: or1[0].type,
+                                                            symbol: or1[0].symbol,
+                                                            price: or1[0].price,
+                                                            flags: or1[0].flags,
+                                                            code: true,
+                                                        });
                                                     }
                                                 }
-                                                return reucr_status(index + 1);
-                                            });
-                                        }
-                                        return submitOrderBuy(10);
+                                            }
+                                            return reucr_status(index + 1);
+                                        });
                                     } else {
                                         return reucr_status(index + 1);
                                     }
