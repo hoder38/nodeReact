@@ -2582,10 +2582,11 @@ exports.default = {
     getSingleStockV2: function getSingleStockV2(type, obj) {
         var stage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
 
+        var index = obj.index;
+
         var _ret3 = function () {
             switch (type) {
                 case 'twse':
-                    var index = obj.index;
                     var date = new Date();
                     var year = date.getFullYear();
                     var month = date.getMonth() + 1;
@@ -2924,6 +2925,25 @@ exports.default = {
                     }
                     break;
                 case 'usse':
+                    if (stage === 0) {
+                        return {
+                            v: (0, _utility.handleError)(new _utility.HoError('no finance data'))
+                        };
+                    } else {
+                        return {
+                            v: (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
+                                var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+                                var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+                                console.log(price);
+                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+                                var trs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                                console.log((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
+                                console.log((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
+                                var trs1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                                console.log(trs1);
+                            })
+                        };
+                    }
                     break;
                 default:
                     return {
@@ -6384,18 +6404,20 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         };
     }
     if (previous.time) {
-        var pPrice = previous.type === 'buy' ? previous.price * (1 + fee) * (1 + fee) : previous.price * (2 - (1 + fee) * (1 + fee));
         if (previous.price >= price) {
             var previousP = priceArray.length - 1;
             var pP = 8;
+            var pPrice = previous.type === 'sell' ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
                     pP--;
                 }
             }
+            nowBP = previousP > nowBP ? previousP : nowBP;
+            bP = pP > bP ? pP : bP;
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -6415,18 +6437,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     is_sell = false;
                 }
             }
-            previousP = priceArray.length - 1;
-            pP = 8;
-            for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
-                    break;
-                }
-                if (priceArray[previousP] < 0) {
-                    pP--;
-                }
-            }
-            nowBP = previousP > nowBP ? previousP : nowBP;
-            bP = pP > bP ? pP : bP;
+            pPrice = previous.type === 'buy' ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
@@ -6443,14 +6454,17 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         if (previous.price < price) {
             var _previousP = 0;
             var _pP = 0;
+            var _pPrice = previous.type === 'buy' ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; _previousP < priceArray.length; _previousP++) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= _pPrice) {
                     break;
                 }
                 if (priceArray[_previousP] < 0) {
                     _pP++;
                 }
             }
+            nowSP = _previousP < nowSP ? _previousP : nowSP;
+            sP = _pP < sP ? _pP : sP;
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -6470,10 +6484,11 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     is_buy = false;
                 }
             }
+            _pPrice = previous.type === 'sell' ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             _previousP = priceArray.length - 1;
             _pP = 8;
             for (; _previousP >= 0; _previousP--) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
+                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 1.001 : 1.0001) >= _pPrice) {
                     break;
                 }
                 if (priceArray[_previousP] < 0) {
@@ -6482,18 +6497,6 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
             nowBP = _previousP > nowBP ? _previousP : nowBP;
             bP = _pP > bP ? _pP : bP;
-            _previousP = 0;
-            _pP = 0;
-            for (; _previousP < priceArray.length; _previousP++) {
-                if (Math.abs(priceArray[_previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
-                    break;
-                }
-                if (priceArray[_previousP] < 0) {
-                    _pP++;
-                }
-            }
-            nowSP = _previousP < nowSP ? _previousP : nowSP;
-            sP = _pP < sP ? _pP : sP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {

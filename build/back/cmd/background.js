@@ -252,6 +252,8 @@ var updateStockList = function updateStockList(list, type) {
     });
 };
 
+//StockTool.getSingleStockV2('usse', { index: 'MSFT',tag: [ 'Microsoft Corporation', 'dow jones', 'nasdaq 100', 's&p 500' ] }, 1).catch(err => bgError(err, 'Loop stockFilter'));
+
 var updateStock = exports.updateStock = function updateStock() {
     if ((0, _config.UPDATE_STOCK)(_ver.ENV_TYPE)) {
         var _ret5 = function () {

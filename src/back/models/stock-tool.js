@@ -2437,9 +2437,9 @@ const getParameterV2 = (data, type, text = null) => {
 
 export default {
     getSingleStockV2: function(type, obj, stage=0) {
+        const index = obj.index;
         switch(type) {
             case 'twse':
-            const index = obj.index;
             const date = new Date();
             let year = date.getFullYear();
             let month = date.getMonth() + 1;
@@ -2705,6 +2705,21 @@ export default {
             }
             break;
             case 'usse':
+            if (stage === 0) {
+                return handleError(new HoError('no finance data'));
+            } else {
+                return Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
+                    const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+                    const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+                    console.log(price);
+                    const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+                    const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                    console.log(findTag(findTag(trs[2], 'td')[1])[0]);
+                    console.log(findTag(findTag(trs[6], 'td')[1])[0]);
+                    const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                    console.log(trs1);
+                });
+            }
             break;
             default:
             return handleError(new HoError('stock type unknown!!!'));
@@ -5356,18 +5371,20 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
     }
     if (previous.time) {
-        const pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price * (2 - (1 + fee) * (1 + fee));
         if (previous.price >= price) {
             let previousP = priceArray.length - 1;
             let pP = 8;
+            let pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
                     pP--;
                 }
             }
+            nowBP = previousP > nowBP ? previousP : nowBP;
+            bP = pP > bP ? pP : bP;
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -5387,18 +5404,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                 }
             }
-            previousP = priceArray.length - 1;
-            pP = 8;
-            for (; previousP >= 0; previousP--) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
-                    break;
-                }
-                if (priceArray[previousP] < 0) {
-                    pP--;
-                }
-            }
-            nowBP = previousP > nowBP ? previousP : nowBP;
-            bP = pP > bP ? pP : bP;
+            pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
@@ -5415,14 +5421,17 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (previous.price < price) {
             let previousP = 0;
             let pP = 0;
+            let pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= previous.price) {
+                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
                     break;
                 }
                 if (priceArray[previousP] < 0) {
                     pP++;
                 }
             }
+            nowSP = previousP < nowSP ? previousP : nowSP;
+            sP = pP < sP ? pP : sP;
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -5442,6 +5451,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = false;
                 }
             }
+            pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             previousP = priceArray.length - 1;
             pP = 8;
             for (; previousP >= 0; previousP--) {
@@ -5454,18 +5464,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             }
             nowBP = previousP > nowBP ? previousP : nowBP;
             bP = pP > bP ? pP : bP;
-            previousP = 0;
-            pP = 0;
-            for (; previousP < priceArray.length; previousP++) {
-                if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
-                    break;
-                }
-                if (priceArray[previousP] < 0) {
-                    pP++;
-                }
-            }
-            nowSP = previousP < nowSP ? previousP : nowSP;
-            sP = pP < sP ? pP : sP;
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
