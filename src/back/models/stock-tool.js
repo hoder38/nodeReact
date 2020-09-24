@@ -2708,16 +2708,24 @@ export default {
             if (stage === 0) {
                 return handleError(new HoError('no finance data'));
             } else {
-                return Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
-                    const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-                    const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-                    console.log(price);
-                    const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
-                    const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                    console.log(findTag(findTag(trs[2], 'td')[1])[0]);
-                    console.log(findTag(findTag(trs[6], 'td')[1])[0]);
-                    const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                    console.log(trs1);
+                let id_db = null;
+                let normal_tags = [];
+                return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
+                    if (items.length > 0) {
+                        id_db = items[0]._id;
+                        for (let i of items[0].tags) {
+                            if (items[0].stock_default) {
+                                if (!items[0].stock_default.includes(i)) {
+                                    normal_tags.push(i);
+                                }
+                            } else {
+                                normal_tags.push(i);
+                            }
+                        }
+                    }
+                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr']).then(ret => {
+                        console.log(ret);
+                    });
                 });
             }
             break;
@@ -6450,4 +6458,37 @@ const twseTicker = (price, large = true) => {
             return Math.floor(price / 5) * 5;
         }
     }
+}
+
+const getUsStock = (index, stat=[price]) => {
+    const ret = {};
+    if (!Array.isArray(stat) || stat.length < 1) {
+        return Promise.resolve(ret);
+    }
+    return Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
+        const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+        if (stat.indexOf('price') !== -1) {
+            const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+            ret['price'] = Number(price);
+        }
+        if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
+            const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
+                const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                if (stat.indexOf('per') !== -1) {
+                    ret['per'] = Number(findTag(findTag(trs[2], 'td')[1])[0]);
+                }
+                if (stat.indexOf('pbr') !== -1) {
+                    ret['pbr'] = Number(findTag(findTag(trs[6], 'td')[1])[0]);
+                }
+            }
+            if (stat.indexOf('pdr') !== -1) {
+                const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
+                stockYield = Number(stockYield.substring(0, stockYield.length -1));
+                ret['pdr'] = 100 / stockYield;
+            }
+        }
+        return Promise.resolve(ret);
+    });
 }

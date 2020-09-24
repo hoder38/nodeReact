@@ -2930,19 +2930,54 @@ exports.default = {
                             v: (0, _utility.handleError)(new _utility.HoError('no finance data'))
                         };
                     } else {
-                        return {
-                            v: (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
-                                var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-                                var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-                                console.log(price);
-                                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
-                                var trs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                                console.log((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
-                                console.log((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
-                                var trs1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                                console.log(trs1);
-                            })
-                        };
+                        var _ret5 = function () {
+                            var id_db = null;
+                            var normal_tags = [];
+                            return {
+                                v: {
+                                    v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: type, index: index }, { limit: 1 }).then(function (items) {
+                                        if (items.length > 0) {
+                                            id_db = items[0]._id;
+                                            var _iteratorNormalCompletion4 = true;
+                                            var _didIteratorError4 = false;
+                                            var _iteratorError4 = undefined;
+
+                                            try {
+                                                for (var _iterator4 = (0, _getIterator3.default)(items[0].tags), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                                                    var i = _step4.value;
+
+                                                    if (items[0].stock_default) {
+                                                        if (!items[0].stock_default.includes(i)) {
+                                                            normal_tags.push(i);
+                                                        }
+                                                    } else {
+                                                        normal_tags.push(i);
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                _didIteratorError4 = true;
+                                                _iteratorError4 = err;
+                                            } finally {
+                                                try {
+                                                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                                                        _iterator4.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError4) {
+                                                        throw _iteratorError4;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        return getUsStock(index, ['price', 'per', 'pdr', 'pbr']).then(function (ret) {
+                                            console.log(ret);
+                                        });
+                                    })
+                                }
+                            };
+                        }();
+
+                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                     }
                     break;
                 default:
@@ -3024,7 +3059,7 @@ exports.default = {
                 };
             });
         } else {
-            var _ret5 = function () {
+            var _ret6 = function () {
                 var id_db = null;
                 var normal_tags = [];
                 var is_start = false;
@@ -3065,13 +3100,13 @@ exports.default = {
                                 tags = _ref4[1];
 
                             var stock_default = [];
-                            var _iteratorNormalCompletion4 = true;
-                            var _didIteratorError4 = false;
-                            var _iteratorError4 = undefined;
+                            var _iteratorNormalCompletion5 = true;
+                            var _didIteratorError5 = false;
+                            var _iteratorError5 = undefined;
 
                             try {
-                                for (var _iterator4 = (0, _getIterator3.default)(tags), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                                    var t = _step4.value;
+                                for (var _iterator5 = (0, _getIterator3.default)(tags), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                                    var t = _step5.value;
 
                                     var normal = (0, _tagTool.normalize)(t);
                                     if (!(0, _tagTool.isDefaultTag)(normal)) {
@@ -3082,16 +3117,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError4 = true;
-                                _iteratorError4 = err;
+                                _didIteratorError5 = true;
+                                _iteratorError5 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                                        _iterator4.return();
+                                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                                        _iterator5.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError4) {
-                                        throw _iteratorError4;
+                                    if (_didIteratorError5) {
+                                        throw _iteratorError5;
                                     }
                                 }
                             }
@@ -3258,13 +3293,13 @@ exports.default = {
                     v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: type, index: index }, { limit: 1 }).then(function (items) {
                         if (items.length > 0) {
                             id_db = items[0]._id;
-                            var _iteratorNormalCompletion5 = true;
-                            var _didIteratorError5 = false;
-                            var _iteratorError5 = undefined;
+                            var _iteratorNormalCompletion6 = true;
+                            var _didIteratorError6 = false;
+                            var _iteratorError6 = undefined;
 
                             try {
-                                for (var _iterator5 = (0, _getIterator3.default)(items[0].tags), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                                    var i = _step5.value;
+                                for (var _iterator6 = (0, _getIterator3.default)(items[0].tags), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                                    var i = _step6.value;
 
                                     if (items[0].stock_default) {
                                         if (!items[0].stock_default.includes(i)) {
@@ -3275,16 +3310,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError5 = true;
-                                _iteratorError5 = err;
+                                _didIteratorError6 = true;
+                                _iteratorError6 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                                        _iterator5.return();
+                                    if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                        _iterator6.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError5) {
-                                        throw _iteratorError5;
+                                    if (_didIteratorError6) {
+                                        throw _iteratorError6;
                                     }
                                 }
                             }
@@ -3309,7 +3344,7 @@ exports.default = {
                 };
             }();
 
-            if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
         }
     },
     getStockPERV2: function getStockPERV2(id) {
@@ -3343,7 +3378,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
 
-            var _ret6 = function () {
+            var _ret7 = function () {
                 switch (items[0].type) {
                     case 'twse':
                         var count = 0;
@@ -3396,7 +3431,7 @@ exports.default = {
                 }
             }();
 
-            if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+            if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -3523,7 +3558,7 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                var _ret7 = function () {
+                                var _ret8 = function () {
                                     var count = 0;
                                     var getTable = function getTable() {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
@@ -3608,7 +3643,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -3848,7 +3883,7 @@ exports.default = {
                                                 j = _temp12.start + 1;
                                             }
                                             if (testResult.length > 0) {
-                                                var _ret8 = function () {
+                                                var _ret9 = function () {
                                                     testResult.forEach(function (v, i) {
                                                         if (!year[i]) {
                                                             year[i] = [];
@@ -3899,7 +3934,7 @@ exports.default = {
                                                     }
                                                 }();
 
-                                                if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+                                                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                                             } else {
                                                 str = 'no less than mid point';
                                             }
@@ -3970,29 +4005,29 @@ exports.default = {
                                 var low = [];
                                 var vol = [];
                                 if (json_data && json_data['iTotalRecords'] > 0) {
-                                    var _iteratorNormalCompletion6 = true;
-                                    var _didIteratorError6 = false;
-                                    var _iteratorError6 = undefined;
+                                    var _iteratorNormalCompletion7 = true;
+                                    var _didIteratorError7 = false;
+                                    var _iteratorError7 = undefined;
 
                                     try {
-                                        for (var _iterator6 = (0, _getIterator3.default)(json_data['aaData']), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                                            var i = _step6.value;
+                                        for (var _iterator7 = (0, _getIterator3.default)(json_data['aaData']), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                                            var i = _step7.value;
 
                                             high.push(Number(i[4].replace(/,/g, '')));
                                             low.push(Number(i[5].replace(/,/g, '')));
                                             vol.push(Number(i[8].replace(/,/g, '')));
                                         }
                                     } catch (err) {
-                                        _didIteratorError6 = true;
-                                        _iteratorError6 = err;
+                                        _didIteratorError7 = true;
+                                        _iteratorError7 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                                _iterator6.return();
+                                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                                _iterator7.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError6) {
-                                                throw _iteratorError6;
+                                            if (_didIteratorError7) {
+                                                throw _iteratorError7;
                                             }
                                         }
                                     }
@@ -4016,13 +4051,13 @@ exports.default = {
                                         if (data_list && data_list.length > 0) {
                                             var tmp_index = -1;
                                             var tmp_number = '';
-                                            var _iteratorNormalCompletion7 = true;
-                                            var _didIteratorError7 = false;
-                                            var _iteratorError7 = undefined;
+                                            var _iteratorNormalCompletion8 = true;
+                                            var _didIteratorError8 = false;
+                                            var _iteratorError8 = undefined;
 
                                             try {
-                                                for (var _iterator7 = (0, _getIterator3.default)(data_list), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                                                    var i = _step7.value;
+                                                for (var _iterator8 = (0, _getIterator3.default)(data_list), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                                                    var i = _step8.value;
 
                                                     var tmp_list_1 = [];
                                                     var tmp_list = i.split(',');
@@ -4053,16 +4088,16 @@ exports.default = {
                                                     }
                                                 }
                                             } catch (err) {
-                                                _didIteratorError7 = true;
-                                                _iteratorError7 = err;
+                                                _didIteratorError8 = true;
+                                                _iteratorError8 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                                                        _iterator7.return();
+                                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                                        _iterator8.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError7) {
-                                                        throw _iteratorError7;
+                                                    if (_didIteratorError8) {
+                                                        throw _iteratorError8;
                                                     }
                                                 }
                                             }
@@ -4263,38 +4298,38 @@ exports.default = {
                             }
                             var group_num = 0;
                             var final_group = [];
-                            var _iteratorNormalCompletion8 = true;
-                            var _didIteratorError8 = false;
-                            var _iteratorError8 = undefined;
+                            var _iteratorNormalCompletion9 = true;
+                            var _didIteratorError9 = false;
+                            var _iteratorError9 = undefined;
 
                             try {
-                                for (var _iterator8 = (0, _getIterator3.default)(group), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                                    var _i26 = _step8.value;
+                                for (var _iterator9 = (0, _getIterator3.default)(group), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                                    var _i26 = _step9.value;
 
                                     if (_i26.end - _i26.start > 33) {
-                                        var _iteratorNormalCompletion9 = true;
-                                        var _didIteratorError9 = false;
-                                        var _iteratorError9 = undefined;
+                                        var _iteratorNormalCompletion10 = true;
+                                        var _didIteratorError10 = false;
+                                        var _iteratorError10 = undefined;
 
                                         try {
-                                            for (var _iterator9 = (0, _getIterator3.default)(group), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                                                var j = _step9.value;
+                                            for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                                                var j = _step10.value;
 
                                                 if (j.end - j.start > 13) {
                                                     final_group.push(j);
                                                 }
                                             }
                                         } catch (err) {
-                                            _didIteratorError9 = true;
-                                            _iteratorError9 = err;
+                                            _didIteratorError10 = true;
+                                            _iteratorError10 = err;
                                         } finally {
                                             try {
-                                                if (!_iteratorNormalCompletion9 && _iterator9.return) {
-                                                    _iterator9.return();
+                                                if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                                                    _iterator10.return();
                                                 }
                                             } finally {
-                                                if (_didIteratorError9) {
-                                                    throw _iteratorError9;
+                                                if (_didIteratorError10) {
+                                                    throw _iteratorError10;
                                                 }
                                             }
                                         }
@@ -4303,29 +4338,29 @@ exports.default = {
                                     } else if (_i26.end - _i26.start > 13) {
                                         group_num++;
                                         if (group_num > 2) {
-                                            var _iteratorNormalCompletion10 = true;
-                                            var _didIteratorError10 = false;
-                                            var _iteratorError10 = undefined;
+                                            var _iteratorNormalCompletion11 = true;
+                                            var _didIteratorError11 = false;
+                                            var _iteratorError11 = undefined;
 
                                             try {
-                                                for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                                    var _j2 = _step10.value;
+                                                for (var _iterator11 = (0, _getIterator3.default)(group), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                                                    var _j2 = _step11.value;
 
                                                     if (_j2.end - _j2.start > 13) {
                                                         final_group.push(_j2);
                                                     }
                                                 }
                                             } catch (err) {
-                                                _didIteratorError10 = true;
-                                                _iteratorError10 = err;
+                                                _didIteratorError11 = true;
+                                                _iteratorError11 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion10 && _iterator10.return) {
-                                                        _iterator10.return();
+                                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                                                        _iterator11.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError10) {
-                                                        throw _iteratorError10;
+                                                    if (_didIteratorError11) {
+                                                        throw _iteratorError11;
                                                     }
                                                 }
                                             }
@@ -4335,16 +4370,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError8 = true;
-                                _iteratorError8 = err;
+                                _didIteratorError9 = true;
+                                _iteratorError9 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                                        _iterator8.return();
+                                    if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                                        _iterator9.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError8) {
-                                        throw _iteratorError8;
+                                    if (_didIteratorError9) {
+                                        throw _iteratorError9;
                                     }
                                 }
                             }
@@ -4390,13 +4425,13 @@ exports.default = {
                                 final_arr[_i27] = 0;
                             }
                             var diff = (max - min) / 100;
-                            var _iteratorNormalCompletion11 = true;
-                            var _didIteratorError11 = false;
-                            var _iteratorError11 = undefined;
+                            var _iteratorNormalCompletion12 = true;
+                            var _didIteratorError12 = false;
+                            var _iteratorError12 = undefined;
 
                             try {
-                                for (var _iterator11 = (0, _getIterator3.default)(raw_arr), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                                    var _i30 = _step11.value;
+                                for (var _iterator12 = (0, _getIterator3.default)(raw_arr), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                                    var _i30 = _step12.value;
 
                                     var e = Math.ceil((_i30.h - min) / diff);
                                     var s = Math.floor((_i30.l - min) / diff);
@@ -4405,16 +4440,16 @@ exports.default = {
                                     }
                                 }
                             } catch (err) {
-                                _didIteratorError11 = true;
-                                _iteratorError11 = err;
+                                _didIteratorError12 = true;
+                                _iteratorError12 = err;
                             } finally {
                                 try {
-                                    if (!_iteratorNormalCompletion11 && _iterator11.return) {
-                                        _iterator11.return();
+                                    if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                        _iterator12.return();
                                     }
                                 } finally {
-                                    if (_didIteratorError11) {
-                                        throw _iteratorError11;
+                                    if (_didIteratorError12) {
+                                        throw _iteratorError12;
                                     }
                                 }
                             }
@@ -4457,29 +4492,29 @@ exports.default = {
                                 var low = [];
                                 var vol = [];
                                 if (json_data && json_data['iTotalRecords'] > 0) {
-                                    var _iteratorNormalCompletion12 = true;
-                                    var _didIteratorError12 = false;
-                                    var _iteratorError12 = undefined;
+                                    var _iteratorNormalCompletion13 = true;
+                                    var _didIteratorError13 = false;
+                                    var _iteratorError13 = undefined;
 
                                     try {
-                                        for (var _iterator12 = (0, _getIterator3.default)(json_data['aaData']), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                                            var i = _step12.value;
+                                        for (var _iterator13 = (0, _getIterator3.default)(json_data['aaData']), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                                            var i = _step13.value;
 
                                             high.push(Number(i[4].replace(/,/g, '')));
                                             low.push(Number(i[5].replace(/,/g, '')));
                                             vol.push(Number(i[8].replace(/,/g, '')));
                                         }
                                     } catch (err) {
-                                        _didIteratorError12 = true;
-                                        _iteratorError12 = err;
+                                        _didIteratorError13 = true;
+                                        _iteratorError13 = err;
                                     } finally {
                                         try {
-                                            if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                                                _iterator12.return();
+                                            if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                                                _iterator13.return();
                                             }
                                         } finally {
-                                            if (_didIteratorError12) {
-                                                throw _iteratorError12;
+                                            if (_didIteratorError13) {
+                                                throw _iteratorError13;
                                             }
                                         }
                                     }
@@ -4504,13 +4539,13 @@ exports.default = {
                                             console.log(data_list.length);
                                             var tmp_index = -1;
                                             var tmp_number = '';
-                                            var _iteratorNormalCompletion13 = true;
-                                            var _didIteratorError13 = false;
-                                            var _iteratorError13 = undefined;
+                                            var _iteratorNormalCompletion14 = true;
+                                            var _didIteratorError14 = false;
+                                            var _iteratorError14 = undefined;
 
                                             try {
-                                                for (var _iterator13 = (0, _getIterator3.default)(data_list), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                                    var i = _step13.value;
+                                                for (var _iterator14 = (0, _getIterator3.default)(data_list), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                                                    var i = _step14.value;
 
                                                     var tmp_list_1 = [];
                                                     var tmp_list = i.split(',');
@@ -4539,16 +4574,16 @@ exports.default = {
                                                     vol.push(Number(tmp_list_1[8]));
                                                 }
                                             } catch (err) {
-                                                _didIteratorError13 = true;
-                                                _iteratorError13 = err;
+                                                _didIteratorError14 = true;
+                                                _iteratorError14 = err;
                                             } finally {
                                                 try {
-                                                    if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                                                        _iterator13.return();
+                                                    if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                                                        _iterator14.return();
                                                     }
                                                 } finally {
-                                                    if (_didIteratorError13) {
-                                                        throw _iteratorError13;
+                                                    if (_didIteratorError14) {
+                                                        throw _iteratorError14;
                                                     }
                                                 }
                                             }
@@ -5387,13 +5422,13 @@ exports.default = {
             var totalName = '';
             var totalType = '';
             var totalId = null;
-            var _iteratorNormalCompletion14 = true;
-            var _didIteratorError14 = false;
-            var _iteratorError14 = undefined;
+            var _iteratorNormalCompletion15 = true;
+            var _didIteratorError15 = false;
+            var _iteratorError15 = undefined;
 
             try {
-                for (var _iterator14 = (0, _getIterator3.default)(items), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                    var v = _step14.value;
+                for (var _iterator15 = (0, _getIterator3.default)(items), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                    var v = _step15.value;
 
                     if (v.name === '投資部位' && v.type === 'total') {
                         remain = v.amount;
@@ -5403,16 +5438,16 @@ exports.default = {
                     }
                 }
             } catch (err) {
-                _didIteratorError14 = true;
-                _iteratorError14 = err;
+                _didIteratorError15 = true;
+                _iteratorError15 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                        _iterator14.return();
+                    if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                        _iterator15.return();
                     }
                 } finally {
-                    if (_didIteratorError14) {
-                        throw _iteratorError14;
+                    if (_didIteratorError15) {
+                        throw _iteratorError15;
                     }
                 }
             }
@@ -5443,14 +5478,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret9 = _loop(i);
+                            var _ret10 = _loop(i);
 
-                            switch (_ret9) {
+                            switch (_ret10) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                             }
                         }
                     } else {
@@ -5597,14 +5632,14 @@ exports.default = {
                         };
 
                         _loop4: for (var _i31 in items) {
-                            var _ret10 = _loop3(_i31);
+                            var _ret11 = _loop3(_i31);
 
-                            switch (_ret10) {
+                            switch (_ret11) {
                                 case 'break':
                                     break _loop4;
 
                                 default:
-                                    if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                             }
                         }
 
@@ -5781,7 +5816,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret11 = function () {
+    var _ret12 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -5813,7 +5848,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -5830,13 +5865,13 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
         }
         var tds = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
         var filename = false;
-        var _iteratorNormalCompletion15 = true;
-        var _didIteratorError15 = false;
-        var _iteratorError15 = undefined;
+        var _iteratorNormalCompletion16 = true;
+        var _didIteratorError16 = false;
+        var _iteratorError16 = undefined;
 
         try {
-            for (var _iterator15 = (0, _getIterator3.default)(tds), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-                var t = _step15.value;
+            for (var _iterator16 = (0, _getIterator3.default)(tds), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                var t = _step16.value;
 
                 var a = (0, _utility.findTag)(t, 'a')[0];
                 if (a) {
@@ -5845,16 +5880,16 @@ var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
                 }
             }
         } catch (err) {
-            _didIteratorError15 = true;
-            _iteratorError15 = err;
+            _didIteratorError16 = true;
+            _iteratorError16 = err;
         } finally {
             try {
-                if (!_iteratorNormalCompletion15 && _iterator15.return) {
-                    _iterator15.return();
+                if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                    _iterator16.return();
                 }
             } finally {
-                if (_didIteratorError15) {
-                    throw _iteratorError15;
+                if (_didIteratorError16) {
+                    throw _iteratorError16;
                 }
             }
         }
@@ -5881,7 +5916,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret12 = function () {
+            var _ret13 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -5928,7 +5963,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+            if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -5946,27 +5981,27 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
         }).then(function (metadata) {
             return recur_annual(year, metadata.id);
         }) : (0, _apiToolGoogle2.default)('list file', { folderId: annualList[0].id }).then(function (metadataList) {
-            var _iteratorNormalCompletion16 = true;
-            var _didIteratorError16 = false;
-            var _iteratorError16 = undefined;
+            var _iteratorNormalCompletion17 = true;
+            var _didIteratorError17 = false;
+            var _iteratorError17 = undefined;
 
             try {
-                for (var _iterator16 = (0, _getIterator3.default)(metadataList), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-                    var i = _step16.value;
+                for (var _iterator17 = (0, _getIterator3.default)(metadataList), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                    var i = _step17.value;
 
                     annual_list.push((0, _mime.getExtname)(i.title).front);
                 }
             } catch (err) {
-                _didIteratorError16 = true;
-                _iteratorError16 = err;
+                _didIteratorError17 = true;
+                _iteratorError17 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion16 && _iterator16.return) {
-                        _iterator16.return();
+                    if (!_iteratorNormalCompletion17 && _iterator17.return) {
+                        _iterator17.return();
                     }
                 } finally {
-                    if (_didIteratorError16) {
-                        throw _iteratorError16;
+                    if (_didIteratorError17) {
+                        throw _iteratorError17;
                     }
                 }
             }
@@ -6189,7 +6224,7 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    var _ret13 = function () {
+    var _ret14 = function () {
         switch (type) {
             case 'twse':
                 var quarter = 3;
@@ -6244,9 +6279,9 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                                 };
 
                                                 for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
-                                                    var _ret14 = _loop5(_i32);
+                                                    var _ret15 = _loop5(_i32);
 
-                                                    if (_ret14 === 'break') break;
+                                                    if (_ret15 === 'break') break;
                                                 }
                                                 if (!exist) {
                                                     stock_list.push({
@@ -6311,7 +6346,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         }
     }();
 
-    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+    if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
 };
 
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
@@ -7533,4 +7568,39 @@ var twseTicker = function twseTicker(price) {
             return Math.floor(price / 5) * 5;
         }
     }
+};
+
+var getUsStock = function getUsStock(index) {
+    var stat = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [price];
+
+    var ret = {};
+    if (!Array.isArray(stat) || stat.length < 1) {
+        return _promise2.default.resolve(ret);
+    }
+    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
+        var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+        if (stat.indexOf('price') !== -1) {
+            var _price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+            ret['price'] = Number(_price);
+        }
+        if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
+            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
+                var trs = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                if (stat.indexOf('per') !== -1) {
+                    ret['per'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
+                }
+                if (stat.indexOf('pbr') !== -1) {
+                    ret['pbr'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
+                }
+            }
+            if (stat.indexOf('pdr') !== -1) {
+                var trs1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                var stockYield = (0, _utility.findTag)((0, _utility.findTag)(trs1[3], 'td')[1])[0];
+                stockYield = Number(stockYield.substring(0, stockYield.length - 1));
+                ret['pdr'] = 100 / stockYield;
+            }
+        }
+        return _promise2.default.resolve(ret);
+    });
 };
