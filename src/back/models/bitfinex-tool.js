@@ -1620,7 +1620,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 return cancelOrder();
                             }).then(() => {
                                 let is_insert = false;
-                                for (i = 0; i < newOrder.lenght; i++) {
+                                for (let i = 0; i < newOrder.lenght; i++) {
                                     if (item.orig > newOrder[i].item.orig) {
                                         newOrder.splice(i, 0, {item, suggestion});
                                         is_insert = true;
