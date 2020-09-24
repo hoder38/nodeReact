@@ -1860,7 +1860,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     return cancelOrder();
                                 }).then(function () {
                                     var is_insert = false;
-                                    for (var _i14 = 0; _i14 < newOrder.lenght; _i14++) {
+                                    for (var _i14 = 0; _i14 < newOrder.length; _i14++) {
                                         if (item.orig > newOrder[_i14].item.orig) {
                                             newOrder.splice(_i14, 0, { item: item, suggestion: suggestion });
                                             is_insert = true;
