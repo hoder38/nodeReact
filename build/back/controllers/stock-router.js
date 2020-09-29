@@ -192,24 +192,16 @@ router.get('/getPER/:uid', function (req, res, next) {
     });
 });
 
-router.get('/getPredictPER/:uid', function (req, res, next) {
+/*router.get('/getPredictPER/:uid', function(req, res,next) {
     console.log('stock get predict');
-    var id = (0, _utility.isValidString)(req.params.uid, 'uid');
+    const id = isValidString(req.params.uid, 'uid');
     if (!id) {
-        return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
+        return handleError(new HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getPredictPERWarp(id, req.session).then(function (_ref3) {
-        var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
-            result = _ref4[0],
-            index = _ref4[1];
-
-        return res.json({ per: index + ': ' + result });
-    }).catch(function (err) {
-        return (0, _utility.handleError)(err, next);
-    });
+    StockTool.getPredictPERWarp(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
-/*router.get('/getPoint/:uid/:price?', function(req, res, next) {
+router.get('/getPoint/:uid/:price?', function(req, res, next) {
     console.log('stock get point');
     const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {
@@ -231,10 +223,10 @@ router.get('/getInterval/:uid', function (req, res, next) {
     if (!id) {
         return (0, _utility.handleError)(new _utility.HoError('uid is not vaild'), next);
     }
-    _stockTool2.default.getIntervalWarp(id, req.session).then(function (_ref5) {
-        var _ref6 = (0, _slicedToArray3.default)(_ref5, 2),
-            result = _ref6[0],
-            index = _ref6[1];
+    _stockTool2.default.getIntervalWarp(id, req.session).then(function (_ref3) {
+        var _ref4 = (0, _slicedToArray3.default)(_ref3, 2),
+            result = _ref4[0],
+            index = _ref4[1];
 
         return res.json({ interval: index + ': ' + result });
     }).catch(function (err) {

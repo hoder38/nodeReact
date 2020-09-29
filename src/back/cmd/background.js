@@ -114,8 +114,6 @@ const updateStockList = (list, type) => {
     });
 }
 
-//StockTool.getSingleStockV2('usse', { index: 'MSFT',tag: [ 'Microsoft Corporation', 'dow jones', 'nasdaq 100', 's&p 500' ] }, 1).catch(err => bgError(err, 'Loop stockFilter'));
-
 export const updateStock = () => {
     if (UPDATE_STOCK(ENV_TYPE)) {
         const loopUpdateStock = () => {

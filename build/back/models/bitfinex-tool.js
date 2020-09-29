@@ -1669,7 +1669,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
                 var newOrder = [];
-                var reucr_status = function reucr_status(index) {
+                var recur_status = function recur_status(index) {
                     if (index >= items.length) {
                         (0, _sendWs2.default)({
                             type: 'bitfinex',
@@ -1870,7 +1870,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     if (!is_insert) {
                                         newOrder.push({ item: item, suggestion: suggestion });
                                     }
-                                    return reucr_status(index + 1);
+                                    return recur_status(index + 1);
                                 });
                             };
                             if (item.ing === 2) {
@@ -1886,7 +1886,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     item_count = item.count < item_count ? item.count : item_count;
                                     var delTotal = function delTotal() {
                                         return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
-                                            return reucr_status(index + 1);
+                                            return recur_status(index + 1);
                                         });
                                     };
                                     if (item_count > 0) {
@@ -1956,7 +1956,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     };
                                 } else {
                                     return {
-                                        v: reucr_status(index + 1)
+                                        v: recur_status(index + 1)
                                     };
                                 }
                             } else {
@@ -1967,7 +1967,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             if (+priceData[item.index].lastPrice) {
                                                 return startStatus();
                                             } else {
-                                                return reucr_status(index + 1);
+                                                return recur_status(index + 1);
                                             }
                                         })
                                     };
@@ -1975,7 +1975,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     console.log('enter_mid');
                                     console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
                                     return {
-                                        v: reucr_status(index + 1)
+                                        v: recur_status(index + 1)
                                     };
                                 }
                             }
@@ -1986,6 +1986,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 };
                 var recur_NewOrder = function recur_NewOrder(index) {
                     if (index >= newOrder.length) {
+                        (0, _sendWs2.default)({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id
+                        });
                         return _promise2.default.resolve();
                     } else {
                         var _ret9 = function () {
@@ -2033,7 +2038,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 return or1.submit().catch(function (err) {
                                                     var msg = err.message || err.msg;
                                                     if (msg.includes('not enough tradable balance')) {
-                                                        (0, _sendWs2.default)(id + ' Total Updata Error: ' + (err.message || err.msg), 0, 0, true);
+                                                        //sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                         (0, _utility.handleError)(err, id + ' Total Updata Error');
                                                         return new _promise2.default(function (resolve, reject) {
                                                             return setTimeout(function () {
@@ -2175,7 +2180,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
                     }
                 };
-                return reucr_status(0).then(function () {
+                return recur_status(0).then(function () {
                     return recur_NewOrder(0);
                 });
             });

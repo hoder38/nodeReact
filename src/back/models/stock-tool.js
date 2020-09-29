@@ -121,41 +121,53 @@ const quarterIsEmpty = quarter => {
 
 
 const getStockPrice = (type, index, price_only = true) => {
-    let count = 0;
-    const real = () => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
-        const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
-        if (!table) {
-            return handleError(new HoError(`stock ${index} price get fail`));
-        }
-        const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
-        if (!price || !price[0]) {
-            console.log(raw_data);
-            return handleError(new HoError(`stock ${index} price get fail`));
-        }
-        if (price[0] === '-') {
-            const last_price = findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
-            if (!last_price || !last_price[0]) {
+    switch(type) {
+        case 'twse':
+        let count = 0;
+        const real = () => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+            const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1], 'tr')[0], 'td')[0], 'table')[0];
+            if (!table) {
+                return handleError(new HoError(`stock ${index} price get fail`));
+            }
+            const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
+            if (!price || !price[0]) {
+                console.log(raw_data);
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
             if (price[0] === '-') {
-                last_price[0] = 0;
+                const last_price = findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
+                if (!last_price || !last_price[0]) {
+                    return handleError(new HoError(`stock ${index} price get fail`));
+                }
+                if (price[0] === '-') {
+                    last_price[0] = 0;
+                }
+                price[0] = last_price[0];
             }
-            price[0] = last_price[0];
-        }
-        price[0] = +price[0];
-        if (!price_only) {
-            const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
-            if (up && up[0]) {
-                price[0] = `${price[0]} ${up[0]}`;
+            price[0] = +price[0];
+            if (!price_only) {
+                const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
+                if (up && up[0]) {
+                    price[0] = `${price[0]} ${up[0]}`;
+                }
             }
-        }
-        console.log(price[0]);
-        return price[0];
-    }).catch(err => {
-        console.log(count);
-        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
-    });
-    return real();
+            console.log(price[0]);
+            return price[0];
+        }).catch(err => {
+            console.log(count);
+            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
+        });
+        return real();
+        break;
+        case 'usse':
+        return getUsStock(index).then(ret => {
+            console.log(ret.price);
+            return ret.price;
+        });
+        break;
+        default:
+        return handleError(new HoError('stock type unknown!!!'));
+    }
 }
 
 const getEPS = sales => {
@@ -1864,6 +1876,30 @@ const getBasicStockData = (type, index) => {
             });
             return result;
         });
+        break;
+        case 'usse':
+        return Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
+            let result = {stock_location: ['us', '美國'], stock_index: index};
+            const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+            const market = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[1], 'span')[0])[0];
+            result.stock_market = market.substring(0, market.indexOf('-')).trim();
+            const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0];
+            const section = findTag(findTag(info, 'div')[0], 'div')[0];
+            result.stock_full = findTag(findTag(section, 'h3')[0])[0];
+            result.stock_name = [result.stock_full];
+            result.stock_class = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[1])[0];
+            result.stock_time = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[3])[0];
+            result.stock_executive = [];
+            findTag(findTag(findTag(findTag(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                findTag(findTag(findTag(t, 'td')[0], 'span')[0]).forEach(n => {
+                    if (n.match(/^M/)) {
+                        result.stock_executive.push(n);
+                    }
+                });
+            });
+            return result;
+        });
+        break;
         default:
         return handleError(new HoError('stock type unknown!!!'));
     }
@@ -1872,9 +1908,15 @@ const getBasicStockData = (type, index) => {
 const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
     let tags = new Set();
     indexTag.forEach(v => tags.add(v));
-    tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_market_e).add(basic.stock_class).add(basic.stock_time);
+    tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class).add(basic.stock_time);
+    if (basic.stock_market_e) {
+        tags.add(basic.stock_market_e);
+    }
     basic.stock_name.forEach(i => tags.add(i));
     basic.stock_location.forEach(i => tags.add(i));
+    if (basic.stock_executive && basic.stock_executive.length > 0) {
+        basic.stock_executive.forEach(i => tags.add(i));
+    }
     let valid_tags = [];
     tags.forEach(i => {
         const valid_name = isValidString(i, 'name');
@@ -2523,7 +2565,7 @@ export default {
                                 pbr,
                                 latestQuarter,
                                 latestYear,
-                                stockName: `${type}${index}${name}`,
+                                stockName: `${type} ${index} ${name}`,
                                 id,
                             }
                         });
@@ -2723,9 +2765,52 @@ export default {
                             }
                         }
                     }
-                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr']).then(ret => {
+                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr']).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
                         console.log(ret);
-                    });
+                        let stock_default = [];
+                        for (let t of tags) {
+                            const normal = normalize(t);
+                            if (!isDefaultTag(normal)) {
+                                if (normal_tags.indexOf(normal) === -1) {
+                                    normal_tags.push(normal);
+                                    stock_default.push(normal);
+                                }
+                            }
+                        }
+                        const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
+                            price: ret.price,
+                            per: ret.per,
+                            pdr: ret.pdr,
+                            pbr: ret.pbr,
+                            latestQuarter: ret.latestQuarter,
+                            latestYear: ret.latestYear,
+                            tags: normal_tags,
+                            name,
+                            stock_default,
+                        }}).then(item => id_db) : Mongo('insert', STOCKDB, {
+                            type,
+                            index,
+                            name,
+                            price: ret.price,
+                            per: ret.per,
+                            pdr: ret.pdr,
+                            pbr: ret.pbr,
+                            latestQuarter: ret.latestQuarter,
+                            latestYear: ret.latestYear,
+                            //tags: normal_tags,
+                            important: 0,
+                            stock_default,
+                        }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
+                        return retObj().then(id => ({
+                            per: ret.per,
+                            pdr: ret.pdr,
+                            pbr: ret.pbr,
+                            latestQuarter: ret.latestQuarter,
+                            latestYear: ret.latestYear,
+                            stockName: `${type} ${index} ${name}`,
+                            id,
+                        }));
+                    }));
                 });
             }
             break;
@@ -2795,7 +2880,7 @@ export default {
                     profitIndex: items[0].profitIndex,
                     managementIndex: items[0].managementIndex,
                     safetyIndex: items[0].safetyIndex,
-                    stockName: `${items[0].type}${items[0].index}${items[0].name}`,
+                    stockName: `${items[0].type} ${items[0].index} ${items[0].name}`,
                 };
             });
         } else {
@@ -2885,7 +2970,7 @@ export default {
                             profitIndex,
                             managementIndex,
                             safetyIndex,
-                            stockName: `${type}${index}${name}`,
+                            stockName: `${type} ${index} ${name}`,
                             id,
                         }));
                     });
@@ -3013,12 +3098,21 @@ export default {
                 return handleError(new HoError('can not find stock!!!'));
             }
             const start = (items[0].latestQuarter === 0) ? `${items[0].latestYear - 1912}12` : `${items[0].latestYear - 1911}${completeZero(items[0].latestQuarter*3, 2)}`;
-            return getStockPrice(items[0].type, items[0].index).then(price => {
-                const per = (items[0].profit === 0) ? 0 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
-                const pdr = (items[0].dividends === 0) ? 0 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
-                const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
-                return [per, pdr, pbr, items[0].index, start];
-            });
+            switch(items[0].type) {
+                case 'twse':
+                return getStockPrice(items[0].type, items[0].index).then(price => {
+                    const per = (items[0].profit === 0) ? 0 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
+                    const pdr = (items[0].dividends === 0) ? 0 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
+                    const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
+                    return [per, pdr, pbr, items[0].index, start];
+                });
+                break;
+                case 'usse':
+                return [items[0].per, items[0].pdr, items[0].pbr, items[0].index, start];
+                break;
+                default:
+                return handleError(new HoError('stock type unknown!!!'));
+            }
         });
     },
     getStockPER: function(id) {
@@ -3437,7 +3531,7 @@ export default {
                                 return [interval_data, 'no profit'];
                             }
                             //update total
-                            const restTest = () => getStockPrice('twse', items[0].index).then(price => {
+                            const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const year = [];
                                 const ret_str1 = [];
                                 let ret_str = '';
@@ -3626,7 +3720,7 @@ export default {
                             }
                         }
                         if (start_month && raw_list && raw_list[year] && raw_list[year][month_str]) {
-                            raw_arr = raw_arr.concat(raw_list[year][month_str].raw);
+                            raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
                             if (raw_list[year][month_str].max > max) {
                                 max = raw_list[year][month_str].max;
                             }
@@ -3667,13 +3761,13 @@ export default {
                                         if (!tmp_min || list.low[i] < tmp_min) {
                                             tmp_min = list.low[i];
                                         }
-                                        raw_arr.push({
+                                        tmp_interval.push({
                                             h: list.high[i],
                                             l: list.low[i],
                                             v: list.vol[i],
                                         });
-                                        tmp_interval.push(raw_arr[raw_arr.length - 1]);
                                     }
+                                    raw_arr = raw_arr.concat(tmp_interval.reverse());
                                     if (!interval_data) {
                                         interval_data = {};
                                     }
@@ -3690,7 +3784,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
+                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ recur_mi(1, 0) /*: Promise.resolve([null, ret_obj]);*/
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -3702,6 +3796,298 @@ export default {
                         return [ret_obj, items[0].index];
                     });
                 });
+                break;
+                case 'usse':
+                StockTagTool.setLatest(items[0]._id, session).catch(err => handleError(err, 'Set latest'));
+                return Redis('hgetall', `interval: ${items[0].type}${items[0].index}`).then(item => {
+                    const getInit = () => item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
+                    return getInit();
+                }).then(([raw_list, ret_obj, etime]) => {
+                    let interval_data = null;
+                    if (month === 1) {
+                        year--;
+                        month = 12;
+                        month_str = completeZero(month.toString(), 2);
+                    } else {
+                        month--;
+                        month_str = completeZero(month.toString(), 2);
+                    }
+                    let start_get = new Date(year, month, 1, 12).getTime() / 1000;
+                    let end_get = new Date(year - 5, month, 1, 12).getTime() / 1000;
+                    let start_month = `${year}${month_str}`;
+                    let max = 0;
+                    let min = 0;
+                    let raw_arr = [];
+                    let min_vol = 0;
+                    const rest_interval = () => {
+                        console.log(max);
+                        console.log(min);
+                        console.log(min_vol);
+                        const loga = logArray(max, min);
+                        const web = calStair(raw_arr, loga, min);
+                        console.log(web);
+                        return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
+                            console.log(item);
+                            if (!web) {
+                                return [interval_data, 'no profit'];
+                            }
+                            //update total
+                            const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
+                                const year = [];
+                                const ret_str1 = [];
+                                let ret_str = '';
+                                let best_rate = 0;
+                                let lastest_type = 0;
+                                let lastest_rate = 0;
+                                const resultShow = type => {
+                                    let str = '';
+                                    const testResult = [];
+                                    const match = [];
+                                    let j = raw_arr.length - 1;
+                                    while (j > 249) {
+                                        const temp = stockTest(raw_arr, loga, min, type, j);
+                                        if (temp === 'data miss') {
+                                            return true;
+                                        }
+                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                            testResult.push(temp);
+                                            match.push(tempM);
+                                        }
+                                        j = temp.start + 1;
+                                    }
+                                    if (testResult.length > 0) {
+                                        testResult.forEach((v, i) => {
+                                            if (!year[i]) {
+                                                year[i] = [];
+                                            }
+                                            year[i].push(v);
+                                        });
+                                        let rate = 1;
+                                        let real = 1;
+                                        let count = 0;
+                                        let times = 0;
+                                        let stoploss = 0;
+                                        let maxloss = 0;
+                                        match.forEach((v, i) => {
+                                            rate = rate * (Number(v[3]) + 100) / 100;
+                                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                lastest_rate = Number(v[3]);
+                                                lastest_type = type;
+                                            }*/
+                                            real = real * (Number(v[4]) + 100) / 100;
+                                            count++;
+                                            times += Number(v[5]);
+                                            stoploss += Number(v[6]);
+                                            if (!maxloss || maxloss > +v[7]) {
+                                                maxloss = +v[7];
+                                            }
+                                        });
+                                        str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
+                                        rate = Math.round(rate * 10000 - 10000) / 100;
+                                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                        times = Math.round(times / count * 100) / 100;
+                                        str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
+                                        if (!best_rate || rate > best_rate) {
+                                            best_rate = rate;
+                                            ret_str = str;
+                                        }
+                                        const temp = stockTest(raw_arr, loga, min, type, 0, true);
+                                        if (temp === 'data miss') {
+                                            return true;
+                                        }
+                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                lastest_rate = Number(tempM[3]);
+                                                lastest_type = type;
+                                            }
+                                        }
+                                    } else {
+                                        str = 'no less than mid point';
+                                    }
+                                    ret_str1.push(str);
+                                }
+                                for (let i = 15; i >= 0; i--) {
+                                    if (resultShow(i)) {
+                                        return handleError(new HoError(`${items[0].index} data miss!!!`));
+                                    }
+                                }
+                                year.forEach((v, i) => {
+                                    console.log('year' + (+i + 1));
+                                    v.forEach(k => console.log(k.str));
+                                });
+                                ret_str1.forEach(v => console.log(v));
+                                if (!ret_str) {
+                                    ret_str = 'no less than mid point';
+                                }
+                                console.log(lastest_type);
+                                //amount real strategy times stoploss (no less than mid point)
+                                console.log('done');
+                                return [interval_data, ret_str, lastest_type];
+                            });
+                            return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
+                                const recur_web = (index, type) => {
+                                    if (index >= item.length) {
+                                        return Promise.resolve();
+                                    } else {
+                                        const newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
+                                        return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
+                                            web: newWeb.arr,
+                                            mid: newWeb.mid,
+                                            times: newWeb.times,
+                                            wType: type,
+                                        }}).then(() => recur_web(index + 1));
+                                    }
+                                }
+                                return restTest().then(([result, index, type]) => {
+                                    web.type = type;
+                                    return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => recur_web(0, type).then(() => [result, index]));
+                                });
+                            });
+                        })
+                    }
+                    const get_mi = index => {
+                        if (raw_list) {
+                            let isEnd = false;
+                            for (let i = 0; i < 60; i++) {
+                                if (raw_list[year] && raw_list[year][month_str]) {
+                                    if (!isEnd) {
+                                        isEnd = true;
+                                        end_get = new Date(year, month, 1, 12).getTime() / 1000;
+                                    }
+                                    raw_list[year][month_str].raw.forEach(v => {
+                                        if (!min_vol || v.v < min_vol) {
+                                            min_vol = v.v;
+                                        }
+                                    });
+                                    raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
+                                    if (raw_list[year][month_str].max > max) {
+                                        max = raw_list[year][month_str].max;
+                                    }
+                                    if (!min || raw_list[year][month_str].min < min) {
+                                        min = raw_list[year][month_str].min;
+                                    }
+                                    if (!interval_data) {
+                                        interval_data = {};
+                                    }
+                                    if (!interval_data[year]) {
+                                        interval_data[year] = {};
+                                    }
+                                    interval_data[year][month_str] = {
+                                        raw: raw_list[year][month_str].raw,
+                                        max: raw_list[year][month_str].max,
+                                        min: raw_list[year][month_str].min,
+                                    };
+                                }
+                                if (month === 1) {
+                                    year--;
+                                    month = 12;
+                                    month_str = completeZero(month.toString(), 2);
+                                } else {
+                                    month--;
+                                    month_str = completeZero(month.toString(), 2);
+                                }
+                            }
+                        }
+                        return ((start_get - end_get) < (20 * 86400)) ? rest_interval() : Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
+                            if (raw_data.split("\n").length > 1) {
+                                raw_arr = [];
+                                interval_data = null;
+                                min_vol = 0;
+                                max = 0;
+                                min = 0;
+                                end_get = new Date(year - 5, month).getTime() / 1000;
+                            }
+                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
+                                raw_data = raw_data.split("\n").reverse();
+                                let y = '';
+                                let m = '';
+                                let tmp_interval = [];
+                                let tmp_max = 0;
+                                let tmp_min = 0;
+                                for (let i = 0; i < raw_data.length - 1; i++) {
+                                    const len = raw_data[i].split(',');
+                                    const match = len[0].match(/^(\d+)\-(\d+)\-/);
+                                    if (match[1] !== y || match[2] !== m) {
+                                        if (y && m) {
+                                            if (!interval_data) {
+                                                interval_data = {};
+                                            }
+                                            if (!interval_data[y]) {
+                                                interval_data[y] = {};
+                                            }
+                                            interval_data[y][m] = {
+                                                raw: tmp_interval.reverse(),
+                                                max: tmp_max,
+                                                min: tmp_min,
+                                            };
+                                            tmp_interval = [];
+                                            tmp_max = 0;
+                                            tmp_min = 0;
+                                        }
+                                        y = match[1];
+                                        m = match[2];
+                                    }
+                                    raw_arr.push({
+                                        h: Number(len[2]),
+                                        l: Number(len[3]),
+                                        v: Number(len[6]),
+                                    });
+                                    tmp_interval.push({
+                                        h: Number(len[2]),
+                                        l: Number(len[3]),
+                                        v: Number(len[6]),
+                                    });
+                                    if (Number(len[2]) > max) {
+                                        max = Number(len[2]);
+                                    }
+                                    if (!min || Number(len[3]) < min) {
+                                        min = Number(len[3]);
+                                    }
+                                    if (Number(len[2]) > tmp_max) {
+                                        tmp_max = Number(len[2]);
+                                    }
+                                    if (!tmp_min || Number(len[3]) < tmp_min) {
+                                        tmp_min = Number(len[3]);
+                                    }
+                                    if (!min_vol || Number(len[6]) < min_vol) {
+                                        min_vol = Number(len[6]);
+                                    }
+                                }
+                                if (y && m) {
+                                    if (!interval_data) {
+                                        interval_data = {};
+                                    }
+                                    if (!interval_data[y]) {
+                                        interval_data[y] = {};
+                                    }
+                                    interval_data[y][m] = {
+                                        raw: tmp_interval.reverse(),
+                                        max: tmp_max,
+                                        min: tmp_min,
+                                    };
+                                    tmp_interval = [];
+                                    tmp_max = 0;
+                                    tmp_min = 0;
+                                }
+                                return rest_interval();
+                            });
+                        });
+                    }
+                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ get_mi() /*: Promise.resolve([null, ret_obj]);*/
+                    return exGet().then(([raw_list, ret_obj]) => {
+                        if (raw_list) {
+                            Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
+                                raw_list: JSON.stringify(raw_list),
+                                ret_obj,
+                                etime: Math.round(new Date().getTime()/1000 + CACHE_EXPIRE),
+                            }).catch(err => handleError(err, 'Redis'));
+                        }
+                        return [ret_obj, items[0].index];
+                    });
+                });
+                break;
                 default:
                 return handleError(new HoError('stock type unknown!!!'));
             }
@@ -5272,7 +5658,7 @@ export const getStockListV2 = (type, year, month) => {
             } else {
                 return Api('url', `https://www.slickcharts.com/${list[index]}`).then(raw_data => {
                     findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                        const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0];
+                        const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
                         const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
                         let is_exit = false;
                         for (let i = 0; i < stock_list.length; i++) {
@@ -6460,7 +6846,7 @@ const twseTicker = (price, large = true) => {
     }
 }
 
-const getUsStock = (index, stat=[price]) => {
+const getUsStock = (index, stat=['price']) => {
     const ret = {};
     if (!Array.isArray(stat) || stat.length < 1) {
         return Promise.resolve(ret);
@@ -6473,8 +6859,26 @@ const getUsStock = (index, stat=[price]) => {
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
             const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+            const table1 = findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0];
+            findTag(findTag(findTag(findTag(findTag(findTag(table1, 'thead')[0], 'tr')[0], 'th')[1], 'span')[0], 'span')[0]).forEach(d => {
+                const m = d.match(/^As of Date\: (\d+)\/\d+\/(\d+)$/);
+                if (m) {
+                    ret['latestYear'] = Number(m[2]);
+                    const q = Number(m[1]);
+                    if (q < 4) {
+                        ret['latestQuarter'] = 1;
+                    } else if (q < 7) {
+                        ret['latestQuarter'] = 2;
+                    } else if (q < 10) {
+                        ret['latestQuarter'] = 3;
+                    } else {
+                        ret['latestQuarter'] = 0;
+                        ret['latestYear']++;
+                    }
+                }
+            });
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
-                const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                const trs = findTag(findTag(table1, 'tbody')[0], 'tr');
                 if (stat.indexOf('per') !== -1) {
                     ret['per'] = Number(findTag(findTag(trs[2], 'td')[1])[0]);
                 }

@@ -6,7 +6,7 @@ const ItemStock = React.createClass({
     componentWillMount: function() {
         this._dropList = [
             {title: 'PER', onclick: () => this._per(this.props.item.id), key: 0},
-            {title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
+            //{title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
             {title: 'INTERVAL', onclick: () => this._interval(this.props.item.id), key: 2},
             //{title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
         ]
@@ -17,12 +17,12 @@ const ItemStock = React.createClass({
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
         }).catch(err => this.props.addalert(err))
     },
-    _predict: function(id) {
+    /*_predict: function(id) {
         api(`/api/stock/getPredictPER/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
         }).catch(err => this.props.addalert(err))
-    },
+    },*/
     _interval: function(id) {
         api(`/api/stock/getInterval/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);

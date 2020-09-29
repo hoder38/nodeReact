@@ -106,7 +106,7 @@ router.get('/getPER/:uid', function(req, res,next) {
     }).catch(err => handleError(err, next));
 });
 
-router.get('/getPredictPER/:uid', function(req, res,next) {
+/*router.get('/getPredictPER/:uid', function(req, res,next) {
     console.log('stock get predict');
     const id = isValidString(req.params.uid, 'uid');
     if (!id) {
@@ -115,7 +115,7 @@ router.get('/getPredictPER/:uid', function(req, res,next) {
     StockTool.getPredictPERWarp(id, req.session).then(([result, index]) => res.json({per: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
-/*router.get('/getPoint/:uid/:price?', function(req, res, next) {
+router.get('/getPoint/:uid/:price?', function(req, res, next) {
     console.log('stock get point');
     const id = isValidString(req.params.uid, 'uid', 'uid is not vaild');
     if (!id) {

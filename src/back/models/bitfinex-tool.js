@@ -1452,7 +1452,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
-                const reucr_status = index => {
+                const recur_status = index => {
                     if (index >= items.length) {
                         sendWs({
                             type: 'bitfinex',
@@ -1630,7 +1630,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (!is_insert) {
                                     newOrder.push({item, suggestion});
                                 }
-                                return reucr_status(index + 1);
+                                return recur_status(index + 1);
                             });
                         }
                         if (item.ing === 2) {
@@ -1644,7 +1644,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     });
                                 }
                                 item_count = (item.count < item_count) ? item.count : item_count;
-                                const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => reucr_status(index + 1));
+                                const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
                                 if (item_count > 0) {
                                     const or = new Order({
                                         cid: Date.now(),
@@ -1695,7 +1695,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if (+priceData[item.index].lastPrice) {
                                 return startStatus();
                             } else {
-                                return reucr_status(index + 1);
+                                return recur_status(index + 1);
                             }
                         } else {
                             current.enter_mid = current.enter_mid ? current.enter_mid : 0;
@@ -1704,19 +1704,24 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     if (+priceData[item.index].lastPrice) {
                                         return startStatus();
                                     } else {
-                                        return reucr_status(index + 1);
+                                        return recur_status(index + 1);
                                     }
                                 });
                             } else {
                                 console.log('enter_mid');
                                 console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
-                                return reucr_status(index + 1);
+                                return recur_status(index + 1);
                             }
                         }
                     }
                 }
                 const recur_NewOrder = index => {
                     if (index >= newOrder.length) {
+                        sendWs({
+                            type: 'bitfinex',
+                            data: -1,
+                            user: id,
+                        });
                         return Promise.resolve();
                     } else {
                         const item = newOrder[index].item;
@@ -1762,7 +1767,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         return or1.submit().catch(err => {
                                             const msg = err.message || err.msg;
                                             if (msg.includes('not enough tradable balance')) {
-                                                sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                                //sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                 handleError(err, `${id} Total Updata Error`);
                                                 return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => submitOrderBuy(quotaChk - 1));
                                             } else {
@@ -1864,7 +1869,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }
                     }
                 }
-                return reucr_status(0).then(() => recur_NewOrder(0));
+                return recur_status(0).then(() => recur_NewOrder(0));
             });
         });
     }
