@@ -120,7 +120,7 @@ const quarterIsEmpty = quarter => {
 }
 
 
-const getStockPrice = (type, index, price_only = true) => {
+const getStockPrice = (type='twse', index, price_only = true) => {
     switch(type) {
         case 'twse':
         let count = 0;
@@ -5421,7 +5421,7 @@ export const getSingleAnnual = (year, folder, index) => {
 }
 
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(price => {
+    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
         if (price === 0) {
             return 0;
         }
@@ -5607,7 +5607,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
 

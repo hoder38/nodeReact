@@ -188,7 +188,9 @@ var quarterIsEmpty = function quarterIsEmpty(quarter) {
     return true;
 };
 
-var getStockPrice = function getStockPrice(type, index) {
+var getStockPrice = function getStockPrice() {
+    var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'twse';
+    var index = arguments[1];
     var price_only = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
     var _ret = function () {
@@ -6528,7 +6530,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
 var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
         var recur_price = function recur_price(index) {
-            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(function (price) {
+            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
                 if (price === 0) {
                     return 0;
                 }
@@ -6726,7 +6728,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
 var stockShow = exports.stockShow = function stockShow() {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
         var recur_price = function recur_price(index, ret) {
-            return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(function (price) {
+            return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index, false).then(function (price) {
                 return ret + '\n' + items[index].name + ' ' + price;
             }).then(function (ret) {
                 return recur_price(index + 1, ret);
