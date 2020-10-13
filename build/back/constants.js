@@ -350,7 +350,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     per: [1, '<', 35],
     pdr: [1, '<', 50],
     pbr: [1, '<', 10],
-    times: [1, '>', 20],
+    times: [1, '>', 12],
     stop: [1, '<', 3],
     gap: [1, '>', -10],
     profit: [1, '>', 10],
