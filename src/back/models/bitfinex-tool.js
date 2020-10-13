@@ -272,7 +272,7 @@ export const calWeb = curArr => {
             }
             ret_str1.push(str);
         }
-        for (let i = 15; i >= 0; i--) {
+        for (let i = 31; i >= 0; i--) {
             resultShow(i);
         }
         month.forEach((v, i) => {
