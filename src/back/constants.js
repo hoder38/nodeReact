@@ -55,7 +55,7 @@ export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'Jun
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const DOC_TYPE = {
-    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'sem', 'oec', 'dol', 'rea', 'sca', 'fed'],
+    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'oec', 'dol', 'rea', 'sca', 'fed'],
     jp: ['sea'],
     tw: ['ndc', 'sta', 'mof', 'moe', 'cbc'],
 }
@@ -802,12 +802,12 @@ export const STOCK_FILTER = {
     sortName: 'name',
     sortType: 'asc',
     per: [1, '<', 35],
-    pdr: [1, '<', 70],
+    pdr: [1, '<', 50],
     pbr: [1, '<', 10],
     times: [1, '>', 20],
     stop: [1, '<', 3],
-    //gap: [1, '>', 0],
-    profit: [1, '>', 20],
+    gap: [1, '>', -10],
+    profit: [1, '>', 10],
     //pp: [1, '>', 100],
     //ss: [1, '>', -500],
     //mm: [1, '>', 3],

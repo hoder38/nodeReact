@@ -1512,20 +1512,20 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         if (offer[id][current.type]) {
                             var _ret4 = function () {
                                 var real_id = offer[id][current.type].filter(function (v) {
-                                    return o.risk !== undefined;
+                                    return v.risk !== undefined;
                                 });
                                 var real_delete = function real_delete(index) {
                                     var is_error = false;
                                     if (index >= real_id.length || availableMargin >= needTrans) {
                                         return _promise2.default.resolve(availableMargin);
                                     } else {
-                                        return userRest.cancelFundingOffer(offer[id][current.type][index].id).catch(function (err) {
+                                        return userRest.cancelFundingOffer(real_id[index].id).catch(function (err) {
                                             is_error = true;
-                                            (0, _sendWs2.default)(id + ' ' + offer[id][current.type][index].id + ' cancelFundingOffer Error: ' + (err.message || err.msg), 0, 0, true);
-                                            (0, _utility.handleError)(err, id + ' ' + offer[id][current.type][index].id + ' cancelFundingOffer Error');
+                                            (0, _sendWs2.default)(id + ' ' + real_id[index].id + ' cancelFundingOffer Error: ' + (err.message || err.msg), 0, 0, true);
+                                            (0, _utility.handleError)(err, id + ' ' + real_id[index].id + ' cancelFundingOffer Error');
                                         }).then(function () {
                                             if (!is_error) {
-                                                availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                                availableMargin = availableMargin + real_id[index].amount;
                                                 if (availableMargin >= needTrans) {
                                                     availableMargin = needTrans;
                                                 }

@@ -33,8 +33,8 @@ export const API_LIMIT = env => env === RELEASE ? ReleaseConfig.API_LIMIT : DevC
 export const TORRENT_LIMIT = env => env === RELEASE ? ReleaseConfig.TORRENT_LIMIT : DevConfig.TORRENT_LIMIT
 export const ZIP_LIMIT = env => env === RELEASE ? ReleaseConfig.ZIP_LIMIT : DevConfig.ZIP_LIMIT
 export const MEGA_LIMIT = env => env === RELEASE ? ReleaseConfig.MEGA_LIMIT : DevConfig.MEGA_LIMIT
-export const STOCK_DATE = env => env === RELEASE ? ReleaseConfig.STOCK_DATE : DevConfig.STOCK_DATE
-export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : DevConfig.STOCK_MODE
+//export const STOCK_DATE = env => env === RELEASE ? ReleaseConfig.STOCK_DATE : DevConfig.STOCK_DATE
+//export const STOCK_MODE = env => env === RELEASE ? ReleaseConfig.STOCK_MODE : DevConfig.STOCK_MODE
 export const STOCK_FILTER = env => env === RELEASE ? ReleaseConfig.STOCK_FILTER : DevConfig.STOCK_FILTER
 export const DB_BACKUP = env => env === RELEASE ? ReleaseConfig.DB_BACKUP : DevConfig.DB_BACKUP
 export const BACKUP_PATH = env => env === RELEASE ? ReleaseConfig.BACKUP_PATH : DevConfig.BACKUP_PATH

@@ -1333,19 +1333,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     } else {
                         //close offer
                         if (offer[id][current.type]) {
-                            const real_id = offer[id][current.type].filter(v => o.risk !== undefined);
+                            const real_id = offer[id][current.type].filter(v => v.risk !== undefined);
                             const real_delete = index => {
                                 let is_error = false;
                                 if ((index >= real_id.length) || availableMargin >= needTrans) {
                                     return Promise.resolve(availableMargin);
                                 } else {
-                                    return userRest.cancelFundingOffer(offer[id][current.type][index].id).catch(err => {
+                                    return userRest.cancelFundingOffer(real_id[index].id).catch(err => {
                                         is_error = true;
-                                        sendWs(`${id} ${offer[id][current.type][index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
-                                        handleError(err, `${id} ${offer[id][current.type][index].id} cancelFundingOffer Error`);
+                                        sendWs(`${id} ${real_id[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
+                                        handleError(err, `${id} ${real_id[index].id} cancelFundingOffer Error`);
                                     }).then(() => {
                                         if (!is_error) {
-                                            availableMargin = availableMargin + offer[id][current.type][index].amount;
+                                            availableMargin = availableMargin + real_id[index].amount;
                                             if (availableMargin >= needTrans) {
                                                 availableMargin = needTrans;
                                             }

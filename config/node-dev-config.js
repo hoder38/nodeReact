@@ -40,8 +40,8 @@ exports.default = {
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,
     ZIP_LIMIT: 1,
-    STOCK_DATE: [6, 21, 24, 25],
-    STOCK_MODE: 1,
+    //STOCK_DATE: [6, 21, 24, 25],
+    //STOCK_MODE: 1,
     //3: xml重抓 2: xml重parse 1: parse tag
     BITFINEX_LOAN: false,
 }

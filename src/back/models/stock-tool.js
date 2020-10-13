@@ -1888,7 +1888,7 @@ const getBasicStockData = (type, index) => {
             result.stock_full = findTag(findTag(section, 'h3')[0])[0];
             result.stock_name = [result.stock_full];
             result.stock_class = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[1])[0];
-            result.stock_time = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[3])[0];
+            result.stock_ind = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[3])[0];
             result.stock_executive = [];
             findTag(findTag(findTag(findTag(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                 findTag(findTag(findTag(t, 'td')[0], 'span')[0]).forEach(n => {
@@ -1908,9 +1908,15 @@ const getBasicStockData = (type, index) => {
 const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
     let tags = new Set();
     indexTag.forEach(v => tags.add(v));
-    tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class).add(basic.stock_time);
+    tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class);
     if (basic.stock_market_e) {
         tags.add(basic.stock_market_e);
+    }
+    if (basic.stock_time) {
+        tags.add(basic.stock_time);
+    }
+    if (basic.stock_ind) {
+        tags.add(basic.stock_ind);
     }
     basic.stock_name.forEach(i => tags.add(i));
     basic.stock_location.forEach(i => tags.add(i));
@@ -3470,6 +3476,7 @@ export default {
         const date = new Date();
         let year = date.getFullYear();
         let month = date.getMonth() + 1;
+        let day = date.getDate();
         let month_str = completeZero(month.toString(), 2);
         let vol_year = year;
         let vol_month = month;
@@ -3511,7 +3518,12 @@ export default {
                         console.log(min);
                         let min_vol = 0;
                         for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
-                            min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                            //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                            interval_data[vol_year][vol_month_str].raw.forEach(v => {
+                                if (!min_vol || v.v < min_vol) {
+                                    min_vol = v.v;
+                                }
+                            });
                             if (vol_month === 1) {
                                 vol_month = 12;
                                 vol_year--;
@@ -3582,7 +3594,7 @@ export default {
                                                 maxloss = +v[7];
                                             }
                                         });
-                                        str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}000`;
+                                        str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
                                         rate = Math.round(rate * 10000 - 10000) / 100;
                                         real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                                         times = Math.round(times / count * 100) / 100;
@@ -3607,7 +3619,7 @@ export default {
                                     }
                                     ret_str1.push(str);
                                 }
-                                for (let i = 15; i >= 0; i--) {
+                                for (let i = 31; i >= 0; i--) {
                                     if (resultShow(i)) {
                                         return handleError(new HoError(`${items[0].index} data miss!!!`));
                                     }
@@ -3720,7 +3732,7 @@ export default {
                             }
                         }
                         if (start_month && raw_list && raw_list[year] && raw_list[year][month_str]) {
-                            raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
+                            raw_arr = raw_arr.concat(raw_list[year][month_str].raw.slice().reverse());
                             if (raw_list[year][month_str].max > max) {
                                 max = raw_list[year][month_str].max;
                             }
@@ -3767,7 +3779,6 @@ export default {
                                             v: list.vol[i],
                                         });
                                     }
-                                    raw_arr = raw_arr.concat(tmp_interval.reverse());
                                     if (!interval_data) {
                                         interval_data = {};
                                     }
@@ -3779,6 +3790,7 @@ export default {
                                         max: tmp_max,
                                         min: tmp_min,
                                     };
+                                    raw_arr = raw_arr.concat(tmp_interval.slice().reverse());
                                 }
                                 return rest_interval(type, index, is_stop);
                             });
@@ -3804,16 +3816,16 @@ export default {
                     return getInit();
                 }).then(([raw_list, ret_obj, etime]) => {
                     let interval_data = null;
-                    if (month === 1) {
+                    /*if (month === 1) {
                         year--;
                         month = 12;
                         month_str = completeZero(month.toString(), 2);
                     } else {
                         month--;
                         month_str = completeZero(month.toString(), 2);
-                    }
-                    let start_get = new Date(year, month, 1, 12).getTime() / 1000;
-                    let end_get = new Date(year - 5, month, 1, 12).getTime() / 1000;
+                    }*/
+                    let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
+                    let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
                     let start_month = `${year}${month_str}`;
                     let max = 0;
                     let min = 0;
@@ -3822,6 +3834,23 @@ export default {
                     const rest_interval = () => {
                         console.log(max);
                         console.log(min);
+                        let min_vol = 0;
+                        for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
+                            //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                            interval_data[vol_year][vol_month_str].raw.forEach(v => {
+                                if (!min_vol || v.v < min_vol) {
+                                    min_vol = v.v;
+                                }
+                            });
+                            if (vol_month === 1) {
+                                vol_month = 12;
+                                vol_year--;
+                                vol_month_str = completeZero(vol_month.toString(), 2);
+                            } else {
+                                vol_month--;
+                                vol_month_str = completeZero(vol_month.toString(), 2);
+                            }
+                        }
                         console.log(min_vol);
                         const loga = logArray(max, min);
                         const web = calStair(raw_arr, loga, min);
@@ -3954,14 +3983,9 @@ export default {
                                 if (raw_list[year] && raw_list[year][month_str]) {
                                     if (!isEnd) {
                                         isEnd = true;
-                                        end_get = new Date(year, month, 1, 12).getTime() / 1000;
+                                        end_get = new Date(year, month - 1, 1, 12).getTime() / 1000;
                                     }
-                                    raw_list[year][month_str].raw.forEach(v => {
-                                        if (!min_vol || v.v < min_vol) {
-                                            min_vol = v.v;
-                                        }
-                                    });
-                                    raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
+                                    raw_arr = raw_arr.concat(raw_list[year][month_str].raw.slice().reverse());
                                     if (raw_list[year][month_str].max > max) {
                                         max = raw_list[year][month_str].max;
                                     }
@@ -3990,14 +4014,14 @@ export default {
                                 }
                             }
                         }
-                        return ((start_get - end_get) < (20 * 86400)) ? rest_interval() : Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
+                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
                             if (raw_data.split("\n").length > 1) {
                                 raw_arr = [];
                                 interval_data = null;
-                                min_vol = 0;
+                                //min_vol = 0;
                                 max = 0;
                                 min = 0;
-                                end_get = new Date(year - 5, month).getTime() / 1000;
+                                end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
                             }
                             return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
                                 raw_data = raw_data.split("\n").reverse();
@@ -4018,7 +4042,7 @@ export default {
                                                 interval_data[y] = {};
                                             }
                                             interval_data[y][m] = {
-                                                raw: tmp_interval.reverse(),
+                                                raw: tmp_interval.slice().reverse(),
                                                 max: tmp_max,
                                                 min: tmp_min,
                                             };
@@ -4051,9 +4075,6 @@ export default {
                                     if (!tmp_min || Number(len[3]) < tmp_min) {
                                         tmp_min = Number(len[3]);
                                     }
-                                    if (!min_vol || Number(len[6]) < min_vol) {
-                                        min_vol = Number(len[6]);
-                                    }
                                 }
                                 if (y && m) {
                                     if (!interval_data) {
@@ -4063,7 +4084,7 @@ export default {
                                         interval_data[y] = {};
                                     }
                                     interval_data[y][m] = {
-                                        raw: tmp_interval.reverse(),
+                                        raw: tmp_interval.slice().reverse(),
                                         max: tmp_max,
                                         min: tmp_min,
                                     };
@@ -4446,10 +4467,10 @@ export default {
             }
             let first_stage = [];
             result.items.forEach(i => {
-                const eok = option.per ? ((option.per[1] === '>' && i.per > option.per[2]) || (option.per[1] === '<' && i.per < option.per[2])) ? true : false : true;
-                const dok = option.pdr ? ((option.pdr[1] === '>' && i.pdr > option.pdr[2]) || (option.pdr[1] === '<' && i.pdr < option.pdr[2])) ? true : false : true;
-                const bok = option.pbr ? ((option.pbr[1] === '>' && i.pbr > option.pbr[2]) || (option.pbr[1] === '<' && i.pbr < option.pbr[2])) ? true : false : true;
-                if (eok && dok && bok) {
+                const eok = option.per ? ((option.per[1] === '>' && i.per > option.per[2]) || (option.per[1] === '<' && i.per && i.per < option.per[2])) ? true : false : true;
+                const dok = option.pdr ? ((option.pdr[1] === '>' && i.pdr > option.pdr[2]) || (option.pdr[1] === '<' && i.pdr && i.pdr < option.pdr[2])) ? true : false : true;
+                const bok = option.pbr ? ((option.pbr[1] === '>' && i.pbr > option.pbr[2]) || (option.pbr[1] === '<' && i.pbr && i.pbr < option.pbr[2])) ? true : false : true;
+                if (eok && dok && bok && i.type === 'twse') {
                     first_stage.push(i);
                 }
             });
@@ -4901,7 +4922,7 @@ export default {
                     totalType = v.type;
                     return Promise.resolve();
                 } else {
-                    return getStockPrice('twse', v.index).then(price => {
+                    return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = price * v.count;
                         totalPrice += current;
                         let p = current + v.amount - v.orig;
@@ -4958,11 +4979,11 @@ export default {
     },
     updateStockTotal: function(user, info, real = false) {
         //remain 800 重設remain
-        //delete 2330 刪除股票
-        //2330 (-)0.5 增減張數
-        //2330 5000 amount 新增股票(設定最大金額)
-        //2330 2 50 輸入交易股價
-        //2330 2 450 cost 重設cost
+        //delete twse2330 刪除股票
+        //twse2330 (-)0.5 增減張數
+        //twse2330 5000 amount 新增股票(設定最大金額)
+        //twse2330 2 50 輸入交易股價
+        //twse2330 2 450 cost 重設cost
         //#2330 300 220
         return Mongo('find', TOTALDB, {owner: user._id, sType: {$exists: false}}).then(items => {
             if (items.length < 1) {
@@ -4983,15 +5004,18 @@ export default {
             const updateTotal = {};
             const removeTotal = [];
             const single = v => {
-                const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
+                //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
+                const cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];
                         updateTotal[totalId] = {amount: remain};
                     } else if (cmd[1] === 'delete') {
+                        const setype = cmd[2].substring(0, 4);
+                        const index = cmd[2].substring(4);
                         for (let i in items) {
-                            if (cmd[2] === items[i].index) {
-                                return getStockPrice('twse', items[i].index).then(price => {
+                            if (index === items[i].index) {
+                                return getStockPrice(setype, items[i].index).then(price => {
                                     remain += (price * items[i].count * (1 - TRADE_FEE));
                                     updateTotal[totalId] = {amount: remain};
                                     if (items[i]._id) {
@@ -5004,8 +5028,10 @@ export default {
                         }
                     } else {
                         let is_find = false;
+                        const setype = cmd[1].substring(0, 4);
+                        const index = cmd[1].substring(4);
                         for (let i in items) {
-                            if (cmd[1] === items[i].index) {
+                            if (index === items[i].index) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
@@ -5055,7 +5081,7 @@ export default {
                                         cmd[2] = -orig_count;
                                         items[i].count = 0;
                                     }
-                                    return getStockPrice('twse', items[i].index).then(price => {
+                                    return getStockPrice(setype, items[i].index).then(price => {
                                         price = !isNaN(+cmd[3]) ? +cmd[3] : price;
                                         const new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - TRADE_FEE) * price * +cmd[2];
                                         items[i].amount -= new_cost;
@@ -5139,7 +5165,9 @@ export default {
                             if (+cmd[2] >= 0 && cmd[3] === 'amount') {
                                 //init amount
                                 //get web? arr mid count
-                                return Mongo('find', STOCKDB, {type: 'twse', index: cmd[1]}, {limit: 1}).then(item => {
+                                const setype = cmd[1].substring(0, 4);
+                                const index = cmd[1].substring(4);
+                                return Mongo('find', STOCKDB, {type: setype, index}, {limit: 1}).then(item => {
                                     if (item.length < 1) {
                                         return handleError(new HoError('No stock data!!!'));
                                     }
@@ -5150,13 +5178,15 @@ export default {
                                     if (!newWeb) {
                                         return handleError(new HoError(`Amount need large than ${Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)}`));
                                     }
-                                    return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('twse', basic.stock_index).then(price => {
+                                    return getBasicStockData(setype, index).then(basic => getStockPrice(setype, basic.stock_index).then(price => {
                                         console.log(basic);
                                         items.push({
+                                            //加setype ind name加setype
                                             owner: user._id,
+                                            setype,
                                             index: basic.stock_index,
-                                            name: `${basic.stock_index} ${basic.stock_name}`,
-                                            type: basic.stock_class,
+                                            name: `${setype} ${basic.stock_index} ${basic.stock_name}`,
+                                            type: basic.stock_ind ? `${basic.stock_class} ${basic.stock_ind}` : `${basic.stock_class}`,
                                             //cost: 0,
                                             count: 0,
                                             web: newWeb.arr,
@@ -5228,7 +5258,7 @@ export default {
                     if (v.name === '投資部位' && v.type === 'total') {
                         return Promise.resolve();
                     } else {
-                        return getStockPrice('twse', v.index).then(price => {
+                        return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                             let current = price * v.count;
                             totalPrice += current;
                             let p = current + v.amount - v.orig;
@@ -5391,7 +5421,7 @@ export const getSingleAnnual = (year, folder, index) => {
 }
 
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(price => {
+    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(price => {
         if (price === 0) {
             return 0;
         }
@@ -5577,7 +5607,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
 
@@ -5659,7 +5689,7 @@ export const getStockListV2 = (type, year, month) => {
                 return Api('url', `https://www.slickcharts.com/${list[index]}`).then(raw_data => {
                     findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                         const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
-                        const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                        const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                         let is_exit = false;
                         for (let i = 0; i < stock_list.length; i++) {
                             if (stock_list[i].index === sIndex) {
@@ -5693,6 +5723,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const t2 = (pType|2) === pType ? true : false;
     const t3 = (pType|4) === pType ? true : false;
     const t4 = (pType|8) === pType ? true : false;
+    const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
     let bTimes = 1;
@@ -5861,26 +5892,26 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
-            if (sType === 0) {
-                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+            if (!t5) {
+                if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
-                } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                }/* else if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd++;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd++;
-                }/* else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                } else */if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
-                }*/
+                }
             } else {
-                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                /*if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
-                } /*else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                } /*else if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
                 }*/
             }
@@ -6851,7 +6882,8 @@ const getUsStock = (index, stat=['price']) => {
     if (!Array.isArray(stat) || stat.length < 1) {
         return Promise.resolve(ret);
     }
-    return Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
+    let count = 0;
+    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
         const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
         if (stat.indexOf('price') !== -1) {
             const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
@@ -6880,19 +6912,36 @@ const getUsStock = (index, stat=['price']) => {
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
                 const trs = findTag(findTag(table1, 'tbody')[0], 'tr');
                 if (stat.indexOf('per') !== -1) {
-                    ret['per'] = Number(findTag(findTag(trs[2], 'td')[1])[0]);
+                    if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
+                        ret['per'] = 0;
+                    } else {
+                        ret['per'] = Number(findTag(findTag(trs[2], 'td')[1])[0]);
+                    }
                 }
                 if (stat.indexOf('pbr') !== -1) {
-                    ret['pbr'] = Number(findTag(findTag(trs[6], 'td')[1])[0]);
+                    if (findTag(findTag(trs[6], 'td')[1], 'span')[0]) {
+                        ret['pbr'] = 0;
+                    } else {
+                        ret['pbr'] = Number(findTag(findTag(trs[6], 'td')[1])[0]);
+                    }
                 }
             }
             if (stat.indexOf('pdr') !== -1) {
                 const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
-                stockYield = Number(stockYield.substring(0, stockYield.length -1));
-                ret['pdr'] = 100 / stockYield;
+                if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
+                    ret['pdr'] = 0;
+                } else {
+                    let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
+                    stockYield = Number(stockYield.substring(0, stockYield.length -1));
+                    ret['pdr'] = Math.round(100 / stockYield * 100) / 100;
+                }
             }
         }
         return Promise.resolve(ret);
+    }).catch(err => {
+        console.log(count);
+        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
     });
+    return real();
 }
+

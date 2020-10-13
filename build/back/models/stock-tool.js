@@ -2014,7 +2014,7 @@ var getBasicStockData = function getBasicStockData(type, index) {
                 result.stock_full = (0, _utility.findTag)((0, _utility.findTag)(section, 'h3')[0])[0];
                 result.stock_name = [result.stock_full];
                 result.stock_class = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[1])[0];
-                result.stock_time = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[3])[0];
+                result.stock_ind = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[3])[0];
                 result.stock_executive = [];
                 (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
                     (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'span')[0]).forEach(function (n) {
@@ -2037,9 +2037,15 @@ var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
         indexTag.forEach(function (v) {
             return tags.add(v);
         });
-        tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class).add(basic.stock_time);
+        tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class);
         if (basic.stock_market_e) {
             tags.add(basic.stock_market_e);
+        }
+        if (basic.stock_time) {
+            tags.add(basic.stock_time);
+        }
+        if (basic.stock_ind) {
+            tags.add(basic.stock_ind);
         }
         basic.stock_name.forEach(function (i) {
             return tags.add(i);
@@ -3927,6 +3933,7 @@ exports.default = {
         var date = new Date();
         var year = date.getFullYear();
         var month = date.getMonth() + 1;
+        var day = date.getDate();
         var month_str = (0, _utility.completeZero)(month.toString(), 2);
         var vol_year = year;
         var vol_month = month;
@@ -3979,9 +3986,12 @@ exports.default = {
                             console.log(min);
                             var min_vol = 0;
                             for (var i = 12; i > 0 && interval_data[vol_year][vol_month_str]; i--) {
-                                min_vol = interval_data[vol_year][vol_month_str].raw.reduce(function (a, v) {
-                                    return a && v.v > a ? a : v.v;
-                                }, min_vol);
+                                //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                                interval_data[vol_year][vol_month_str].raw.forEach(function (v) {
+                                    if (!min_vol || v.v < min_vol) {
+                                        min_vol = v.v;
+                                    }
+                                });
                                 if (vol_month === 1) {
                                     vol_month = 12;
                                     vol_year--;
@@ -4054,7 +4064,7 @@ exports.default = {
                                                             maxloss = +v[7];
                                                         }
                                                     });
-                                                    str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2) + '000';
+                                                    str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
                                                     rate = Math.round(rate * 10000 - 10000) / 100;
                                                     real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                                                     times = Math.round(times / count * 100) / 100;
@@ -4084,7 +4094,7 @@ exports.default = {
                                             }
                                             ret_str1.push(str);
                                         };
-                                        for (var _i25 = 15; _i25 >= 0; _i25--) {
+                                        for (var _i25 = 31; _i25 >= 0; _i25--) {
                                             if (resultShow(_i25)) {
                                                 return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
                                             }
@@ -4279,7 +4289,7 @@ exports.default = {
                                 }
                             };
                             if (start_month && raw_list && raw_list[year] && raw_list[year][month_str]) {
-                                raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
+                                raw_arr = raw_arr.concat(raw_list[year][month_str].raw.slice().reverse());
                                 if (raw_list[year][month_str].max > max) {
                                     max = raw_list[year][month_str].max;
                                 }
@@ -4331,7 +4341,6 @@ exports.default = {
                                                 v: list.vol[i]
                                             });
                                         }
-                                        raw_arr = raw_arr.concat(tmp_interval.reverse());
                                         if (!interval_data) {
                                             interval_data = {};
                                         }
@@ -4343,6 +4352,7 @@ exports.default = {
                                             max: tmp_max,
                                             min: tmp_min
                                         };
+                                        raw_arr = raw_arr.concat(tmp_interval.slice().reverse());
                                     }
                                     return rest_interval(type, index, is_stop);
                                 });
@@ -4386,16 +4396,16 @@ exports.default = {
                             etime = _ref28[2];
 
                         var interval_data = null;
-                        if (month === 1) {
+                        /*if (month === 1) {
                             year--;
                             month = 12;
-                            month_str = (0, _utility.completeZero)(month.toString(), 2);
+                            month_str = completeZero(month.toString(), 2);
                         } else {
                             month--;
-                            month_str = (0, _utility.completeZero)(month.toString(), 2);
-                        }
-                        var start_get = new Date(year, month, 1, 12).getTime() / 1000;
-                        var end_get = new Date(year - 5, month, 1, 12).getTime() / 1000;
+                            month_str = completeZero(month.toString(), 2);
+                        }*/
+                        var start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
+                        var end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
                         var start_month = '' + year + month_str;
                         var max = 0;
                         var min = 0;
@@ -4404,6 +4414,23 @@ exports.default = {
                         var rest_interval = function rest_interval() {
                             console.log(max);
                             console.log(min);
+                            var min_vol = 0;
+                            for (var i = 12; i > 0 && interval_data[vol_year][vol_month_str]; i--) {
+                                //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
+                                interval_data[vol_year][vol_month_str].raw.forEach(function (v) {
+                                    if (!min_vol || v.v < min_vol) {
+                                        min_vol = v.v;
+                                    }
+                                });
+                                if (vol_month === 1) {
+                                    vol_month = 12;
+                                    vol_year--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                } else {
+                                    vol_month--;
+                                    vol_month_str = (0, _utility.completeZero)(vol_month.toString(), 2);
+                                }
+                            }
                             console.log(min_vol);
                             var loga = logArray(max, min);
                             var web = calStair(raw_arr, loga, min);
@@ -4497,8 +4524,8 @@ exports.default = {
                                             }
                                             ret_str1.push(str);
                                         };
-                                        for (var i = 15; i >= 0; i--) {
-                                            if (resultShow(i)) {
+                                        for (var _i26 = 15; _i26 >= 0; _i26--) {
+                                            if (resultShow(_i26)) {
                                                 return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
                                             }
                                         }
@@ -4559,14 +4586,9 @@ exports.default = {
                                     if (raw_list[year] && raw_list[year][month_str]) {
                                         if (!isEnd) {
                                             isEnd = true;
-                                            end_get = new Date(year, month, 1, 12).getTime() / 1000;
+                                            end_get = new Date(year, month - 1, 1, 12).getTime() / 1000;
                                         }
-                                        raw_list[year][month_str].raw.forEach(function (v) {
-                                            if (!min_vol || v.v < min_vol) {
-                                                min_vol = v.v;
-                                            }
-                                        });
-                                        raw_arr = raw_arr.concat(raw_list[year][month_str].raw.reverse());
+                                        raw_arr = raw_arr.concat(raw_list[year][month_str].raw.slice().reverse());
                                         if (raw_list[year][month_str].max > max) {
                                             max = raw_list[year][month_str].max;
                                         }
@@ -4595,14 +4617,14 @@ exports.default = {
                                     }
                                 }
                             }
-                            return start_get - end_get < 20 * 86400 ? rest_interval() : (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split').then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split').then(function (raw_data) {
                                 if (raw_data.split("\n").length > 1) {
                                     raw_arr = [];
                                     interval_data = null;
-                                    min_vol = 0;
+                                    //min_vol = 0;
                                     max = 0;
                                     min = 0;
-                                    end_get = new Date(year - 5, month).getTime() / 1000;
+                                    end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
                                 }
                                 return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history').then(function (raw_data) {
                                     raw_data = raw_data.split("\n").reverse();
@@ -4611,8 +4633,8 @@ exports.default = {
                                     var tmp_interval = [];
                                     var tmp_max = 0;
                                     var tmp_min = 0;
-                                    for (var _i26 = 0; _i26 < raw_data.length - 1; _i26++) {
-                                        var len = raw_data[_i26].split(',');
+                                    for (var _i27 = 0; _i27 < raw_data.length - 1; _i27++) {
+                                        var len = raw_data[_i27].split(',');
                                         var match = len[0].match(/^(\d+)\-(\d+)\-/);
                                         if (match[1] !== y || match[2] !== m) {
                                             if (y && m) {
@@ -4623,7 +4645,7 @@ exports.default = {
                                                     interval_data[y] = {};
                                                 }
                                                 interval_data[y][m] = {
-                                                    raw: tmp_interval.reverse(),
+                                                    raw: tmp_interval.slice().reverse(),
                                                     max: tmp_max,
                                                     min: tmp_min
                                                 };
@@ -4656,9 +4678,6 @@ exports.default = {
                                         if (!tmp_min || Number(len[3]) < tmp_min) {
                                             tmp_min = Number(len[3]);
                                         }
-                                        if (!min_vol || Number(len[6]) < min_vol) {
-                                            min_vol = Number(len[6]);
-                                        }
                                     }
                                     if (y && m) {
                                         if (!interval_data) {
@@ -4668,7 +4687,7 @@ exports.default = {
                                             interval_data[y] = {};
                                         }
                                         interval_data[y][m] = {
-                                            raw: tmp_interval.reverse(),
+                                            raw: tmp_interval.slice().reverse(),
                                             max: tmp_max,
                                             min: tmp_min
                                         };
@@ -4782,9 +4801,9 @@ exports.default = {
 
                             try {
                                 for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                    var _i27 = _step10.value;
+                                    var _i28 = _step10.value;
 
-                                    if (_i27.end - _i27.start > 33) {
+                                    if (_i28.end - _i28.start > 33) {
                                         var _iteratorNormalCompletion11 = true;
                                         var _didIteratorError11 = false;
                                         var _iteratorError11 = undefined;
@@ -4813,7 +4832,7 @@ exports.default = {
                                         }
 
                                         return final_group;
-                                    } else if (_i27.end - _i27.start > 13) {
+                                    } else if (_i28.end - _i28.start > 13) {
                                         group_num++;
                                         if (group_num > 2) {
                                             var _iteratorNormalCompletion12 = true;
@@ -4899,8 +4918,8 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var final_arr = [];
-                            for (var _i28 = 0; _i28 < 100; _i28++) {
-                                final_arr[_i28] = 0;
+                            for (var _i29 = 0; _i29 < 100; _i29++) {
+                                final_arr[_i29] = 0;
                             }
                             var diff = (max - min) / 100;
                             var _iteratorNormalCompletion13 = true;
@@ -4909,12 +4928,12 @@ exports.default = {
 
                             try {
                                 for (var _iterator13 = (0, _getIterator3.default)(raw_arr), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                    var _i31 = _step13.value;
+                                    var _i32 = _step13.value;
 
-                                    var e = Math.ceil((_i31.h - min) / diff);
-                                    var s = Math.floor((_i31.l - min) / diff);
+                                    var e = Math.ceil((_i32.h - min) / diff);
+                                    var s = Math.floor((_i32.l - min) / diff);
                                     for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i31.v;
+                                        final_arr[j] += _i32.v;
                                     }
                                 }
                             } catch (err) {
@@ -4936,11 +4955,11 @@ exports.default = {
                                 return a - b;
                             });
                             var interval = null;
-                            for (var _i29 = 19; _i29 > 0; _i29--) {
-                                interval = group_interval(_i29, 5, final_arr, sort_arr);
+                            for (var _i30 = 19; _i30 > 0; _i30--) {
+                                interval = group_interval(_i30, 5, final_arr, sort_arr);
                                 if (interval) {
                                     console.log(interval);
-                                    console.log(_i29);
+                                    console.log(_i30);
                                     break;
                                 }
                             }
@@ -4949,11 +4968,11 @@ exports.default = {
                                 var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                 var fint = lint;
                                 var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                                for (var _i30 = 1; _i30 < interval.length; _i30++) {
-                                    llow = Math.ceil(((interval[_i30].start - 1) * diff + min) * 100) / 100;
+                                for (var _i31 = 1; _i31 < interval.length; _i31++) {
+                                    llow = Math.ceil(((interval[_i31].start - 1) * diff + min) * 100) / 100;
                                     lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                     fint = lint < fint ? lint : fint;
-                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i30].end * diff + min) * 100) / 100;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i31].end * diff + min) * 100) / 100;
                                 }
                                 ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
                                 console.log('done');
@@ -5260,10 +5279,10 @@ exports.default = {
                 }
                 var first_stage = [];
                 result.items.forEach(function (i) {
-                    var eok = option.per ? option.per[1] === '>' && i.per > option.per[2] || option.per[1] === '<' && i.per < option.per[2] ? true : false : true;
-                    var dok = option.pdr ? option.pdr[1] === '>' && i.pdr > option.pdr[2] || option.pdr[1] === '<' && i.pdr < option.pdr[2] ? true : false : true;
-                    var bok = option.pbr ? option.pbr[1] === '>' && i.pbr > option.pbr[2] || option.pbr[1] === '<' && i.pbr < option.pbr[2] ? true : false : true;
-                    if (eok && dok && bok) {
+                    var eok = option.per ? option.per[1] === '>' && i.per > option.per[2] || option.per[1] === '<' && i.per && i.per < option.per[2] ? true : false : true;
+                    var dok = option.pdr ? option.pdr[1] === '>' && i.pdr > option.pdr[2] || option.pdr[1] === '<' && i.pdr && i.pdr < option.pdr[2] ? true : false : true;
+                    var bok = option.pbr ? option.pbr[1] === '>' && i.pbr > option.pbr[2] || option.pbr[1] === '<' && i.pbr && i.pbr < option.pbr[2] ? true : false : true;
+                    if (eok && dok && bok && i.type === 'twse') {
                         first_stage.push(i);
                     }
                 });
@@ -5825,7 +5844,7 @@ exports.default = {
                     totalType = v.type;
                     return _promise2.default.resolve();
                 } else {
-                    return getStockPrice('twse', v.index).then(function (price) {
+                    return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
                         var current = price * v.count;
                         totalPrice += current;
                         var p = current + v.amount - v.orig;
@@ -5886,11 +5905,11 @@ exports.default = {
         var real = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
         //remain 800 重設remain
-        //delete 2330 刪除股票
-        //2330 (-)0.5 增減張數
-        //2330 5000 amount 新增股票(設定最大金額)
-        //2330 2 50 輸入交易股價
-        //2330 2 450 cost 重設cost
+        //delete twse2330 刪除股票
+        //twse2330 (-)0.5 增減張數
+        //twse2330 5000 amount 新增股票(設定最大金額)
+        //twse2330 2 50 輸入交易股價
+        //twse2330 2 450 cost 重設cost
         //#2330 300 220
         return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: user._id, sType: { $exists: false } }).then(function (items) {
             if (items.length < 1) {
@@ -5933,16 +5952,20 @@ exports.default = {
             var updateTotal = {};
             var removeTotal = [];
             var single = function single(v) {
-                var cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/);
+                //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
+                var cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     if (cmd[1] === 'remain') {
                         remain = +cmd[2];
                         updateTotal[totalId] = { amount: remain };
                     } else if (cmd[1] === 'delete') {
+                        var setype = cmd[2].substring(0, 4);
+                        var index = cmd[2].substring(4);
+
                         var _loop = function _loop(i) {
-                            if (cmd[2] === items[i].index) {
+                            if (index === items[i].index) {
                                 return {
-                                    v: getStockPrice('twse', items[i].index).then(function (price) {
+                                    v: getStockPrice(setype, items[i].index).then(function (price) {
                                         remain += price * items[i].count * (1 - _constants.TRADE_FEE);
                                         updateTotal[totalId] = { amount: remain };
                                         if (items[i]._id) {
@@ -5968,121 +5991,123 @@ exports.default = {
                         }
                     } else {
                         var is_find = false;
+                        var _setype = cmd[1].substring(0, 4);
+                        var _index = cmd[1].substring(4);
 
-                        var _loop3 = function _loop3(_i32) {
-                            if (cmd[1] === items[_i32].index) {
+                        var _loop3 = function _loop3(_i33) {
+                            if (_index === items[_i33].index) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
-                                    var newWeb = adjustWeb(items[_i32].web, items[_i32].mid, +cmd[2]);
+                                    var newWeb = adjustWeb(items[_i33].web, items[_i33].mid, +cmd[2]);
                                     if (!newWeb) {
                                         return {
-                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i32].mid * (items[_i32].web.length - 1) / 3)))
+                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i33].mid * (items[_i33].web.length - 1) / 3)))
                                         };
                                     }
-                                    items[_i32].web = newWeb.arr;
-                                    items[_i32].mid = newWeb.mid;
-                                    items[_i32].times = newWeb.times;
-                                    items[_i32].amount = items[_i32].amount + +cmd[2] - items[_i32].orig;
-                                    items[_i32].orig = +cmd[2];
-                                    if (items[_i32]._id) {
-                                        if (updateTotal[items[_i32]._id]) {
-                                            updateTotal[items[_i32]._id].web = items[_i32].web;
-                                            updateTotal[items[_i32]._id].mid = items[_i32].mid;
-                                            updateTotal[items[_i32]._id].times = items[_i32].times;
-                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
-                                            updateTotal[items[_i32]._id].orig = items[_i32].orig;
+                                    items[_i33].web = newWeb.arr;
+                                    items[_i33].mid = newWeb.mid;
+                                    items[_i33].times = newWeb.times;
+                                    items[_i33].amount = items[_i33].amount + +cmd[2] - items[_i33].orig;
+                                    items[_i33].orig = +cmd[2];
+                                    if (items[_i33]._id) {
+                                        if (updateTotal[items[_i33]._id]) {
+                                            updateTotal[items[_i33]._id].web = items[_i33].web;
+                                            updateTotal[items[_i33]._id].mid = items[_i33].mid;
+                                            updateTotal[items[_i33]._id].times = items[_i33].times;
+                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                            updateTotal[items[_i33]._id].orig = items[_i33].orig;
                                         } else {
-                                            updateTotal[items[_i32]._id] = {
-                                                web: items[_i32].web,
-                                                mid: items[_i32].mid,
-                                                times: items[_i32].times,
-                                                amount: items[_i32].amount,
-                                                orig: items[_i32].orig
+                                            updateTotal[items[_i33]._id] = {
+                                                web: items[_i33].web,
+                                                mid: items[_i33].mid,
+                                                times: items[_i33].times,
+                                                amount: items[_i33].amount,
+                                                orig: items[_i33].orig
                                             };
                                         }
                                     }
                                 } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
                                     //} else if (cmd[4]) {
-                                    items[_i32].count = +cmd[2];
-                                    remain = remain + items[_i32].orig - items[_i32].amount - +cmd[3];
-                                    items[_i32].amount = items[_i32].orig - +cmd[3];
+                                    items[_i33].count = +cmd[2];
+                                    remain = remain + items[_i33].orig - items[_i33].amount - +cmd[3];
+                                    items[_i33].amount = items[_i33].orig - +cmd[3];
                                     updateTotal[totalId] = { amount: remain };
-                                    if (items[_i32]._id) {
-                                        if (updateTotal[items[_i32]._id]) {
-                                            updateTotal[items[_i32]._id].count = items[_i32].count;
-                                            updateTotal[items[_i32]._id].amount = items[_i32].amount;
+                                    if (items[_i33]._id) {
+                                        if (updateTotal[items[_i33]._id]) {
+                                            updateTotal[items[_i33]._id].count = items[_i33].count;
+                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
                                         } else {
-                                            updateTotal[items[_i32]._id] = { count: items[_i32].count, amount: items[_i32].amount };
+                                            updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount };
                                         }
                                     }
                                 } else if (!isNaN(+cmd[2])) {
-                                    var orig_count = items[_i32].count;
-                                    items[_i32].count += +cmd[2];
-                                    if (items[_i32].count < 0) {
+                                    var orig_count = items[_i33].count;
+                                    items[_i33].count += +cmd[2];
+                                    if (items[_i33].count < 0) {
                                         cmd[2] = -orig_count;
-                                        items[_i32].count = 0;
+                                        items[_i33].count = 0;
                                     }
                                     return {
-                                        v: getStockPrice('twse', items[_i32].index).then(function (price) {
+                                        v: getStockPrice(_setype, items[_i33].index).then(function (price) {
                                             price = !isNaN(+cmd[3]) ? +cmd[3] : price;
                                             var new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
-                                            items[_i32].amount -= new_cost;
+                                            items[_i33].amount -= new_cost;
                                             remain -= new_cost;
                                             updateTotal[totalId] = { amount: remain };
                                             var time = Math.round(new Date().getTime() / 1000);
                                             var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
                                             if (tradeType === 'buy') {
                                                 var is_insert = false;
-                                                for (var k = 0; k < items[_i32].previous.buy.length; k++) {
-                                                    if (price < items[_i32].previous.buy[k].price) {
-                                                        items[_i32].previous.buy.splice(k, 0, { price: price, time: time });
+                                                for (var k = 0; k < items[_i33].previous.buy.length; k++) {
+                                                    if (price < items[_i33].previous.buy[k].price) {
+                                                        items[_i33].previous.buy.splice(k, 0, { price: price, time: time });
                                                         is_insert = true;
                                                         break;
                                                     }
                                                 }
                                                 if (!is_insert) {
-                                                    items[_i32].previous.buy.push({ price: price, time: time });
+                                                    items[_i33].previous.buy.push({ price: price, time: time });
                                                 }
-                                                items[_i32].previous = {
+                                                items[_i33].previous = {
                                                     price: price,
                                                     time: time,
                                                     type: 'buy',
-                                                    buy: items[_i32].previous.buy.filter(function (v) {
+                                                    buy: items[_i33].previous.buy.filter(function (v) {
                                                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                     }),
-                                                    sell: items[_i32].previous.sell
+                                                    sell: items[_i33].previous.sell
                                                 };
                                             } else if (tradeType === 'sell') {
                                                 var _is_insert = false;
-                                                for (var _k = 0; _k < items[_i32].previous.sell.length; _k++) {
-                                                    if (price > items[_i32].previous.sell[_k].price) {
-                                                        items[_i32].previous.sell.splice(_k, 0, { price: price, time: time });
+                                                for (var _k = 0; _k < items[_i33].previous.sell.length; _k++) {
+                                                    if (price > items[_i33].previous.sell[_k].price) {
+                                                        items[_i33].previous.sell.splice(_k, 0, { price: price, time: time });
                                                         _is_insert = true;
                                                         break;
                                                     }
                                                 }
                                                 if (!_is_insert) {
-                                                    items[_i32].previous.sell.push({ price: price, time: time });
+                                                    items[_i33].previous.sell.push({ price: price, time: time });
                                                 }
-                                                items[_i32].previous = {
+                                                items[_i33].previous = {
                                                     price: price,
                                                     time: time,
                                                     type: 'sell',
-                                                    sell: items[_i32].previous.sell.filter(function (v) {
+                                                    sell: items[_i33].previous.sell.filter(function (v) {
                                                         return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                     }),
-                                                    buy: items[_i32].previous.buy
+                                                    buy: items[_i33].previous.buy
                                                 };
                                             }
-                                            if (items[_i32]._id) {
-                                                if (updateTotal[items[_i32]._id]) {
-                                                    updateTotal[items[_i32]._id].count = items[_i32].count;
-                                                    updateTotal[items[_i32]._id].amount = items[_i32].amount;
-                                                    updateTotal[items[_i32]._id].previous = items[_i32].previous;
+                                            if (items[_i33]._id) {
+                                                if (updateTotal[items[_i33]._id]) {
+                                                    updateTotal[items[_i33]._id].count = items[_i33].count;
+                                                    updateTotal[items[_i33]._id].amount = items[_i33].amount;
+                                                    updateTotal[items[_i33]._id].previous = items[_i33].previous;
                                                 } else {
-                                                    updateTotal[items[_i32]._id] = { count: items[_i32].count,
-                                                        amount: items[_i32].amount,
-                                                        previous: items[_i32].previous
+                                                    updateTotal[items[_i33]._id] = { count: items[_i33].count,
+                                                        amount: items[_i33].amount,
+                                                        previous: items[_i33].previous
                                                     };
                                                 }
                                             }
@@ -6109,8 +6134,8 @@ exports.default = {
                             }
                         };
 
-                        _loop4: for (var _i32 in items) {
-                            var _ret13 = _loop3(_i32);
+                        _loop4: for (var _i33 in items) {
+                            var _ret13 = _loop3(_i33);
 
                             switch (_ret13) {
                                 case 'break':
@@ -6123,65 +6148,75 @@ exports.default = {
 
                         if (!is_find) {
                             if (+cmd[2] >= 0 && cmd[3] === 'amount') {
-                                //init amount
-                                //get web? arr mid count
-                                return (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: 'twse', index: cmd[1] }, { limit: 1 }).then(function (item) {
-                                    if (item.length < 1) {
-                                        return (0, _utility.handleError)(new _utility.HoError('No stock data!!!'));
-                                    }
-                                    if (!item[0].web) {
-                                        return (0, _utility.handleError)(new _utility.HoError('No web data!!!'));
-                                    }
-                                    var newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
-                                    if (!newWeb) {
-                                        return (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)));
-                                    }
-                                    return getBasicStockData('twse', cmd[1]).then(function (basic) {
-                                        return getStockPrice('twse', basic.stock_index).then(function (price) {
+                                var _ret14 = function () {
+                                    //init amount
+                                    //get web? arr mid count
+                                    var setype = cmd[1].substring(0, 4);
+                                    var index = cmd[1].substring(4);
+                                    return {
+                                        v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: setype, index: index }, { limit: 1 }).then(function (item) {
+                                            if (item.length < 1) {
+                                                return (0, _utility.handleError)(new _utility.HoError('No stock data!!!'));
+                                            }
+                                            if (!item[0].web) {
+                                                return (0, _utility.handleError)(new _utility.HoError('No web data!!!'));
+                                            }
+                                            var newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
+                                            if (!newWeb) {
+                                                return (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)));
+                                            }
+                                            return getBasicStockData(setype, index).then(function (basic) {
+                                                return getStockPrice(setype, basic.stock_index).then(function (price) {
+                                                    console.log(basic);
+                                                    items.push({
+                                                        //加setype ind name加setype
+                                                        owner: user._id,
+                                                        setype: setype,
+                                                        index: basic.stock_index,
+                                                        name: setype + ' ' + basic.stock_index + ' ' + basic.stock_name,
+                                                        type: basic.stock_ind ? basic.stock_class + ' ' + basic.stock_ind : '' + basic.stock_class,
+                                                        //cost: 0,
+                                                        count: 0,
+                                                        web: newWeb.arr,
+                                                        wType: item[0].web.type,
+                                                        mid: newWeb.mid,
+                                                        times: newWeb.times,
+                                                        amount: +cmd[2],
+                                                        orig: +cmd[2],
+                                                        //top: Math.floor(price * 1.2 * 100) / 100,
+                                                        //bottom: Math.floor(price * 0.95 * 100) / 100,
+                                                        price: price,
+                                                        previous: { buy: [], sell: [] },
+                                                        newMid: []
+                                                    });
+                                                    //remain -= cost;
+                                                    //updateTotal[totalId] = {cost: remain};
+                                                });
+                                            });
+                                        })
+                                    };
+                                    /*} else if (cmd[4] && +cmd[2] > 0) {
+                                        return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
                                             console.log(basic);
+                                            const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
                                             items.push({
                                                 owner: user._id,
                                                 index: basic.stock_index,
-                                                name: basic.stock_index + ' ' + basic.stock_name,
+                                                name: `${basic.stock_index} ${basic.stock_name}`,
                                                 type: basic.stock_class,
-                                                //cost: 0,
-                                                count: 0,
-                                                web: newWeb.arr,
-                                                wType: item[0].web.type,
-                                                mid: newWeb.mid,
-                                                times: newWeb.times,
-                                                amount: +cmd[2],
-                                                orig: +cmd[2],
-                                                //top: Math.floor(price * 1.2 * 100) / 100,
-                                                //bottom: Math.floor(price * 0.95 * 100) / 100,
-                                                price: price,
-                                                previous: { buy: [], sell: [] },
-                                                newMid: []
-                                            });
-                                            //remain -= cost;
-                                            //updateTotal[totalId] = {cost: remain};
-                                        });
-                                    });
-                                });
-                                /*} else if (cmd[4] && +cmd[2] > 0) {
-                                    return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
-                                        console.log(basic);
-                                        const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
-                                        items.push({
-                                            owner: user._id,
-                                            index: basic.stock_index,
-                                            name: `${basic.stock_index} ${basic.stock_name}`,
-                                            type: basic.stock_class,
-                                            cost,
-                                            count: +cmd[2],
-                                            top: Math.floor(price * 1.2 * 100) / 100,
-                                            bottom: Math.floor(price * 0.95 * 100) / 100,
-                                            price,
-                                            high: price,
-                                        })
-                                        remain -= cost;
-                                        updateTotal[totalId] = {cost: remain};
-                                    }));*/
+                                                cost,
+                                                count: +cmd[2],
+                                                top: Math.floor(price * 1.2 * 100) / 100,
+                                                bottom: Math.floor(price * 0.95 * 100) / 100,
+                                                price,
+                                                high: price,
+                                            })
+                                            remain -= cost;
+                                            updateTotal[totalId] = {cost: remain};
+                                        }));*/
+                                }();
+
+                                if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
                             }
                         }
                     }
@@ -6223,7 +6258,7 @@ exports.default = {
                     if (v.name === '投資部位' && v.type === 'total') {
                         return _promise2.default.resolve();
                     } else {
-                        return getStockPrice('twse', v.index).then(function (price) {
+                        return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
                             var current = price * v.count;
                             totalPrice += current;
                             var p = current + v.amount - v.orig;
@@ -6294,7 +6329,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret14 = function () {
+    var _ret15 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -6326,7 +6361,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
+    if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -6394,7 +6429,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret15 = function () {
+            var _ret16 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -6441,7 +6476,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
+            if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -6493,7 +6528,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
 var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
         var recur_price = function recur_price(index) {
-            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice('twse', items[index].index).then(function (price) {
+            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(function (price) {
                 if (price === 0) {
                     return 0;
                 }
@@ -6691,7 +6726,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
 var stockShow = exports.stockShow = function stockShow() {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
         var recur_price = function recur_price(index, ret) {
-            return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice('twse', items[index].index, false).then(function (price) {
+            return index >= items.length ? _promise2.default.resolve(ret) : items[index].index === 0 ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(function (price) {
                 return ret + '\n' + items[index].name + ' ' + price;
             }).then(function (ret) {
                 return recur_price(index + 1, ret);
@@ -6702,7 +6737,7 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    var _ret16 = function () {
+    var _ret17 = function () {
         switch (type) {
             case 'twse':
                 var quarter = 3;
@@ -6746,20 +6781,20 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                             if (Number(index)) {
                                                 var exist = false;
 
-                                                var _loop5 = function _loop5(_i33) {
-                                                    if (stock_list[_i33].index === index) {
+                                                var _loop5 = function _loop5(_i34) {
+                                                    if (stock_list[_i34].index === index) {
                                                         exist = true;
                                                         tag.forEach(function (v) {
-                                                            return stock_list[_i33].tag.push(v);
+                                                            return stock_list[_i34].tag.push(v);
                                                         });
                                                         return 'break';
                                                     }
                                                 };
 
-                                                for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
-                                                    var _ret17 = _loop5(_i33);
+                                                for (var _i34 = 0; _i34 < stock_list.length; _i34++) {
+                                                    var _ret18 = _loop5(_i34);
 
-                                                    if (_ret17 === 'break') break;
+                                                    if (_ret18 === 'break') break;
                                                 }
                                                 if (!exist) {
                                                     stock_list.push({
@@ -6793,7 +6828,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                         return (0, _apiTool2.default)('url', 'https://www.slickcharts.com/' + list[index]).then(function (raw_data) {
                             (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
                                 var sIndex = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[2], 'a')[0])[0].replace('.', '-');
-                                var name = (0, _utility.toValidName)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&');
+                                var name = (0, _utility.toValidName)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                                 var is_exit = false;
                                 for (var i = 0; i < stock_list.length; i++) {
                                     if (stock_list[i].index === sIndex) {
@@ -6824,7 +6859,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         }
     }();
 
-    if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
+    if ((typeof _ret17 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret17)) === "object") return _ret17.v;
 };
 
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
@@ -6845,6 +6880,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
     var t2 = (pType | 2) === pType ? true : false;
     var t3 = (pType | 4) === pType ? true : false;
     var t4 = (pType | 8) === pType ? true : false;
+    var t5 = (pType | 16) === pType ? true : false;
     var is_buy = true;
     var is_sell = true;
     var bTimes = 1;
@@ -7013,26 +7049,26 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
-            if (sType === 0) {
-                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+            if (!t5) {
+                if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
-                } else*/if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
-                    bAdd++;
+                } /* else if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                     bAdd++;
+                  }
+                  if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
+                     sAdd++;
+                  } else */if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                    sAdd--;
                 }
-                if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
-                    sAdd++;
-                } /* else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                     sAdd--;
-                  }*/
             } else {
-                /*if (previous.buy * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                /*if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 } else*/if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
-                } /*else if (previous.sell * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                } /*else if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
                   }*/
             }
@@ -7783,24 +7819,24 @@ var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
     }
     var volsum = 0;
     var maxlen = len && stair_start + len < raw_arr.length ? stair_start + len : raw_arr.length;
-    for (var _i34 = stair_start; _i34 < maxlen; _i34++) {
+    for (var _i35 = stair_start; _i35 < maxlen; _i35++) {
         var s = 0;
         var e = 100;
         for (var _j10 = 0; _j10 < 100; _j10++) {
-            if (raw_arr[_i34].l >= loga.arr[_j10]) {
+            if (raw_arr[_i35].l >= loga.arr[_j10]) {
                 s = _j10;
             }
-            if (raw_arr[_i34].h <= loga.arr[_j10]) {
+            if (raw_arr[_i35].h <= loga.arr[_j10]) {
                 e = _j10;
                 break;
             }
         }
-        volsum += raw_arr[_i34].v;
-        single_arr.push((raw_arr[_i34].h - raw_arr[_i34].l) / raw_arr[_i34].h * 100);
+        volsum += raw_arr[_i35].v;
+        single_arr.push((raw_arr[_i35].h - raw_arr[_i35].l) / raw_arr[_i35].h * 100);
         if (e - s === 0) {
-            final_arr[s] += raw_arr[_i34].v;
+            final_arr[s] += raw_arr[_i35].v;
         } else {
-            var v = raw_arr[_i34].v / (e - s);
+            var v = raw_arr[_i35].v / (e - s);
             for (var _j11 = s; _j11 < e; _j11++) {
                 final_arr[_j11] += v;
             }
@@ -7964,16 +8000,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
-        if (webArr[_i35] >= 0) {
+    for (var _i36 = mid - 1; _i36 >= 0; _i36--) {
+        if (webArr[_i36] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i35]);
+                new_arr.splice(0, 0, webArr[_i36]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i35]);
+            new_arr.splice(0, 0, webArr[_i36]);
         }
     }
     return {
@@ -8055,48 +8091,71 @@ var getUsStock = function getUsStock(index) {
     if (!Array.isArray(stat) || stat.length < 1) {
         return _promise2.default.resolve(ret);
     }
-    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
-        var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-        if (stat.indexOf('price') !== -1) {
-            var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-            ret['price'] = Number(price);
-        }
-        if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
-            var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
-            var table1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0];
-            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table1, 'thead')[0], 'tr')[0], 'th')[1], 'span')[0], 'span')[0]).forEach(function (d) {
-                var m = d.match(/^As of Date\: (\d+)\/\d+\/(\d+)$/);
-                if (m) {
-                    ret['latestYear'] = Number(m[2]);
-                    var q = Number(m[1]);
-                    if (q < 4) {
-                        ret['latestQuarter'] = 1;
-                    } else if (q < 7) {
-                        ret['latestQuarter'] = 2;
-                    } else if (q < 10) {
-                        ret['latestQuarter'] = 3;
-                    } else {
-                        ret['latestQuarter'] = 0;
-                        ret['latestYear']++;
+    var count = 0;
+    var real = function real() {
+        return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
+            var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+            if (stat.indexOf('price') !== -1) {
+                var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+                ret['price'] = Number(price);
+            }
+            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
+                var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
+                var table1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0];
+                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table1, 'thead')[0], 'tr')[0], 'th')[1], 'span')[0], 'span')[0]).forEach(function (d) {
+                    var m = d.match(/^As of Date\: (\d+)\/\d+\/(\d+)$/);
+                    if (m) {
+                        ret['latestYear'] = Number(m[2]);
+                        var q = Number(m[1]);
+                        if (q < 4) {
+                            ret['latestQuarter'] = 1;
+                        } else if (q < 7) {
+                            ret['latestQuarter'] = 2;
+                        } else if (q < 10) {
+                            ret['latestQuarter'] = 3;
+                        } else {
+                            ret['latestQuarter'] = 0;
+                            ret['latestYear']++;
+                        }
+                    }
+                });
+                if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
+                    var trs = (0, _utility.findTag)((0, _utility.findTag)(table1, 'tbody')[0], 'tr');
+                    if (stat.indexOf('per') !== -1) {
+                        if ((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1], 'span')[0]) {
+                            ret['per'] = 0;
+                        } else {
+                            ret['per'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
+                        }
+                    }
+                    if (stat.indexOf('pbr') !== -1) {
+                        if ((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1], 'span')[0]) {
+                            ret['pbr'] = 0;
+                        } else {
+                            ret['pbr'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
+                        }
                     }
                 }
+                if (stat.indexOf('pdr') !== -1) {
+                    var trs1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                    if ((0, _utility.findTag)((0, _utility.findTag)(trs1[3], 'td')[1], 'span')[0]) {
+                        ret['pdr'] = 0;
+                    } else {
+                        var stockYield = (0, _utility.findTag)((0, _utility.findTag)(trs1[3], 'td')[1])[0];
+                        stockYield = Number(stockYield.substring(0, stockYield.length - 1));
+                        ret['pdr'] = Math.round(100 / stockYield * 100) / 100;
+                    }
+                }
+            }
+            return _promise2.default.resolve(ret);
+        }).catch(function (err) {
+            console.log(count);
+            return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+                return setTimeout(function () {
+                    return resolve(real());
+                }, count * 1000);
             });
-            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
-                var trs = (0, _utility.findTag)((0, _utility.findTag)(table1, 'tbody')[0], 'tr');
-                if (stat.indexOf('per') !== -1) {
-                    ret['per'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
-                }
-                if (stat.indexOf('pbr') !== -1) {
-                    ret['pbr'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
-                }
-            }
-            if (stat.indexOf('pdr') !== -1) {
-                var trs1 = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                var stockYield = (0, _utility.findTag)((0, _utility.findTag)(trs1[3], 'td')[1])[0];
-                stockYield = Number(stockYield.substring(0, stockYield.length - 1));
-                ret['pdr'] = 100 / stockYield;
-            }
-        }
-        return _promise2.default.resolve(ret);
-    });
+        });
+    };
+    return real();
 };

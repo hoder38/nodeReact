@@ -244,7 +244,7 @@ var updateStockList = function updateStockList(list, type) {
     console.log('updateStockList');
     console.log(new Date());
     console.log(list[0]);
-    return _stockTool2.default.getSingleStockV2(type, list[0], (0, _config.STOCK_MODE)(_ver.ENV_TYPE)).then(function () {
+    return _stockTool2.default.getSingleStockV2(type, list[0], 1).then(function () {
         list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
@@ -258,8 +258,6 @@ var updateStock = exports.updateStock = function updateStock() {
             var loopUpdateStock = function loopUpdateStock() {
                 console.log('loopUpdateStock');
                 console.log(new Date());
-                var sDay = (0, _config.STOCK_DATE)(_ver.ENV_TYPE).indexOf(new Date().getDate());
-                console.log(sDay);
                 /*let use_stock_list = stock_batch_list;
                 if (stock_batch_list.length > 0) {
                     console.log('stock_batch_list remain');
@@ -275,8 +273,9 @@ var updateStock = exports.updateStock = function updateStock() {
                     use_stock_list = stock_batch_list;
                 }*/
                 var use_stock_list = [];
+                var sd = new Date();
                 var parseStockList = function parseStockList() {
-                    return sDay === -1 ? _promise2.default.resolve() : (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
+                    return sd.getDay() === 3 && sd.getHours() === 23 ? (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
                         /*Mongo('find', STOCKDB, {important: 1}).then(items => {
                         let annualList = [];
                         const year = new Date().getFullYear();
@@ -307,7 +306,14 @@ var updateStock = exports.updateStock = function updateStock() {
                         return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
                         }));*/
                         return updateStockList(use_stock_list, 'twse');
-                    });
+                    }) /* : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+                         stocklist.forEach(i => {
+                             if (use_stock_list.indexOf(i) === -1) {
+                                 use_stock_list.push(i);
+                             }
+                         });
+                         return updateStockList(use_stock_list, 'usse');
+                       })*/ : _promise2.default.resolve();
                 };
                 return parseStockList().catch(function (err) {
                     return bgError(err, 'Loop updateStock');
@@ -315,7 +321,7 @@ var updateStock = exports.updateStock = function updateStock() {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
-                        }, _constants.STOCK_INTERVAL * 1000);
+                        }, _constants.DOC_INTERVAL * 1000);
                     });
                 }).then(function () {
                     return loopUpdateStock();
@@ -368,6 +374,7 @@ var filterStock = exports.filterStock = function filterStock() {
                     return loopStockFilter();
                 })
             };
+            //return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopStockFilter());
         }();
 
         if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;

@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, STOCK_MODE, STOCK_DATE, STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER } from '../config'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, STOCK_INTERVAL, STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER } from '../config'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool'
@@ -106,7 +106,7 @@ const updateStockList = (list, type) => {
     console.log('updateStockList');
     console.log(new Date());
     console.log(list[0]);
-    return StockTool.getSingleStockV2(type, list[0], STOCK_MODE(ENV_TYPE)).then(() => {
+    return StockTool.getSingleStockV2(type, list[0], 1).then(() => {
         list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
@@ -119,8 +119,6 @@ export const updateStock = () => {
         const loopUpdateStock = () => {
             console.log('loopUpdateStock');
             console.log(new Date());
-            const sDay = STOCK_DATE(ENV_TYPE).indexOf(new Date().getDate());
-            console.log(sDay);
             /*let use_stock_list = stock_batch_list;
             if (stock_batch_list.length > 0) {
                 console.log('stock_batch_list remain');
@@ -136,7 +134,8 @@ export const updateStock = () => {
                 use_stock_list = stock_batch_list;
             }*/
             let use_stock_list = [];
-            const parseStockList = () => (sDay === -1) ? Promise.resolve() : getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
+            const sd = new Date();
+            const parseStockList = () => (sd.getDay() === 3 && sd.getHours() === 23) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
@@ -166,8 +165,15 @@ export const updateStock = () => {
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
             }));*/
                 return updateStockList(use_stock_list, 'twse');
-            });
-            return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), STOCK_INTERVAL * 1000))).then(() => loopUpdateStock());
+            })/* : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+                stocklist.forEach(i => {
+                    if (use_stock_list.indexOf(i) === -1) {
+                        use_stock_list.push(i);
+                    }
+                });
+                return updateStockList(use_stock_list, 'usse');
+            })*/ : Promise.resolve() ;
+            return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
     }
@@ -184,6 +190,7 @@ export const filterStock = () => {
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
+        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopStockFilter());
     }
 }
 
