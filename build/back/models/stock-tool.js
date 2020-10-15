@@ -3981,7 +3981,7 @@ exports.default = {
                             }
                             console.log(year);
                             console.log(month_str);
-                            if (!is_stop && index < 70 && raw_arr.length <= 1150) {
+                            if (!is_stop && index < 60 && raw_arr.length <= 1000) {
                                 return recur_mi(type, index);
                             }
                             console.log(max);
@@ -4026,7 +4026,7 @@ exports.default = {
                                             var testResult = [];
                                             var match = [];
                                             var j = raw_arr.length - 1;
-                                            while (j > 249) {
+                                            while (j > 199) {
                                                 var _temp12 = stockTest(raw_arr, loga, min, type, j);
                                                 if (_temp12 === 'data miss') {
                                                     return true;
@@ -4361,9 +4361,8 @@ exports.default = {
                             }
                         };
                         var exGet = function exGet() {
-                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/recur_mi(1, 0)
-                            );
-                        }; /*: Promise.resolve([null, ret_obj]);*/
+                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? recur_mi(1, 0) : _promise2.default.resolve([null, ret_obj]);
+                        };
                         return exGet().then(function (_ref25) {
                             var _ref26 = (0, _slicedToArray3.default)(_ref25, 2),
                                 raw_list = _ref26[0],
@@ -4407,7 +4406,7 @@ exports.default = {
                             month_str = completeZero(month.toString(), 2);
                         }*/
                         var start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
-                        var end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                        var end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                         var start_month = '' + year + month_str;
                         var max = 0;
                         var min = 0;
@@ -4456,7 +4455,7 @@ exports.default = {
                                             var testResult = [];
                                             var match = [];
                                             var j = raw_arr.length - 1;
-                                            while (j > 249) {
+                                            while (j > 199) {
                                                 var _temp13 = stockTest(raw_arr, loga, min, type, j);
                                                 if (_temp13 === 'data miss') {
                                                     return true;
@@ -4526,7 +4525,7 @@ exports.default = {
                                             }
                                             ret_str1.push(str);
                                         };
-                                        for (var _i26 = 15; _i26 >= 0; _i26--) {
+                                        for (var _i26 = 31; _i26 >= 0; _i26--) {
                                             if (resultShow(_i26)) {
                                                 return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
                                             }
@@ -4584,7 +4583,7 @@ exports.default = {
                         var get_mi = function get_mi(index) {
                             if (raw_list) {
                                 var isEnd = false;
-                                for (var i = 0; i < 60; i++) {
+                                for (var i = 0; i < 48; i++) {
                                     if (raw_list[year] && raw_list[year][month_str]) {
                                         if (!isEnd) {
                                             isEnd = true;
@@ -4626,7 +4625,7 @@ exports.default = {
                                     //min_vol = 0;
                                     max = 0;
                                     min = 0;
-                                    end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                                    end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                                 }
                                 return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history').then(function (raw_data) {
                                     raw_data = raw_data.split("\n").reverse();
@@ -4702,9 +4701,8 @@ exports.default = {
                             });
                         };
                         var exGet = function exGet() {
-                            return (/*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/get_mi()
-                            );
-                        }; /*: Promise.resolve([null, ret_obj]);*/
+                            return etime === -1 || !etime || etime < new Date().getTime() / 1000 ? get_mi() : _promise2.default.resolve([null, ret_obj]);
+                        };
                         return exGet().then(function (_ref31) {
                             var _ref32 = (0, _slicedToArray3.default)(_ref31, 2),
                                 raw_list = _ref32[0],
@@ -5281,11 +5279,25 @@ exports.default = {
                 }
                 var first_stage = [];
                 result.items.forEach(function (i) {
-                    var eok = option.per ? option.per[1] === '>' && i.per > option.per[2] || option.per[1] === '<' && i.per && i.per < option.per[2] ? true : false : true;
-                    var dok = option.pdr ? option.pdr[1] === '>' && i.pdr > option.pdr[2] || option.pdr[1] === '<' && i.pdr && i.pdr < option.pdr[2] ? true : false : true;
-                    var bok = option.pbr ? option.pbr[1] === '>' && i.pbr > option.pbr[2] || option.pbr[1] === '<' && i.pbr && i.pbr < option.pbr[2] ? true : false : true;
-                    if (eok && dok && bok && i.type === 'twse') {
-                        first_stage.push(i);
+                    switch (i.type) {
+                        case 'usse':
+                            var eok = option['usse'].per ? option['usse'].per[1] === '>' && i.per > option['usse'].per[2] || option['usse'].per[1] === '<' && i.per && i.per < option['usse'].per[2] ? true : false : true;
+                            var dok = option['usse'].pdr ? option['usse'].pdr[1] === '>' && i.pdr > option['usse'].pdr[2] || option['usse'].pdr[1] === '<' && i.pdr && i.pdr < option['usse'].pdr[2] ? true : false : true;
+                            var bok = option['usse'].pbr ? option['usse'].pbr[1] === '>' && i.pbr > option['usse'].pbr[2] || option['usse'].pbr[1] === '<' && i.pbr && i.pbr < option['usse'].pbr[2] ? true : false : true;
+                            if (eok && dok && bok) {
+                                first_stage.push(i);
+                            }
+                            break;
+                        case 'twse':
+                            var eok1 = option['twse'].per ? option['twse'].per[1] === '>' && i.per > option['twse'].per[2] || option['twse'].per[1] === '<' && i.per && i.per < option['twse'].per[2] ? true : false : true;
+                            var dok1 = option['twse'].pdr ? option['twse'].pdr[1] === '>' && i.pdr > option['twse'].pdr[2] || option['twse'].pdr[1] === '<' && i.pdr && i.pdr < option['twse'].pdr[2] ? true : false : true;
+                            var bok1 = option['twse'].pbr ? option['twse'].pbr[1] === '>' && i.pbr > option['twse'].pbr[2] || option['twse'].pbr[1] === '<' && i.pbr && i.pbr < option['twse'].pbr[2] ? true : false : true;
+                            if (eok1 && dok1 && bok1) {
+                                first_stage.push(i);
+                            }
+                            break;
+                        default:
+                            break;
                     }
                 });
                 if (first_stage.length < 1) {
@@ -5328,15 +5340,33 @@ exports.default = {
                     console.log(result);
                     var intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
                     if (intervalVal) {
-                        var cok = option.close ? option.close[1] === '>' && intervalVal[1] > option.close[2] || option.close[1] === '<' && intervalVal[1] < option.close[2] ? true : false : true;
-                        var pok = option.profit ? option.profit[1] === '>' && intervalVal[3] > option.profit[2] || option.profit[1] === '<' && intervalVal[3] < option.profit[2] ? true : false : true;
-                        var gok = option.gap ? option.gap[1] === '>' && intervalVal[4] > option.gap[2] || option.gap[1] === '<' && intervalVal[4] < option.gap[2] ? true : false : true;
-                        var tok = option.times ? option.times[1] === '>' && intervalVal[5] > option.times[2] || option.times[1] === '<' && intervalVal[5] < option.times[2] ? true : false : true;
-                        var sok = option.stop ? option.stop[1] === '>' && intervalVal[6] > option.stop[2] || option.stop[1] === '<' && intervalVal[6] < option.stop[2] ? true : false : true;
-                        var iok = option.interval ? option.interval[1] === '>' && intervalVal[8] > option.interval[2] || option.interval[1] === '<' && intervalVal[8] < option.interval[2] ? true : false : true;
-                        var vok = option.vol ? option.vol[1] === '>' && intervalVal[9] > option.vol[2] || option.vol[1] === '<' && intervalVal[9] < option.vol[2] ? true : false : true;
-                        if (iok && vok && cok && pok && gok && tok && sok) {
-                            filterList1.push(filterList[iIndex]);
+                        switch (filterList[iIndex].type) {
+                            case 'usse':
+                                var cok = option.close ? option.close[1] === '>' && intervalVal[1] > option.close[2] || option.close[1] === '<' && intervalVal[1] < option.close[2] ? true : false : true;
+                                var pok = option['usse'].profit ? option['usse'].profit[1] === '>' && intervalVal[3] > option['usse'].profit[2] || option['usse'].profit[1] === '<' && intervalVal[3] < option['usse'].profit[2] ? true : false : true;
+                                var gok = option['usse'].gap ? option['usse'].gap[1] === '>' && intervalVal[4] > option['usse'].gap[2] || option['usse'].gap[1] === '<' && intervalVal[4] < option['usse'].gap[2] ? true : false : true;
+                                var tok = option['usse'].times ? option['usse'].times[1] === '>' && intervalVal[5] > option['usse'].times[2] || option['usse'].times[1] === '<' && intervalVal[5] < option['usse'].times[2] ? true : false : true;
+                                var sok = option['usse'].stop ? option['usse'].stop[1] === '>' && intervalVal[6] > option['usse'].stop[2] || option['usse'].stop[1] === '<' && intervalVal[6] < option['usse'].stop[2] ? true : false : true;
+                                var iok = option['usse'].interval ? option['usse'].interval[1] === '>' && intervalVal[8] > option['usse'].interval[2] || option['usse'].interval[1] === '<' && intervalVal[8] < option['usse'].interval[2] ? true : false : true;
+                                var vok = option['usse'].vol ? option['usse'].vol[1] === '>' && intervalVal[9] > option['usse'].vol[2] || option['usse'].vol[1] === '<' && intervalVal[9] < option['usse'].vol[2] ? true : false : true;
+                                if (iok && vok && cok && pok && gok && tok && sok) {
+                                    filterList1.push(filterList[iIndex]);
+                                }
+                                break;
+                            case 'twse':
+                                var cok1 = option.close ? option.close[1] === '>' && intervalVal[1] > option.close[2] || option.close[1] === '<' && intervalVal[1] < option.close[2] ? true : false : true;
+                                var pok1 = option['twse'].profit ? option['twse'].profit[1] === '>' && intervalVal[3] > option['twse'].profit[2] || option['twse'].profit[1] === '<' && intervalVal[3] < option['twse'].profit[2] ? true : false : true;
+                                var gok1 = option['twse'].gap ? option['twse'].gap[1] === '>' && intervalVal[4] > option['twse'].gap[2] || option['twse'].gap[1] === '<' && intervalVal[4] < option['twse'].gap[2] ? true : false : true;
+                                var tok1 = option['twse'].times ? option['twse'].times[1] === '>' && intervalVal[5] > option['twse'].times[2] || option['twse'].times[1] === '<' && intervalVal[5] < option['twse'].times[2] ? true : false : true;
+                                var sok1 = option['twse'].stop ? option['twse'].stop[1] === '>' && intervalVal[6] > option['twse'].stop[2] || option['twse'].stop[1] === '<' && intervalVal[6] < option['twse'].stop[2] ? true : false : true;
+                                var iok1 = option['twse'].interval ? option['twse'].interval[1] === '>' && intervalVal[8] > option['twse'].interval[2] || option['twse'].interval[1] === '<' && intervalVal[8] < option['twse'].interval[2] ? true : false : true;
+                                var vok1 = option['twse'].vol ? option['twse'].vol[1] === '>' && intervalVal[9] > option['twse'].vol[2] || option['twse'].vol[1] === '<' && intervalVal[9] < option['twse'].vol[2] ? true : false : true;
+                                if (iok1 && vok1 && cok1 && pok1 && gok1 && tok1 && sok1) {
+                                    filterList1.push(filterList[iIndex]);
+                                }
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }).catch(function (err) {
@@ -5352,7 +5382,7 @@ exports.default = {
                 }) : _promise2.default.resolve();
             };
             console.log('stage three');
-            return option.interval || option.vol || option.close ? stage3(0).then(function () {
+            return option['twse'].interval || option['usse'].interval || option['twse'].vol || option['usse'].vol || option.close ? stage3(0).then(function () {
                 return filterList1;
             }) : filterList;
         }).then(function (filterList) {
@@ -6818,8 +6848,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                 };
                 break;
             case 'usse':
-                //const list = ['dowjones', 'nasdaq100', 'sp500'];
-                var list = ['dowjones'];
+                var list = ['dowjones', 'nasdaq100', 'sp500'];
                 var stock_list = [];
                 var recur_get = function recur_get(index) {
                     if (index >= list.length) {
@@ -7287,7 +7316,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
     var pType = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
     var start = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 0;
     var reverse = arguments.length > 5 && arguments[5] !== undefined ? arguments[5] : false;
-    var len = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 250;
+    var len = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 200;
     var rinterval = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : _constants.RANGE_INTERVAL;
     var fee = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_FEE;
     var ttime = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_TIME;

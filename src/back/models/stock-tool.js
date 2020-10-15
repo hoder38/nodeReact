@@ -3511,7 +3511,7 @@ export default {
                         }
                         console.log(year);
                         console.log(month_str);
-                        if (!is_stop && index < 70 && raw_arr.length <= 1150) {
+                        if (!is_stop && index < 60 && raw_arr.length <= 1000) {
                             return recur_mi(type, index);
                         }
                         console.log(max);
@@ -3555,7 +3555,7 @@ export default {
                                     const testResult = [];
                                     const match = [];
                                     let j = raw_arr.length - 1;
-                                    while (j > 249) {
+                                    while (j > 199) {
                                         const temp = stockTest(raw_arr, loga, min, type, j);
                                         if (temp === 'data miss') {
                                             return true;
@@ -3796,7 +3796,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ recur_mi(1, 0) /*: Promise.resolve([null, ret_obj]);*/
+                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -3825,7 +3825,7 @@ export default {
                         month_str = completeZero(month.toString(), 2);
                     }*/
                     let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
-                    let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                    let end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                     let start_month = `${year}${month_str}`;
                     let max = 0;
                     let min = 0;
@@ -3873,7 +3873,7 @@ export default {
                                     const testResult = [];
                                     const match = [];
                                     let j = raw_arr.length - 1;
-                                    while (j > 249) {
+                                    while (j > 199) {
                                         const temp = stockTest(raw_arr, loga, min, type, j);
                                         if (temp === 'data miss') {
                                             return true;
@@ -3937,7 +3937,7 @@ export default {
                                     }
                                     ret_str1.push(str);
                                 }
-                                for (let i = 15; i >= 0; i--) {
+                                for (let i = 31; i >= 0; i--) {
                                     if (resultShow(i)) {
                                         return handleError(new HoError(`${items[0].index} data miss!!!`));
                                     }
@@ -3979,7 +3979,7 @@ export default {
                     const get_mi = index => {
                         if (raw_list) {
                             let isEnd = false;
-                            for (let i = 0; i < 60; i++) {
+                            for (let i = 0; i < 48; i++) {
                                 if (raw_list[year] && raw_list[year][month_str]) {
                                     if (!isEnd) {
                                         isEnd = true;
@@ -4021,7 +4021,7 @@ export default {
                                 //min_vol = 0;
                                 max = 0;
                                 min = 0;
-                                end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                                end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                             }
                             return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
                                 raw_data = raw_data.split("\n").reverse();
@@ -4096,7 +4096,7 @@ export default {
                             });
                         });
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (new Date().getTime()/1000)) ?*/ get_mi() /*: Promise.resolve([null, ret_obj]);*/
+                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -4467,11 +4467,25 @@ export default {
             }
             let first_stage = [];
             result.items.forEach(i => {
-                const eok = option.per ? ((option.per[1] === '>' && i.per > option.per[2]) || (option.per[1] === '<' && i.per && i.per < option.per[2])) ? true : false : true;
-                const dok = option.pdr ? ((option.pdr[1] === '>' && i.pdr > option.pdr[2]) || (option.pdr[1] === '<' && i.pdr && i.pdr < option.pdr[2])) ? true : false : true;
-                const bok = option.pbr ? ((option.pbr[1] === '>' && i.pbr > option.pbr[2]) || (option.pbr[1] === '<' && i.pbr && i.pbr < option.pbr[2])) ? true : false : true;
-                if (eok && dok && bok && i.type === 'twse') {
-                    first_stage.push(i);
+                switch (i.type) {
+                    case 'usse':
+                    const eok = option['usse'].per ? ((option['usse'].per[1] === '>' && i.per > option['usse'].per[2]) || (option['usse'].per[1] === '<' && i.per && i.per < option['usse'].per[2])) ? true : false : true;
+                    const dok = option['usse'].pdr ? ((option['usse'].pdr[1] === '>' && i.pdr > option['usse'].pdr[2]) || (option['usse'].pdr[1] === '<' && i.pdr && i.pdr < option['usse'].pdr[2])) ? true : false : true;
+                    const bok = option['usse'].pbr ? ((option['usse'].pbr[1] === '>' && i.pbr > option['usse'].pbr[2]) || (option['usse'].pbr[1] === '<' && i.pbr && i.pbr < option['usse'].pbr[2])) ? true : false : true;
+                    if (eok && dok && bok) {
+                        first_stage.push(i);
+                    }
+                    break;
+                    case 'twse':
+                    const eok1 = option['twse'].per ? ((option['twse'].per[1] === '>' && i.per > option['twse'].per[2]) || (option['twse'].per[1] === '<' && i.per && i.per < option['twse'].per[2])) ? true : false : true;
+                    const dok1 = option['twse'].pdr ? ((option['twse'].pdr[1] === '>' && i.pdr > option['twse'].pdr[2]) || (option['twse'].pdr[1] === '<' && i.pdr && i.pdr < option['twse'].pdr[2])) ? true : false : true;
+                    const bok1 = option['twse'].pbr ? ((option['twse'].pbr[1] === '>' && i.pbr > option['twse'].pbr[2]) || (option['twse'].pbr[1] === '<' && i.pbr && i.pbr < option['twse'].pbr[2])) ? true : false : true;
+                    if (eok1 && dok1 && bok1) {
+                        first_stage.push(i);
+                    }
+                    break;
+                    default:
+                    break;
                 }
             });
             if (first_stage.length < 1) {
@@ -4506,15 +4520,33 @@ export default {
                 console.log(result);
                 const intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
                 if (intervalVal) {
-                    const cok = option.close ? ((option.close[1] === '>' && intervalVal[1] > option.close[2]) || (option.close[1] === '<' && intervalVal[1] < option.close[2])) ? true : false : true;
-                    const pok = option.profit ? ((option.profit[1] === '>' && intervalVal[3] > option.profit[2]) || (option.profit[1] === '<' && intervalVal[3] < option.profit[2])) ? true : false : true;
-                    const gok = option.gap ? ((option.gap[1] === '>' && intervalVal[4] > option.gap[2]) || (option.gap[1] === '<' && intervalVal[4] < option.gap[2])) ? true : false : true;
-                    const tok = option.times ? ((option.times[1] === '>' && intervalVal[5] > option.times[2]) || (option.times[1] === '<' && intervalVal[5] < option.times[2])) ? true : false : true;
-                    const sok = option.stop ? ((option.stop[1] === '>' && intervalVal[6] > option.stop[2]) || (option.stop[1] === '<' && intervalVal[6] < option.stop[2])) ? true : false : true;
-                    const iok = option.interval ? ((option.interval[1] === '>' && intervalVal[8] > option.interval[2]) || (option.interval[1] === '<' && intervalVal[8] < option.interval[2])) ? true : false : true;
-                    const vok = option.vol ? ((option.vol[1] === '>' && intervalVal[9] > option.vol[2]) || (option.vol[1] === '<' && intervalVal[9] < option.vol[2])) ? true : false : true;
-                    if (iok && vok && cok && pok && gok && tok && sok) {
-                        filterList1.push(filterList[iIndex]);
+                    switch (filterList[iIndex].type) {
+                        case 'usse':
+                        const cok = option.close ? ((option.close[1] === '>' && intervalVal[1] > option.close[2]) || (option.close[1] === '<' && intervalVal[1] < option.close[2])) ? true : false : true;
+                        const pok = option['usse'].profit ? ((option['usse'].profit[1] === '>' && intervalVal[3] > option['usse'].profit[2]) || (option['usse'].profit[1] === '<' && intervalVal[3] < option['usse'].profit[2])) ? true : false : true;
+                        const gok = option['usse'].gap ? ((option['usse'].gap[1] === '>' && intervalVal[4] > option['usse'].gap[2]) || (option['usse'].gap[1] === '<' && intervalVal[4] < option['usse'].gap[2])) ? true : false : true;
+                        const tok = option['usse'].times ? ((option['usse'].times[1] === '>' && intervalVal[5] > option['usse'].times[2]) || (option['usse'].times[1] === '<' && intervalVal[5] < option['usse'].times[2])) ? true : false : true;
+                        const sok = option['usse'].stop ? ((option['usse'].stop[1] === '>' && intervalVal[6] > option['usse'].stop[2]) || (option['usse'].stop[1] === '<' && intervalVal[6] < option['usse'].stop[2])) ? true : false : true;
+                        const iok = option['usse'].interval ? ((option['usse'].interval[1] === '>' && intervalVal[8] > option['usse'].interval[2]) || (option['usse'].interval[1] === '<' && intervalVal[8] < option['usse'].interval[2])) ? true : false : true;
+                        const vok = option['usse'].vol ? ((option['usse'].vol[1] === '>' && intervalVal[9] > option['usse'].vol[2]) || (option['usse'].vol[1] === '<' && intervalVal[9] < option['usse'].vol[2])) ? true : false : true;
+                        if (iok && vok && cok && pok && gok && tok && sok) {
+                            filterList1.push(filterList[iIndex]);
+                        }
+                        break;
+                        case 'twse':
+                        const cok1 = option.close ? ((option.close[1] === '>' && intervalVal[1] > option.close[2]) || (option.close[1] === '<' && intervalVal[1] < option.close[2])) ? true : false : true;
+                        const pok1 = option['twse'].profit ? ((option['twse'].profit[1] === '>' && intervalVal[3] > option['twse'].profit[2]) || (option['twse'].profit[1] === '<' && intervalVal[3] < option['twse'].profit[2])) ? true : false : true;
+                        const gok1 = option['twse'].gap ? ((option['twse'].gap[1] === '>' && intervalVal[4] > option['twse'].gap[2]) || (option['twse'].gap[1] === '<' && intervalVal[4] < option['twse'].gap[2])) ? true : false : true;
+                        const tok1 = option['twse'].times ? ((option['twse'].times[1] === '>' && intervalVal[5] > option['twse'].times[2]) || (option['twse'].times[1] === '<' && intervalVal[5] < option['twse'].times[2])) ? true : false : true;
+                        const sok1 = option['twse'].stop ? ((option['twse'].stop[1] === '>' && intervalVal[6] > option['twse'].stop[2]) || (option['twse'].stop[1] === '<' && intervalVal[6] < option['twse'].stop[2])) ? true : false : true;
+                        const iok1 = option['twse'].interval ? ((option['twse'].interval[1] === '>' && intervalVal[8] > option['twse'].interval[2]) || (option['twse'].interval[1] === '<' && intervalVal[8] < option['twse'].interval[2])) ? true : false : true;
+                        const vok1 = option['twse'].vol ? ((option['twse'].vol[1] === '>' && intervalVal[9] > option['twse'].vol[2]) || (option['twse'].vol[1] === '<' && intervalVal[9] < option['twse'].vol[2])) ? true : false : true;
+                        if (iok1 && vok1 && cok1 && pok1 && gok1 && tok1 && sok1) {
+                            filterList1.push(filterList[iIndex]);
+                        }
+                        break;
+                        default:
+                        break;
                     }
                 }
             }).catch(err => {
@@ -4527,7 +4559,7 @@ export default {
                 handleError(err, 'Stock filter');
             }).then(() => stage3(iIndex + 1)) : Promise.resolve();
             console.log('stage three');
-            return (option.interval || option.vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
+            return (option['twse'].interval || option['usse'].interval || option['twse'].vol || option['usse'].vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
         }).then(filterList => {
             const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
                 sendWs({
@@ -5677,8 +5709,7 @@ export const getStockListV2 = (type, year, month) => {
         });
         break;
         case 'usse':
-        //const list = ['dowjones', 'nasdaq100', 'sp500'];
-        const list = ['dowjones'];
+        const list = ['dowjones', 'nasdaq100', 'sp500'];
         const stock_list = [];
         const recur_get = index => {
             if (index >= list.length) {
@@ -6124,7 +6155,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     };
 }
 
-export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = false, len = 250, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, sType = 0) => {
+export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = false, len = 200, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, sType = 0) => {
     const now = Math.round(new Date().getTime() / 1000);
     //let is_start = false;
     let count = 0;

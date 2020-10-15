@@ -306,14 +306,14 @@ var updateStock = exports.updateStock = function updateStock() {
                         return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
                         }));*/
                         return updateStockList(use_stock_list, 'twse');
-                    }) /* : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
-                         stocklist.forEach(i => {
-                             if (use_stock_list.indexOf(i) === -1) {
-                                 use_stock_list.push(i);
-                             }
-                         });
-                         return updateStockList(use_stock_list, 'usse');
-                       })*/ : _promise2.default.resolve();
+                    }) : sd.getDay() === 4 && sd.getHours() === 23 ? (0, _stockTool.getStockListV2)('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
+                        stocklist.forEach(function (i) {
+                            if (use_stock_list.indexOf(i) === -1) {
+                                use_stock_list.push(i);
+                            }
+                        });
+                        return updateStockList(use_stock_list, 'usse');
+                    }) : _promise2.default.resolve();
                 };
                 return parseStockList().catch(function (err) {
                     return bgError(err, 'Loop updateStock');

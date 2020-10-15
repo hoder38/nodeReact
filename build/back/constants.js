@@ -347,20 +347,37 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
     name: '檢驗', //changing to filter after fixed to reading DB
     sortName: 'name',
     sortType: 'asc',
-    per: [1, '<', 35],
-    pdr: [1, '<', 50],
-    pbr: [1, '<', 10],
-    times: [1, '>', 12],
-    stop: [1, '<', 3],
-    gap: [1, '>', -10],
-    profit: [1, '>', 10],
-    //pp: [1, '>', 100],
-    //ss: [1, '>', -500],
-    //mm: [1, '>', 3],
-    //pre: [1, '>', 10],
-    interval: [1, '>', 750],
-    vol: [1, '>', 150],
-    close: [1, '<', 5]
+    close: [1, '<', 5],
+    twse: {
+        per: [1, '<', 35],
+        pdr: [1, '<', 50],
+        pbr: [1, '<', 10],
+        times: [1, '>', 10],
+        stop: [1, '<', 4],
+        gap: [1, '>', -10],
+        profit: [1, '>', 10],
+        //pp: [1, '>', 100],
+        //ss: [1, '>', -500],
+        //mm: [1, '>', 3],
+        //pre: [1, '>', 10],
+        interval: [1, '>', 700],
+        vol: [1, '>', 150]
+    },
+    usse: {
+        per: [1, '<', 70],
+        //pdr: [1, '<', 50],
+        pbr: [1, '<', 20],
+        times: [1, '>', 10],
+        stop: [1, '<', 4],
+        gap: [1, '>', -10],
+        profit: [1, '>', 10],
+        //pp: [1, '>', 100],
+        //ss: [1, '>', -500],
+        //mm: [1, '>', 3],
+        //pre: [1, '>', 10],
+        interval: [1, '>', 700],
+        vol: [1, '>', 200000]
+    }
 };
 
 var BACKUP_COLLECTION = exports.BACKUP_COLLECTION = [USERDB, STORAGEDB, STOCKDB, PASSWORDDB, DOCDB, STORAGEDB + 'User', STOCKDB + 'User', PASSWORDDB + 'User'];
