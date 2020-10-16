@@ -165,14 +165,14 @@ export const updateStock = () => {
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
             }));*/
                 return updateStockList(use_stock_list, 'twse');
-            }) : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+            }) : (sd.getDay() === 5 && sd.getHours() === 10) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
                 stocklist.forEach(i => {
                     if (use_stock_list.indexOf(i) === -1) {
                         use_stock_list.push(i);
                     }
                 });
                 return updateStockList(use_stock_list, 'usse');
-            }) : Promise.resolve() ;
+            }) : Promise.resolve();
             return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
@@ -190,7 +190,6 @@ export const filterStock = () => {
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
-        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopStockFilter());
     }
 }
 

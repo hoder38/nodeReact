@@ -6946,14 +6946,22 @@ const getUsStock = (index, stat=['price']) => {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
                         ret['per'] = 0;
                     } else {
-                        ret['per'] = Number(findTag(findTag(trs[2], 'td')[1])[0]);
+                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                        if (!per) {
+                            return handleError(new HoError('usa stock parse error'));
+                        }
+                        ret['per'] = per[2] ? Number(per[1]) * 1000 : Number(per[1]);
                     }
                 }
                 if (stat.indexOf('pbr') !== -1) {
                     if (findTag(findTag(trs[6], 'td')[1], 'span')[0]) {
                         ret['pbr'] = 0;
                     } else {
-                        ret['pbr'] = Number(findTag(findTag(trs[6], 'td')[1])[0]);
+                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                        if (!pbr) {
+                            return handleError(new HoError('usa stock parse error'));
+                        }
+                        ret['pbr'] = pbr[2] ? Number(pbr[1]) * 1000 : Number(pbr[1]);
                     }
                 }
             }
@@ -6971,7 +6979,7 @@ const getUsStock = (index, stat=['price']) => {
         return Promise.resolve(ret);
     }).catch(err => {
         console.log(count);
-        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
+        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
     });
     return real();
 }

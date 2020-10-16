@@ -8156,14 +8156,22 @@ var getUsStock = function getUsStock(index) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1], 'span')[0]) {
                             ret['per'] = 0;
                         } else {
-                            ret['per'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0]);
+                            var per = (0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                            if (!per) {
+                                return (0, _utility.handleError)(new _utility.HoError('usa stock parse error'));
+                            }
+                            ret['per'] = per[2] ? Number(per[1]) * 1000 : Number(per[1]);
                         }
                     }
                     if (stat.indexOf('pbr') !== -1) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1], 'span')[0]) {
                             ret['pbr'] = 0;
                         } else {
-                            ret['pbr'] = Number((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0]);
+                            var pbr = (0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                            if (!pbr) {
+                                return (0, _utility.handleError)(new _utility.HoError('usa stock parse error'));
+                            }
+                            ret['pbr'] = pbr[2] ? Number(pbr[1]) * 1000 : Number(pbr[1]);
                         }
                     }
                 }
@@ -8184,7 +8192,7 @@ var getUsStock = function getUsStock(index) {
             return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
                 return setTimeout(function () {
                     return resolve(real());
-                }, count * 1000);
+                }, 60000);
             });
         });
     };

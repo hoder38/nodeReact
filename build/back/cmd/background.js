@@ -306,7 +306,7 @@ var updateStock = exports.updateStock = function updateStock() {
                         return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
                         }));*/
                         return updateStockList(use_stock_list, 'twse');
-                    }) : sd.getDay() === 4 && sd.getHours() === 23 ? (0, _stockTool.getStockListV2)('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
+                    }) : sd.getDay() === 5 && sd.getHours() === 10 ? (0, _stockTool.getStockListV2)('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
                         stocklist.forEach(function (i) {
                             if (use_stock_list.indexOf(i) === -1) {
                                 use_stock_list.push(i);
@@ -374,7 +374,6 @@ var filterStock = exports.filterStock = function filterStock() {
                     return loopStockFilter();
                 })
             };
-            //return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopStockFilter());
         }();
 
         if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
