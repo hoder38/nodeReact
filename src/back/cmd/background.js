@@ -165,7 +165,7 @@ export const updateStock = () => {
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
             }));*/
                 return updateStockList(use_stock_list, 'twse');
-            }) : (sd.getDay() === 5 && sd.getHours() === 14) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+            }) : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
                 stocklist.forEach(i => {
                     if (use_stock_list.indexOf(i) === -1) {
                         use_stock_list.push(i);

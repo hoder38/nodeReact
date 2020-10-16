@@ -6908,7 +6908,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                         break;
                                     }
                                 }
-                                if (!is_exit) {
+                                if (!is_exit && sIndex !== 'ETFC') {
                                     stock_list.push({
                                         index: sIndex,
                                         tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500']
