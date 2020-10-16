@@ -2027,7 +2027,7 @@ var getBasicStockData = function getBasicStockData(type, index) {
                         var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
                         var mn = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
                         var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(mn, 'div')[0], 'h1')[0])[0];
-                        result.stock_full = name.substring(0, name.indexOf('(')).trim();
+                        result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
                         result.stock_name = [result.stock_full];
                         var market = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(mn, 'div')[1], 'span')[0])[0];
                         result.stock_market = market.substring(0, market.indexOf('-')).trim();
@@ -2102,7 +2102,7 @@ var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
         }
         var valid_tags = [];
         tags.forEach(function (i) {
-            var valid_name = (0, _utility.isValidString)(i.replace('&amp;', '&').replace('&#x27;', "'"), 'name');
+            var valid_name = (0, _utility.isValidString)(i, 'name');
             if (valid_name) {
                 valid_tags.push(valid_name);
             }

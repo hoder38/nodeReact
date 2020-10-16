@@ -1888,7 +1888,7 @@ const getBasicStockData = (type, index) => {
             const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             const mn = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
             const name = findTag(findTag(findTag(mn, 'div')[0], 'h1')[0])[0];
-            result.stock_full = name.substring(0, name.indexOf('(')).trim();
+            result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
             result.stock_name = [result.stock_full];
             const market = findTag(findTag(findTag(mn, 'div')[1], 'span')[0])[0];
             result.stock_market = market.substring(0, market.indexOf('-')).trim();
@@ -1942,7 +1942,7 @@ const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, inde
     }
     let valid_tags = [];
     tags.forEach(i => {
-        const valid_name = isValidString(i.replace('&amp;', '&').replace('&#x27;', "'"), 'name');
+        const valid_name = isValidString(i, 'name');
         if (valid_name) {
             valid_tags.push(valid_name);
         }
