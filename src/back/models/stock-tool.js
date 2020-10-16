@@ -1816,9 +1816,10 @@ const trans_tag = (item, append) => {
 }
 
 const getBasicStockData = (type, index) => {
+    let count = 0;
     switch(type) {
         case 'twse':
-        return Api('url', `https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
+        const real = () => Api('url', `https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
             let i = 0;
             const form = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
@@ -1875,10 +1876,14 @@ const getBasicStockData = (type, index) => {
                 i++;
             });
             return result;
+        }).catch(err => {
+            console.log(count);
+            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
         });
+        return real();
         break;
         case 'usse':
-        return Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
+        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             const market = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[1], 'span')[0])[0];
@@ -1898,7 +1903,11 @@ const getBasicStockData = (type, index) => {
                 });
             });
             return result;
+        }).catch(err => {
+            console.log(count);
+            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), 60000));
         });
+        return real1();
         break;
         default:
         return handleError(new HoError('stock type unknown!!!'));

@@ -1920,117 +1920,149 @@ var trans_tag = function trans_tag(item, append) {
 };
 
 var getBasicStockData = function getBasicStockData(type, index) {
-    switch (type) {
-        case 'twse':
-            return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=' + index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=' + index).then(function (raw_data) {
-                var result = { stock_location: ['tw', '台灣', '臺灣'] };
-                var i = 0;
-                var form = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
-                var table = (0, _utility.findTag)(form, 'table', 'zoom')[0] ? (0, _utility.findTag)(form, 'table', 'zoom')[0] : (0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table', 'zoom')[0];
-                (0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td').forEach(function (d) {
-                    var as = (0, _utility.findTag)(d, 'a');
-                    if (as.length > 0) {
-                        (function () {
-                            var texts = [];
-                            as.forEach(function (a) {
-                                var text = (0, _utility.findTag)(a)[0];
-                                if (text) {
-                                    texts.push(text);
+    var count = 0;
+
+    var _ret3 = function () {
+        switch (type) {
+            case 'twse':
+                var real = function real() {
+                    return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=' + index + '&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=' + index).then(function (raw_data) {
+                        var result = { stock_location: ['tw', '台灣', '臺灣'] };
+                        var i = 0;
+                        var form = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
+                        var table = (0, _utility.findTag)(form, 'table', 'zoom')[0] ? (0, _utility.findTag)(form, 'table', 'zoom')[0] : (0, _utility.findTag)((0, _utility.findTag)(form, 'table')[0], 'table', 'zoom')[0];
+                        (0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td').forEach(function (d) {
+                            var as = (0, _utility.findTag)(d, 'a');
+                            if (as.length > 0) {
+                                (function () {
+                                    var texts = [];
+                                    as.forEach(function (a) {
+                                        var text = (0, _utility.findTag)(a)[0];
+                                        if (text) {
+                                            texts.push(text);
+                                        }
+                                    });
+                                    switch (i) {
+                                        case 0:
+                                            result.stock_index = texts[0];
+                                            break;
+                                        case 1:
+                                            result.stock_name = texts;
+                                            var _iteratorNormalCompletion = true;
+                                            var _didIteratorError = false;
+                                            var _iteratorError = undefined;
+
+                                            try {
+                                                for (var _iterator = (0, _getIterator3.default)(texts), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                                                    var t = _step.value;
+
+                                                    if (t.match(/^F/)) {
+                                                        result.stock_location.push('大陸');
+                                                        result.stock_location.push('中國');
+                                                        result.stock_location.push('中國大陸');
+                                                        result.stock_location.push('china');
+                                                        break;
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                _didIteratorError = true;
+                                                _iteratorError = err;
+                                            } finally {
+                                                try {
+                                                    if (!_iteratorNormalCompletion && _iterator.return) {
+                                                        _iterator.return();
+                                                    }
+                                                } finally {
+                                                    if (_didIteratorError) {
+                                                        throw _iteratorError;
+                                                    }
+                                                }
+                                            }
+
+                                            break;
+                                        case 2:
+                                            result.stock_full = texts[0];
+                                            break;
+                                        case 3:
+                                            result.stock_market = texts[0];
+                                            if (texts[0] === '上市') {
+                                                result.stock_market_e = 'sii';
+                                            } else if (texts[0] === '上櫃') {
+                                                result.stock_market_e = 'otc';
+                                            } else if (texts[0] === '興櫃') {
+                                                result.stock_market_e = 'rotc';
+                                            } else if (texts[0] === '公開發行') {
+                                                result.stock_market_e = 'pub';
+                                            }
+                                            break;
+                                        case 4:
+                                            result.stock_class = texts[0];
+                                            break;
+                                        case 5:
+                                            result.stock_time = (Number(texts[0].match(/\d+$/)[0]) + 1911).toString();
+                                            break;
+                                    }
+                                })();
+                            }
+                            i++;
+                        });
+                        return result;
+                    }).catch(function (err) {
+                        console.log(count);
+                        return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+                            return setTimeout(function () {
+                                return resolve(real());
+                            }, 60000);
+                        });
+                    });
+                };
+                return {
+                    v: real()
+                };
+                break;
+            case 'usse':
+                var real1 = function real1() {
+                    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index).then(function (raw_data) {
+                        var result = { stock_location: ['us', '美國'], stock_index: index };
+                        var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+                        var market = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[1], 'span')[0])[0];
+                        result.stock_market = market.substring(0, market.indexOf('-')).trim();
+                        var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0];
+                        var section = (0, _utility.findTag)((0, _utility.findTag)(info, 'div')[0], 'div')[0];
+                        result.stock_full = (0, _utility.findTag)((0, _utility.findTag)(section, 'h3')[0])[0];
+                        result.stock_name = [result.stock_full];
+                        result.stock_class = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[1])[0];
+                        result.stock_ind = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[3])[0];
+                        result.stock_executive = [];
+                        (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
+                            (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'span')[0]).forEach(function (n) {
+                                if (n.match(/^M/)) {
+                                    result.stock_executive.push(n);
                                 }
                             });
-                            switch (i) {
-                                case 0:
-                                    result.stock_index = texts[0];
-                                    break;
-                                case 1:
-                                    result.stock_name = texts;
-                                    var _iteratorNormalCompletion = true;
-                                    var _didIteratorError = false;
-                                    var _iteratorError = undefined;
-
-                                    try {
-                                        for (var _iterator = (0, _getIterator3.default)(texts), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                                            var t = _step.value;
-
-                                            if (t.match(/^F/)) {
-                                                result.stock_location.push('大陸');
-                                                result.stock_location.push('中國');
-                                                result.stock_location.push('中國大陸');
-                                                result.stock_location.push('china');
-                                                break;
-                                            }
-                                        }
-                                    } catch (err) {
-                                        _didIteratorError = true;
-                                        _iteratorError = err;
-                                    } finally {
-                                        try {
-                                            if (!_iteratorNormalCompletion && _iterator.return) {
-                                                _iterator.return();
-                                            }
-                                        } finally {
-                                            if (_didIteratorError) {
-                                                throw _iteratorError;
-                                            }
-                                        }
-                                    }
-
-                                    break;
-                                case 2:
-                                    result.stock_full = texts[0];
-                                    break;
-                                case 3:
-                                    result.stock_market = texts[0];
-                                    if (texts[0] === '上市') {
-                                        result.stock_market_e = 'sii';
-                                    } else if (texts[0] === '上櫃') {
-                                        result.stock_market_e = 'otc';
-                                    } else if (texts[0] === '興櫃') {
-                                        result.stock_market_e = 'rotc';
-                                    } else if (texts[0] === '公開發行') {
-                                        result.stock_market_e = 'pub';
-                                    }
-                                    break;
-                                case 4:
-                                    result.stock_class = texts[0];
-                                    break;
-                                case 5:
-                                    result.stock_time = (Number(texts[0].match(/\d+$/)[0]) + 1911).toString();
-                                    break;
-                            }
-                        })();
-                    }
-                    i++;
-                });
-                return result;
-            });
-            break;
-        case 'usse':
-            return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index).then(function (raw_data) {
-                var result = { stock_location: ['us', '美國'], stock_index: index };
-                var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-                var market = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[1], 'span')[0])[0];
-                result.stock_market = market.substring(0, market.indexOf('-')).trim();
-                var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0];
-                var section = (0, _utility.findTag)((0, _utility.findTag)(info, 'div')[0], 'div')[0];
-                result.stock_full = (0, _utility.findTag)((0, _utility.findTag)(section, 'h3')[0])[0];
-                result.stock_name = [result.stock_full];
-                result.stock_class = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[1])[0];
-                result.stock_ind = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[3])[0];
-                result.stock_executive = [];
-                (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(function (t) {
-                    (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(t, 'td')[0], 'span')[0]).forEach(function (n) {
-                        if (n.match(/^M/)) {
-                            result.stock_executive.push(n);
-                        }
+                        });
+                        return result;
+                    }).catch(function (err) {
+                        console.log(count);
+                        return ++count > _constants.MAX_RETRY ? (0, _utility.handleError)(err) : new _promise2.default(function (resolve, reject) {
+                            return setTimeout(function () {
+                                return resolve(real1());
+                            }, 60000);
+                        });
                     });
-                });
-                return result;
-            });
-            break;
-        default:
-            return (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'));
-    }
+                };
+                return {
+                    v: real1()
+                };
+                break;
+            default:
+                return {
+                    v: (0, _utility.handleError)(new _utility.HoError('stock type unknown!!!'))
+                };
+        }
+    }();
+
+    if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
 };
 
 var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
@@ -2646,7 +2678,7 @@ exports.default = {
 
         var index = obj.index;
 
-        var _ret4 = function () {
+        var _ret5 = function () {
             switch (type) {
                 case 'twse':
                     var date = new Date();
@@ -2669,7 +2701,7 @@ exports.default = {
                             v: (0, _utility.handleError)(new _utility.HoError('no finance data'))
                         };
                     } else {
-                        var _ret5 = function () {
+                        var _ret6 = function () {
                             var id_db = null;
                             var normal_tags = [];
                             var not = 0;
@@ -2983,7 +3015,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
+                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
                     }
                     break;
                 case 'usse':
@@ -2992,7 +3024,7 @@ exports.default = {
                             v: (0, _utility.handleError)(new _utility.HoError('no finance data'))
                         };
                     } else {
-                        var _ret6 = function () {
+                        var _ret7 = function () {
                             var id_db = null;
                             var normal_tags = [];
                             return {
@@ -3120,7 +3152,7 @@ exports.default = {
                             };
                         }();
 
-                        if ((typeof _ret6 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret6)) === "object") return _ret6.v;
+                        if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                     }
                     break;
                 default:
@@ -3130,7 +3162,7 @@ exports.default = {
             }
         }();
 
-        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
+        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
     },
     getSingleStock: function getSingleStock(type, index) {
         var stage = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
@@ -3202,7 +3234,7 @@ exports.default = {
                 };
             });
         } else {
-            var _ret7 = function () {
+            var _ret8 = function () {
                 var id_db = null;
                 var normal_tags = [];
                 var is_start = false;
@@ -3487,7 +3519,7 @@ exports.default = {
                 };
             }();
 
-            if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
+            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
         }
     },
     getStockPERV2: function getStockPERV2(id) {
@@ -3530,7 +3562,7 @@ exports.default = {
                 return (0, _utility.handleError)(new _utility.HoError('can not find stock!!!'));
             }
 
-            var _ret8 = function () {
+            var _ret9 = function () {
                 switch (items[0].type) {
                     case 'twse':
                         var count = 0;
@@ -3583,7 +3615,7 @@ exports.default = {
                 }
             }();
 
-            if ((typeof _ret8 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret8)) === "object") return _ret8.v;
+            if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
         });
     },
     getPredictPER: function getPredictPER(id, session) {
@@ -3710,7 +3742,7 @@ exports.default = {
                                 };
                                 return rest_predict(index);
                             } else {
-                                var _ret9 = function () {
+                                var _ret10 = function () {
                                     var count = 0;
                                     var getTable = function getTable() {
                                         return (0, _apiTool2.default)('url', 'https://mops.twse.com.tw/mops/web/ajax_t05st10_ifrs?encodeURIComponent=1&run=Y&step=0&yearmonth=' + year + month_str + '&colorchg=&TYPEK=all&co_id=' + items[0].index + '&off=1&year=' + year + '&month=' + month_str + '&firstin=true').then(function (raw_data) {
@@ -3795,7 +3827,7 @@ exports.default = {
                                     };
                                 }();
 
-                                if ((typeof _ret9 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret9)) === "object") return _ret9.v;
+                                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
                             }
                         };
                         var exGet = function exGet() {
@@ -4039,7 +4071,7 @@ exports.default = {
                                                 j = _temp12.start + 1;
                                             }
                                             if (testResult.length > 0) {
-                                                var _ret10 = function () {
+                                                var _ret11 = function () {
                                                     testResult.forEach(function (v, i) {
                                                         if (!year[i]) {
                                                             year[i] = [];
@@ -4090,7 +4122,7 @@ exports.default = {
                                                     }
                                                 }();
 
-                                                if ((typeof _ret10 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret10)) === "object") return _ret10.v;
+                                                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
                                             } else {
                                                 str = 'no less than mid point';
                                             }
@@ -4468,7 +4500,7 @@ exports.default = {
                                                 j = _temp13.start + 1;
                                             }
                                             if (testResult.length > 0) {
-                                                var _ret11 = function () {
+                                                var _ret12 = function () {
                                                     testResult.forEach(function (v, i) {
                                                         if (!year[i]) {
                                                             year[i] = [];
@@ -4519,7 +4551,7 @@ exports.default = {
                                                     }
                                                 }();
 
-                                                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                                                if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                                             } else {
                                                 str = 'no less than mid point';
                                             }
@@ -6011,14 +6043,14 @@ exports.default = {
                         };
 
                         _loop2: for (var i in items) {
-                            var _ret12 = _loop(i);
+                            var _ret13 = _loop(i);
 
-                            switch (_ret12) {
+                            switch (_ret13) {
                                 case 'break':
                                     break _loop2;
 
                                 default:
-                                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                                    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
                             }
                         }
                     } else {
@@ -6167,20 +6199,20 @@ exports.default = {
                         };
 
                         _loop4: for (var _i33 in items) {
-                            var _ret13 = _loop3(_i33);
+                            var _ret14 = _loop3(_i33);
 
-                            switch (_ret13) {
+                            switch (_ret14) {
                                 case 'break':
                                     break _loop4;
 
                                 default:
-                                    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                                    if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
                             }
                         }
 
                         if (!is_find) {
                             if (+cmd[2] >= 0 && cmd[3] === 'amount') {
-                                var _ret14 = function () {
+                                var _ret15 = function () {
                                     //init amount
                                     //get web? arr mid count
                                     var setype = cmd[1].substring(0, 4);
@@ -6248,7 +6280,7 @@ exports.default = {
                                         }));*/
                                 }();
 
-                                if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
+                                if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
                             }
                         }
                     }
@@ -6361,7 +6393,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret15 = function () {
+    var _ret16 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -6393,7 +6425,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
+    if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -6461,7 +6493,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret16 = function () {
+            var _ret17 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -6508,7 +6540,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
+            if ((typeof _ret17 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret17)) === "object") return _ret17.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -6769,7 +6801,7 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    var _ret17 = function () {
+    var _ret18 = function () {
         switch (type) {
             case 'twse':
                 var quarter = 3;
@@ -6824,9 +6856,9 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                                 };
 
                                                 for (var _i34 = 0; _i34 < stock_list.length; _i34++) {
-                                                    var _ret18 = _loop5(_i34);
+                                                    var _ret19 = _loop5(_i34);
 
-                                                    if (_ret18 === 'break') break;
+                                                    if (_ret19 === 'break') break;
                                                 }
                                                 if (!exist) {
                                                     stock_list.push({
@@ -6890,7 +6922,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         }
     }();
 
-    if ((typeof _ret17 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret17)) === "object") return _ret17.v;
+    if ((typeof _ret18 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret18)) === "object") return _ret18.v;
 };
 
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
