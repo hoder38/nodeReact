@@ -2025,12 +2025,17 @@ var getBasicStockData = function getBasicStockData(type, index) {
                     return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index).then(function (raw_data) {
                         var result = { stock_location: ['us', '美國'], stock_index: index };
                         var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-                        var market = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[1], 'span')[0])[0];
+                        var mn = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
+                        var name = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(mn, 'div')[0], 'h1')[0])[0];
+                        result.stock_full = name.substring(0, name.indexOf('(')).trim();
+                        result.stock_name = [result.stock_full];
+                        var market = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(mn, 'div')[1], 'span')[0])[0];
                         result.stock_market = market.substring(0, market.indexOf('-')).trim();
                         var info = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0];
+                        if (!(0, _utility.findTag)(info, 'div')[0]) {
+                            return result;
+                        }
                         var section = (0, _utility.findTag)((0, _utility.findTag)(info, 'div')[0], 'div')[0];
-                        result.stock_full = (0, _utility.findTag)((0, _utility.findTag)(section, 'h3')[0])[0];
-                        result.stock_name = [result.stock_full];
                         result.stock_class = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[1])[0];
                         result.stock_ind = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(section, 'div')[0], 'p')[1], 'span')[3])[0];
                         result.stock_executive = [];
@@ -2071,7 +2076,10 @@ var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
         indexTag.forEach(function (v) {
             return tags.add(v);
         });
-        tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market).add(basic.stock_class);
+        tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market);
+        if (basic.stock_class) {
+            tags.add(basic.stock_class);
+        }
         if (basic.stock_market_e) {
             tags.add(basic.stock_market_e);
         }
@@ -2094,7 +2102,7 @@ var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
         }
         var valid_tags = [];
         tags.forEach(function (i) {
-            var valid_name = (0, _utility.isValidString)(i, 'name');
+            var valid_name = (0, _utility.isValidString)(i.replace('&amp;', '&').replace('&#x27;', "'"), 'name');
             if (valid_name) {
                 valid_tags.push(valid_name);
             }
