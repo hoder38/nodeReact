@@ -186,7 +186,7 @@ export const filterStock = () => {
             console.log('loopStockFilter');
             console.log(new Date());
             const sd = new Date();
-            const sdf = () => (sd.getDay() === 5 && sd.getHours() === 23) ? StockTool.stockFilterWarp() : Promise.resolve();
+            const sdf = () => (sd.getDay() === 1 && sd.getHours() === 11) ? StockTool.stockFilterWarp() : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
@@ -259,7 +259,7 @@ export const setUserOffer = () => {
 export const checkSetOffer = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const cso = () => {
-            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 600) {
+            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 1800) {
                 sendWs('restart set offer', 0, 0, true);
                 setUserOffer();
             }

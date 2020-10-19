@@ -1283,6 +1283,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             }
                         }
                     });
+                } else {
+                    offer[id][current.type] = [];
                 }
                 needDelete.forEach(function (v) {
                     var orig_risk = v.risk;
@@ -1719,6 +1721,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
 
                                     if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;
                                 } else {
+                                    order[id][current.type] = [];
                                     return rest ? rest() : _promise2.default.resolve();
                                 }
                             };

@@ -1123,6 +1123,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                         }
                     });
+                } else {
+                    offer[id][current.type] = [];
                 }
                 needDelete.forEach(v => {
                     const orig_risk = v.risk;
@@ -1485,6 +1487,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                                 return real_delete(0);
                             } else {
+                                order[id][current.type] = [];
                                 return rest ? rest() : Promise.resolve();
                             }
                         }
