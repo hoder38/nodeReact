@@ -4521,9 +4521,9 @@ export default {
                 }
                 const addFilter = () => {
                     filterList.push(first_stage[index]);
-                    if (filterList.length >= STOCK_FILTER_LIMIT) {
+                    /*if (filterList.length >= STOCK_FILTER_LIMIT) {
                         return filterList;
-                    }
+                    }*/
                     return nextFilter();
                 };
                 return addFilter();

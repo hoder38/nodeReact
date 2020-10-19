@@ -186,7 +186,7 @@ export const filterStock = () => {
             console.log('loopStockFilter');
             console.log(new Date());
             const sd = new Date();
-            const sdf = () => (sd.getDay() === 1 && sd.getHours() === 12) ? StockTool.stockFilterWarp() : Promise.resolve();
+            const sdf = () => (sd.getDay() === 1 && sd.getHours() === 15) ? StockTool.stockFilterWarp() : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());

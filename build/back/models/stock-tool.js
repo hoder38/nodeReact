@@ -5356,9 +5356,9 @@ exports.default = {
                     };
                     var addFilter = function addFilter() {
                         filterList.push(first_stage[index]);
-                        if (filterList.length >= _constants.STOCK_FILTER_LIMIT) {
+                        /*if (filterList.length >= STOCK_FILTER_LIMIT) {
                             return filterList;
-                        }
+                        }*/
                         return nextFilter();
                     };
                     return addFilter();
