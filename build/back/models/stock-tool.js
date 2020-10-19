@@ -5418,7 +5418,11 @@ exports.default = {
                     }
                     (0, _utility.handleError)(err, 'Stock filter');
                 }).then(function () {
-                    return stage3(iIndex + 1);
+                    return new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve(stage3(iIndex + 1));
+                        }, 10000);
+                    });
                 }) : _promise2.default.resolve();
             };
             console.log('stage three');

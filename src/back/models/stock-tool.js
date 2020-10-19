@@ -4574,7 +4574,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
-            }).then(() => stage3(iIndex + 1)) : Promise.resolve();
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(stage3(iIndex + 1)), 10000))) : Promise.resolve();
             console.log('stage three');
             return (option['twse'].interval || option['usse'].interval || option['twse'].vol || option['usse'].vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
         }).then(filterList => {
