@@ -351,7 +351,7 @@ var filterStock = exports.filterStock = function filterStock() {
                 console.log(new Date());
                 var sd = new Date();
                 var sdf = function sdf() {
-                    return sd.getDay() === 2 && sd.getHours() === 10 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
+                    return sd.getDay() === 6 && sd.getHours() === 2 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
                 };
                 return sdf().catch(function (err) {
                     return bgError(err, 'Loop stockFilter');
