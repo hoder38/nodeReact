@@ -1458,10 +1458,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     });
                 }
             };
+            //return Promise.resolve();
             return cancelOffer(0).then(function () {
                 return submitOffer(0);
             });
-            //return Promise.resolve();
         });
     };
 

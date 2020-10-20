@@ -438,6 +438,7 @@ export const bitfinexPush = (item, path=null, bookmark=null, latest=null, sortNa
     sortType,
     pageToken,
     list,
+    noScroll: true,
 })
 
 export const setBitfinex = (select, latest=null, bookmark=null, multi=null, list=null, id=null, opt=null, time=null) => ({

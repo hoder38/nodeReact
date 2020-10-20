@@ -1,5 +1,5 @@
 import { arrayObject, arrayId } from '../utility'
-import { SET_LOTTERY, SET_BITFINEX } from '../constants'
+import { SET_LOTTERY, SET_BITFINEX, BITFINEX_PUSH } from '../constants'
 
 const rest_item = item => {
     if (item.utime) {
@@ -108,7 +108,9 @@ export default function complexDataHandle (push, pop, set) {
             case push:
             if (action.sortName !== null && action.sortType !== null) {
                 if (action.list === 'item') {
-                    window.scrollTo(0, 0)
+                    if (!action.noScroll) {
+                        window.scrollTo(0, 0)
+                    }
                     return Object.assign({}, state, {
                         list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         latest: action.latest === null ? '' : action.latest,

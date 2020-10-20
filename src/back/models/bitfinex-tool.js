@@ -1282,8 +1282,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     });
                 }
             }
-            return cancelOffer(0).then(() => submitOffer(0));
             //return Promise.resolve();
+            return cancelOffer(0).then(() => submitOffer(0));
         });
     }
 
