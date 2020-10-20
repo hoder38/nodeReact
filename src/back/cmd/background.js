@@ -135,7 +135,7 @@ export const updateStock = () => {
             }*/
             let use_stock_list = [];
             const sd = new Date();
-            const parseStockList = () => (sd.getDay() === 3 && sd.getHours() === 23) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
+            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 2) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
@@ -165,7 +165,7 @@ export const updateStock = () => {
                 return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
             }));*/
                 return updateStockList(use_stock_list, 'twse');
-            }) : (sd.getDay() === 4 && sd.getHours() === 23) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+            }) : (sd.getDay() === 5 && sd.getHours() === 2) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
                 stocklist.forEach(i => {
                     if (use_stock_list.indexOf(i) === -1) {
                         use_stock_list.push(i);
@@ -186,7 +186,7 @@ export const filterStock = () => {
             console.log('loopStockFilter');
             console.log(new Date());
             const sd = new Date();
-            const sdf = () => (sd.getDay() === 1 && sd.getHours() === 15) ? StockTool.stockFilterWarp() : Promise.resolve();
+            const sdf = () => (sd.getDay() === 2 && sd.getHours() === 10) ? StockTool.stockFilterWarp() : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());

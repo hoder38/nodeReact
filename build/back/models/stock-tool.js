@@ -2022,7 +2022,7 @@ var getBasicStockData = function getBasicStockData(type, index) {
                 break;
             case 'usse':
                 var real1 = function real1() {
-                    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index).then(function (raw_data) {
+                    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index, { timeout: 3000 }).then(function (raw_data) {
                         var result = { stock_location: ['us', '美國'], stock_index: index };
                         var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
                         var mn = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
@@ -4658,7 +4658,7 @@ exports.default = {
                                     }
                                 }
                             }
-                            return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split').then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split', { timeout: 3000 }).then(function (raw_data) {
                                 if (raw_data.split("\n").length > 1) {
                                     raw_arr = [];
                                     interval_data = null;
@@ -4667,7 +4667,7 @@ exports.default = {
                                     min = 0;
                                     end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                                 }
-                                return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history').then(function (raw_data) {
+                                return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history', { timeout: 3000 }).then(function (raw_data) {
                                     raw_data = raw_data.split("\n").reverse();
                                     var y = '';
                                     var m = '';
@@ -8168,7 +8168,7 @@ var getUsStock = function getUsStock(index) {
     }
     var count = 0;
     var real = function real() {
-        return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
+        return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index, { timeout: 3000 }).then(function (raw_data) {
             var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             if (stat.indexOf('price') !== -1) {
                 var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];

@@ -229,7 +229,9 @@ function download(user, url) {
         _ref$errHandle = _ref.errHandle,
         errHandle = _ref$errHandle === undefined ? null : _ref$errHandle,
         _ref$is_dm = _ref.is_dm5,
-        is_dm5 = _ref$is_dm === undefined ? false : _ref$is_dm;
+        is_dm5 = _ref$is_dm === undefined ? false : _ref$is_dm,
+        _ref$timeout = _ref.timeout,
+        timeout = _ref$timeout === undefined ? 0 : _ref$timeout;
 
     var qspost = null;
     if (post) {
@@ -256,7 +258,7 @@ function download(user, url) {
             } : {}, is_dm5 ? { 'Accept-Language': 'en-US,en;q=0.9' } : {}) }, post ? {
             method: 'POST',
             body: qspost
-        } : {})).then(function (res) {
+        } : {}, timeout ? { timeout: timeout } : {})).then(function (res) {
             if (user) {
                 if (!filePath) {
                     return (0, _utility.handleError)(new _utility.HoError('file path empty!'), errHandle);

@@ -1883,7 +1883,7 @@ const getBasicStockData = (type, index) => {
         return real();
         break;
         case 'usse':
-        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
+        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`, {timeout: 3000}).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             const mn = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
@@ -4031,7 +4031,7 @@ export default {
                                 }
                             }
                         }
-                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
+                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`, {timeout: 3000}).then(raw_data => {
                             if (raw_data.split("\n").length > 1) {
                                 raw_arr = [];
                                 interval_data = null;
@@ -4040,7 +4040,7 @@ export default {
                                 min = 0;
                                 end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                             }
-                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
+                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`, {timeout: 3000}).then(raw_data => {
                                 raw_data = raw_data.split("\n").reverse();
                                 let y = '';
                                 let m = '';
@@ -6931,7 +6931,7 @@ const getUsStock = (index, stat=['price']) => {
         return Promise.resolve(ret);
     }
     let count = 0;
-    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
+    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`, {timeout: 3000}).then(raw_data => {
         const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
         if (stat.indexOf('price') !== -1) {
             const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];

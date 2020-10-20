@@ -275,7 +275,7 @@ var updateStock = exports.updateStock = function updateStock() {
                 var use_stock_list = [];
                 var sd = new Date();
                 var parseStockList = function parseStockList() {
-                    return sd.getDay() === 3 && sd.getHours() === 23 ? (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
+                    return sd.getDay() === 4 && sd.getHours() === 2 ? (0, _stockTool.getStockListV2)('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
                         /*Mongo('find', STOCKDB, {important: 1}).then(items => {
                         let annualList = [];
                         const year = new Date().getFullYear();
@@ -306,7 +306,7 @@ var updateStock = exports.updateStock = function updateStock() {
                         return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
                         }));*/
                         return updateStockList(use_stock_list, 'twse');
-                    }) : sd.getDay() === 4 && sd.getHours() === 23 ? (0, _stockTool.getStockListV2)('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
+                    }) : sd.getDay() === 5 && sd.getHours() === 2 ? (0, _stockTool.getStockListV2)('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(function (stocklist) {
                         stocklist.forEach(function (i) {
                             if (use_stock_list.indexOf(i) === -1) {
                                 use_stock_list.push(i);
@@ -351,7 +351,7 @@ var filterStock = exports.filterStock = function filterStock() {
                 console.log(new Date());
                 var sd = new Date();
                 var sdf = function sdf() {
-                    return sd.getDay() === 1 && sd.getHours() === 15 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
+                    return sd.getDay() === 2 && sd.getHours() === 10 ? _stockTool2.default.stockFilterWarp() : _promise2.default.resolve();
                 };
                 return sdf().catch(function (err) {
                     return bgError(err, 'Loop stockFilter');
