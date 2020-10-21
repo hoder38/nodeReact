@@ -4474,7 +4474,7 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var loga = logArray(max, min);
-                            var web = calStair(raw_arr, loga, min);
+                            var web = calStair(raw_arr, loga, min, 0, _constants.USSE_FEE);
                             console.log(web);
                             return (0, _mongoTool2.default)('update', _constants.STOCKDB, { _id: id }, { $set: { web: web } }).then(function (item) {
                                 console.log(item);
@@ -4496,7 +4496,7 @@ exports.default = {
                                             var match = [];
                                             var j = raw_arr.length - 1;
                                             while (j > 199) {
-                                                var _temp13 = stockTest(raw_arr, loga, min, type, j);
+                                                var _temp13 = stockTest(raw_arr, loga, min, type, j, false, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
                                                 if (_temp13 === 'data miss') {
                                                     return true;
                                                 }
@@ -4544,7 +4544,7 @@ exports.default = {
                                                         best_rate = rate;
                                                         ret_str = str;
                                                     }
-                                                    var temp = stockTest(raw_arr, loga, min, type, 0, true);
+                                                    var temp = stockTest(raw_arr, loga, min, type, 0, true, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
                                                     if (temp === 'data miss') {
                                                         return {
                                                             v: true
@@ -5881,28 +5881,58 @@ exports.default = {
                 return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
                     owner: user._id,
                     index: 0,
-                    name: '投資部位',
+                    name: 'twse 投資部位',
                     type: 'total',
                     amount: 0,
-                    count: 1
+                    count: 1,
+                    setype: 'twse'
                 }).then(function (item) {
-                    return {
-                        remain: item[0].amount,
-                        total: 0,
-                        stock: [{
-                            name: item[0].name,
-                            type: item[0].type,
-                            remain: 0,
-                            price: 0,
-                            profit: 0,
-                            count: 1,
-                            mid: 0,
-                            //plus: 0,
-                            //minus: 0,
-                            current: 0,
-                            str: ''
-                        }]
-                    };
+                    return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                        owner: user._id,
+                        index: 0,
+                        name: 'usse 投資部位',
+                        type: 'total',
+                        amount: 0,
+                        count: 1,
+                        setype: 'usse'
+                    }).then(function (item1) {
+                        return {
+                            se: [{
+                                type: item[0].setype,
+                                remain: item[0].amount,
+                                total: item[0].amount
+                            }, {
+                                type: item1[0].setype,
+                                remain: item1[0].amount,
+                                total: item1[0].amount
+                            }],
+                            stock: [{
+                                name: item[0].name,
+                                type: item[0].type,
+                                remain: 0,
+                                price: 0,
+                                profit: 0,
+                                count: 1,
+                                mid: 0,
+                                //plus: 0,
+                                //minus: 0,
+                                current: 0,
+                                str: '',
+                                se: 0
+                            }, {
+                                name: item1[0].name,
+                                type: item1[0].type,
+                                remain: 0,
+                                price: 0,
+                                profit: 0,
+                                count: 1,
+                                mid: 0,
+                                current: 0,
+                                str: '',
+                                se: 1
+                            }]
+                        };
+                    });
                 });
             }
             var remain = 0;
@@ -5910,21 +5940,39 @@ exports.default = {
             var totalType = '';
             var profit = 0;
             var totalPrice = 0;
+            var remain1 = 0;
+            var totalName1 = '';
+            var totalType1 = '';
+            var profit1 = 0;
+            var totalPrice1 = 0;
             //let plus = 0;
             //let minus = 0;
             var stock = [];
             var getStock = function getStock(v) {
-                if (v.name === '投資部位' && v.type === 'total') {
-                    remain = v.amount;
-                    totalName = v.name;
-                    totalType = v.type;
+                if (v.type === 'total') {
+                    if (v.setype === 'usse') {
+                        remain1 = v.amount;
+                        totalName1 = v.name;
+                        totalType1 = v.type;
+                    } else {
+                        remain = v.amount;
+                        totalName = v.name;
+                        totalType = v.type;
+                    }
                     return _promise2.default.resolve();
                 } else {
                     return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
                         var current = price * v.count;
-                        totalPrice += current;
                         var p = current + v.amount - v.orig;
-                        profit += p;
+                        var se = 0;
+                        if (v.setype === 'usse') {
+                            totalPrice1 += current;
+                            profit1 += p;
+                            se = 1;
+                        } else {
+                            totalPrice += current;
+                            profit += p;
+                        }
                         //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                         //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                         //plus += p;
@@ -5943,29 +5991,57 @@ exports.default = {
                             //plus: p,
                             //minus: m,
                             current: current,
-                            str: v.str ? v.str : ''
+                            str: v.str ? v.str : '',
+                            se: se
                         });
                     });
                 }
             };
             var recurGet = function recurGet(index) {
                 if (index >= items.length) {
-                    stock.unshift({
-                        name: totalName,
-                        type: totalType,
-                        profit: profit,
-                        price: totalPrice,
-                        mid: 1,
-                        remain: totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 + '%' : '0%',
-                        count: 1,
-                        //plus: Math.floor(plus * 100) / 100,
-                        //minus: Math.floor(minus * 100) / 100,
-                        current: totalPrice,
-                        str: ''
-                    });
+                    if (totalName1) {
+                        stock.unshift({
+                            name: totalName1,
+                            type: totalType1,
+                            profit: profit1,
+                            price: totalPrice1,
+                            mid: 1,
+                            remain: (totalPrice1 + remain1 > 0 ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0) + '%',
+                            count: 1,
+                            //plus: Math.floor(plus * 100) / 100,
+                            //minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice1,
+                            str: '',
+                            se: 1
+                        });
+                    }
+                    if (totalName) {
+                        stock.unshift({
+                            name: totalName,
+                            type: totalType,
+                            profit: profit,
+                            price: totalPrice,
+                            mid: 1,
+                            remain: (totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0) + '%',
+                            count: 1,
+                            //plus: Math.floor(plus * 100) / 100,
+                            //minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice,
+                            str: '',
+                            se: 0
+                        });
+                    }
                     return {
-                        remain: remain,
-                        total: totalPrice + remain,
+                        se: [{
+                            type: 'TWSE',
+                            remain: remain,
+                            total: totalPrice + remain
+                        }, {
+                            type: 'USSE',
+                            remain: remain1,
+                            total: totalPrice1 + remain1
+                        }],
+                        //total: totalPrice + remain,
                         stock: stock
                     };
                 } else {
@@ -5995,6 +6071,11 @@ exports.default = {
             var totalName = '';
             var totalType = '';
             var totalId = null;
+            var remain1 = 0;
+            var totalName1 = '';
+            var totalType1 = '';
+            var totalId1 = null;
+
             var _iteratorNormalCompletion16 = true;
             var _didIteratorError16 = false;
             var _iteratorError16 = undefined;
@@ -6003,11 +6084,19 @@ exports.default = {
                 for (var _iterator16 = (0, _getIterator3.default)(items), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
                     var v = _step16.value;
 
-                    if (v.name === '投資部位' && v.type === 'total') {
-                        remain = v.amount;
-                        totalName = v.name;
-                        totalType = v.type;
-                        totalId = v._id;
+                    //if (v.name === '投資部位' && v.type === 'total') {
+                    if (v.type === 'total') {
+                        if (v.setype === 'usse') {
+                            remain1 = v.amount;
+                            totalName1 = v.name;
+                            totalType1 = v.type;
+                            totalId1 = v._id;
+                        } else {
+                            remain = v.amount;
+                            totalName = v.name;
+                            totalType = v.type;
+                            totalId = v._id;
+                        }
                     }
                 }
             } catch (err) {
@@ -6031,270 +6120,321 @@ exports.default = {
                 //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
                 var cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
-                    if (cmd[1] === 'remain') {
-                        remain = +cmd[2];
-                        updateTotal[totalId] = { amount: remain };
-                    } else if (cmd[1] === 'delete') {
-                        var setype = cmd[2].substring(0, 4);
-                        var index = cmd[2].substring(4);
-
-                        var _loop = function _loop(i) {
-                            if (index === items[i].index) {
-                                return {
-                                    v: getStockPrice(setype, items[i].index).then(function (price) {
-                                        remain += price * items[i].count * (1 - _constants.TRADE_FEE);
-                                        updateTotal[totalId] = { amount: remain };
-                                        if (items[i]._id) {
-                                            removeTotal.push(items[i]._id);
-                                        }
-                                        items.splice(i, 1);
-                                    })
-                                };
-                                return 'break';
-                            }
-                        };
-
-                        _loop2: for (var i in items) {
-                            var _ret13 = _loop(i);
-
-                            switch (_ret13) {
-                                case 'break':
-                                    break _loop2;
-
-                                default:
-                                    if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
-                            }
+                    var remainM = null;
+                    if (remainM = cmd[1].match(/^remain(.*)$/)) {
+                        switch (remainM[1]) {
+                            case 'twse':
+                                remain = +cmd[2];
+                                updateTotal[totalId] = { amount: remain };
+                                break;
+                            case 'usse':
+                                remain1 = +cmd[2];
+                                updateTotal[totalId1] = { amount: remain1 };
+                                break;
                         }
-                    } else {
-                        var is_find = false;
-                        var _setype = cmd[1].substring(0, 4);
-                        var _index = cmd[1].substring(4);
+                    } else if (cmd[1] === 'delete') {
+                        var _ret13 = function () {
+                            var setype = cmd[2].substring(0, 4);
+                            var index = cmd[2].substring(4);
 
-                        var _loop3 = function _loop3(_i33) {
-                            if (_index === items[_i33].index) {
-                                is_find = true;
-                                if (cmd[3] === 'amount') {
-                                    var newWeb = adjustWeb(items[_i33].web, items[_i33].mid, +cmd[2]);
-                                    if (!newWeb) {
-                                        return {
-                                            v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i33].mid * (items[_i33].web.length - 1) / 3)))
-                                        };
-                                    }
-                                    items[_i33].web = newWeb.arr;
-                                    items[_i33].mid = newWeb.mid;
-                                    items[_i33].times = newWeb.times;
-                                    items[_i33].amount = items[_i33].amount + +cmd[2] - items[_i33].orig;
-                                    items[_i33].orig = +cmd[2];
-                                    if (items[_i33]._id) {
-                                        if (updateTotal[items[_i33]._id]) {
-                                            updateTotal[items[_i33]._id].web = items[_i33].web;
-                                            updateTotal[items[_i33]._id].mid = items[_i33].mid;
-                                            updateTotal[items[_i33]._id].times = items[_i33].times;
-                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
-                                            updateTotal[items[_i33]._id].orig = items[_i33].orig;
-                                        } else {
-                                            updateTotal[items[_i33]._id] = {
-                                                web: items[_i33].web,
-                                                mid: items[_i33].mid,
-                                                times: items[_i33].times,
-                                                amount: items[_i33].amount,
-                                                orig: items[_i33].orig
+                            var _loop = function _loop(i) {
+                                if (index === items[i].index) {
+                                    return {
+                                        v: {
+                                            v: getStockPrice(setype, items[i].index).then(function (price) {
+                                                switch (setype) {
+                                                    case 'twse':
+                                                        remain += price * items[i].count * (1 - _constants.TRADE_FEE);
+                                                        updateTotal[totalId] = { amount: remain };
+                                                        break;
+                                                    case 'usse':
+                                                        remain1 += price * items[i].count * (1 - _constants.USSE_FEE);
+                                                        updateTotal[totalId1] = { amount: remain1 };
+                                                        break;
+                                                }
+                                                if (items[i]._id) {
+                                                    removeTotal.push(items[i]._id);
+                                                }
+                                                items.splice(i, 1);
+                                            })
+                                        }
+                                    };
+                                    return 'break';
+                                }
+                            };
+
+                            _loop2: for (var i in items) {
+                                var _ret14 = _loop(i);
+
+                                switch (_ret14) {
+                                    case 'break':
+                                        break _loop2;
+
+                                    default:
+                                        if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
+                                }
+                            }
+                        }();
+
+                        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                    } else {
+                        var _ret15 = function () {
+                            var is_find = false;
+                            var setype = cmd[1].substring(0, 4);
+                            var index = cmd[1].substring(4);
+
+                            var _loop3 = function _loop3(i) {
+                                if (index === items[i].index) {
+                                    is_find = true;
+                                    if (cmd[3] === 'amount') {
+                                        var newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
+                                        if (!newWeb) {
+                                            return {
+                                                v: {
+                                                    v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[i].mid * (items[i].web.length - 1) / 3)))
+                                                }
                                             };
                                         }
-                                    }
-                                } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
-                                    //} else if (cmd[4]) {
-                                    items[_i33].count = +cmd[2];
-                                    remain = remain + items[_i33].orig - items[_i33].amount - +cmd[3];
-                                    items[_i33].amount = items[_i33].orig - +cmd[3];
-                                    updateTotal[totalId] = { amount: remain };
-                                    if (items[_i33]._id) {
-                                        if (updateTotal[items[_i33]._id]) {
-                                            updateTotal[items[_i33]._id].count = items[_i33].count;
-                                            updateTotal[items[_i33]._id].amount = items[_i33].amount;
-                                        } else {
-                                            updateTotal[items[_i33]._id] = { count: items[_i33].count, amount: items[_i33].amount };
-                                        }
-                                    }
-                                } else if (!isNaN(+cmd[2])) {
-                                    var orig_count = items[_i33].count;
-                                    items[_i33].count += +cmd[2];
-                                    if (items[_i33].count < 0) {
-                                        cmd[2] = -orig_count;
-                                        items[_i33].count = 0;
-                                    }
-                                    return {
-                                        v: getStockPrice(_setype, items[_i33].index).then(function (price) {
-                                            price = !isNaN(+cmd[3]) ? +cmd[3] : price;
-                                            var new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
-                                            items[_i33].amount -= new_cost;
-                                            remain -= new_cost;
-                                            updateTotal[totalId] = { amount: remain };
-                                            var time = Math.round(new Date().getTime() / 1000);
-                                            var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
-                                            if (tradeType === 'buy') {
-                                                var is_insert = false;
-                                                for (var k = 0; k < items[_i33].previous.buy.length; k++) {
-                                                    if (price < items[_i33].previous.buy[k].price) {
-                                                        items[_i33].previous.buy.splice(k, 0, { price: price, time: time });
-                                                        is_insert = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!is_insert) {
-                                                    items[_i33].previous.buy.push({ price: price, time: time });
-                                                }
-                                                items[_i33].previous = {
-                                                    price: price,
-                                                    time: time,
-                                                    type: 'buy',
-                                                    buy: items[_i33].previous.buy.filter(function (v) {
-                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
-                                                    }),
-                                                    sell: items[_i33].previous.sell
-                                                };
-                                            } else if (tradeType === 'sell') {
-                                                var _is_insert = false;
-                                                for (var _k = 0; _k < items[_i33].previous.sell.length; _k++) {
-                                                    if (price > items[_i33].previous.sell[_k].price) {
-                                                        items[_i33].previous.sell.splice(_k, 0, { price: price, time: time });
-                                                        _is_insert = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!_is_insert) {
-                                                    items[_i33].previous.sell.push({ price: price, time: time });
-                                                }
-                                                items[_i33].previous = {
-                                                    price: price,
-                                                    time: time,
-                                                    type: 'sell',
-                                                    sell: items[_i33].previous.sell.filter(function (v) {
-                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
-                                                    }),
-                                                    buy: items[_i33].previous.buy
-                                                };
-                                            }
-                                            if (items[_i33]._id) {
-                                                if (updateTotal[items[_i33]._id]) {
-                                                    updateTotal[items[_i33]._id].count = items[_i33].count;
-                                                    updateTotal[items[_i33]._id].amount = items[_i33].amount;
-                                                    updateTotal[items[_i33]._id].previous = items[_i33].previous;
-                                                } else {
-                                                    updateTotal[items[_i33]._id] = { count: items[_i33].count,
-                                                        amount: items[_i33].amount,
-                                                        previous: items[_i33].previous
-                                                    };
-                                                }
-                                            }
-                                        })
-                                    };
-                                    /*} else {
-                                        if (+cmd[2] > +cmd[3]) {
-                                            items[i].top = +cmd[2];
-                                            items[i].bottom = +cmd[3];
-                                        } else {
-                                            items[i].top = +cmd[3];
-                                            items[i].bottom = +cmd[2];
-                                        }
+                                        items[i].web = newWeb.arr;
+                                        items[i].mid = newWeb.mid;
+                                        items[i].times = newWeb.times;
+                                        items[i].amount = items[i].amount + +cmd[2] - items[i].orig;
+                                        items[i].orig = +cmd[2];
                                         if (items[i]._id) {
                                             if (updateTotal[items[i]._id]) {
-                                                updateTotal[items[i]._id].top = items[i].top;
-                                                updateTotal[items[i]._id].bottom = items[i].bottom;
+                                                updateTotal[items[i]._id].web = items[i].web;
+                                                updateTotal[items[i]._id].mid = items[i].mid;
+                                                updateTotal[items[i]._id].times = items[i].times;
+                                                updateTotal[items[i]._id].amount = items[i].amount;
+                                                updateTotal[items[i]._id].orig = items[i].orig;
                                             } else {
-                                                updateTotal[items[i]._id] = {top: items[i].top, bottom: items[i].bottom};
+                                                updateTotal[items[i]._id] = {
+                                                    web: items[i].web,
+                                                    mid: items[i].mid,
+                                                    times: items[i].times,
+                                                    amount: items[i].amount,
+                                                    orig: items[i].orig
+                                                };
                                             }
-                                        }*/
+                                        }
+                                    } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
+                                        //} else if (cmd[4]) {
+                                        items[i].count = +cmd[2];
+                                        switch (setype) {
+                                            case 'twse':
+                                                remain = remain + items[i].orig - items[i].amount - +cmd[3];
+                                                updateTotal[totalId] = { amount: remain };
+                                                break;
+                                            case 'usse':
+                                                remain1 = remain1 + items[i].orig - items[i].amount - +cmd[3];
+                                                updateTotal[totalId1] = { amount: remain1 };
+                                                break;
+                                        }
+                                        items[i].amount = items[i].orig - +cmd[3];
+                                        if (items[i]._id) {
+                                            if (updateTotal[items[i]._id]) {
+                                                updateTotal[items[i]._id].count = items[i].count;
+                                                updateTotal[items[i]._id].amount = items[i].amount;
+                                            } else {
+                                                updateTotal[items[i]._id] = { count: items[i].count, amount: items[i].amount };
+                                            }
+                                        }
+                                    } else if (!isNaN(+cmd[2])) {
+                                        var orig_count = items[i].count;
+                                        items[i].count += +cmd[2];
+                                        if (items[i].count < 0) {
+                                            cmd[2] = -orig_count;
+                                            items[i].count = 0;
+                                        }
+                                        return {
+                                            v: {
+                                                v: getStockPrice(setype, items[i].index).then(function (price) {
+                                                    price = !isNaN(+cmd[3]) ? +cmd[3] : price;
+                                                    var new_cost = 0;
+                                                    switch (setype) {
+                                                        case 'twse':
+                                                            new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.TRADE_FEE) * price * +cmd[2];
+                                                            remain -= new_cost;
+                                                            updateTotal[totalId] = { amount: remain };
+                                                            break;
+                                                        case 'usse':
+                                                            new_cost = +cmd[2] > 0 ? price * +cmd[2] : (1 - _constants.USSE_FEE) * price * +cmd[2];
+                                                            remain1 -= new_cost;
+                                                            updateTotal[totalId1] = { amount: remain1 };
+                                                            break;
+                                                    }
+                                                    items[i].amount -= new_cost;
+                                                    var time = Math.round(new Date().getTime() / 1000);
+                                                    var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
+                                                    if (tradeType === 'buy') {
+                                                        var is_insert = false;
+                                                        for (var k = 0; k < items[i].previous.buy.length; k++) {
+                                                            if (price < items[i].previous.buy[k].price) {
+                                                                items[i].previous.buy.splice(k, 0, { price: price, time: time });
+                                                                is_insert = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!is_insert) {
+                                                            items[i].previous.buy.push({ price: price, time: time });
+                                                        }
+                                                        items[i].previous = {
+                                                            price: price,
+                                                            time: time,
+                                                            type: 'buy',
+                                                            buy: items[i].previous.buy.filter(function (v) {
+                                                                return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                            }),
+                                                            sell: items[i].previous.sell
+                                                        };
+                                                    } else if (tradeType === 'sell') {
+                                                        var _is_insert = false;
+                                                        for (var _k = 0; _k < items[i].previous.sell.length; _k++) {
+                                                            if (price > items[i].previous.sell[_k].price) {
+                                                                items[i].previous.sell.splice(_k, 0, { price: price, time: time });
+                                                                _is_insert = true;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!_is_insert) {
+                                                            items[i].previous.sell.push({ price: price, time: time });
+                                                        }
+                                                        items[i].previous = {
+                                                            price: price,
+                                                            time: time,
+                                                            type: 'sell',
+                                                            sell: items[i].previous.sell.filter(function (v) {
+                                                                return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                            }),
+                                                            buy: items[i].previous.buy
+                                                        };
+                                                    }
+                                                    if (items[i]._id) {
+                                                        if (updateTotal[items[i]._id]) {
+                                                            updateTotal[items[i]._id].count = items[i].count;
+                                                            updateTotal[items[i]._id].amount = items[i].amount;
+                                                            updateTotal[items[i]._id].previous = items[i].previous;
+                                                        } else {
+                                                            updateTotal[items[i]._id] = { count: items[i].count,
+                                                                amount: items[i].amount,
+                                                                previous: items[i].previous
+                                                            };
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                        };
+                                        /*} else {
+                                            if (+cmd[2] > +cmd[3]) {
+                                                items[i].top = +cmd[2];
+                                                items[i].bottom = +cmd[3];
+                                            } else {
+                                                items[i].top = +cmd[3];
+                                                items[i].bottom = +cmd[2];
+                                            }
+                                            if (items[i]._id) {
+                                                if (updateTotal[items[i]._id]) {
+                                                    updateTotal[items[i]._id].top = items[i].top;
+                                                    updateTotal[items[i]._id].bottom = items[i].bottom;
+                                                } else {
+                                                    updateTotal[items[i]._id] = {top: items[i].top, bottom: items[i].bottom};
+                                                }
+                                            }*/
+                                    }
+                                    return 'break';
                                 }
-                                return 'break';
+                            };
+
+                            _loop4: for (var i in items) {
+                                var _ret16 = _loop3(i);
+
+                                switch (_ret16) {
+                                    case 'break':
+                                        break _loop4;
+
+                                    default:
+                                        if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
+                                }
                             }
-                        };
 
-                        _loop4: for (var _i33 in items) {
-                            var _ret14 = _loop3(_i33);
-
-                            switch (_ret14) {
-                                case 'break':
-                                    break _loop4;
-
-                                default:
-                                    if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
-                            }
-                        }
-
-                        if (!is_find) {
-                            if (+cmd[2] >= 0 && cmd[3] === 'amount') {
-                                var _ret15 = function () {
-                                    //init amount
-                                    //get web? arr mid count
-                                    var setype = cmd[1].substring(0, 4);
-                                    var index = cmd[1].substring(4);
-                                    return {
-                                        v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: setype, index: index }, { limit: 1 }).then(function (item) {
-                                            if (item.length < 1) {
-                                                return (0, _utility.handleError)(new _utility.HoError('No stock data!!!'));
-                                            }
-                                            if (!item[0].web) {
-                                                return (0, _utility.handleError)(new _utility.HoError('No web data!!!'));
-                                            }
-                                            var newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
-                                            if (!newWeb) {
-                                                return (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)));
-                                            }
-                                            return getBasicStockData(setype, index).then(function (basic) {
-                                                return getStockPrice(setype, basic.stock_index).then(function (price) {
-                                                    console.log(basic);
-                                                    items.push({
-                                                        //加setype ind name加setype
-                                                        owner: user._id,
-                                                        setype: setype,
-                                                        index: basic.stock_index,
-                                                        name: setype + ' ' + basic.stock_index + ' ' + basic.stock_name,
-                                                        type: basic.stock_ind ? basic.stock_class + ' ' + basic.stock_ind : '' + basic.stock_class,
-                                                        //cost: 0,
-                                                        count: 0,
-                                                        web: newWeb.arr,
-                                                        wType: item[0].web.type,
-                                                        mid: newWeb.mid,
-                                                        times: newWeb.times,
-                                                        amount: +cmd[2],
-                                                        orig: +cmd[2],
-                                                        //top: Math.floor(price * 1.2 * 100) / 100,
-                                                        //bottom: Math.floor(price * 0.95 * 100) / 100,
-                                                        price: price,
-                                                        previous: { buy: [], sell: [] },
-                                                        newMid: []
+                            if (!is_find) {
+                                if (+cmd[2] >= 0 && cmd[3] === 'amount') {
+                                    var _ret17 = function () {
+                                        //init amount
+                                        //get web? arr mid count
+                                        var setype = cmd[1].substring(0, 4);
+                                        var index = cmd[1].substring(4);
+                                        return {
+                                            v: {
+                                                v: (0, _mongoTool2.default)('find', _constants.STOCKDB, { type: setype, index: index }, { limit: 1 }).then(function (item) {
+                                                    if (item.length < 1) {
+                                                        return (0, _utility.handleError)(new _utility.HoError('No stock data!!!'));
+                                                    }
+                                                    if (!item[0].web) {
+                                                        return (0, _utility.handleError)(new _utility.HoError('No web data!!!'));
+                                                    }
+                                                    var newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
+                                                    if (!newWeb) {
+                                                        return (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)));
+                                                    }
+                                                    return getBasicStockData(setype, index).then(function (basic) {
+                                                        return getStockPrice(setype, basic.stock_index).then(function (price) {
+                                                            console.log(basic);
+                                                            items.push({
+                                                                //加setype ind name加setype
+                                                                owner: user._id,
+                                                                setype: setype,
+                                                                index: basic.stock_index,
+                                                                name: setype + ' ' + basic.stock_index + ' ' + basic.stock_name,
+                                                                type: basic.stock_ind ? basic.stock_class + ' ' + basic.stock_ind : '' + basic.stock_class,
+                                                                //cost: 0,
+                                                                count: 0,
+                                                                web: newWeb.arr,
+                                                                wType: item[0].web.type,
+                                                                mid: newWeb.mid,
+                                                                times: newWeb.times,
+                                                                amount: +cmd[2],
+                                                                orig: +cmd[2],
+                                                                //top: Math.floor(price * 1.2 * 100) / 100,
+                                                                //bottom: Math.floor(price * 0.95 * 100) / 100,
+                                                                price: price,
+                                                                previous: { buy: [], sell: [] },
+                                                                newMid: []
+                                                            });
+                                                            //remain -= cost;
+                                                            //updateTotal[totalId] = {cost: remain};
+                                                        });
                                                     });
-                                                    //remain -= cost;
-                                                    //updateTotal[totalId] = {cost: remain};
-                                                });
-                                            });
-                                        })
-                                    };
-                                    /*} else if (cmd[4] && +cmd[2] > 0) {
-                                        return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
-                                            console.log(basic);
-                                            const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
-                                            items.push({
-                                                owner: user._id,
-                                                index: basic.stock_index,
-                                                name: `${basic.stock_index} ${basic.stock_name}`,
-                                                type: basic.stock_class,
-                                                cost,
-                                                count: +cmd[2],
-                                                top: Math.floor(price * 1.2 * 100) / 100,
-                                                bottom: Math.floor(price * 0.95 * 100) / 100,
-                                                price,
-                                                high: price,
-                                            })
-                                            remain -= cost;
-                                            updateTotal[totalId] = {cost: remain};
-                                        }));*/
-                                }();
+                                                })
+                                            }
+                                        };
+                                        /*} else if (cmd[4] && +cmd[2] > 0) {
+                                            return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
+                                                console.log(basic);
+                                                const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
+                                                items.push({
+                                                    owner: user._id,
+                                                    index: basic.stock_index,
+                                                    name: `${basic.stock_index} ${basic.stock_name}`,
+                                                    type: basic.stock_class,
+                                                    cost,
+                                                    count: +cmd[2],
+                                                    top: Math.floor(price * 1.2 * 100) / 100,
+                                                    bottom: Math.floor(price * 0.95 * 100) / 100,
+                                                    price,
+                                                    high: price,
+                                                })
+                                                remain -= cost;
+                                                updateTotal[totalId] = {cost: remain};
+                                            }));*/
+                                    }();
 
-                                if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
+                                    if ((typeof _ret17 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret17)) === "object") return _ret17.v;
+                                }
                             }
-                        }
+                        }();
+
+                        if ((typeof _ret15 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret15)) === "object") return _ret15.v;
                     }
                 }
             };
@@ -6302,6 +6442,7 @@ exports.default = {
                 console.log(updateTotal);
                 console.log(removeTotal);
                 console.log(remain);
+                console.log(remain1);
                 console.log(items);
                 var singleUpdate = function singleUpdate(v) {
                     if (!v._id) {
@@ -6327,18 +6468,27 @@ exports.default = {
             var rest = function rest() {
                 var profit = 0;
                 var totalPrice = 0;
+                var profit1 = 0;
+                var totalPrice1 = 0;
                 //let plus = 0;
                 //let minus = 0;
                 var stock = [];
                 var getStock = function getStock(v) {
-                    if (v.name === '投資部位' && v.type === 'total') {
+                    if (v.type === 'total') {
                         return _promise2.default.resolve();
                     } else {
                         return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
+                            var se = 0;
                             var current = price * v.count;
-                            totalPrice += current;
                             var p = current + v.amount - v.orig;
-                            profit += p;
+                            if (v.setype === 'usse') {
+                                totalPrice1 += current;
+                                profit1 += p;
+                                se = 1;
+                            } else {
+                                totalPrice += current;
+                                profit += p;
+                            }
                             //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                             //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                             //plus += p;
@@ -6357,29 +6507,57 @@ exports.default = {
                                 //plus: p,
                                 //minus: m,
                                 current: current,
-                                str: v.str ? v.str : ''
+                                str: v.str ? v.str : '',
+                                se: se
                             });
                         });
                     }
                 };
                 var recurGet = function recurGet(index) {
                     if (index >= items.length) {
-                        stock.unshift({
-                            name: totalName,
-                            type: totalType,
-                            profit: profit,
-                            price: totalPrice,
-                            mid: 1,
-                            remain: totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 + '%' : '0%',
-                            count: 1,
-                            //plus: Math.floor(plus * 100) / 100,
-                            //minus: Math.floor(minus * 100) / 100,
-                            current: totalPrice,
-                            str: ''
-                        });
+                        if (totalName1) {
+                            stock.unshift({
+                                name: totalName1,
+                                type: totalType1,
+                                profit: profit1,
+                                price: totalPrice1,
+                                mid: 1,
+                                remain: (totalPrice1 + remain1 > 0 ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0) + '%',
+                                count: 1,
+                                //plus: Math.floor(plus * 100) / 100,
+                                //minus: Math.floor(minus * 100) / 100,
+                                current: totalPrice1,
+                                str: '',
+                                se: 1
+                            });
+                        }
+                        if (totalName) {
+                            stock.unshift({
+                                name: totalName,
+                                type: totalType,
+                                profit: profit,
+                                price: totalPrice,
+                                mid: 1,
+                                remain: (totalPrice + remain > 0 ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0) + '%',
+                                count: 1,
+                                //plus: Math.floor(plus * 100) / 100,
+                                //minus: Math.floor(minus * 100) / 100,
+                                current: totalPrice,
+                                str: '',
+                                se: 0
+                            });
+                        }
                         return {
-                            remain: remain,
-                            total: totalPrice + remain,
+                            se: [{
+                                type: 'TWSE',
+                                remain: remain,
+                                total: totalPrice + remain
+                            }, {
+                                type: 'USSE',
+                                remain: remain1,
+                                total: totalPrice1 + remain1
+                            }],
+                            //total: totalPrice + remain,
                             stock: stock
                         };
                     } else {
@@ -6390,12 +6568,67 @@ exports.default = {
                 };
                 return recurGet(0);
             };
+            var checkTotal = function checkTotal() {
+                if (!totalId1) {
+                    return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                        owner: user._id,
+                        index: 0,
+                        name: 'usse 投資部位',
+                        type: 'total',
+                        amount: 0,
+                        count: 1,
+                        setype: 'usse'
+                    }).then(function (item) {
+                        remain1 = item[0].amount;
+                        totalName1 = item[0].name;
+                        totalType1 = item[0].type;
+                        totalId1 = item[0]._id;
+                        if (!totalId) {
+                            return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                                owner: user._id,
+                                index: 0,
+                                name: 'twse 投資部位',
+                                type: 'total',
+                                amount: 0,
+                                count: 1,
+                                setype: 'twse'
+                            }).then(function (item1) {
+                                remain = item1[0].amount;
+                                totalName = item1[0].name;
+                                totalType = item1[0].type;
+                                totalId = item1[0]._id;
+                            });
+                        } else {
+                            return _promise2.default.resolve();
+                        }
+                    });
+                } else if (!totalId) {
+                    return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                        owner: user._id,
+                        index: 0,
+                        name: 'twse 投資部位',
+                        type: 'total',
+                        amount: 0,
+                        count: 1,
+                        setype: 'twse'
+                    }).then(function (item) {
+                        remain = item[0].amount;
+                        totalName = item[0].name;
+                        totalType = item[0].type;
+                        totalId = item[0]._id;
+                    });
+                } else {
+                    return _promise2.default.resolve();
+                }
+            };
             var recur = function recur(index) {
                 return index >= info.length ? updateReal() : _promise2.default.resolve(single(info[index])).then(function () {
                     return recur(index + 1);
                 });
             };
-            return recur(0);
+            return checkTotal().then(function () {
+                return recur(0);
+            });
         });
     }
 };
@@ -6405,7 +6638,7 @@ exports.default = {
 var getStockList = exports.getStockList = function getStockList(type) {
     var stocktype = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
 
-    var _ret16 = function () {
+    var _ret18 = function () {
         switch (type) {
             case 'twse':
                 //1: sii(odd) 2: sii(even)
@@ -6437,7 +6670,7 @@ var getStockList = exports.getStockList = function getStockList(type) {
         }
     }();
 
-    if ((typeof _ret16 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret16)) === "object") return _ret16.v;
+    if ((typeof _ret18 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret18)) === "object") return _ret18.v;
 };
 
 var getTwseAnnual = function getTwseAnnual(index, year, filePath) {
@@ -6505,7 +6738,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
     var annual_list = [];
     var recur_annual = function recur_annual(cYear, annual_folder) {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes('read' + cYear)) {
-            var _ret17 = function () {
+            var _ret19 = function () {
                 var folderPath = '/mnt/stock/twse/' + index;
                 var filePath = folderPath + '/tmp';
                 var mkfolder = function mkfolder() {
@@ -6552,7 +6785,7 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
                 };
             }();
 
-            if ((typeof _ret17 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret17)) === "object") return _ret17.v;
+            if ((typeof _ret19 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret19)) === "object") return _ret19.v;
         } else {
             cYear--;
             if (cYear > year - 5) {
@@ -6610,6 +6843,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                 }
                 var item = items[index];
                 console.log(item);
+                var fee = items[index].setype === 'usse' ? _constants.USSE_FEE : _constants.TRADE_FEE;
                 //new mid
                 var newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                     return v * item.newMid[item.newMid.length - 1] / item.mid;
@@ -6629,7 +6863,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     }) : item.web;
                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                 }
-                var suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
+                var suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
                 while (suggestion.resetWeb) {
                     if (item.newMid.length === 0) {
                         item.tmpPT = {
@@ -6643,7 +6877,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                         return v * item.newMid[item.newMid.length - 1] / item.mid;
                     }) : item.web;
-                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
+                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
                 }
                 var count = 0;
                 var amount = item.amount;
@@ -6689,8 +6923,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                 if (suggestion.type === 9) {
                     if (amount < item.orig / 8) {
                         var _tmpAmount3 = item.orig / 4 - amount;
-                        while (_tmpAmount3 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
-                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                        while (_tmpAmount3 - suggestion.sell * (1 - fee) > 0) {
+                            amount += suggestion.sell * (1 - fee);
                             _tmpAmount3 = item.orig / 4 - amount;
                             count++;
                         }
@@ -6701,8 +6935,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                 } else if (suggestion.type === 5) {
                     if (amount < item.orig * 3 / 8) {
                         var _tmpAmount4 = item.orig / 2 - amount;
-                        while (_tmpAmount4 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
-                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                        while (_tmpAmount4 - suggestion.sell * (1 - fee) > 0) {
+                            amount += suggestion.sell * (1 - fee);
                             _tmpAmount4 = item.orig / 2 - amount;
                             count++;
                         }
@@ -6713,8 +6947,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                 } else if (suggestion.type === 8) {
                     if (amount < item.orig * 5 / 8) {
                         var _tmpAmount5 = item.orig * 3 / 4 - amount;
-                        while (_tmpAmount5 - suggestion.sell * (1 - _constants.TRADE_FEE) > 0) {
-                            amount += suggestion.sell * (1 - _constants.TRADE_FEE);
+                        while (_tmpAmount5 - suggestion.sell * (1 - fee) > 0) {
+                            amount += suggestion.sell * (1 - fee);
                             _tmpAmount5 = item.orig * 3 / 4 - amount;
                             count++;
                         }
@@ -6729,7 +6963,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
                 }
                 if (suggestion.type === 2) {
-                    if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE) * item.bCurrent) {
+                    if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
                         item.bTarget = item.bCurrent;
                         item.bCurrent = suggestion.buy;
                     }
@@ -6738,7 +6972,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     item.bTarget = 0;
                 }
                 if (suggestion.type === 4) {
-                    if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + _constants.TRADE_FEE) * (1 + _constants.TRADE_FEE) * item.sCurrent) {
+                    if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + fee) * (1 + fee) * item.sCurrent) {
                         item.sTarget = item.sCurrent;
                         item.sCurrent = suggestion.sell;
                     }
@@ -6813,7 +7047,7 @@ var stockShow = exports.stockShow = function stockShow() {
 };
 
 var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year, month) {
-    var _ret18 = function () {
+    var _ret20 = function () {
         switch (type) {
             case 'twse':
                 var quarter = 3;
@@ -6857,20 +7091,20 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                             if (Number(index)) {
                                                 var exist = false;
 
-                                                var _loop5 = function _loop5(_i34) {
-                                                    if (stock_list[_i34].index === index) {
+                                                var _loop5 = function _loop5(_i33) {
+                                                    if (stock_list[_i33].index === index) {
                                                         exist = true;
                                                         tag.forEach(function (v) {
-                                                            return stock_list[_i34].tag.push(v);
+                                                            return stock_list[_i33].tag.push(v);
                                                         });
                                                         return 'break';
                                                     }
                                                 };
 
-                                                for (var _i34 = 0; _i34 < stock_list.length; _i34++) {
-                                                    var _ret19 = _loop5(_i34);
+                                                for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
+                                                    var _ret21 = _loop5(_i33);
 
-                                                    if (_ret19 === 'break') break;
+                                                    if (_ret21 === 'break') break;
                                                 }
                                                 if (!exist) {
                                                     stock_list.push({
@@ -6934,7 +7168,7 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
         }
     }();
 
-    if ((typeof _ret18 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret18)) === "object") return _ret18.v;
+    if ((typeof _ret20 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret20)) === "object") return _ret20.v;
 };
 
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
@@ -7894,24 +8128,24 @@ var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
     }
     var volsum = 0;
     var maxlen = len && stair_start + len < raw_arr.length ? stair_start + len : raw_arr.length;
-    for (var _i35 = stair_start; _i35 < maxlen; _i35++) {
+    for (var _i34 = stair_start; _i34 < maxlen; _i34++) {
         var s = 0;
         var e = 100;
         for (var _j10 = 0; _j10 < 100; _j10++) {
-            if (raw_arr[_i35].l >= loga.arr[_j10]) {
+            if (raw_arr[_i34].l >= loga.arr[_j10]) {
                 s = _j10;
             }
-            if (raw_arr[_i35].h <= loga.arr[_j10]) {
+            if (raw_arr[_i34].h <= loga.arr[_j10]) {
                 e = _j10;
                 break;
             }
         }
-        volsum += raw_arr[_i35].v;
-        single_arr.push((raw_arr[_i35].h - raw_arr[_i35].l) / raw_arr[_i35].h * 100);
+        volsum += raw_arr[_i34].v;
+        single_arr.push((raw_arr[_i34].h - raw_arr[_i34].l) / raw_arr[_i34].h * 100);
         if (e - s === 0) {
-            final_arr[s] += raw_arr[_i35].v;
+            final_arr[s] += raw_arr[_i34].v;
         } else {
-            var v = raw_arr[_i35].v / (e - s);
+            var v = raw_arr[_i34].v / (e - s);
             for (var _j11 = s; _j11 < e; _j11++) {
                 final_arr[_j11] += v;
             }
@@ -8075,16 +8309,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i36 = mid - 1; _i36 >= 0; _i36--) {
-        if (webArr[_i36] >= 0) {
+    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
+        if (webArr[_i35] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i36]);
+                new_arr.splice(0, 0, webArr[_i35]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i36]);
+            new_arr.splice(0, 0, webArr[_i35]);
         }
     }
     return {

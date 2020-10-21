@@ -132,3 +132,24 @@ sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
 
 遊戲: 請在pacjage.json加入     "redux-saga": ">=0.15.4",
 並uncommnet configureStore.js
+
+The Allstate Corporation 17
+-0.94% 1309 17.39% -0.35% 24 0 -9.85% 1008 817900
+Biogen Inc. 67
+-2.66% 4603 43.11% 24.43% 23.33 2 -6.19% 1008 433700
+Tyson Foods, Inc. 35
+-6.33% 1148 29.25% 5.5% 27 0 -9.02% 1009 564200
+Globe Life Inc. 20
+-0.02% 1000 19.44% -0.96% 28 0 -8.33% 1009 200500
+Cigna Corporation 28
+0.89% 2116 23.78% -4.95% 24.5 0 -7.69% 1009 531000
+Northern Trust Corporation 35
+-3.31% 1266 21.84% 14.21% 26.67 1 -5.95% 1006 204300
+The Charles Schwab Corporation 31
+-4.91% 744 43.32% 15.99% 15.33 0 -5.2% 1006 1819000
+BorgWarner Inc. 58
+-3.35% 641 22.72% 35.5% 20.5 0 -7.05% 1006 331500
+Kellogg Company 31
+4.28% 911 15.64% 15.77% 12.33 0 -13.06% 1006 737900
+Ulta Beauty, Inc. 71
+-2.01% 3364 36.42% 35.06% 22.67 0 -22.95% 1006 447000

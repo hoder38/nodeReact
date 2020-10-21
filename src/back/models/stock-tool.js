@@ -1,4 +1,4 @@
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/ } from '../constants'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
 import Mkdirp from 'mkdirp'
@@ -3870,7 +3870,7 @@ export default {
                         }
                         console.log(min_vol);
                         const loga = logArray(max, min);
-                        const web = calStair(raw_arr, loga, min);
+                        const web = calStair(raw_arr, loga, min, 0, USSE_FEE);
                         console.log(web);
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
                             console.log(item);
@@ -3891,7 +3891,7 @@ export default {
                                     const match = [];
                                     let j = raw_arr.length - 1;
                                     while (j > 199) {
-                                        const temp = stockTest(raw_arr, loga, min, type, j);
+                                        const temp = stockTest(raw_arr, loga, min, type, j, false, 200, RANGE_INTERVAL, USSE_FEE);
                                         if (temp === 'data miss') {
                                             return true;
                                         }
@@ -3938,7 +3938,7 @@ export default {
                                             best_rate = rate;
                                             ret_str = str;
                                         }
-                                        const temp = stockTest(raw_arr, loga, min, type, 0, true);
+                                        const temp = stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE);
                                         if (temp === 'data miss') {
                                             return true;
                                         }
@@ -4934,48 +4934,96 @@ export default {
                 return Mongo('insert', TOTALDB, {
                     owner: user._id,
                     index: 0,
-                    name: '投資部位',
+                    name: 'twse 投資部位',
                     type: 'total',
                     amount: 0,
                     count: 1,
-                }).then(item => ({
+                    setype: 'twse',
+                }).then(item => Mongo('insert', TOTALDB, {
+                    owner: user._id,
+                    index: 0,
+                    name: 'usse 投資部位',
+                    type: 'total',
+                    amount: 0,
+                    count: 1,
+                    setype: 'usse',
+                }).then(item1 => ({
+                    se: [{
+                        type: item[0].setype,
                         remain: item[0].amount,
-                        total: 0,
-                        stock: [{
-                            name: item[0].name,
-                            type: item[0].type,
-                            remain: 0,
-                            price: 0,
-                            profit: 0,
-                            count: 1,
-                            mid: 0,
-                            //plus: 0,
-                            //minus: 0,
-                            current: 0,
-                            str: '',
-                        }],
-                }));
+                        total: item[0].amount,
+                    },
+                    {
+                        type: item1[0].setype,
+                        remain: item1[0].amount,
+                        total: item1[0].amount,
+                    }],
+                    stock: [{
+                        name: item[0].name,
+                        type: item[0].type,
+                        remain: 0,
+                        price: 0,
+                        profit: 0,
+                        count: 1,
+                        mid: 0,
+                        //plus: 0,
+                        //minus: 0,
+                        current: 0,
+                        str: '',
+                        se: 0,
+                    },
+                    {
+                        name: item1[0].name,
+                        type: item1[0].type,
+                        remain: 0,
+                        price: 0,
+                        profit: 0,
+                        count: 1,
+                        mid: 0,
+                        current: 0,
+                        str: '',
+                        se: 1,
+                    }],
+                })));
             }
             let remain = 0;
             let totalName = '';
             let totalType = '';
             let profit = 0;
             let totalPrice = 0;
+            let remain1 = 0;
+            let totalName1 = '';
+            let totalType1 = '';
+            let profit1 = 0;
+            let totalPrice1 = 0;
             //let plus = 0;
             //let minus = 0;
             const stock = [];
             const getStock = v => {
-                if (v.name === '投資部位' && v.type === 'total') {
-                    remain = v.amount;
-                    totalName = v.name;
-                    totalType = v.type;
+                if (v.type === 'total') {
+                    if (v.setype === 'usse') {
+                        remain1 = v.amount;
+                        totalName1 = v.name;
+                        totalType1 = v.type;
+                    } else {
+                        remain = v.amount;
+                        totalName = v.name;
+                        totalType = v.type;
+                    }
                     return Promise.resolve();
                 } else {
                     return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = price * v.count;
-                        totalPrice += current;
                         let p = current + v.amount - v.orig;
-                        profit += p;
+                        let se = 0;
+                        if (v.setype === 'usse') {
+                            totalPrice1 += current;
+                            profit1 += p;
+                            se = 1;
+                        } else {
+                            totalPrice += current;
+                            profit += p;
+                        }
                         //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                         //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                         //plus += p;
@@ -4995,28 +5043,57 @@ export default {
                             //minus: m,
                             current,
                             str: v.str ? v.str : '',
+                            se,
                         });
                     });
                 }
             }
             const recurGet = index => {
                 if (index >= items.length) {
-                    stock.unshift({
-                        name: totalName,
-                        type: totalType,
-                        profit,
-                        price: totalPrice,
-                        mid: 1,
-                        remain: (totalPrice + remain > 0) ? `${Math.round(profit / (totalPrice + remain) * 10000) / 100}%` : '0%',
-                        count: 1,
-                        //plus: Math.floor(plus * 100) / 100,
-                        //minus: Math.floor(minus * 100) / 100,
-                        current: totalPrice,
-                        str: '',
-                    })
+                    if (totalName1) {
+                        stock.unshift({
+                            name: totalName1,
+                            type: totalType1,
+                            profit: profit1,
+                            price: totalPrice1,
+                            mid: 1,
+                            remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
+                            count: 1,
+                            //plus: Math.floor(plus * 100) / 100,
+                            //minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice1,
+                            str: '',
+                            se: 1,
+                        })
+                    }
+                    if (totalName) {
+                        stock.unshift({
+                            name: totalName,
+                            type: totalType,
+                            profit,
+                            price: totalPrice,
+                            mid: 1,
+                            remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
+                            count: 1,
+                            //plus: Math.floor(plus * 100) / 100,
+                            //minus: Math.floor(minus * 100) / 100,
+                            current: totalPrice,
+                            str: '',
+                            se: 0,
+                        })
+                    }
                     return {
-                        remain: remain,
-                        total: totalPrice + remain,
+                        se: [{
+                            type: 'TWSE',
+                            remain,
+                            total: totalPrice + remain,
+                        },
+                        {
+                            type: 'USSE',
+                            remain: remain1,
+                            total: totalPrice1 + remain1,
+                        }],
+                        //total: totalPrice + remain,
                         stock,
                     };
                 } else {
@@ -5042,12 +5119,25 @@ export default {
             let totalName = '';
             let totalType = '';
             let totalId = null;
+            let remain1 = 0;
+            let totalName1 = '';
+            let totalType1 = '';
+            let totalId1 = null;
+
             for (let v of items) {
-                if (v.name === '投資部位' && v.type === 'total') {
-                    remain = v.amount;
-                    totalName = v.name;
-                    totalType = v.type;
-                    totalId = v._id;
+                //if (v.name === '投資部位' && v.type === 'total') {
+                if (v.type === 'total') {
+                    if (v.setype === 'usse') {
+                        remain1 = v.amount;
+                        totalName1 = v.name;
+                        totalType1 = v.type;
+                        totalId1 = v._id;
+                    } else {
+                        remain = v.amount;
+                        totalName = v.name;
+                        totalType = v.type;
+                        totalId = v._id;
+                    }
                 }
             }
             const updateTotal = {};
@@ -5056,17 +5146,34 @@ export default {
                 //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
                 const cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
-                    if (cmd[1] === 'remain') {
-                        remain = +cmd[2];
-                        updateTotal[totalId] = {amount: remain};
+                    let remainM = null;
+                    if (remainM = cmd[1].match(/^remain(.*)$/)) {
+                        switch(remainM[1]) {
+                            case 'twse':
+                            remain = +cmd[2];
+                            updateTotal[totalId] = {amount: remain};
+                            break;
+                            case 'usse':
+                            remain1 = +cmd[2];
+                            updateTotal[totalId1] = {amount: remain1};
+                            break;
+                        }
                     } else if (cmd[1] === 'delete') {
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
                             if (index === items[i].index) {
                                 return getStockPrice(setype, items[i].index).then(price => {
-                                    remain += (price * items[i].count * (1 - TRADE_FEE));
-                                    updateTotal[totalId] = {amount: remain};
+                                    switch(setype) {
+                                        case 'twse':
+                                        remain += (price * items[i].count * (1 - TRADE_FEE));
+                                        updateTotal[totalId] = {amount: remain};
+                                        break;
+                                        case 'usse':
+                                        remain1 += (price * items[i].count * (1 - USSE_FEE));
+                                        updateTotal[totalId1] = {amount: remain1};
+                                        break;
+                                    }
                                     if (items[i]._id) {
                                         removeTotal.push(items[i]._id);
                                     }
@@ -5112,9 +5219,17 @@ export default {
                                 } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
                                 //} else if (cmd[4]) {
                                     items[i].count = +cmd[2];
-                                    remain = remain + items[i].orig - items[i].amount - +cmd[3];
+                                    switch(setype) {
+                                        case 'twse':
+                                        remain = remain + items[i].orig - items[i].amount - +cmd[3];
+                                        updateTotal[totalId] = {amount: remain};
+                                        break;
+                                        case 'usse':
+                                        remain1 = remain1 + items[i].orig - items[i].amount - +cmd[3];
+                                        updateTotal[totalId1] = {amount: remain1};
+                                        break;
+                                    }
                                     items[i].amount = items[i].orig - +cmd[3];
-                                    updateTotal[totalId] = {amount: remain};
                                     if (items[i]._id) {
                                         if (updateTotal[items[i]._id]) {
                                             updateTotal[items[i]._id].count = items[i].count;
@@ -5132,10 +5247,20 @@ export default {
                                     }
                                     return getStockPrice(setype, items[i].index).then(price => {
                                         price = !isNaN(+cmd[3]) ? +cmd[3] : price;
-                                        const new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - TRADE_FEE) * price * +cmd[2];
+                                        let new_cost = 0;
+                                        switch(setype) {
+                                            case 'twse':
+                                            new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - TRADE_FEE) * price * +cmd[2];
+                                            remain -= new_cost;
+                                            updateTotal[totalId] = {amount: remain};
+                                            break;
+                                            case 'usse':
+                                            new_cost = (+cmd[2] > 0) ? price * +cmd[2] : (1 - USSE_FEE) * price * +cmd[2];
+                                            remain1 -= new_cost;
+                                            updateTotal[totalId1] = {amount: remain1};
+                                            break;
+                                        }
                                         items[i].amount -= new_cost;
-                                        remain -= new_cost;
-                                        updateTotal[totalId] = {amount: remain};
                                         const time = Math.round(new Date().getTime() / 1000);
                                         const tradeType = (+cmd[2] > 0) ? 'buy' : 'sell';
                                         if (tradeType === 'buy') {
@@ -5283,6 +5408,7 @@ export default {
                 console.log(updateTotal);
                 console.log(removeTotal);
                 console.log(remain);
+                console.log(remain1);
                 console.log(items);
                 const singleUpdate = v => {
                     if (!v._id) {
@@ -5300,18 +5426,27 @@ export default {
             const rest = () => {
                 let profit = 0;
                 let totalPrice = 0;
+                let profit1 = 0;
+                let totalPrice1 = 0;
                 //let plus = 0;
                 //let minus = 0;
                 const stock = [];
                 const getStock = v => {
-                    if (v.name === '投資部位' && v.type === 'total') {
+                    if (v.type === 'total') {
                         return Promise.resolve();
                     } else {
                         return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                            let se = 0;
                             let current = price * v.count;
-                            totalPrice += current;
                             let p = current + v.amount - v.orig;
-                            profit += p;
+                            if (v.setype === 'usse') {
+                                totalPrice1 += current;
+                                profit1 += p;
+                                se = 1;
+                            } else {
+                                totalPrice += current;
+                                profit += p;
+                            }
                             //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                             //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                             //plus += p;
@@ -5331,28 +5466,57 @@ export default {
                                 //minus: m,
                                 current,
                                 str: v.str ? v.str : '',
+                                se,
                             });
                         });
                     }
                 }
                 const recurGet = index => {
                     if (index >= items.length) {
-                        stock.unshift({
-                            name: totalName,
-                            type: totalType,
-                            profit,
-                            price: totalPrice,
-                            mid: 1,
-                            remain: (totalPrice + remain > 0) ? `${Math.round(profit / (totalPrice + remain) * 10000) / 100}%` : '0%',
-                            count: 1,
-                            //plus: Math.floor(plus * 100) / 100,
-                            //minus: Math.floor(minus * 100) / 100,
-                            current: totalPrice,
-                            str: '',
-                        })
+                        if (totalName1) {
+                            stock.unshift({
+                                name: totalName1,
+                                type: totalType1,
+                                profit: profit1,
+                                price: totalPrice1,
+                                mid: 1,
+                                remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
+                                count: 1,
+                                //plus: Math.floor(plus * 100) / 100,
+                                //minus: Math.floor(minus * 100) / 100,
+                                current: totalPrice1,
+                                str: '',
+                                se: 1,
+                            })
+                        }
+                        if (totalName) {
+                            stock.unshift({
+                                name: totalName,
+                                type: totalType,
+                                profit,
+                                price: totalPrice,
+                                mid: 1,
+                                remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
+                                count: 1,
+                                //plus: Math.floor(plus * 100) / 100,
+                                //minus: Math.floor(minus * 100) / 100,
+                                current: totalPrice,
+                                str: '',
+                                se: 0,
+                            })
+                        }
                         return {
-                            remain: remain,
-                            total: totalPrice + remain,
+                            se: [{
+                                type: 'TWSE',
+                                remain,
+                                total: totalPrice + remain,
+                            },
+                            {
+                                type: 'USSE',
+                                remain: remain1,
+                                total: totalPrice1 + remain1,
+                            }],
+                            //total: totalPrice + remain,
                             stock,
                         };
                     } else {
@@ -5361,8 +5525,61 @@ export default {
                 }
                 return recurGet(0);
             }
+            const checkTotal = () => {
+                if (!totalId1) {
+                    return Mongo('insert', TOTALDB, {
+                        owner: user._id,
+                        index: 0,
+                        name: 'usse 投資部位',
+                        type: 'total',
+                        amount: 0,
+                        count: 1,
+                        setype: 'usse',
+                    }).then(item => {
+                        remain1 = item[0].amount;
+                        totalName1 = item[0].name;
+                        totalType1 = item[0].type;
+                        totalId1 = item[0]._id;
+                        if (!totalId) {
+                            return Mongo('insert', TOTALDB, {
+                                owner: user._id,
+                                index: 0,
+                                name: 'twse 投資部位',
+                                type: 'total',
+                                amount: 0,
+                                count: 1,
+                                setype: 'twse',
+                            }).then(item1 => {
+                                remain = item1[0].amount;
+                                totalName = item1[0].name;
+                                totalType = item1[0].type;
+                                totalId = item1[0]._id;
+                            });
+                        } else {
+                            return Promise.resolve();
+                        }
+                    });
+                } else if (!totalId) {
+                    return Mongo('insert', TOTALDB, {
+                        owner: user._id,
+                        index: 0,
+                        name: 'twse 投資部位',
+                        type: 'total',
+                        amount: 0,
+                        count: 1,
+                        setype: 'twse',
+                    }).then(item => {
+                        remain = item[0].amount;
+                        totalName = item[0].name;
+                        totalType = item[0].type;
+                        totalId = item[0]._id;
+                    });
+                } else {
+                    return Promise.resolve();
+                }
+            }
             const recur = index => (index >= info.length) ? updateReal() : Promise.resolve(single(info[index])).then(() => recur(index + 1));
-            return recur(0);
+            return checkTotal().then(() => recur(0));
         });
     },
 }
@@ -5476,6 +5693,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         }
         const item = items[index];
         console.log(item);
+        const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
         //new mid
         let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
         let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -5491,7 +5709,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
             checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
         }
-        let suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
+        let suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
         while(suggestion.resetWeb) {
             if (item.newMid.length === 0) {
                 item.tmpPT = {
@@ -5503,7 +5721,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             item.previous.time = 0;
             item.newMid.push(suggestion.newMid);
             newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-            suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType);
+            suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
         }
         let count = 0;
         let amount = item.amount;
@@ -5549,8 +5767,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         if (suggestion.type === 9) {
             if (amount < item.orig / 8) {
                 let tmpAmount = item.orig / 4 - amount;
-                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
-                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                    amount += (suggestion.sell * (1 - fee));
                     tmpAmount = item.orig / 4 - amount;
                     count++;
                 }
@@ -5561,8 +5779,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         } else if (suggestion.type === 5) {
             if (amount < item.orig * 3 / 8) {
                 let tmpAmount = item.orig / 2 - amount;
-                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
-                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                    amount += (suggestion.sell * (1 - fee));
                     tmpAmount = item.orig / 2 - amount;
                     count++;
                 }
@@ -5573,8 +5791,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         } else if (suggestion.type === 8) {
             if (amount < item.orig * 5 / 8) {
                 let tmpAmount = item.orig * 3 / 4 - amount;
-                while ((tmpAmount - suggestion.sell * (1 - TRADE_FEE)) > 0) {
-                    amount += (suggestion.sell * (1 - TRADE_FEE));
+                while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                    amount += (suggestion.sell * (1 - fee));
                     tmpAmount = item.orig * 3 / 4 - amount;
                     count++;
                 }
@@ -5589,7 +5807,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
         }
         if (suggestion.type === 2) {
-            if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + TRADE_FEE) * (1 + TRADE_FEE) * item.bCurrent) {
+            if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
                 item.bTarget = item.bCurrent;
                 item.bCurrent = suggestion.buy;
             }
@@ -5598,7 +5816,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             item.bTarget = 0;
         }
         if (suggestion.type === 4) {
-            if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + TRADE_FEE) * (1 + TRADE_FEE) * item.sCurrent) {
+            if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + fee) * (1 + fee) * item.sCurrent) {
                 item.sTarget = item.sCurrent;
                 item.sCurrent = suggestion.sell;
             }

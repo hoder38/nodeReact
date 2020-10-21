@@ -872,6 +872,7 @@ export const MINIMAL_OFFER = 50;
 export const BITFINEX_FEE = 0.003;
 export const BITFINEX_INTERVAL = 3600;
 export const RANGE_BITFINEX_INTERVAL = 259200;
+export const USSE_FEE = 0.003;
 export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
 export const TRADE_TIME = 21600;
