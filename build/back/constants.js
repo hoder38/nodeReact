@@ -370,7 +370,7 @@ var STOCK_FILTER = exports.STOCK_FILTER = {
         times: [1, '>', 10],
         stop: [1, '<', 4],
         gap: [1, '>', -10],
-        profit: [1, '>', 10],
+        profit: [1, '>', 20],
         //pp: [1, '>', 100],
         //ss: [1, '>', -500],
         //mm: [1, '>', 3],
