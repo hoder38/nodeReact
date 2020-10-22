@@ -5012,8 +5012,8 @@ export default {
                     }
                     return Promise.resolve();
                 } else {
-                    return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
-                        let current = price * v.count;
+                    //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                        let current = v.price * v.count;
                         let p = current + v.amount - v.orig;
                         let se = 0;
                         if (v.setype === 'usse') {
@@ -5032,7 +5032,7 @@ export default {
                             name: v.name,
                             type: v.type,
                             //cost: v.cost,
-                            price,
+                            price: v.price,
                             mid: v.mid,
                             count: v.count,
                             remain: Math.round(v.amount * 100) / 100,
@@ -5045,7 +5045,8 @@ export default {
                             str: v.str ? v.str : '',
                             se,
                         });
-                    });
+                        return Promise.resolve();
+                    //});
                 }
             }
             const recurGet = index => {
@@ -5435,9 +5436,9 @@ export default {
                     if (v.type === 'total') {
                         return Promise.resolve();
                     } else {
-                        return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                        //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                             let se = 0;
-                            let current = price * v.count;
+                            let current = v.price * v.count;
                             let p = current + v.amount - v.orig;
                             if (v.setype === 'usse') {
                                 totalPrice1 += current;
@@ -5455,7 +5456,7 @@ export default {
                                 name: v.name,
                                 type: v.type,
                                 //cost: v.cost,
-                                price,
+                                price: v.price,
                                 mid: v.mid,
                                 count: v.count,
                                 remain: Math.round(v.amount * 100) / 100,
@@ -5468,7 +5469,8 @@ export default {
                                 str: v.str ? v.str : '',
                                 se,
                             });
-                        });
+                            return Promise.resolve();
+                        //});
                     }
                 }
                 const recurGet = index => {

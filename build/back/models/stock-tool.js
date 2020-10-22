@@ -5961,40 +5961,41 @@ exports.default = {
                     }
                     return _promise2.default.resolve();
                 } else {
-                    return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
-                        var current = price * v.count;
-                        var p = current + v.amount - v.orig;
-                        var se = 0;
-                        if (v.setype === 'usse') {
-                            totalPrice1 += current;
-                            profit1 += p;
-                            se = 1;
-                        } else {
-                            totalPrice += current;
-                            profit += p;
-                        }
-                        //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                        //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                        //plus += p;
-                        //minus += m;
-                        stock.push({
-                            name: v.name,
-                            type: v.type,
-                            //cost: v.cost,
-                            price: price,
-                            mid: v.mid,
-                            count: v.count,
-                            remain: Math.round(v.amount * 100) / 100,
-                            profit: p,
-                            //top: v.top,
-                            //bottom: v.bottom,
-                            //plus: p,
-                            //minus: m,
-                            current: current,
-                            str: v.str ? v.str : '',
-                            se: se
-                        });
+                    //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                    var current = v.price * v.count;
+                    var p = current + v.amount - v.orig;
+                    var se = 0;
+                    if (v.setype === 'usse') {
+                        totalPrice1 += current;
+                        profit1 += p;
+                        se = 1;
+                    } else {
+                        totalPrice += current;
+                        profit += p;
+                    }
+                    //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                    //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                    //plus += p;
+                    //minus += m;
+                    stock.push({
+                        name: v.name,
+                        type: v.type,
+                        //cost: v.cost,
+                        price: v.price,
+                        mid: v.mid,
+                        count: v.count,
+                        remain: Math.round(v.amount * 100) / 100,
+                        profit: p,
+                        //top: v.top,
+                        //bottom: v.bottom,
+                        //plus: p,
+                        //minus: m,
+                        current: current,
+                        str: v.str ? v.str : '',
+                        se: se
                     });
+                    return _promise2.default.resolve();
+                    //});
                 }
             };
             var recurGet = function recurGet(index) {
@@ -6477,40 +6478,41 @@ exports.default = {
                     if (v.type === 'total') {
                         return _promise2.default.resolve();
                     } else {
-                        return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(function (price) {
-                            var se = 0;
-                            var current = price * v.count;
-                            var p = current + v.amount - v.orig;
-                            if (v.setype === 'usse') {
-                                totalPrice1 += current;
-                                profit1 += p;
-                                se = 1;
-                            } else {
-                                totalPrice += current;
-                                profit += p;
-                            }
-                            //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                            //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                            //plus += p;
-                            //minus += m;
-                            stock.push({
-                                name: v.name,
-                                type: v.type,
-                                //cost: v.cost,
-                                price: price,
-                                mid: v.mid,
-                                count: v.count,
-                                remain: Math.round(v.amount * 100) / 100,
-                                profit: p,
-                                //top: v.top,
-                                //bottom: v.bottom,
-                                //plus: p,
-                                //minus: m,
-                                current: current,
-                                str: v.str ? v.str : '',
-                                se: se
-                            });
+                        //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                        var se = 0;
+                        var current = v.price * v.count;
+                        var p = current + v.amount - v.orig;
+                        if (v.setype === 'usse') {
+                            totalPrice1 += current;
+                            profit1 += p;
+                            se = 1;
+                        } else {
+                            totalPrice += current;
+                            profit += p;
+                        }
+                        //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
+                        //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
+                        //plus += p;
+                        //minus += m;
+                        stock.push({
+                            name: v.name,
+                            type: v.type,
+                            //cost: v.cost,
+                            price: v.price,
+                            mid: v.mid,
+                            count: v.count,
+                            remain: Math.round(v.amount * 100) / 100,
+                            profit: p,
+                            //top: v.top,
+                            //bottom: v.bottom,
+                            //plus: p,
+                            //minus: m,
+                            current: current,
+                            str: v.str ? v.str : '',
+                            se: se
                         });
+                        return _promise2.default.resolve();
+                        //});
                     }
                 };
                 var recurGet = function recurGet(index) {
