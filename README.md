@@ -106,6 +106,10 @@ sudo -i node /home/pi/release/nodeReact/build/back/cmd/googledrive.js
 改權限記得刪權限後再要一次refresh token, https://myaccount.google.com/u/0/permissions
 記得update db token
 
+td ameritrade auth:
+每90天要更新一次token(前7天會提醒)
+sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/tdameritrade.js
+sudo -i node /home/pi/release/nodeReact/build/back/cmd/tdameritrade.js
 
 /*make p12
 

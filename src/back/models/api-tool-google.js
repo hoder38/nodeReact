@@ -205,7 +205,7 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
 
 const setToken = () => {
     oauth2Client.setCredentials(tokens);
-    return tokens.expiry_date < (Date.now() - 600000) ? new Promise((resolve, reject) => oauth2Client.refreshAccessToken((err, refresh_tokens)=> err ? reject(err) : resolve(refresh_tokens))).then(token => Mongo('update', 'accessToken', {api: 'google'}, {$set: token}).then(result => {
+    return tokens.expiry_date < (Date.now() + 600000) ? new Promise((resolve, reject) => oauth2Client.refreshAccessToken((err, refresh_tokens)=> err ? reject(err) : resolve(refresh_tokens))).then(token => Mongo('update', 'accessToken', {api: 'google'}, {$set: token}).then(result => {
         console.log('expire');
         console.log(result);
         console.log(token);

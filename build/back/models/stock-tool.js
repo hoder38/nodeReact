@@ -4065,98 +4065,131 @@ exports.default = {
                                             var str = '';
                                             var testResult = [];
                                             var match = [];
-                                            var j = raw_arr.length - 1;
-                                            while (j > 199) {
-                                                var _temp12 = stockTest(raw_arr, loga, min, type, j);
-                                                if (_temp12 === 'data miss') {
-                                                    return true;
-                                                }
-                                                var tempM = _temp12.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                                    testResult.push(_temp12);
-                                                    match.push(tempM);
-                                                }
-                                                j = _temp12.start + 1;
-                                            }
-                                            if (testResult.length > 0) {
-                                                var _ret11 = function () {
-                                                    testResult.forEach(function (v, i) {
-                                                        if (!year[i]) {
-                                                            year[i] = [];
+                                            var loopTest = function loopTest(j) {
+                                                if (j > 199) {
+                                                    return new _promise2.default(function (resolve, reject) {
+                                                        return setTimeout(function () {
+                                                            return resolve();
+                                                        }, 0);
+                                                    }).then(function () {
+                                                        return stockTest(raw_arr, loga, min, type, j);
+                                                    }).then(function (temp) {
+                                                        if (temp === 'data miss') {
+                                                            return _promise2.default.resolve(true);
                                                         }
-                                                        year[i].push(v);
-                                                    });
-                                                    var rate = 1;
-                                                    var real = 1;
-                                                    var count = 0;
-                                                    var times = 0;
-                                                    var stoploss = 0;
-                                                    var maxloss = 0;
-                                                    match.forEach(function (v, i) {
-                                                        rate = rate * (Number(v[3]) + 100) / 100;
-                                                        /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                                                            lastest_rate = Number(v[3]);
-                                                            lastest_type = type;
-                                                        }*/
-                                                        real = real * (Number(v[4]) + 100) / 100;
-                                                        count++;
-                                                        times += Number(v[5]);
-                                                        stoploss += Number(v[6]);
-                                                        if (!maxloss || maxloss > +v[7]) {
-                                                            maxloss = +v[7];
+                                                        var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                            testResult.push(temp);
+                                                            match.push(tempM);
                                                         }
+                                                        return loopTest(temp.start + 1);
                                                     });
-                                                    str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
-                                                    rate = Math.round(rate * 10000 - 10000) / 100;
-                                                    real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                                    times = Math.round(times / count * 100) / 100;
-                                                    str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
-                                                    if (!best_rate || rate > best_rate) {
-                                                        best_rate = rate;
-                                                        ret_str = str;
-                                                    }
-                                                    var temp = stockTest(raw_arr, loga, min, type, 0, true);
-                                                    if (temp === 'data miss') {
+                                                } else {
+                                                    return _promise2.default.resolve();
+                                                }
+                                            };
+                                            return loopTest(raw_arr.length - 1).then(function (result) {
+                                                if (result) {
+                                                    return _promise2.default.resolve(true);
+                                                }
+                                                if (testResult.length > 0) {
+                                                    var _ret11 = function () {
+                                                        testResult.forEach(function (v, i) {
+                                                            if (!year[i]) {
+                                                                year[i] = [];
+                                                            }
+                                                            year[i].push(v);
+                                                        });
+                                                        var rate = 1;
+                                                        var real = 1;
+                                                        var count = 0;
+                                                        var times = 0;
+                                                        var stoploss = 0;
+                                                        var maxloss = 0;
+                                                        match.forEach(function (v, i) {
+                                                            rate = rate * (Number(v[3]) + 100) / 100;
+                                                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                                lastest_rate = Number(v[3]);
+                                                                lastest_type = type;
+                                                            }*/
+                                                            real = real * (Number(v[4]) + 100) / 100;
+                                                            count++;
+                                                            times += Number(v[5]);
+                                                            stoploss += Number(v[6]);
+                                                            if (!maxloss || maxloss > +v[7]) {
+                                                                maxloss = +v[7];
+                                                            }
+                                                        });
+                                                        str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
+                                                        rate = Math.round(rate * 10000 - 10000) / 100;
+                                                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                                        times = Math.round(times / count * 100) / 100;
+                                                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
+                                                        if (!best_rate || rate > best_rate) {
+                                                            best_rate = rate;
+                                                            ret_str = str;
+                                                        }
                                                         return {
-                                                            v: true
+                                                            v: new _promise2.default(function (resolve, reject) {
+                                                                return setTimeout(function () {
+                                                                    return resolve();
+                                                                }, 0);
+                                                            }).then(function () {
+                                                                return stockTest(raw_arr, loga, min, type, 0, true);
+                                                            }).then(function (temp) {
+                                                                if (temp === 'data miss') {
+                                                                    return _promise2.default.resolve(true);
+                                                                }
+                                                                var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                                    if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                                        lastest_rate = Number(tempM[3]);
+                                                                        lastest_type = type;
+                                                                    }
+                                                                }
+                                                                ret_str1.push(str);
+                                                            })
                                                         };
-                                                    }
-                                                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                                        if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                                            lastest_rate = Number(tempM[3]);
-                                                            lastest_type = type;
-                                                        }
-                                                    }
-                                                }();
+                                                    }();
 
-                                                if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
-                                            } else {
-                                                str = 'no less than mid point';
-                                            }
-                                            ret_str1.push(str);
-                                        };
-                                        for (var _i25 = 31; _i25 >= 0; _i25--) {
-                                            if (resultShow(_i25)) {
-                                                return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
-                                            }
-                                        }
-                                        year.forEach(function (v, i) {
-                                            console.log('year' + (+i + 1));
-                                            v.forEach(function (k) {
-                                                return console.log(k.str);
+                                                    if ((typeof _ret11 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret11)) === "object") return _ret11.v;
+                                                } else {
+                                                    str = 'no less than mid point';
+                                                    ret_str1.push(str);
+                                                }
                                             });
+                                        };
+                                        var loopShow = function loopShow(index) {
+                                            if (index >= 0) {
+                                                return resultShow(index).then(function (result) {
+                                                    if (result) {
+                                                        return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
+                                                    } else {
+                                                        return loopShow(index - 1);
+                                                    }
+                                                });
+                                            } else {
+                                                return _promise2.default.resolve();
+                                            }
+                                        };
+                                        return loopShow(31).then(function () {
+                                            year.forEach(function (v, i) {
+                                                console.log('year' + (+i + 1));
+                                                v.forEach(function (k) {
+                                                    return console.log(k.str);
+                                                });
+                                            });
+                                            ret_str1.forEach(function (v) {
+                                                return console.log(v);
+                                            });
+                                            if (!ret_str) {
+                                                ret_str = 'no less than mid point';
+                                            }
+                                            console.log(lastest_type);
+                                            //amount real strategy times stoploss (no less than mid point)
+                                            console.log('done');
+                                            return [interval_data, ret_str, lastest_type];
                                         });
-                                        ret_str1.forEach(function (v) {
-                                            return console.log(v);
-                                        });
-                                        if (!ret_str) {
-                                            ret_str = 'no less than mid point';
-                                        }
-                                        console.log(lastest_type);
-                                        //amount real strategy times stoploss (no less than mid point)
-                                        console.log('done');
-                                        return [interval_data, ret_str, lastest_type];
                                     });
                                 };
                                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: items[0].index }).then(function (item) {
@@ -4494,98 +4527,131 @@ exports.default = {
                                             var str = '';
                                             var testResult = [];
                                             var match = [];
-                                            var j = raw_arr.length - 1;
-                                            while (j > 199) {
-                                                var _temp13 = stockTest(raw_arr, loga, min, type, j, false, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
-                                                if (_temp13 === 'data miss') {
-                                                    return true;
-                                                }
-                                                var tempM = _temp13.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                                    testResult.push(_temp13);
-                                                    match.push(tempM);
-                                                }
-                                                j = _temp13.start + 1;
-                                            }
-                                            if (testResult.length > 0) {
-                                                var _ret12 = function () {
-                                                    testResult.forEach(function (v, i) {
-                                                        if (!year[i]) {
-                                                            year[i] = [];
+                                            var loopTest = function loopTest(j) {
+                                                if (j > 199) {
+                                                    return new _promise2.default(function (resolve, reject) {
+                                                        return setTimeout(function () {
+                                                            return resolve();
+                                                        }, 0);
+                                                    }).then(function () {
+                                                        return stockTest(raw_arr, loga, min, type, j, false, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
+                                                    }).then(function (temp) {
+                                                        if (temp === 'data miss') {
+                                                            return _promise2.default.resolve(true);
                                                         }
-                                                        year[i].push(v);
-                                                    });
-                                                    var rate = 1;
-                                                    var real = 1;
-                                                    var count = 0;
-                                                    var times = 0;
-                                                    var stoploss = 0;
-                                                    var maxloss = 0;
-                                                    match.forEach(function (v, i) {
-                                                        rate = rate * (Number(v[3]) + 100) / 100;
-                                                        /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                                                            lastest_rate = Number(v[3]);
-                                                            lastest_type = type;
-                                                        }*/
-                                                        real = real * (Number(v[4]) + 100) / 100;
-                                                        count++;
-                                                        times += Number(v[5]);
-                                                        stoploss += Number(v[6]);
-                                                        if (!maxloss || maxloss > +v[7]) {
-                                                            maxloss = +v[7];
+                                                        var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                            testResult.push(temp);
+                                                            match.push(tempM);
                                                         }
+                                                        return loopTest(temp.start + 1);
                                                     });
-                                                    str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
-                                                    rate = Math.round(rate * 10000 - 10000) / 100;
-                                                    real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                                    times = Math.round(times / count * 100) / 100;
-                                                    str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
-                                                    if (!best_rate || rate > best_rate) {
-                                                        best_rate = rate;
-                                                        ret_str = str;
-                                                    }
-                                                    var temp = stockTest(raw_arr, loga, min, type, 0, true, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
-                                                    if (temp === 'data miss') {
+                                                } else {
+                                                    return _promise2.default.resolve();
+                                                }
+                                            };
+                                            return loopTest(raw_arr.length - 1).then(function (result) {
+                                                if (result) {
+                                                    return _promise2.default.resolve(true);
+                                                }
+                                                if (testResult.length > 0) {
+                                                    var _ret12 = function () {
+                                                        testResult.forEach(function (v, i) {
+                                                            if (!year[i]) {
+                                                                year[i] = [];
+                                                            }
+                                                            year[i].push(v);
+                                                        });
+                                                        var rate = 1;
+                                                        var real = 1;
+                                                        var count = 0;
+                                                        var times = 0;
+                                                        var stoploss = 0;
+                                                        var maxloss = 0;
+                                                        match.forEach(function (v, i) {
+                                                            rate = rate * (Number(v[3]) + 100) / 100;
+                                                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                                lastest_rate = Number(v[3]);
+                                                                lastest_type = type;
+                                                            }*/
+                                                            real = real * (Number(v[4]) + 100) / 100;
+                                                            count++;
+                                                            times += Number(v[5]);
+                                                            stoploss += Number(v[6]);
+                                                            if (!maxloss || maxloss > +v[7]) {
+                                                                maxloss = +v[7];
+                                                            }
+                                                        });
+                                                        str = Math.round((+price - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
+                                                        rate = Math.round(rate * 10000 - 10000) / 100;
+                                                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                                        times = Math.round(times / count * 100) / 100;
+                                                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + min_vol;
+                                                        if (!best_rate || rate > best_rate) {
+                                                            best_rate = rate;
+                                                            ret_str = str;
+                                                        }
                                                         return {
-                                                            v: true
+                                                            v: new _promise2.default(function (resolve, reject) {
+                                                                return setTimeout(function () {
+                                                                    return resolve();
+                                                                }, 0);
+                                                            }).then(function () {
+                                                                return stockTest(raw_arr, loga, min, type, 0, true, 200, _constants.RANGE_INTERVAL, _constants.USSE_FEE);
+                                                            }).then(function (temp) {
+                                                                if (temp === 'data miss') {
+                                                                    return _promise2.default.resolve(true);
+                                                                }
+                                                                var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                                    if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                                        lastest_rate = Number(tempM[3]);
+                                                                        lastest_type = type;
+                                                                    }
+                                                                }
+                                                                ret_str1.push(str);
+                                                            })
                                                         };
-                                                    }
-                                                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                                        if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                                            lastest_rate = Number(tempM[3]);
-                                                            lastest_type = type;
-                                                        }
-                                                    }
-                                                }();
+                                                    }();
 
-                                                if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
-                                            } else {
-                                                str = 'no less than mid point';
-                                            }
-                                            ret_str1.push(str);
-                                        };
-                                        for (var _i26 = 31; _i26 >= 0; _i26--) {
-                                            if (resultShow(_i26)) {
-                                                return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
-                                            }
-                                        }
-                                        year.forEach(function (v, i) {
-                                            console.log('year' + (+i + 1));
-                                            v.forEach(function (k) {
-                                                return console.log(k.str);
+                                                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+                                                } else {
+                                                    str = 'no less than mid point';
+                                                    ret_str1.push(str);
+                                                }
                                             });
+                                        };
+                                        var loopShow = function loopShow(index) {
+                                            if (index >= 0) {
+                                                return resultShow(index).then(function (result) {
+                                                    if (result) {
+                                                        return (0, _utility.handleError)(new _utility.HoError(items[0].index + ' data miss!!!'));
+                                                    } else {
+                                                        return loopShow(index - 1);
+                                                    }
+                                                });
+                                            } else {
+                                                return _promise2.default.resolve();
+                                            }
+                                        };
+                                        return loopShow(31).then(function () {
+                                            year.forEach(function (v, i) {
+                                                console.log('year' + (+i + 1));
+                                                v.forEach(function (k) {
+                                                    return console.log(k.str);
+                                                });
+                                            });
+                                            ret_str1.forEach(function (v) {
+                                                return console.log(v);
+                                            });
+                                            if (!ret_str) {
+                                                ret_str = 'no less than mid point';
+                                            }
+                                            console.log(lastest_type);
+                                            //amount real strategy times stoploss (no less than mid point)
+                                            console.log('done');
+                                            return [interval_data, ret_str, lastest_type];
                                         });
-                                        ret_str1.forEach(function (v) {
-                                            return console.log(v);
-                                        });
-                                        if (!ret_str) {
-                                            ret_str = 'no less than mid point';
-                                        }
-                                        console.log(lastest_type);
-                                        //amount real strategy times stoploss (no less than mid point)
-                                        console.log('done');
-                                        return [interval_data, ret_str, lastest_type];
                                     });
                                 };
                                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: items[0].index }).then(function (item) {
@@ -4674,8 +4740,8 @@ exports.default = {
                                     var tmp_interval = [];
                                     var tmp_max = 0;
                                     var tmp_min = 0;
-                                    for (var _i27 = 0; _i27 < raw_data.length - 1; _i27++) {
-                                        var len = raw_data[_i27].split(',');
+                                    for (var _i25 = 0; _i25 < raw_data.length - 1; _i25++) {
+                                        var len = raw_data[_i25].split(',');
                                         var match = len[0].match(/^(\d+)\-(\d+)\-/);
                                         if (match[1] !== y || match[2] !== m) {
                                             if (y && m) {
@@ -4841,9 +4907,9 @@ exports.default = {
 
                             try {
                                 for (var _iterator10 = (0, _getIterator3.default)(group), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                                    var _i28 = _step10.value;
+                                    var _i26 = _step10.value;
 
-                                    if (_i28.end - _i28.start > 33) {
+                                    if (_i26.end - _i26.start > 33) {
                                         var _iteratorNormalCompletion11 = true;
                                         var _didIteratorError11 = false;
                                         var _iteratorError11 = undefined;
@@ -4872,7 +4938,7 @@ exports.default = {
                                         }
 
                                         return final_group;
-                                    } else if (_i28.end - _i28.start > 13) {
+                                    } else if (_i26.end - _i26.start > 13) {
                                         group_num++;
                                         if (group_num > 2) {
                                             var _iteratorNormalCompletion12 = true;
@@ -4958,8 +5024,8 @@ exports.default = {
                             }
                             console.log(min_vol);
                             var final_arr = [];
-                            for (var _i29 = 0; _i29 < 100; _i29++) {
-                                final_arr[_i29] = 0;
+                            for (var _i27 = 0; _i27 < 100; _i27++) {
+                                final_arr[_i27] = 0;
                             }
                             var diff = (max - min) / 100;
                             var _iteratorNormalCompletion13 = true;
@@ -4968,12 +5034,12 @@ exports.default = {
 
                             try {
                                 for (var _iterator13 = (0, _getIterator3.default)(raw_arr), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                    var _i32 = _step13.value;
+                                    var _i30 = _step13.value;
 
-                                    var e = Math.ceil((_i32.h - min) / diff);
-                                    var s = Math.floor((_i32.l - min) / diff);
+                                    var e = Math.ceil((_i30.h - min) / diff);
+                                    var s = Math.floor((_i30.l - min) / diff);
                                     for (var j = s; j < e; j++) {
-                                        final_arr[j] += _i32.v;
+                                        final_arr[j] += _i30.v;
                                     }
                                 }
                             } catch (err) {
@@ -4995,11 +5061,11 @@ exports.default = {
                                 return a - b;
                             });
                             var interval = null;
-                            for (var _i30 = 19; _i30 > 0; _i30--) {
-                                interval = group_interval(_i30, 5, final_arr, sort_arr);
+                            for (var _i28 = 19; _i28 > 0; _i28--) {
+                                interval = group_interval(_i28, 5, final_arr, sort_arr);
                                 if (interval) {
                                     console.log(interval);
-                                    console.log(_i30);
+                                    console.log(_i28);
                                     break;
                                 }
                             }
@@ -5008,11 +5074,11 @@ exports.default = {
                                 var lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                 var fint = lint;
                                 var ret_str = llow + ' -' + Math.ceil((interval[0].end * diff + min) * 100) / 100;
-                                for (var _i31 = 1; _i31 < interval.length; _i31++) {
-                                    llow = Math.ceil(((interval[_i31].start - 1) * diff + min) * 100) / 100;
+                                for (var _i29 = 1; _i29 < interval.length; _i29++) {
+                                    llow = Math.ceil(((interval[_i29].start - 1) * diff + min) * 100) / 100;
                                     lint = Math.abs(Math.ceil(llow / price * 100) - 100);
                                     fint = lint < fint ? lint : fint;
-                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i31].end * diff + min) * 100) / 100;
+                                    ret_str = ret_str + ', ' + llow + '-' + Math.ceil((interval[_i29].end * diff + min) * 100) / 100;
                                 }
                                 ret_str = ret_str + ' ' + start_month + ' ' + raw_arr.length + ' ' + min_vol + ' ' + fint;
                                 console.log('done');
@@ -5418,11 +5484,7 @@ exports.default = {
                     }
                     (0, _utility.handleError)(err, 'Stock filter');
                 }).then(function () {
-                    return new _promise2.default(function (resolve, reject) {
-                        return setTimeout(function () {
-                            return resolve(stage3(iIndex + 1));
-                        }, 10000);
-                    });
+                    return stage3(iIndex + 1);
                 }) : _promise2.default.resolve();
             };
             console.log('stage three');
@@ -7093,18 +7155,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                             if (Number(index)) {
                                                 var exist = false;
 
-                                                var _loop5 = function _loop5(_i33) {
-                                                    if (stock_list[_i33].index === index) {
+                                                var _loop5 = function _loop5(_i31) {
+                                                    if (stock_list[_i31].index === index) {
                                                         exist = true;
                                                         tag.forEach(function (v) {
-                                                            return stock_list[_i33].tag.push(v);
+                                                            return stock_list[_i31].tag.push(v);
                                                         });
                                                         return 'break';
                                                     }
                                                 };
 
-                                                for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
-                                                    var _ret21 = _loop5(_i33);
+                                                for (var _i31 = 0; _i31 < stock_list.length; _i31++) {
+                                                    var _ret21 = _loop5(_i31);
 
                                                     if (_ret21 === 'break') break;
                                                 }
@@ -8130,24 +8192,24 @@ var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
     }
     var volsum = 0;
     var maxlen = len && stair_start + len < raw_arr.length ? stair_start + len : raw_arr.length;
-    for (var _i34 = stair_start; _i34 < maxlen; _i34++) {
+    for (var _i32 = stair_start; _i32 < maxlen; _i32++) {
         var s = 0;
         var e = 100;
         for (var _j10 = 0; _j10 < 100; _j10++) {
-            if (raw_arr[_i34].l >= loga.arr[_j10]) {
+            if (raw_arr[_i32].l >= loga.arr[_j10]) {
                 s = _j10;
             }
-            if (raw_arr[_i34].h <= loga.arr[_j10]) {
+            if (raw_arr[_i32].h <= loga.arr[_j10]) {
                 e = _j10;
                 break;
             }
         }
-        volsum += raw_arr[_i34].v;
-        single_arr.push((raw_arr[_i34].h - raw_arr[_i34].l) / raw_arr[_i34].h * 100);
+        volsum += raw_arr[_i32].v;
+        single_arr.push((raw_arr[_i32].h - raw_arr[_i32].l) / raw_arr[_i32].h * 100);
         if (e - s === 0) {
-            final_arr[s] += raw_arr[_i34].v;
+            final_arr[s] += raw_arr[_i32].v;
         } else {
-            var v = raw_arr[_i34].v / (e - s);
+            var v = raw_arr[_i32].v / (e - s);
             for (var _j11 = s; _j11 < e; _j11++) {
                 final_arr[_j11] += v;
             }
@@ -8311,16 +8373,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
-        if (webArr[_i35] >= 0) {
+    for (var _i33 = mid - 1; _i33 >= 0; _i33--) {
+        if (webArr[_i33] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i35]);
+                new_arr.splice(0, 0, webArr[_i33]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i35]);
+            new_arr.splice(0, 0, webArr[_i33]);
         }
     }
     return {

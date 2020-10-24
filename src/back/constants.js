@@ -948,3 +948,6 @@ export const STOCK_INDEX = {
         },
     ],
 }
+
+export const TD_AUTH_URL = 'https://auth.tdameritrade.com/auth?';
+export const TD_TOKEN_URL = 'https://api.tdameritrade.com/v1/oauth2/token';

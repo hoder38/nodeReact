@@ -276,152 +276,177 @@ var calWeb = exports.calWeb = function calWeb(curArr) {
                 var testResult = [];
                 var match = [];
                 //let j = Math.floor((raw_arr.length - 1) / 2);
-                var j = raw_arr.length - 240 * 3;
                 //console.log('start');
-                while (j > 239) {
-                    //console.log(j);
-                    var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
-                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                        testResult.push(temp);
-                        match.push(tempM);
-                    }
-                    j = temp.start + 1;
-                }
-                if (testResult.length > 0) {
-                    var _ret = function () {
-                        testResult.forEach(function (v, i) {
-                            if (!month[i]) {
-                                month[i] = [];
+                var loopTest = function loopTest(j) {
+                    if (j > 239) {
+                        //console.log(j);
+                        return new _promise2.default(function (resolve, reject) {
+                            return setTimeout(function () {
+                                return resolve();
+                            }, 0);
+                        }).then(function () {
+                            return (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, false, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
+                        }).then(function (temp) {
+                            var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                            if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                testResult.push(temp);
+                                match.push(tempM);
                             }
-                            month[i].push(v);
-                        });
-                        var rate = 1;
-                        var real = 1;
-                        var count = 0;
-                        var times = 0;
-                        var stoploss = 0;
-                        var maxloss = 0;
-                        match.forEach(function (v, i) {
-                            rate = rate * (Number(v[3]) + 100) / 100;
-                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                                lastest_rate = Number(v[3]);
-                                lastest_type = type;
-                            }*/
-                            real = real * (Number(v[4]) + 100) / 100;
-                            count++;
-                            times += Number(v[5]);
-                            stoploss += Number(v[6]);
-                            if (!maxloss || maxloss > +v[7]) {
-                                maxloss = +v[7];
-                            }
-                        });
-                        str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
-                        rate = Math.round(rate * 10000 - 10000) / 100;
-                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                        times = Math.round(times / count * 100) / 100;
-                        str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + Math.round(min_vol * 100) / 100;
-                        if (!best_rate || rate > best_rate) {
-                            best_rate = rate;
-                            ret_str = str;
-                        }
-                        var temp = (0, _stockTool.stockTest)(raw_arr, loga, min, type, j, true, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
-                        if (temp === 'data miss') {
-                            return {
-                                v: true
-                            };
-                        }
-                        var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                lastest_rate = Number(tempM[3]);
-                                lastest_type = type;
-                            }
-                        }
-                    }();
-
-                    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
-                } else {
-                    str = 'no less than mid point';
-                }
-                ret_str1.push(str);
-            };
-            for (var i = 31; i >= 0; i--) {
-                resultShow(i);
-            }
-            month.forEach(function (v, i) {
-                console.log('month' + (+i + 1));
-                v.forEach(function (k) {
-                    return console.log(k.str);
-                });
-            });
-            ret_str1.forEach(function (v) {
-                return console.log(v);
-            });
-            if (!ret_str) {
-                ret_str = 'no less than mid point';
-            }
-            console.log(lastest_type);
-            console.log('done');
-            (0, _redisTool2.default)('hmset', 'bitfinex: ' + curArr[index], {
-                str: ret_str
-            }).catch(function (err) {
-                return (0, _utility.handleError)(err, 'Redis');
-            });
-            var updateWeb = function updateWeb() {
-                return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: curArr[index] }).then(function (item) {
-                    console.log(item);
-                    if (item.length < 1) {
-                        return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
-                            sType: 1,
-                            index: curArr[index],
-                            name: curArr[index].substr(1),
-                            type: _constants.FUSD_SYM,
-                            web: web.arr,
-                            wType: lastest_type,
-                            mid: web.mid
-                        }).then(function (items) {
-                            return console.log(items);
+                            return loopTest(temp.start + 1);
                         });
                     } else {
-                        var _ret2 = function () {
-                            var recur_update = function recur_update(i) {
-                                if (i >= item.length) {
-                                    return _promise2.default.resolve();
-                                } else {
-                                    if (!item[i].owner) {
-                                        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
-                                                web: web.arr,
-                                                wType: lastest_type,
-                                                mid: web.mid
-                                            } }).then(function (items) {
-                                            console.log(items);
-                                            return recur_update(i + 1);
-                                        });
-                                    } else {
-                                        var maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-                                        return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
-                                                web: web.arr,
-                                                wType: lastest_type,
-                                                mid: web.mid,
-                                                times: Math.floor(item[i].orig / maxAmount * 10000) / 10000
-                                            } }).then(function (items) {
-                                            console.log(items);
-                                            return recur_update(i + 1);
-                                        });
-                                    }
+                        return _promise2.default.resolve(j);
+                    }
+                };
+                return loopTest(raw_arr.length - 240 * 3).then(function (result) {
+                    if (testResult.length > 0) {
+                        var _ret = function () {
+                            testResult.forEach(function (v, i) {
+                                if (!month[i]) {
+                                    month[i] = [];
                                 }
-                            };
+                                month[i].push(v);
+                            });
+                            var rate = 1;
+                            var real = 1;
+                            var count = 0;
+                            var times = 0;
+                            var stoploss = 0;
+                            var maxloss = 0;
+                            match.forEach(function (v, i) {
+                                rate = rate * (Number(v[3]) + 100) / 100;
+                                /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                    lastest_rate = Number(v[3]);
+                                    lastest_type = type;
+                                }*/
+                                real = real * (Number(v[4]) + 100) / 100;
+                                count++;
+                                times += Number(v[5]);
+                                stoploss += Number(v[6]);
+                                if (!maxloss || maxloss > +v[7]) {
+                                    maxloss = +v[7];
+                                }
+                            });
+                            str = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100 + '% ' + Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2);
+                            rate = Math.round(rate * 10000 - 10000) / 100;
+                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                            times = Math.round(times / count * 100) / 100;
+                            str += ' ' + rate + '% ' + real + '% ' + times + ' ' + stoploss + ' ' + maxloss + '% ' + raw_arr.length + ' ' + Math.round(min_vol * 100) / 100;
+                            if (!best_rate || rate > best_rate) {
+                                best_rate = rate;
+                                ret_str = str;
+                            }
                             return {
-                                v: recur_update(0)
+                                v: new _promise2.default(function (resolve, reject) {
+                                    return setTimeout(function () {
+                                        return resolve();
+                                    }, 0);
+                                }).then(function () {
+                                    return (0, _stockTool.stockTest)(raw_arr, loga, min, type, result, true, 240, _constants.RANGE_BITFINEX_INTERVAL, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL, 24, 1);
+                                }).then(function (temp) {
+                                    var tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                    if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                        if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                            lastest_rate = Number(tempM[3]);
+                                            lastest_type = type;
+                                        }
+                                    }
+                                    ret_str1.push(str);
+                                })
                             };
                         }();
 
-                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+                    } else {
+                        str = 'no less than mid point';
+                        ret_str1.push(str);
                     }
                 });
             };
-            return updateWeb();
+            var loopShow = function loopShow(index) {
+                if (index >= 0) {
+                    return resultShow(index).then(function () {
+                        return loopShow(index - 1);
+                    });
+                } else {
+                    return _promise2.default.resolve();
+                }
+            };
+            return loopShow(31).then(function () {
+                month.forEach(function (v, i) {
+                    console.log('month' + (+i + 1));
+                    v.forEach(function (k) {
+                        return console.log(k.str);
+                    });
+                });
+                ret_str1.forEach(function (v) {
+                    return console.log(v);
+                });
+                if (!ret_str) {
+                    ret_str = 'no less than mid point';
+                }
+                console.log(lastest_type);
+                console.log('done');
+                (0, _redisTool2.default)('hmset', 'bitfinex: ' + curArr[index], {
+                    str: ret_str
+                }).catch(function (err) {
+                    return (0, _utility.handleError)(err, 'Redis');
+                });
+                var updateWeb = function updateWeb() {
+                    return (0, _mongoTool2.default)('find', _constants.TOTALDB, { index: curArr[index] }).then(function (item) {
+                        console.log(item);
+                        if (item.length < 1) {
+                            return (0, _mongoTool2.default)('insert', _constants.TOTALDB, {
+                                sType: 1,
+                                index: curArr[index],
+                                name: curArr[index].substr(1),
+                                type: _constants.FUSD_SYM,
+                                web: web.arr,
+                                wType: lastest_type,
+                                mid: web.mid
+                            }).then(function (items) {
+                                return console.log(items);
+                            });
+                        } else {
+                            var _ret2 = function () {
+                                var recur_update = function recur_update(i) {
+                                    if (i >= item.length) {
+                                        return _promise2.default.resolve();
+                                    } else {
+                                        if (!item[i].owner) {
+                                            return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
+                                                    web: web.arr,
+                                                    wType: lastest_type,
+                                                    mid: web.mid
+                                                } }).then(function (items) {
+                                                console.log(items);
+                                                return recur_update(i + 1);
+                                            });
+                                        } else {
+                                            var maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                                            return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[i]._id }, { $set: {
+                                                    web: web.arr,
+                                                    wType: lastest_type,
+                                                    mid: web.mid,
+                                                    times: Math.floor(item[i].orig / maxAmount * 10000) / 10000
+                                                } }).then(function (items) {
+                                                console.log(items);
+                                                return recur_update(i + 1);
+                                            });
+                                        }
+                                    }
+                                };
+                                return {
+                                    v: recur_update(0)
+                                };
+                            }();
+
+                            if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                        }
+                    });
+                };
+                return updateWeb();
+            });
         });
     };
     //return recurPrice(0).then(() => recurType(0));

@@ -3571,88 +3571,109 @@ export default {
                                     let str = '';
                                     const testResult = [];
                                     const match = [];
-                                    let j = raw_arr.length - 1;
-                                    while (j > 199) {
-                                        const temp = stockTest(raw_arr, loga, min, type, j);
-                                        if (temp === 'data miss') {
-                                            return true;
+                                    const loopTest = j => {
+                                        if (j > 199) {
+                                            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, j)).then(temp => {
+                                                if (temp === 'data miss') {
+                                                    return Promise.resolve(true);
+                                                }
+                                                const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                    testResult.push(temp);
+                                                    match.push(tempM);
+                                                }
+                                                return loopTest(temp.start + 1);
+                                            });
+                                        } else {
+                                            return Promise.resolve();
                                         }
-                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                            testResult.push(temp);
-                                            match.push(tempM);
-                                        }
-                                        j = temp.start + 1;
                                     }
-                                    if (testResult.length > 0) {
-                                        testResult.forEach((v, i) => {
-                                            if (!year[i]) {
-                                                year[i] = [];
+                                    return loopTest(raw_arr.length - 1).then(result => {
+                                        if (result) {
+                                            return Promise.resolve(true);
+                                        }
+                                        if (testResult.length > 0) {
+                                            testResult.forEach((v, i) => {
+                                                if (!year[i]) {
+                                                    year[i] = [];
+                                                }
+                                                year[i].push(v);
+                                            });
+                                            let rate = 1;
+                                            let real = 1;
+                                            let count = 0;
+                                            let times = 0;
+                                            let stoploss = 0;
+                                            let maxloss = 0;
+                                            match.forEach((v, i) => {
+                                                rate = rate * (Number(v[3]) + 100) / 100;
+                                                /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                    lastest_rate = Number(v[3]);
+                                                    lastest_type = type;
+                                                }*/
+                                                real = real * (Number(v[4]) + 100) / 100;
+                                                count++;
+                                                times += Number(v[5]);
+                                                stoploss += Number(v[6]);
+                                                if (!maxloss || maxloss > +v[7]) {
+                                                    maxloss = +v[7];
+                                                }
+                                            });
+                                            str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
+                                            rate = Math.round(rate * 10000 - 10000) / 100;
+                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                            times = Math.round(times / count * 100) / 100;
+                                            str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
+                                            if (!best_rate || rate > best_rate) {
+                                                best_rate = rate;
+                                                ret_str = str;
                                             }
-                                            year[i].push(v);
+                                            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true)).then(temp => {
+                                                if (temp === 'data miss') {
+                                                    return Promise.resolve(true);
+                                                }
+                                                const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                    if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                        lastest_rate = Number(tempM[3]);
+                                                        lastest_type = type;
+                                                    }
+                                                }
+                                                ret_str1.push(str);
+                                            });
+                                        } else {
+                                            str = 'no less than mid point';
+                                            ret_str1.push(str);
+                                        }
+                                    });
+                                }
+                                const loopShow = index => {
+                                    if (index >= 0) {
+                                        return resultShow(index).then(result => {
+                                            if (result) {
+                                                return handleError(new HoError(`${items[0].index} data miss!!!`));
+                                            } else {
+                                                return loopShow(index - 1);
+                                            }
                                         });
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        let times = 0;
-                                        let stoploss = 0;
-                                        let maxloss = 0;
-                                        match.forEach((v, i) => {
-                                            rate = rate * (Number(v[3]) + 100) / 100;
-                                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                                                lastest_rate = Number(v[3]);
-                                                lastest_type = type;
-                                            }*/
-                                            real = real * (Number(v[4]) + 100) / 100;
-                                            count++;
-                                            times += Number(v[5]);
-                                            stoploss += Number(v[6]);
-                                            if (!maxloss || maxloss > +v[7]) {
-                                                maxloss = +v[7];
-                                            }
-                                        });
-                                        str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
-                                        rate = Math.round(rate * 10000 - 10000) / 100;
-                                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                        times = Math.round(times / count * 100) / 100;
-                                        str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
-                                        if (!best_rate || rate > best_rate) {
-                                            best_rate = rate;
-                                            ret_str = str;
-                                        }
-                                        const temp = stockTest(raw_arr, loga, min, type, 0, true);
-                                        if (temp === 'data miss') {
-                                            return true;
-                                        }
-                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                                lastest_rate = Number(tempM[3]);
-                                                lastest_type = type;
-                                            }
-                                        }
                                     } else {
-                                        str = 'no less than mid point';
-                                    }
-                                    ret_str1.push(str);
-                                }
-                                for (let i = 31; i >= 0; i--) {
-                                    if (resultShow(i)) {
-                                        return handleError(new HoError(`${items[0].index} data miss!!!`));
+                                        return Promise.resolve();
                                     }
                                 }
-                                year.forEach((v, i) => {
-                                    console.log('year' + (+i + 1));
-                                    v.forEach(k => console.log(k.str));
+                                return loopShow(31).then(() => {
+                                    year.forEach((v, i) => {
+                                        console.log('year' + (+i + 1));
+                                        v.forEach(k => console.log(k.str));
+                                    });
+                                    ret_str1.forEach(v => console.log(v));
+                                    if (!ret_str) {
+                                        ret_str = 'no less than mid point';
+                                    }
+                                    console.log(lastest_type);
+                                    //amount real strategy times stoploss (no less than mid point)
+                                    console.log('done');
+                                    return [interval_data, ret_str, lastest_type];
                                 });
-                                ret_str1.forEach(v => console.log(v));
-                                if (!ret_str) {
-                                    ret_str = 'no less than mid point';
-                                }
-                                console.log(lastest_type);
-                                //amount real strategy times stoploss (no less than mid point)
-                                console.log('done');
-                                return [interval_data, ret_str, lastest_type];
                             });
                             return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
                                 const recur_web = (index, type) => {
@@ -3889,88 +3910,109 @@ export default {
                                     let str = '';
                                     const testResult = [];
                                     const match = [];
-                                    let j = raw_arr.length - 1;
-                                    while (j > 199) {
-                                        const temp = stockTest(raw_arr, loga, min, type, j, false, 200, RANGE_INTERVAL, USSE_FEE);
-                                        if (temp === 'data miss') {
-                                            return true;
+                                    const loopTest = j => {
+                                        if (j > 199) {
+                                            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, j, false, 200, RANGE_INTERVAL, USSE_FEE)).then(temp => {
+                                                if (temp === 'data miss') {
+                                                    return Promise.resolve(true);
+                                                }
+                                                const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                    testResult.push(temp);
+                                                    match.push(tempM);
+                                                }
+                                                return loopTest(temp.start + 1);
+                                            });
+                                        } else {
+                                            return Promise.resolve();
                                         }
-                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                            testResult.push(temp);
-                                            match.push(tempM);
-                                        }
-                                        j = temp.start + 1;
                                     }
-                                    if (testResult.length > 0) {
-                                        testResult.forEach((v, i) => {
-                                            if (!year[i]) {
-                                                year[i] = [];
+                                    return loopTest(raw_arr.length - 1).then(result => {
+                                        if (result) {
+                                            return Promise.resolve(true);
+                                        }
+                                        if (testResult.length > 0) {
+                                            testResult.forEach((v, i) => {
+                                                if (!year[i]) {
+                                                    year[i] = [];
+                                                }
+                                                year[i].push(v);
+                                            });
+                                            let rate = 1;
+                                            let real = 1;
+                                            let count = 0;
+                                            let times = 0;
+                                            let stoploss = 0;
+                                            let maxloss = 0;
+                                            match.forEach((v, i) => {
+                                                rate = rate * (Number(v[3]) + 100) / 100;
+                                                /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
+                                                    lastest_rate = Number(v[3]);
+                                                    lastest_type = type;
+                                                }*/
+                                                real = real * (Number(v[4]) + 100) / 100;
+                                                count++;
+                                                times += Number(v[5]);
+                                                stoploss += Number(v[6]);
+                                                if (!maxloss || maxloss > +v[7]) {
+                                                    maxloss = +v[7];
+                                                }
+                                            });
+                                            str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
+                                            rate = Math.round(rate * 10000 - 10000) / 100;
+                                            real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
+                                            times = Math.round(times / count * 100) / 100;
+                                            str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
+                                            if (!best_rate || rate > best_rate) {
+                                                best_rate = rate;
+                                                ret_str = str;
                                             }
-                                            year[i].push(v);
+                                            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE)).then(temp => {
+                                                if (temp === 'data miss') {
+                                                    return Promise.resolve(true);
+                                                }
+                                                const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
+                                                if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
+                                                    if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
+                                                        lastest_rate = Number(tempM[3]);
+                                                        lastest_type = type;
+                                                    }
+                                                }
+                                                ret_str1.push(str);
+                                            });
+                                        } else {
+                                            str = 'no less than mid point';
+                                            ret_str1.push(str);
+                                        }
+                                    });
+                                }
+                                const loopShow = index => {
+                                    if (index >= 0) {
+                                        return resultShow(index).then(result => {
+                                            if (result) {
+                                                return handleError(new HoError(`${items[0].index} data miss!!!`));
+                                            } else {
+                                                return loopShow(index - 1);
+                                            }
                                         });
-                                        let rate = 1;
-                                        let real = 1;
-                                        let count = 0;
-                                        let times = 0;
-                                        let stoploss = 0;
-                                        let maxloss = 0;
-                                        match.forEach((v, i) => {
-                                            rate = rate * (Number(v[3]) + 100) / 100;
-                                            /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                                                lastest_rate = Number(v[3]);
-                                                lastest_type = type;
-                                            }*/
-                                            real = real * (Number(v[4]) + 100) / 100;
-                                            count++;
-                                            times += Number(v[5]);
-                                            stoploss += Number(v[6]);
-                                            if (!maxloss || maxloss > +v[7]) {
-                                                maxloss = +v[7];
-                                            }
-                                        });
-                                        str = `${Math.round((+price - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
-                                        rate = Math.round(rate * 10000 - 10000) / 100;
-                                        real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                                        times = Math.round(times / count * 100) / 100;
-                                        str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
-                                        if (!best_rate || rate > best_rate) {
-                                            best_rate = rate;
-                                            ret_str = str;
-                                        }
-                                        const temp = stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE);
-                                        if (temp === 'data miss') {
-                                            return true;
-                                        }
-                                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                                lastest_rate = Number(tempM[3]);
-                                                lastest_type = type;
-                                            }
-                                        }
                                     } else {
-                                        str = 'no less than mid point';
-                                    }
-                                    ret_str1.push(str);
-                                }
-                                for (let i = 31; i >= 0; i--) {
-                                    if (resultShow(i)) {
-                                        return handleError(new HoError(`${items[0].index} data miss!!!`));
+                                        return Promise.resolve();
                                     }
                                 }
-                                year.forEach((v, i) => {
-                                    console.log('year' + (+i + 1));
-                                    v.forEach(k => console.log(k.str));
+                                return loopShow(31).then(() => {
+                                    year.forEach((v, i) => {
+                                        console.log('year' + (+i + 1));
+                                        v.forEach(k => console.log(k.str));
+                                    });
+                                    ret_str1.forEach(v => console.log(v));
+                                    if (!ret_str) {
+                                        ret_str = 'no less than mid point';
+                                    }
+                                    console.log(lastest_type);
+                                    //amount real strategy times stoploss (no less than mid point)
+                                    console.log('done');
+                                    return [interval_data, ret_str, lastest_type];
                                 });
-                                ret_str1.forEach(v => console.log(v));
-                                if (!ret_str) {
-                                    ret_str = 'no less than mid point';
-                                }
-                                console.log(lastest_type);
-                                //amount real strategy times stoploss (no less than mid point)
-                                console.log('done');
-                                return [interval_data, ret_str, lastest_type];
                             });
                             return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
                                 const recur_web = (index, type) => {
@@ -4574,7 +4616,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
-            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(stage3(iIndex + 1)), 10000))) : Promise.resolve();
+            }).then(() => stage3(iIndex + 1)) : Promise.resolve();
             console.log('stage three');
             return (option['twse'].interval || option['usse'].interval || option['twse'].vol || option['usse'].vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
         }).then(filterList => {

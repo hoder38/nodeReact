@@ -429,7 +429,7 @@ var checkOauth = function checkOauth() {
 
 var setToken = function setToken() {
     oauth2Client.setCredentials(tokens);
-    return tokens.expiry_date < Date.now() - 600000 ? new _promise2.default(function (resolve, reject) {
+    return tokens.expiry_date < Date.now() + 600000 ? new _promise2.default(function (resolve, reject) {
         return oauth2Client.refreshAccessToken(function (err, refresh_tokens) {
             return err ? reject(err) : resolve(refresh_tokens);
         });
