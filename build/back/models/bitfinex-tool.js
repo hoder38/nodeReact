@@ -2075,6 +2075,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                         }).then(function () {
                                                             return submitOrderBuy(quotaChk - 1);
                                                         });
+                                                    } else if (msg.includes('minimum size')) {
+                                                        return _promise2.default.resolve();
                                                     } else {
                                                         throw err;
                                                     }
@@ -2149,7 +2151,14 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }, userRest);
                                     return {
                                         v: {
-                                            v: or.submit().then(function () {
+                                            v: or.submit().catch(function (err) {
+                                                var msg = err.message || err.msg;
+                                                if (msg.includes('minimum size')) {
+                                                    return _promise2.default.resolve();
+                                                } else {
+                                                    throw err;
+                                                }
+                                            }).then(function () {
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
                                                         return resolve();

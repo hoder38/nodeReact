@@ -1784,6 +1784,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 //sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                 handleError(err, `${id} Total Updata Error`);
                                                 return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => submitOrderBuy(quotaChk - 1));
+                                            } else if (msg.includes('minimum size')) {
+                                                return Promise.resolve();
                                             } else {
                                                 throw err;
                                             }
@@ -1842,7 +1844,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 price: suggestion.sell,
                                 flags: 1024,
                             }, userRest);
-                            return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                            return or.submit().catch(err => {
+                                const msg = err.message || err.msg;
+                                if (msg.includes('minimum size')) {
+                                    return Promise.resolve();
+                                } else {
+                                    throw err;
+                                }
+                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                 let isExist = false;
                                 for (let i = 0; i < order[id][current.type].length; i++) {
                                     if (or[0].id === order[id][current.type][i].id) {

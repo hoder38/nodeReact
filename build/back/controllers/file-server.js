@@ -109,6 +109,7 @@ var server = (0, _https.createServer)(credentials, app);
 (0, _background.setUserOffer)();
 (0, _background.checkSetOffer)();
 (0, _background.filterBitfinex)();
+(0, _background.usseTicker)();
 
 app.use((0, _bodyParser.urlencoded)({ extended: true }));
 app.use((0, _bodyParser.json)({ extended: true }));

@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.filterBitfinex = exports.checkSetOffer = exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.usseTicker = exports.filterBitfinex = exports.checkSetOffer = exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
@@ -46,6 +46,8 @@ var _apiToolPlaylist2 = _interopRequireDefault(_apiToolPlaylist);
 var _apiToolGoogle = require('../models/api-tool-google');
 
 var _apiToolGoogle2 = _interopRequireDefault(_apiToolGoogle);
+
+var _tdameritradeTool = require('../models/tdameritrade-tool');
 
 var _cmd = require('./cmd');
 
@@ -602,5 +604,17 @@ var filterBitfinex = exports.filterBitfinex = function filterBitfinex() {
         }();
 
         if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
+    }
+};
+
+var usseTicker = exports.usseTicker = function usseTicker() {
+    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE)) {
+        return new _promise2.default(function (resolve, reject) {
+            return setTimeout(function () {
+                return resolve();
+            }, 50000);
+        }).then(function () {
+            return (0, _tdameritradeTool.usseTDTicker)();
+        });
     }
 };

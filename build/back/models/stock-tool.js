@@ -65,6 +65,8 @@ var _apiTool = require('./api-tool');
 
 var _apiTool2 = _interopRequireDefault(_apiTool);
 
+var _tdameritradeTool = require('../models/tdameritrade-tool');
+
 var _utility = require('../util/utility');
 
 var _mime = require('../util/mime');
@@ -220,9 +222,9 @@ var getStockPrice = function getStockPrice() {
                         }
                         price[0] = +price[0];
                         if (!price_only) {
-                            var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
-                            if (up && up[0]) {
-                                price[0] = price[0] + ' ' + up[0];
+                            var _up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
+                            if (_up && _up[0]) {
+                                price[0] = price[0] + ' ' + _up[0];
                             }
                         }
                         console.log(price[0]);
@@ -241,12 +243,20 @@ var getStockPrice = function getStockPrice() {
                 };
                 break;
             case 'usse':
-                return {
-                    v: getUsStock(index).then(function (ret) {
-                        console.log(ret.price);
-                        return ret.price;
-                    })
-                };
+                var up = (0, _tdameritradeTool.getUssePrice)();
+                if (up[index] && new Date().getTime() / 1000 - up[index].t < 1800) {
+                    console.log(up[index]);
+                    return {
+                        v: up[index].p
+                    };
+                } else {
+                    return {
+                        v: getUsStock(index).then(function (ret) {
+                            console.log(ret.price);
+                            return ret.price;
+                        })
+                    };
+                }
                 break;
             default:
                 return {
@@ -2022,7 +2032,7 @@ var getBasicStockData = function getBasicStockData(type, index) {
                 break;
             case 'usse':
                 var real1 = function real1() {
-                    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index, { timeout: 3000 }).then(function (raw_data) {
+                    return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/profile?p=' + index).then(function (raw_data) {
                         var result = { stock_location: ['us', '美國'], stock_index: index };
                         var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
                         var mn = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
@@ -4724,7 +4734,7 @@ exports.default = {
                                     }
                                 }
                             }
-                            return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split', { timeout: 3000 }).then(function (raw_data) {
+                            return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=split').then(function (raw_data) {
                                 if (raw_data.split("\n").length > 1) {
                                     raw_arr = [];
                                     interval_data = null;
@@ -4733,7 +4743,7 @@ exports.default = {
                                     min = 0;
                                     end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                                 }
-                                return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history', { timeout: 3000 }).then(function (raw_data) {
+                                return (0, _apiTool2.default)('url', 'https://query1.finance.yahoo.com/v7/finance/download/' + items[0].index + '?period1=' + end_get + '&period2=' + start_get + '&interval=1d&events=history').then(function (raw_data) {
                                     raw_data = raw_data.split("\n").reverse();
                                     var y = '';
                                     var m = '';
@@ -6900,6 +6910,12 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
 
 var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
+        var gp = (0, _tdameritradeTool.getUssePrice)();
+        items.forEach(function (t) {
+            if (t.setype === 'usse' && !gp[t.index]) {
+                (0, _tdameritradeTool.usseSubStock)([t.index]);
+            }
+        });
         var recur_price = function recur_price(index) {
             return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
                 if (price === 0) {
@@ -7338,8 +7354,10 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     pP--;
                 }
             }
-            nowBP = previousP > nowBP ? previousP : nowBP;
-            bP = pP > bP ? pP : bP;
+            if (pCount !== 0) {
+                nowBP = previousP > nowBP ? previousP : nowBP;
+                bP = pP > bP ? pP : bP;
+            }
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -7417,8 +7435,10 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     _pP--;
                 }
             }
-            nowBP = _previousP > nowBP ? _previousP : nowBP;
-            bP = _pP > bP ? _pP : bP;
+            if (pCount !== 0) {
+                nowBP = _previousP > nowBP ? _previousP : nowBP;
+                bP = _pP > bP ? _pP : bP;
+            }
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
@@ -8476,7 +8496,7 @@ var getUsStock = function getUsStock(index) {
     }
     var count = 0;
     var real = function real() {
-        return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index, { timeout: 3000 }).then(function (raw_data) {
+        return (0, _apiTool2.default)('url', 'https://finance.yahoo.com/quote/' + index + '/key-statistics?p=' + index).then(function (raw_data) {
             var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             if (stat.indexOf('price') !== -1) {
                 var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];

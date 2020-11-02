@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER } from '../config'
+import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER } from '../config'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants'
 import Mongo from '../models/mongo-tool'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
@@ -9,6 +9,7 @@ import External from '../models/external-tool'
 import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
+import { usseTDTicker } from '../models/tdameritrade-tool'
 import { dbDump } from './cmd'
 import { handleError, completeZero } from '../util/utility'
 import sendWs from '../util/sendWs'
@@ -273,5 +274,13 @@ export const filterBitfinex = () => {
     if (BITFINEX_FILTER(ENV_TYPE)) {
         const cW = () => calWeb(SUPPORT_PAIR[FUSD_SYM]).catch(err => bgError(err, 'Loop bitfinex filter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => cW());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 80000)).then(() => cW());
+    }
+}
+
+export const usseTicker = () => {
+    if (USSE_TICKER(ENV_TYPE)) {
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 50000)).then(() => {
+            return usseTDTicker();
+        });
     }
 }

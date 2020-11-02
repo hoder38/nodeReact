@@ -42,3 +42,4 @@ export const CHECK_STOCK = env => env === RELEASE ? ReleaseConfig.CHECK_STOCK : 
 export const BITFINEX_LOAN = env => env === RELEASE ? ReleaseConfig.BITFINEX_LOAN : DevConfig.BITFINEX_LOAN
 export const BITFINEX_FILTER = env => env === RELEASE ? ReleaseConfig.BITFINEX_FILTER : DevConfig.BITFINEX_FILTER
 export const BITFINEX_ORDER = env => env === RELEASE ? ReleaseConfig.BITFINEX_ORDER : DevConfig.BITFINEX_ORDER
+export const USSE_TICKER = env => env === RELEASE ? ReleaseConfig.USSE_TICKER : DevConfig.USSE_TICKER

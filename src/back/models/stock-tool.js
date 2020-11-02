@@ -8,6 +8,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
+import { getUssePrice, usseSubStock } from '../models/tdameritrade-tool'
 import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility'
 import { getExtname } from '../util/mime'
 import sendWs from '../util/sendWs'
@@ -160,10 +161,16 @@ const getStockPrice = (type='twse', index, price_only = true) => {
         return real();
         break;
         case 'usse':
-        return getUsStock(index).then(ret => {
-            console.log(ret.price);
-            return ret.price;
-        });
+        const up = getUssePrice();
+        if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 1800)) {
+            console.log(up[index]);
+            return up[index].p;
+        } else {
+            return getUsStock(index).then(ret => {
+                console.log(ret.price);
+                return ret.price;
+            });
+        }
         break;
         default:
         return handleError(new HoError('stock type unknown!!!'));
@@ -1883,7 +1890,7 @@ const getBasicStockData = (type, index) => {
         return real();
         break;
         case 'usse':
-        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`, {timeout: 3000}).then(raw_data => {
+        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             const mn = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
@@ -4073,7 +4080,7 @@ export default {
                                 }
                             }
                         }
-                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`, {timeout: 3000}).then(raw_data => {
+                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
                             if (raw_data.split("\n").length > 1) {
                                 raw_arr = [];
                                 interval_data = null;
@@ -4082,7 +4089,7 @@ export default {
                                 min = 0;
                                 end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
                             }
-                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`, {timeout: 3000}).then(raw_data => {
+                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
                                 raw_data = raw_data.split("\n").reverse();
                                 let y = '';
                                 let m = '';
@@ -5731,6 +5738,12 @@ export const getSingleAnnual = (year, folder, index) => {
 }
 
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
+    const gp = getUssePrice();
+    items.forEach(t => {
+        if (t.setype === 'usse' && !gp[t.index]) {
+            usseSubStock([t.index]);
+        }
+    });
     const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
         if (price === 0) {
             return 0;
@@ -6118,8 +6131,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP--;
                 }
             }
-            nowBP = previousP > nowBP ? previousP : nowBP;
-            bP = pP > bP ? pP : bP;
+            if (pCount !== 0) {
+                nowBP = previousP > nowBP ? previousP : nowBP;
+                bP = pP > bP ? pP : bP;
+            }
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
@@ -6197,8 +6212,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP--;
                 }
             }
-            nowBP = previousP > nowBP ? previousP : nowBP;
-            bP = pP > bP ? pP : bP;
+            if (pCount !== 0) {
+                nowBP = previousP > nowBP ? previousP : nowBP;
+                bP = pP > bP ? pP : bP;
+            }
         }
         //if (pType === 0 && previous.buy && previous.sell) {
         if (previous.buy.length > 0 && previous.sell.length > 0) {
@@ -7201,7 +7218,7 @@ const getUsStock = (index, stat=['price']) => {
         return Promise.resolve(ret);
     }
     let count = 0;
-    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`, {timeout: 3000}).then(raw_data => {
+    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
         const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
         if (stat.indexOf('price') !== -1) {
             const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
