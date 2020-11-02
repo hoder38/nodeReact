@@ -260,7 +260,7 @@ export const usseTDTicker = () => checkOauth().then(() => Fetch('https://api.tda
         });
         //usseWs.on('message', data => {
         usseWs.onmessage = evt => {
-            console.log(evt);
+            //console.log(evt);
             const data = JSON.parse(evt.data);
             const res = (data.response || data.notify || data.data) ? (data.response || data.notify || data.data)[0] : null;
             if (!res) {

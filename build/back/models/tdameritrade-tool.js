@@ -318,7 +318,7 @@ var usseTDTicker = exports.usseTDTicker = function usseTDTicker() {
             });
             //usseWs.on('message', data => {
             usseWs.onmessage = function (evt) {
-                console.log(evt);
+                //console.log(evt);
                 var data = JSON.parse(evt.data);
                 var res = data.response || data.notify || data.data ? (data.response || data.notify || data.data)[0] : null;
                 if (!res) {
