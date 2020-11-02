@@ -1785,6 +1785,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 handleError(err, `${id} Total Updata Error`);
                                                 return new Promise((resolve, reject) => setTimeout(() => resolve(), 3000)).then(() => submitOrderBuy(quotaChk - 1));
                                             } else if (msg.includes('minimum size')) {
+                                                or1 = null;
                                                 return Promise.resolve();
                                             } else {
                                                 throw err;
@@ -1836,7 +1837,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }
                         if (suggestion.sCount > 0 && suggestion.sell) {
                             console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
-                            const or = new Order({
+                            let or = new Order({
                                 cid: Date.now(),
                                 type: 'LIMIT',
                                 symbol: item.index,
@@ -1847,42 +1848,45 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             return or.submit().catch(err => {
                                 const msg = err.message || err.msg;
                                 if (msg.includes('minimum size')) {
+                                    or = null;
                                     return Promise.resolve();
                                 } else {
                                     throw err;
                                 }
                             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
-                                let isExist = false;
-                                for (let i = 0; i < order[id][current.type].length; i++) {
-                                    if (or[0].id === order[id][current.type][i].id) {
-                                        order[id][current.type][i].code = true;
-                                        isExist = true;
-                                        break;
-                                    }
-                                }
-                                if (!isExist) {
-                                    let isDelete = false;
-                                    for (let i = 0; i < deleteOrder.length; i++) {
-                                        if (deleteOrder[i].id === or[0].id) {
-                                            isDelete = true;
-                                            const delobj = deleteOrder.splice(i, 1);
-                                            if (delobj.process){
-                                                return processOrderRest(delobj.amount, delobj.price, item).then(() => recur_NewOrder(index + 1));
-                                            }
+                                if (or) {
+                                    let isExist = false;
+                                    for (let i = 0; i < order[id][current.type].length; i++) {
+                                        if (or[0].id === order[id][current.type][i].id) {
+                                            order[id][current.type][i].code = true;
+                                            isExist = true;
                                             break;
                                         }
                                     }
-                                    if (!isDelete) {
-                                        order[id][current.type].push({
-                                            id: or[0].id,
-                                            time: Math.round(new Date().getTime() / 1000),
-                                            amount: or[0].amount,
-                                            type: or[0].type,
-                                            symbol: or[0].symbol,
-                                            price: or[0].price,
-                                            flags: or[0].flags,
-                                            code: true,
-                                        });
+                                    if (!isExist) {
+                                        let isDelete = false;
+                                        for (let i = 0; i < deleteOrder.length; i++) {
+                                            if (deleteOrder[i].id === or[0].id) {
+                                                isDelete = true;
+                                                const delobj = deleteOrder.splice(i, 1);
+                                                if (delobj.process){
+                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => recur_NewOrder(index + 1));
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        if (!isDelete) {
+                                            order[id][current.type].push({
+                                                id: or[0].id,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                amount: or[0].amount,
+                                                type: or[0].type,
+                                                symbol: or[0].symbol,
+                                                price: or[0].price,
+                                                flags: or[0].flags,
+                                                code: true,
+                                            });
+                                        }
                                     }
                                 }
                                 return submitBuy();

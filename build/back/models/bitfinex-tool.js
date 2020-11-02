@@ -2076,6 +2076,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                             return submitOrderBuy(quotaChk - 1);
                                                         });
                                                     } else if (msg.includes('minimum size')) {
+                                                        or1 = null;
                                                         return _promise2.default.resolve();
                                                     } else {
                                                         throw err;
@@ -2154,6 +2155,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             v: or.submit().catch(function (err) {
                                                 var msg = err.message || err.msg;
                                                 if (msg.includes('minimum size')) {
+                                                    or = null;
                                                     return _promise2.default.resolve();
                                                 } else {
                                                     throw err;
@@ -2165,39 +2167,41 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     }, 3000);
                                                 });
                                             }).then(function () {
-                                                var isExist = false;
-                                                for (var _i20 = 0; _i20 < order[id][current.type].length; _i20++) {
-                                                    if (or[0].id === order[id][current.type][_i20].id) {
-                                                        order[id][current.type][_i20].code = true;
-                                                        isExist = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!isExist) {
-                                                    var isDelete = false;
-                                                    for (var _i21 = 0; _i21 < deleteOrder.length; _i21++) {
-                                                        if (deleteOrder[_i21].id === or[0].id) {
-                                                            isDelete = true;
-                                                            var delobj = deleteOrder.splice(_i21, 1);
-                                                            if (delobj.process) {
-                                                                return processOrderRest(delobj.amount, delobj.price, item).then(function () {
-                                                                    return recur_NewOrder(index + 1);
-                                                                });
-                                                            }
+                                                if (or) {
+                                                    var isExist = false;
+                                                    for (var _i20 = 0; _i20 < order[id][current.type].length; _i20++) {
+                                                        if (or[0].id === order[id][current.type][_i20].id) {
+                                                            order[id][current.type][_i20].code = true;
+                                                            isExist = true;
                                                             break;
                                                         }
                                                     }
-                                                    if (!isDelete) {
-                                                        order[id][current.type].push({
-                                                            id: or[0].id,
-                                                            time: Math.round(new Date().getTime() / 1000),
-                                                            amount: or[0].amount,
-                                                            type: or[0].type,
-                                                            symbol: or[0].symbol,
-                                                            price: or[0].price,
-                                                            flags: or[0].flags,
-                                                            code: true
-                                                        });
+                                                    if (!isExist) {
+                                                        var isDelete = false;
+                                                        for (var _i21 = 0; _i21 < deleteOrder.length; _i21++) {
+                                                            if (deleteOrder[_i21].id === or[0].id) {
+                                                                isDelete = true;
+                                                                var delobj = deleteOrder.splice(_i21, 1);
+                                                                if (delobj.process) {
+                                                                    return processOrderRest(delobj.amount, delobj.price, item).then(function () {
+                                                                        return recur_NewOrder(index + 1);
+                                                                    });
+                                                                }
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (!isDelete) {
+                                                            order[id][current.type].push({
+                                                                id: or[0].id,
+                                                                time: Math.round(new Date().getTime() / 1000),
+                                                                amount: or[0].amount,
+                                                                type: or[0].type,
+                                                                symbol: or[0].symbol,
+                                                                price: or[0].price,
+                                                                flags: or[0].flags,
+                                                                code: true
+                                                            });
+                                                        }
                                                     }
                                                 }
                                                 return submitBuy();
