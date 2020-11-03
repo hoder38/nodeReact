@@ -5,13 +5,13 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.resetBFX = exports.setWsOffer = exports.calWeb = exports.calRate = undefined;
 
-var _keys = require('babel-runtime/core-js/object/keys');
-
-var _keys2 = _interopRequireDefault(_keys);
-
 var _assign = require('babel-runtime/core-js/object/assign');
 
 var _assign2 = _interopRequireDefault(_assign);
+
+var _keys = require('babel-runtime/core-js/object/keys');
+
+var _keys2 = _interopRequireDefault(_keys);
 
 var _getIterator2 = require('babel-runtime/core-js/get-iterator');
 
@@ -528,8 +528,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             };
         }
         return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
-                amount: item.amount - price * amount,
-                count: item.count ? item.count + amount : amount > 0 ? amount : 0,
+                //amount: item.amount - price * amount,
+                //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
                 previous: item.previous
             } });
     };
@@ -1691,7 +1691,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }).then(function () {
             updateTime[id]['trade']++;
             console.log(updateTime[id]['trade']);
-            if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 3) {
+            if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 2) {
                 return _promise2.default.resolve();
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
@@ -1707,6 +1707,16 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     } else {
                         var _ret6 = function () {
                             var item = items[index];
+                            item.count = 0;
+                            item.amount = item.orig;
+                            if (position[id][current.type]) {
+                                position[id][current.type].forEach(function (v) {
+                                    if (v.symbol === item.index) {
+                                        item.count += v.amount;
+                                        item.amount = item.amount - v.amount * v.price;
+                                    }
+                                });
+                            }
                             console.log(item);
                             var cancelOrder = function cancelOrder(rest) {
                                 if (order[id][current.type]) {
@@ -1865,25 +1875,22 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }
                                 }
                                 console.log(suggestion);
-                                var item_count = 0;
+                                /*let item_count = 0;
                                 if (position[id][current.type]) {
-                                    position[id][current.type].forEach(function (v) {
+                                    position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {
                                             item_count += v.amount;
                                         }
                                     });
-                                }
+                                }*/
                                 if (item.count < suggestion.sCount) {
                                     suggestion.sCount = item.count;
                                 }
-                                if (item_count < suggestion.sCount) {
-                                    suggestion.sCount = item_count;
-                                }
-                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: (0, _assign2.default)({
+                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
                                         newMid: item.newMid,
                                         tmpPT: item.tmpPT,
                                         previous: item.previous
-                                    }, item.count < item_count ? { count: item_count } : {}) }).then(function (result) {
+                                    } }).then(function (result) {
                                     console.log(result);
                                     return cancelOrder();
                                 }).then(function () {
@@ -1903,27 +1910,27 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             };
                             if (item.ing === 2) {
                                 var sellAll = function sellAll() {
-                                    var item_count = 0;
+                                    /*let item_count = 0;
                                     if (position[id][current.type]) {
-                                        position[id][current.type].forEach(function (v) {
+                                        position[id][current.type].forEach(v => {
                                             if (v.symbol === item.index) {
                                                 item_count += v.amount;
                                             }
                                         });
                                     }
-                                    item_count = item.count < item_count ? item.count : item_count;
+                                    item_count = (item.count < item_count) ? item.count : item_count;*/
                                     var delTotal = function delTotal() {
                                         return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
                                             return recur_status(index + 1);
                                         });
                                     };
-                                    if (item_count > 0) {
+                                    if (item.count > 0) {
                                         var _ret8 = function () {
                                             var or = new _bfxApiNodeModels.Order({
                                                 cid: Date.now(),
                                                 type: 'MARKET',
                                                 symbol: item.index,
-                                                amount: -item_count,
+                                                amount: -item.count,
                                                 flags: 1024
                                             }, userRest);
                                             return {
@@ -2481,34 +2488,38 @@ exports.default = {
             }
             if (set.hasOwnProperty('pair')) {
                 if (set.pair) {
-                    var pair = (0, _utility.isValidString)(set.pair, 'name');
-                    if (pair === false) {
-                        return (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'));
-                    }
-                    var mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
-                    if (mPair) {
-                        if (_constants.SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
-                            rest_total = {
-                                index: mPair[1],
-                                data: (0, _assign2.default)(mPair[2][0] === 'a' ? { amount: Number(mPair[2].substr(1)) } : mPair[2][0] === 'c' ? { count: Number(mPair[2].substr(1)) } : {}, mPair[3] && mPair[3][0] === 'a' ? { amount: Number(mPair[3].substr(1)) } : mPair[3] && mPair[3][0] === 'c' ? { count: Number(mPair[3].substr(1)) } : {})
+                    var _ret12 = function () {
+                        var pair = (0, _utility.isValidString)(set.pair, 'name');
+                        if (pair === false) {
+                            return {
+                                v: (0, _utility.handleError)(new _utility.HoError('Trade Pair is not valid'))
                             };
                         }
-                    } else {
-                        (function () {
-                            var pairArr = [];
-                            pair.split(',').forEach(function (v) {
-                                var p = v.trim();
-                                var m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
-                                if (m && _constants.SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
-                                    pairArr.push({
-                                        type: m[1],
-                                        amount: Number(m[2])
-                                    });
-                                }
-                            });
-                            data['pair'] = pairArr;
-                        })();
-                    }
+                        /*const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
+                        if (mPair) {
+                            if (SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
+                                rest_total = {
+                                    index: mPair[1],
+                                    data: Object.assign(mPair[2][0] === 'a' ? {amount: Number(mPair[2].substr(1))} : mPair[2][0] === 'c' ? {count: Number(mPair[2].substr(1))} : {}, (mPair[3] && mPair[3][0] === 'a') ? {amount: Number(mPair[3].substr(1))} : (mPair[3] && mPair[3][0] === 'c') ? {count: Number(mPair[3].substr(1))} : {},),
+                                };
+                            }
+                        } else {*/
+                        var pairArr = [];
+                        pair.split(',').forEach(function (v) {
+                            var p = v.trim();
+                            var m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                            if (m && _constants.SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
+                                pairArr.push({
+                                    type: m[1],
+                                    amount: Number(m[2])
+                                });
+                            }
+                        });
+                        data['pair'] = pairArr;
+                        //}
+                    }();
+
+                    if ((typeof _ret12 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret12)) === "object") return _ret12.v;
                 } else {
                     data['pair'] = [];
                 }
@@ -2572,29 +2583,29 @@ exports.default = {
                 //處理市價出單
                 return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, type: set.type }).then(function (item) {
                     console.log(item);
-                    if (rest_total) {
-                        for (var _i22 = 0; _i22 < item.length; _i22++) {
-                            if (item[_i22].index === rest_total.index) {
-                                rest_total.data.amount = rest_total.data.amount ? item[_i22].amount - rest_total.data.amount > 0 ? item[_i22].amount - rest_total.data.amount : 0 : item[_i22].amount;
+                    /*if (rest_total) {
+                        for (let i = 0; i < item.length; i++) {
+                            if (item[i].index === rest_total.index) {
+                                rest_total.data.amount = (rest_total.data.amount) ? item[i].amount - rest_total.data.amount > 0 ? item[i].amount - rest_total.data.amount : 0 : item[i].amount;
                                 console.log(rest_total);
-                                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[_i22]._id }, { $set: rest_total.data }).then(function (result) {
+                                return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set : rest_total.data}).then(result => {
                                     console.log(result);
                                     return returnSupport(bitfinex);
                                 });
                             }
                         }
-                    } else if (data['pair']) {
+                    } else */if (data['pair']) {
                         var _ret14 = function () {
-                            for (var _i23 = 0; _i23 < data['pair'].length; _i23++) {
+                            for (var _i22 = 0; _i22 < data['pair'].length; _i22++) {
                                 var exist = false;
                                 for (var j = 0; j < item.length; j++) {
-                                    if (item[j].index === data['pair'][_i23].type) {
+                                    if (item[j].index === data['pair'][_i22].type) {
                                         exist = true;
                                         break;
                                     }
                                 }
                                 if (!exist) {
-                                    item.push(data['pair'][_i23]);
+                                    item.push(data['pair'][_i22]);
                                 }
                             }
                             var recur_update = function recur_update(index) {
@@ -2602,12 +2613,12 @@ exports.default = {
                                     return returnSupport(bitfinex);
                                 } else {
                                     if (item[index]._id) {
-                                        for (var _i24 = 0; _i24 < data['pair'].length; _i24++) {
-                                            if (item[index].index === data['pair'][_i24].type) {
+                                        for (var _i23 = 0; _i23 < data['pair'].length; _i23++) {
+                                            if (item[index].index === data['pair'][_i23].type) {
                                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item[index]._id }, { $set: {
-                                                        times: Math.floor(item[index].times * data['pair'][_i24].amount / item[index].orig * 10000) / 10000,
-                                                        amount: item[index].amount + data['pair'][_i24].amount - item[index].orig,
-                                                        orig: data['pair'][_i24].amount,
+                                                        times: Math.floor(item[index].times * data['pair'][_i23].amount / item[index].orig * 10000) / 10000,
+                                                        //amount: item[index].amount + data['pair'][i].amount - item[index].orig,
+                                                        orig: data['pair'][_i23].amount,
                                                         ing: item[index].ing === 2 ? 0 : item[index].ing
                                                     } }).then(function (item) {
                                                     console.log(item);
@@ -2635,12 +2646,11 @@ exports.default = {
                                                 wType: webitem[0].wType,
                                                 mid: webitem[0].mid,
                                                 times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
-                                                amount: item[index].amount,
+                                                //amount: item[index].amount,
                                                 orig: item[index].amount,
                                                 previous: { buy: [], sell: [] },
                                                 newMid: [],
-                                                ing: 0,
-                                                count: 0
+                                                ing: 0
                                             }).then(function (item) {
                                                 console.log(item);
                                                 return recur_update(index + 1);
@@ -2814,8 +2824,8 @@ exports.default = {
         }
         if (type === 0 || type === 2) {
             var tempList = uid === 0 ? rateList : itemList;
-            for (var _i25 = 0; _i25 < _constants.SUPPORT_COIN.length; _i25++) {
-                var _v = _constants.SUPPORT_COIN[_i25];
+            for (var _i24 = 0; _i24 < _constants.SUPPORT_COIN.length; _i24++) {
+                var _v = _constants.SUPPORT_COIN[_i24];
                 if (coin !== 'all' && coin !== _v) {
                     continue;
                 }
@@ -2823,7 +2833,7 @@ exports.default = {
                     var rate = Math.round(currentRate[_v].rate / 10) / 100000;
                     tempList.push({
                         name: _v.substr(1) + ' Rate',
-                        id: _i25,
+                        id: _i24,
                         tags: [_v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: rate + '%',
                         count: rate,
@@ -2833,16 +2843,16 @@ exports.default = {
                 }
             }
             var vid = _constants.SUPPORT_COIN.length;
-            for (var _i26 in priceData) {
+            for (var _i25 in priceData) {
                 tempList.push({
-                    name: _i26.substr(1) + ' $' + Math.floor(priceData[_i26].lastPrice * 10000) / 10000,
+                    name: _i25.substr(1) + ' $' + Math.floor(priceData[_i25].lastPrice * 10000) / 10000,
                     id: vid++,
-                    tags: [_i26.substr(1, 4), _i26.substr(-3), 'rate', '利率'],
-                    rate: Math.floor(priceData[_i26].dailyChange * 100) / 100 + '%',
-                    count: priceData[_i26].dilyChange,
-                    utime: priceData[_i26].time,
+                    tags: [_i25.substr(1, 4), _i25.substr(-3), 'rate', '利率'],
+                    rate: Math.floor(priceData[_i25].dailyChange * 100) / 100 + '%',
+                    count: priceData[_i25].dilyChange,
+                    utime: priceData[_i25].time,
                     type: 1,
-                    str: priceData[_i26].str
+                    str: priceData[_i25].str
                 });
             }
         }

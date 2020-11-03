@@ -244,7 +244,7 @@ var getStockPrice = function getStockPrice() {
                 break;
             case 'usse':
                 var up = (0, _tdameritradeTool.getUssePrice)();
-                if (up[index] && new Date().getTime() / 1000 - up[index].t < 1800) {
+                if (up[index] && new Date().getTime() / 1000 - up[index].t < 86400) {
                     console.log(up[index]);
                     return {
                         v: up[index].p
@@ -6911,11 +6911,15 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
 var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
         var gp = (0, _tdameritradeTool.getUssePrice)();
+        var addStock = [];
         items.forEach(function (t) {
             if (t.setype === 'usse' && !gp[t.index]) {
-                (0, _tdameritradeTool.usseSubStock)([t.index]);
+                addStock.push(t.index);
             }
         });
+        if (addStock.length > 0) {
+            (0, _tdameritradeTool.usseSubStock)(addStock, false);
+        }
         var recur_price = function recur_price(index) {
             return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
                 if (price === 0) {

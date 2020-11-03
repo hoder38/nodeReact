@@ -162,7 +162,7 @@ const getStockPrice = (type='twse', index, price_only = true) => {
         break;
         case 'usse':
         const up = getUssePrice();
-        if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 1800)) {
+        if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 86400)) {
             console.log(up[index]);
             return up[index].p;
         } else {
@@ -5739,11 +5739,15 @@ export const getSingleAnnual = (year, folder, index) => {
 
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
     const gp = getUssePrice();
+    const addStock = [];
     items.forEach(t => {
         if (t.setype === 'usse' && !gp[t.index]) {
-            usseSubStock([t.index]);
+            addStock.push(t.index);
         }
     });
+    if (addStock.length > 0) {
+        usseSubStock(addStock, false);
+    }
     const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
         if (price === 0) {
             return 0;

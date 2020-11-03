@@ -414,8 +414,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
         }
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
-            amount: item.amount - price * amount,
-            count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
+            //amount: item.amount - price * amount,
+            //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
             previous: item.previous,
         }});
     }
@@ -1460,7 +1460,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }).then(() => {
             updateTime[id]['trade']++;
             console.log(updateTime[id]['trade']);
-            if (updateTime[id]['trade'] % ORDER_INTERVAL !== 3) {
+            if (updateTime[id]['trade'] % ORDER_INTERVAL !== 2) {
                 return Promise.resolve();
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
@@ -1475,6 +1475,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return Promise.resolve();
                     } else {
                         const item = items[index];
+                        item.count = 0;
+                        item.amount = item.orig;
+                        if (position[id][current.type]) {
+                            position[id][current.type].forEach(v => {
+                                if (v.symbol === item.index) {
+                                    item.count += v.amount;
+                                    item.amount = item.amount - v.amount * v.price;
+                                }
+                            });
+                        }
                         console.log(item);
                         const cancelOrder = rest => {
                             if (order[id][current.type]) {
@@ -1611,25 +1621,22 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                             }
                             console.log(suggestion);
-                            let item_count = 0;
+                            /*let item_count = 0;
                             if (position[id][current.type]) {
                                 position[id][current.type].forEach(v => {
                                     if (v.symbol === item.index) {
                                         item_count += v.amount;
                                     }
                                 });
-                            }
+                            }*/
                             if (item.count < suggestion.sCount) {
                                 suggestion.sCount = item.count;
                             }
-                            if (item_count < suggestion.sCount) {
-                                suggestion.sCount = item_count;
-                            }
-                            return Mongo('update', TOTALDB, {_id: item._id}, {$set : Object.assign({
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                                 newMid: item.newMid,
                                 tmpPT: item.tmpPT,
                                 previous: item.previous,
-                            }, (item.count < item_count) ? {count: item_count} : {})}).then(result => {
+                            }}).then(result => {
                                 console.log(result);
                                 return cancelOrder();
                             }).then(() => {
@@ -1649,7 +1656,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }
                         if (item.ing === 2) {
                             const sellAll = () => {
-                                let item_count = 0;
+                                /*let item_count = 0;
                                 if (position[id][current.type]) {
                                     position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {
@@ -1657,14 +1664,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                     });
                                 }
-                                item_count = (item.count < item_count) ? item.count : item_count;
+                                item_count = (item.count < item_count) ? item.count : item_count;*/
                                 const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
-                                if (item_count > 0) {
+                                if (item.count > 0) {
                                     const or = new Order({
                                         cid: Date.now(),
                                         type: 'MARKET',
                                         symbol: item.index,
-                                        amount: -item_count,
+                                        amount: -item.count,
                                         flags: 1024,
                                     }, userRest);
                                     return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
@@ -2123,7 +2130,7 @@ export default {
                     if (pair === false) {
                         return handleError(new HoError('Trade Pair is not valid'));
                     }
-                    const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
+                    /*const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
                     if (mPair) {
                         if (SUPPORT_PAIR[set.type].indexOf(mPair[1]) !== -1) {
                             rest_total = {
@@ -2131,7 +2138,7 @@ export default {
                                 data: Object.assign(mPair[2][0] === 'a' ? {amount: Number(mPair[2].substr(1))} : mPair[2][0] === 'c' ? {count: Number(mPair[2].substr(1))} : {}, (mPair[3] && mPair[3][0] === 'a') ? {amount: Number(mPair[3].substr(1))} : (mPair[3] && mPair[3][0] === 'c') ? {count: Number(mPair[3].substr(1))} : {},),
                             };
                         }
-                    } else {
+                    } else {*/
                         const pairArr = [];
                         pair.split(',').forEach(v => {
                             const p = v.trim();
@@ -2144,7 +2151,7 @@ export default {
                             }
                         });
                         data['pair'] = pairArr;
-                    }
+                    //}
                 } else {
                     data['pair'] = [];
                 }
@@ -2202,7 +2209,7 @@ export default {
                 //處理市價出單
                 return Mongo('find', TOTALDB, {owner: id, sType: 1, type: set.type}).then(item => {
                     console.log(item);
-                    if (rest_total) {
+                    /*if (rest_total) {
                         for (let i = 0; i < item.length; i++) {
                             if (item[i].index === rest_total.index) {
                                 rest_total.data.amount = (rest_total.data.amount) ? item[i].amount - rest_total.data.amount > 0 ? item[i].amount - rest_total.data.amount : 0 : item[i].amount;
@@ -2213,7 +2220,7 @@ export default {
                                 });
                             }
                         }
-                    } else if (data['pair']) {
+                    } else */if (data['pair']) {
                         for (let i = 0; i < data['pair'].length; i++) {
                             let exist = false;
                             for (let j = 0; j < item.length; j++) {
@@ -2235,7 +2242,7 @@ export default {
                                         if (item[index].index === data['pair'][i].type) {
                                             return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
                                                 times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
-                                                amount: item[index].amount + data['pair'][i].amount - item[index].orig,
+                                                //amount: item[index].amount + data['pair'][i].amount - item[index].orig,
                                                 orig: data['pair'][i].amount,
                                                 ing: (item[index].ing === 2) ? 0 : item[index].ing,
                                             }}).then(item => {
@@ -2264,12 +2271,12 @@ export default {
                                             wType: webitem[0].wType,
                                             mid: webitem[0].mid,
                                             times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
-                                            amount: item[index].amount,
+                                            //amount: item[index].amount,
                                             orig: item[index].amount,
                                             previous: {buy: [], sell: []},
                                             newMid: [],
                                             ing: 0,
-                                            count: 0,
+                                            //count: 0,
                                         }).then(item => {
                                             console.log(item);
                                             return recur_update(index + 1);

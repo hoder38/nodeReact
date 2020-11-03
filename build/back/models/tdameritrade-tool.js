@@ -153,7 +153,7 @@ var usseAuth = function usseAuth(fn) {
         "requests": [{
             "service": "ADMIN",
             "command": "LOGIN",
-            "requestid": requestid++,
+            "requestid": (requestid++).toString(),
             "account": userPrincipalsResponse.accounts[0].accountId,
             "source": userPrincipalsResponse.streamerInfo.appId,
             "parameters": {
@@ -183,7 +183,7 @@ var usseLogout = function usseLogout() {
     usseWs.send((0, _stringify2.default)({
         "requests": [{
             "service": "ADMIN",
-            "requestid": requestid++,
+            "requestid": (requestid++).toString(),
             "command": "LOGOUT",
             "account": userPrincipalsResponse.accounts[0].accountId,
             "source": userPrincipalsResponse.streamerInfo.appId,
@@ -201,7 +201,7 @@ var usseSubAccount = function usseSubAccount() {
     usseWs.send((0, _stringify2.default)({
         "requests": [{
             "service": "ACCT_ACTIVITY",
-            "requestid": requestid++,
+            "requestid": (requestid++).toString(),
             "command": "SUBS",
             "account": userPrincipalsResponse.accounts[0].accountId,
             "source": userPrincipalsResponse.streamerInfo.appId,
@@ -238,15 +238,14 @@ var usseSubStock = exports.usseSubStock = function usseSubStock(symbol) {
     usseWs.send((0, _stringify2.default)({
         "requests": [{
             "service": "CHART_EQUITY",
-            "requestid": requestid++,
-            "command": sub ? "SUBS" : 'UNSUBS',
+            "requestid": (requestid++).toString(),
+            "command": sub ? "SUBS" : 'ADD',
             "account": userPrincipalsResponse.accounts[0].accountId,
             "source": userPrincipalsResponse.streamerInfo.appId,
-            "parameters": (0, _assign2.default)({
-                "keys": symbol.join(',').toUpperCase()
-            }, sub ? {
-                "fields": "0,1,2,3,4,5,6,7"
-            } : {})
+            "parameters": {
+                "keys": symbol.join(',').toUpperCase(),
+                "fields": "0,1,2,3,4,5,6,7,8"
+            }
         }]
     }));
 };
@@ -316,10 +315,8 @@ var usseTDTicker = exports.usseTDTicker = function usseTDTicker() {
                     });
                 });
             });
-            //usseWs.on('message', data => {
-            usseWs.onmessage = function (evt) {
-                //console.log(evt);
-                var data = JSON.parse(evt.data);
+            usseWs.on('message', function (data) {
+                data = JSON.parse(data);
                 var res = data.response || data.notify || data.data ? (data.response || data.notify || data.data)[0] : null;
                 if (!res) {
                     console.log(data);
@@ -330,9 +327,9 @@ var usseTDTicker = exports.usseTDTicker = function usseTDTicker() {
                 if (res.service === 'ADMIN' && res.command === 'LOGOUT') {
                     return eventEmitter.emit('LOGOUT', res.content);
                 }
-                if (res.service === 'CHART_EQUITY') {
+                /*if (res.service === 'CHART_EQUITY') {
                     return eventEmitter.emit('STOCK', res.content);
-                }
+                }*/
                 if (res.service === 'ACCT_ACTIVITY') {
                     return eventEmitter.emit('ACCOUNT', res.content);
                 }
@@ -340,8 +337,7 @@ var usseTDTicker = exports.usseTDTicker = function usseTDTicker() {
                     return true;
                 }
                 console.log(res);
-                //});
-            };
+            });
 
             usseWs.on('error', function (err) {
                 var msg = err.message || err.msg ? err.message || err.msg : '';

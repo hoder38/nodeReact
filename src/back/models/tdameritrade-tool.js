@@ -103,7 +103,7 @@ const usseAuth = fn => {
             {
                 "service": "ADMIN",
                 "command": "LOGIN",
-                "requestid": requestid++,
+                "requestid": (requestid++).toString(),
                 "account": userPrincipalsResponse.accounts[0].accountId,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {
@@ -135,7 +135,7 @@ const usseLogout = () => {
         "requests": [
             {
                 "service": "ADMIN",
-                "requestid": requestid++,
+                "requestid": (requestid++).toString(),
                 "command": "LOGOUT",
                 "account": userPrincipalsResponse.accounts[0].accountId,
                 "source": userPrincipalsResponse.streamerInfo.appId,
@@ -153,7 +153,7 @@ const usseSubAccount = (sub = true) => {
         "requests": [
             {
                 "service": "ACCT_ACTIVITY",
-                "requestid": requestid++,
+                "requestid": (requestid++).toString(),
                 "command": "SUBS",
                 "account": userPrincipalsResponse.accounts[0].accountId,
                 "source": userPrincipalsResponse.streamerInfo.appId,
@@ -190,16 +190,26 @@ export const usseSubStock = (symbol, sub = true) => {
         "requests": [
             {
                 "service": "CHART_EQUITY",
-                "requestid": requestid++,
-                "command": sub ? "SUBS" : 'UNSUBS',
+                "requestid": (requestid++).toString(),
+                "command": sub ? "SUBS" : 'ADD',
                 "account": userPrincipalsResponse.accounts[0].accountId,
                 "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": Object.assign({
+                "parameters": {
                     "keys": symbol.join(',').toUpperCase(),
-                }, sub ? {
+                    "fields": "0,1,2,3,4,5,6,7,8"
+                },
+            },
+            /*{
+                "service": "CHART_FUTURES",
+                "requestid": (requestid++).toString(),
+                "command": "SUBS",
+                "account": userPrincipalsResponse.accounts[0].accountId,
+                "source": userPrincipalsResponse.streamerInfo.appId,
+                "parameters": {
+                    "keys": "/ES",
                     "fields": "0,1,2,3,4,5,6,7"
-                } : {}),
-            }
+                }
+            }*/
         ]
     }));
 }
@@ -258,10 +268,8 @@ export const usseTDTicker = () => checkOauth().then(() => Fetch('https://api.tda
                 });
             });
         });
-        //usseWs.on('message', data => {
-        usseWs.onmessage = evt => {
-            //console.log(evt);
-            const data = JSON.parse(evt.data);
+        usseWs.on('message', data => {
+            data = JSON.parse(data);
             const res = (data.response || data.notify || data.data) ? (data.response || data.notify || data.data)[0] : null;
             if (!res) {
                 console.log(data);
@@ -272,9 +280,9 @@ export const usseTDTicker = () => checkOauth().then(() => Fetch('https://api.tda
             if (res.service === 'ADMIN' && res.command === 'LOGOUT') {
                 return eventEmitter.emit('LOGOUT', res.content);
             }
-            if (res.service === 'CHART_EQUITY') {
+            /*if (res.service === 'CHART_EQUITY') {
                 return eventEmitter.emit('STOCK', res.content);
-            }
+            }*/
             if (res.service === 'ACCT_ACTIVITY') {
                 return eventEmitter.emit('ACCOUNT', res.content);
             }
@@ -282,8 +290,7 @@ export const usseTDTicker = () => checkOauth().then(() => Fetch('https://api.tda
                 return true;
             }
             console.log(res);
-        //});
-        }
+        });
 
         usseWs.on('error', err => {
             const msg = (err.message || err.msg) ? (err.message || err.msg) : '';
