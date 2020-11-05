@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool'
@@ -862,12 +862,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     }
                 });
             }).then(() => userRest.fundingOffers('')).then(fos => {
-                let risk = RISK_MAX;
+                const risk = {};
                 const temp = {};
                 fos.forEach(v => {
                     if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
                         if (!temp[v.symbol]) {
                             temp[v.symbol] = [];
+                            risk[v.symbol] = RISK_MAX;
                         }
                         temp[v.symbol].push({
                             id: v.id,
@@ -876,7 +877,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             rate: v.rate,
                             period: v.period,
                             status: v.status,
-                            risk: risk > 0 ? risk-- : 0,
+                            risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : 0,
                         })
                     }
                 });
@@ -1460,7 +1461,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }).then(() => {
             updateTime[id]['trade']++;
             console.log(updateTime[id]['trade']);
-            if (updateTime[id]['trade'] % ORDER_INTERVAL !== 2) {
+            if (updateTime[id]['trade'] % Math.ceil(ORDER_INTERVAL / RATE_INTERVAL) !== Math.floor(180 / RATE_INTERVAL)) {
                 return Promise.resolve();
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
@@ -1632,6 +1633,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if (item.count < suggestion.sCount) {
                                 suggestion.sCount = item.count;
                             }
+                            if (item.amount < suggestion.bCount * suggestion.buy) {
+                                suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                            }
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                                 newMid: item.newMid,
                                 tmpPT: item.tmpPT,
@@ -1751,9 +1755,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if (current.clear === true || current.clear[item.index] === true) {
                                 return recur_NewOrder(index + 1);
                             }
-                            if (item.amount < suggestion.bCount * suggestion.buy) {
+                            /*if (item.amount < suggestion.bCount * suggestion.buy) {
                                 suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
-                            }
+                            }*/
                             return userRest.wallets().then(wallet => {
                                 for (let i = 0; i < wallet.length; i++){
                                     if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {

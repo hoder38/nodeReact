@@ -9,7 +9,7 @@ import External from '../models/external-tool'
 import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool'
 import PlaylistApi from '../models/api-tool-playlist'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
-import { usseTDTicker } from '../models/tdameritrade-tool'
+import { usseTDInit, resetTD } from '../models/tdameritrade-tool'
 import { dbDump } from './cmd'
 import { handleError, completeZero } from '../util/utility'
 import sendWs from '../util/sendWs'
@@ -18,6 +18,7 @@ let stock_batch_list = [];
 let stock_batch_list_2 = [];
 
 let lastSetOffer = 0;
+let lastInitUsse = 0;
 
 function bgError(err, type) {
     sendWs(`${type}: ${err.message||err.msg}`, 0, 0, true);
@@ -234,20 +235,23 @@ export const rateCalculator = () => {
 }
 
 export const setUserOffer = () => {
-    console.log('setUserOffer');
-    console.log(new Date());
     if (BITFINEX_LOAN(ENV_TYPE)) {
+        console.log('setUserOffer');
+        console.log(new Date());
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(() => checkUser(index + 1, userlist));
         const setO = () => {
-            lastSetOffer = Math.round(new Date().getTime() / 1000);
-            return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
-                if ((err.message||err.msg).includes('Maximum call stack size exceeded')) {
-                    return resetBFX();
-                } else {
-                    resetBFX(true);
-                    return bgError(err, 'Loop set offer')
-                }
-            })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastSetOffer) > RATE_INTERVAL * 0.9) {
+                lastSetOffer = now;
+                return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
+                    if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
+                        return resetBFX();
+                    } else {
+                        resetBFX(true);
+                        return bgError(err, 'Loop set offer')
+                    }
+                })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+            }
         }
         if (lastSetOffer) {
             return setO();
@@ -277,10 +281,41 @@ export const filterBitfinex = () => {
     }
 }
 
-export const usseTicker = () => {
-    if (USSE_TICKER(ENV_TYPE)) {
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 50000)).then(() => {
-            return usseTDTicker();
-        });
+export const usseInit = () => {
+    if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+        console.log('initUsse');
+        console.log(new Date());
+        const setO = () => {
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastInitUsse) > PRICE_INTERVAL * 0.9) {
+                lastInitUsse = now;
+                return usseTDInit().catch(err => {
+                    /*if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
+                        return resetBFX();
+                    } else {*/
+                        resetTD(true);
+                        return bgError(err, 'Loop usse init');
+                    //}
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO());
+            }
+        }
+        if (lastInitUsse) {
+            return setO();
+        } else {
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 150000)).then(() => setO());
+        }
+    }
+}
+
+export const checkUsseInit = () => {
+    if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+        const cso = () => {
+            if (Math.round(new Date().getTime() / 1000) - lastInitUsse > 7200) {
+                sendWs('restart usse init', 0, 0, true);
+                usseInit();
+            }
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 180000)).then(() => cso());
     }
 }

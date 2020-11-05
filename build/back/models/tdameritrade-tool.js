@@ -3,7 +3,11 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.getUssePrice = exports.usseTDTicker = exports.usseSubStock = exports.getToken = exports.generateAuthUrl = undefined;
+exports.resetTD = exports.getUssePosition = exports.usseTDInit = exports.usseSubStock = exports.getToken = exports.generateAuthUrl = undefined;
+
+var _typeof2 = require('babel-runtime/helpers/typeof');
+
+var _typeof3 = _interopRequireDefault(_typeof2);
 
 var _keys = require('babel-runtime/core-js/object/keys');
 
@@ -51,13 +55,17 @@ var _events2 = _interopRequireDefault(_events);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+//let ussePrice = [];
 var eventEmitter = new _events2.default.EventEmitter();
 var tokens = {};
 var userPrincipalsResponse = null;
 var usseWs = null;
 var requestid = 0;
 var emitter = [];
-var ussePrice = {};
+var updateTime = { book: 0, trade: 0 };
+var available = 0;
+var order = [];
+var position = [];
 
 var generateAuthUrl = exports.generateAuthUrl = function generateAuthUrl() {
     return _constants.TD_AUTH_URL + 'response_type=code&redirect_uri=' + _ver.GOOGLE_REDIRECT + '&client_id=' + _ver.TDAMERITRADE_KEY + '%40AMER.OAUTHAP';
@@ -167,7 +175,9 @@ var usseAuth = function usseAuth(fn) {
 
 var usseLogout = function usseLogout() {
     if (!usseWs || !userPrincipalsResponse) {
-        return (0, _utility.handleError)(new _utility.HoError('TD cannot be logouted!!!'));
+        console.log('TD has already shut down!!!');
+        return true;
+        //return handleError(new HoError('TD cannot be logouted!!!'));
     }
     eventEmitter.once('LOGOUT', function (data) {
         switch (data.code) {
@@ -176,8 +186,10 @@ var usseLogout = function usseLogout() {
                 usseWs.close();
                 break;
             default:
+                console.log('TD LOGOUT FAIL: ' + data.msg);
                 usseWs.close();
-                return (0, _utility.handleError)(new _utility.HoError('TD LOGOUT FAIL: ' + data.msg));
+                //return handleError(new HoError(`TD LOGOUT FAIL: ${data.msg}`));
+                break;
         }
     });
     usseWs.send((0, _stringify2.default)({
@@ -266,112 +278,226 @@ var usseOnStock = function usseOnStock(fn) {
     });
 };
 
-var usseTDTicker = exports.usseTDTicker = function usseTDTicker() {
+var usseHandler = function usseHandler(res) {
+    if (res.service === 'ADMIN' && res.command === 'LOGIN') {
+        return eventEmitter.emit('LOGIN', res.content);
+    }
+    if (res.service === 'ADMIN' && res.command === 'LOGOUT') {
+        return eventEmitter.emit('LOGOUT', res.content);
+    }
+    if (res.service === 'CHART_EQUITY') {
+        return eventEmitter.emit('STOCK', res.content);
+    }
+    if (res.service === 'ACCT_ACTIVITY') {
+        return eventEmitter.emit('ACCOUNT', res.content);
+    }
+    if (res.heartbeat) {
+        return true;
+    }
+    console.log(res);
+};
+
+var usseTDInit = exports.usseTDInit = function usseTDInit() {
     return checkOauth().then(function () {
-        return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/userprincipals?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', { headers: { Authorization: 'Bearer ' + tokens.access_token } });
-    }).then(function (res) {
-        return res.json();
-    }).then(function (result) {
-        console.log(result);
-        userPrincipalsResponse = result;
-        var tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
-        var tokenTimeStampAsMs = tokenTimeStampAsDateObj.getTime();
-        var credentials = {
-            "userid": userPrincipalsResponse.accounts[0].accountId,
-            "token": userPrincipalsResponse.streamerInfo.token,
-            "company": userPrincipalsResponse.accounts[0].company,
-            "segment": userPrincipalsResponse.accounts[0].segment,
-            "cddomain": userPrincipalsResponse.accounts[0].accountCdDomainId,
-            "usergroup": userPrincipalsResponse.streamerInfo.userGroup,
-            "accesslevel": userPrincipalsResponse.streamerInfo.accessLevel,
-            "authorized": "Y",
-            "timestamp": tokenTimeStampAsMs,
-            "appid": userPrincipalsResponse.streamerInfo.appId,
-            "acl": userPrincipalsResponse.streamerInfo.acl
-        };
-
-        userPrincipalsResponse.credentials = (0, _keys2.default)(credentials).map(function (key) {
-            return encodeURIComponent(key) + '=' + encodeURIComponent(credentials[key]);
-        }).join('&');
-
-        return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '?fields=positions,orders', { headers: { Authorization: 'Bearer ' + tokens.access_token } }).then(function (res) {
-            return res.json();
-        }).then(function (result) {
-            console.log(result);
-            usseWs = new _ws2.default('wss://' + userPrincipalsResponse.streamerInfo.streamerSocketUrl + '/ws', { perMessageDeflate: false });
-
-            usseWs.on('open', function () {
-                //auth
-                console.log('TD usse ticker open');
-                usseAuth(function () {
-                    (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse' }).then(function (item) {
-                        if (item.length > 0) {
-                            usseSubStock(item.map(function (v) {
-                                return v.index;
-                            }));
-                        }
-                        //usseSubAccount();
-                        //usseLogout();
-                    });
-                });
-            });
-            usseWs.on('message', function (data) {
-                data = JSON.parse(data);
-                var res = data.response || data.notify || data.data ? (data.response || data.notify || data.data)[0] : null;
-                if (!res) {
-                    console.log(data);
-                }
-                if (res.service === 'ADMIN' && res.command === 'LOGIN') {
-                    return eventEmitter.emit('LOGIN', res.content);
-                }
-                if (res.service === 'ADMIN' && res.command === 'LOGOUT') {
-                    return eventEmitter.emit('LOGOUT', res.content);
-                }
-                /*if (res.service === 'CHART_EQUITY') {
-                    return eventEmitter.emit('STOCK', res.content);
-                }*/
-                if (res.service === 'ACCT_ACTIVITY') {
-                    return eventEmitter.emit('ACCOUNT', res.content);
-                }
-                if (res.heartbeat) {
-                    return true;
-                }
-                console.log(res);
-            });
-
-            usseWs.on('error', function (err) {
-                var msg = err.message || err.msg ? err.message || err.msg : '';
-                if (!msg) {
-                    console.log(err);
-                }
-                (0, _sendWs2.default)('TD Ameritrade Ws Error: ' + msg, 0, 0, true);
-                (0, _utility.handleError)(err, 'TD Ameritrade Ws Error');
-            });
-
-            usseWs.on('close', function () {
-                userPrincipalsResponse = null;
-                console.log('TD usse ticker close');
-            });
-
-            usseOnStock(function (data) {
-                console.log(data);
-                ussePrice = data.map(function (p) {
-                    var ret = {};
-                    ret[p['key']] = {
-                        p: p[4],
-                        t: p[7] / 1000
+        var initWs = function initWs() {
+            if (!usseWs || !userPrincipalsResponse) {
+                return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/userprincipals?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', { headers: { Authorization: 'Bearer ' + tokens.access_token } }).then(function (res) {
+                    return res.json();
+                }).then(function (result) {
+                    //console.log(result);
+                    userPrincipalsResponse = result;
+                    var tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
+                    var tokenTimeStampAsMs = tokenTimeStampAsDateObj.getTime();
+                    var credentials = {
+                        "userid": userPrincipalsResponse.accounts[0].accountId,
+                        "token": userPrincipalsResponse.streamerInfo.token,
+                        "company": userPrincipalsResponse.accounts[0].company,
+                        "segment": userPrincipalsResponse.accounts[0].segment,
+                        "cddomain": userPrincipalsResponse.accounts[0].accountCdDomainId,
+                        "usergroup": userPrincipalsResponse.streamerInfo.userGroup,
+                        "accesslevel": userPrincipalsResponse.streamerInfo.accessLevel,
+                        "authorized": "Y",
+                        "timestamp": tokenTimeStampAsMs,
+                        "appid": userPrincipalsResponse.streamerInfo.appId,
+                        "acl": userPrincipalsResponse.streamerInfo.acl
                     };
-                    return ret;
-                });
-            });
+                    userPrincipalsResponse.credentials = (0, _keys2.default)(credentials).map(function (key) {
+                        return encodeURIComponent(key) + '=' + encodeURIComponent(credentials[key]);
+                    }).join('&');
 
-            usseOnAccount(function (data) {
-                console.log(data);
+                    usseWs = new _ws2.default('wss://' + userPrincipalsResponse.streamerInfo.streamerSocketUrl + '/ws', { perMessageDeflate: false });
+                    usseWs.on('open', function () {
+                        //auth
+                        console.log('TD usse ticker open');
+                        usseAuth(function () {
+                            /*Mongo('find', TOTALDB, {setype: 'usse'}).then(item => {
+                                if (item.length > 0) {
+                                    usseSubStock(item.map(v => v.index));
+                                }
+                            });*/
+                            usseSubAccount();
+                        });
+                    });
+                    usseWs.on('message', function (data) {
+                        data = JSON.parse(data);
+                        var res = data.response || data.notify || data.data ? (data.response || data.notify || data.data)[0] : null;
+                        if (!res) {
+                            console.log(data);
+                        }
+                        usseHandler(res);
+                    });
+                    usseWs.on('error', function (err) {
+                        var msg = err.message || err.msg ? err.message || err.msg : '';
+                        if (!msg) {
+                            console.log(err);
+                        }
+                        (0, _sendWs2.default)('TD Ameritrade Ws Error: ' + msg, 0, 0, true);
+                        (0, _utility.handleError)(err, 'TD Ameritrade Ws Error');
+                    });
+                    usseWs.on('close', function () {
+                        userPrincipalsResponse = null;
+                        usseWs = null;
+                        console.log('TD usse ticker close');
+                    });
+                    usseOnAccount(function (data) {
+                        console.log(data);
+                    });
+                    /*usseOnStock(data => {
+                        console.log(data);
+                        ussePrice = data.map(p => {
+                            const ret = {};
+                            ret[p['key']] = {
+                                p: p[4],
+                                t: p[7] / 1000,
+                            };
+                            return ret;
+                        })
+                    });*/
+                });
+            } else {
+                return _promise2.default.resolve();
+            }
+        };
+        var initialBook = function initialBook() {
+            if (!usseWs || !userPrincipalsResponse) {
+                return (0, _utility.handleError)(new _utility.HoError('TD cannot be inital book!!!'));
+            }
+            var now = Math.round(new Date().getTime() / 1000);
+            if (now - updateTime['book'] > _constants.UPDATE_BOOK) {
+                return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '?fields=positions,orders', { headers: { Authorization: 'Bearer ' + tokens.access_token } }).then(function (res) {
+                    return res.json();
+                }).then(function (result) {
+                    console.log(result);
+                    //init book
+                    if (result['securitiesAccount']['projectedBalances']) {
+                        available = result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'];
+                    }
+                    if (result['securitiesAccount']['positions']) {
+                        position = result['securitiesAccount']['positions'].map(function (p) {
+                            return {
+                                symbol: p.instrument.symbol,
+                                amount: p.longQuantity,
+                                price: p.averagePrice
+                            };
+                        });
+                    }
+                    if (result['securitiesAccount']['orderStrategies']) {
+                        order = result['securitiesAccount']['orderStrategies'];
+                    }
+                });
+            } else {
+                console.log('TD no new');
+                return _promise2.default.resolve();
+            }
+        };
+        return initWs().then(function () {
+            return initialBook();
+        }).then(function () {
+            updateTime['trade']++;
+            console.log('td ' + updateTime['trade']);
+            if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1200 / /*PRICE_INTERVAL*/1200)) {
+                return _promise2.default.resolve();
+            }
+            return (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', sType: { $exists: false } }).then(function (items) {
+                var newOrder = [];
+                var ussePrice = {};
+                var recur_status = function recur_status(index) {
+                    if (index >= items.length) {
+                        return _promise2.default.resolve();
+                    } else {
+                        var _ret = function () {
+                            var item = items[index];
+                            /*item.count = 0;
+                            item.amount = item.orig;
+                            for (let i = 0; i < position.length; i++) {
+                                if (position[i].symbol === item.index) {
+                                    item.count = position[i].amount;
+                                    item.amount = item.amount - position[i].amount * position[i].price;
+                                    break;
+                                }
+                            }*/
+                            console.log(item);
+                            var cancelOrder = function cancelOrder(rest) {};
+                            var startStatus = function startStatus() {};
+                            if (item.ing === 2) {
+                                var sellAll = function sellAll() {};
+                                return {
+                                    v: cancelOrder(sellAll)
+                                };
+                            } else if (item.ing === 1) {
+                                if (ussePrice[item.index].lastPrice) {
+                                    return {
+                                        v: startStatus()
+                                    };
+                                } else {
+                                    return {
+                                        v: recur_status(index + 1)
+                                    };
+                                }
+                            } else {
+                                if ((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100 < _constants.USSE_ENTER_MID) {
+                                    return {
+                                        v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { ing: 1 } }).then(function (result) {
+                                            if (ussePrice[item.index].lastPrice) {
+                                                return startStatus();
+                                            } else {
+                                                return recur_status(index + 1);
+                                            }
+                                        })
+                                    };
+                                } else {
+                                    console.log('enter_mid');
+                                    console.log((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100);
+                                    return {
+                                        v: recur_status(index + 1)
+                                    };
+                                }
+                            }
+                        }();
+
+                        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+                    }
+                };
             });
         });
     });
 };
 
-var getUssePrice = exports.getUssePrice = function getUssePrice() {
-    return ussePrice;
+//export const getUssePrice = () => ussePrice;
+var getUssePosition = exports.getUssePosition = function getUssePosition() {
+    return position;
+};
+
+var resetTD = exports.resetTD = function resetTD() {
+    var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
+    console.log('TD reset');
+    if (update) {
+        var trade_count = updateTime['trade'];
+        updateTime = {};
+        updateTime['book'] = 0;
+        updateTime['trade'] = trade_count;
+    } else {
+        usseLogout();
+    }
 };

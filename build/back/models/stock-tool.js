@@ -222,9 +222,9 @@ var getStockPrice = function getStockPrice() {
                         }
                         price[0] = +price[0];
                         if (!price_only) {
-                            var _up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
-                            if (_up && _up[0]) {
-                                price[0] = price[0] + ' ' + _up[0];
+                            var up = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
+                            if (up && up[0]) {
+                                price[0] = price[0] + ' ' + up[0];
                             }
                         }
                         console.log(price[0]);
@@ -243,20 +243,18 @@ var getStockPrice = function getStockPrice() {
                 };
                 break;
             case 'usse':
-                var up = (0, _tdameritradeTool.getUssePrice)();
-                if (up[index] && new Date().getTime() / 1000 - up[index].t < 86400) {
+                /*const up = getUssePrice();
+                if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 86400)) {
                     console.log(up[index]);
-                    return {
-                        v: up[index].p
-                    };
-                } else {
-                    return {
-                        v: getUsStock(index).then(function (ret) {
-                            console.log(ret.price);
-                            return ret.price;
-                        })
-                    };
-                }
+                    return up[index].p;
+                } else {*/
+                return {
+                    v: getUsStock(index).then(function (ret) {
+                        console.log(ret.price);
+                        return ret.price;
+                    })
+                };
+                //}
                 break;
             default:
                 return {
@@ -6910,22 +6908,34 @@ var getSingleAnnual = exports.getSingleAnnual = function getSingleAnnual(year, f
 
 var stockStatus = exports.stockStatus = function stockStatus(newStr) {
     return (0, _mongoTool2.default)('find', _constants.TOTALDB, { sType: { $exists: false } }).then(function (items) {
-        var gp = (0, _tdameritradeTool.getUssePrice)();
-        var addStock = [];
-        items.forEach(function (t) {
+        /*const gp = getUssePrice();
+        const addStock = [];
+        items.forEach(t => {
             if (t.setype === 'usse' && !gp[t.index]) {
                 addStock.push(t.index);
             }
         });
         if (addStock.length > 0) {
-            (0, _tdameritradeTool.usseSubStock)(addStock, false);
-        }
+            usseSubStock(addStock, false);
+        }*/
+        var ussePosition = (0, _tdameritradeTool.getUssePosition)();
         var recur_price = function recur_price(index) {
-            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
+            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 || !items[index].index ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
                 if (price === 0) {
                     return 0;
                 }
                 var item = items[index];
+                if (item.setype === 'usse') {
+                    item.count = 0;
+                    item.amount = item.orig;
+                    for (var i = 0; i < ussePosition.length; i++) {
+                        if (ussePosition[i].symbol === item.index) {
+                            item.count = ussePosition[i].amount;
+                            item.amount = item.amount - ussePosition[i].amount * ussePosition[i].price;
+                            break;
+                        }
+                    }
+                }
                 console.log(item);
                 var fee = items[index].setype === 'usse' ? _constants.USSE_FEE : _constants.TRADE_FEE;
                 //new mid
@@ -7046,7 +7056,13 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     item.sent = new Date().getDay() + 1;
                     (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
                 }
-                if (suggestion.type === 2) {
+                if (item.count < suggestion.sCount) {
+                    suggestion.sCount = item.count;
+                }
+                if (item.amount < suggestion.bCount * suggestion.buy) {
+                    suggestion.bCount = Math.floor(item.amount / suggestion.buy);
+                }
+                /*if (suggestion.type === 2) {
                     if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
                         item.bTarget = item.bCurrent;
                         item.bCurrent = suggestion.buy;
@@ -7065,14 +7081,14 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     item.sTarget = 0;
                 }
                 if (item.count > 0 && suggestion.type === 1 && price < item.price) {
-                    (0, _sendWs2.default)(item.name + ' SELL ALL NOW!!!', 0, 0, true);
+                    sendWs(`${item.name} SELL ALL NOW!!!`, 0, 0, true);
                 }
                 if (item.bTarget && price >= item.bTarget && price > item.price && item.amount >= price) {
-                    (0, _sendWs2.default)(item.name + ' BUY NOW!!!', 0, 0, true);
+                    sendWs(`${item.name} BUY NOW!!!`, 0, 0, true);
                 }
                 if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
-                    (0, _sendWs2.default)(item.name + ' SELL NOW!!!', 0, 0, true);
-                }
+                    sendWs(`${item.name} SELL NOW!!!`, 0, 0, true);
+                }*/
                 /*
                 const high = (!item.high || price > item.high) ? price : item.high;
                 if (price > item.price) {
@@ -7098,13 +7114,14 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                     }
                 }*/
                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                        //3個改成存redis或local 給total用
                         price: price,
                         str: suggestion.str,
                         sent: item.sent,
-                        bTarget: item.bTarget,
-                        bCurrent: item.bCurrent,
-                        sTarget: item.sTarget,
-                        sCurrent: item.sCurrent,
+                        //bTarget: item.bTarget,
+                        //bCurrent: item.bCurrent,
+                        //sTarget: item.sTarget,
+                        //sCurrent: item.sCurrent,
                         newMid: item.newMid,
                         tmpPT: item.tmpPT,
                         previous: item.previous
@@ -7358,7 +7375,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     pP--;
                 }
             }
-            if (pCount !== 0) {
+            if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
             }
@@ -7439,7 +7456,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     _pP--;
                 }
             }
-            if (pCount !== 0) {
+            if (pCount !== 0 || bP < 5) {
                 nowBP = _previousP > nowBP ? _previousP : nowBP;
                 bP = _pP > bP ? _pP : bP;
             }

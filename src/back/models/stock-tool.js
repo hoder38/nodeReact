@@ -8,7 +8,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
-import { getUssePrice, usseSubStock } from '../models/tdameritrade-tool'
+import { getUssePosition } from '../models/tdameritrade-tool'
 import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility'
 import { getExtname } from '../util/mime'
 import sendWs from '../util/sendWs'
@@ -161,16 +161,16 @@ const getStockPrice = (type='twse', index, price_only = true) => {
         return real();
         break;
         case 'usse':
-        const up = getUssePrice();
+        /*const up = getUssePrice();
         if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 86400)) {
             console.log(up[index]);
             return up[index].p;
-        } else {
+        } else {*/
             return getUsStock(index).then(ret => {
                 console.log(ret.price);
                 return ret.price;
             });
-        }
+        //}
         break;
         default:
         return handleError(new HoError('stock type unknown!!!'));
@@ -5738,7 +5738,7 @@ export const getSingleAnnual = (year, folder, index) => {
 }
 
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const gp = getUssePrice();
+    /*const gp = getUssePrice();
     const addStock = [];
     items.forEach(t => {
         if (t.setype === 'usse' && !gp[t.index]) {
@@ -5747,12 +5747,24 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     });
     if (addStock.length > 0) {
         usseSubStock(addStock, false);
-    }
-    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
+    }*/
+    const ussePosition = getUssePosition();
+    const recur_price = index => (index >= items.length) ? Promise.resolve() : (items[index].index === 0 || !items[index].index) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
         if (price === 0) {
             return 0;
         }
         const item = items[index];
+        if (item.setype === 'usse') {
+            item.count = 0;
+            item.amount = item.orig;
+            for (let i = 0; i < ussePosition.length; i++) {
+                if (ussePosition[i].symbol === item.index) {
+                    item.count = ussePosition[i].amount;
+                    item.amount = item.amount - ussePosition[i].amount * ussePosition[i].price;
+                    break;
+                }
+            }
+        }
         console.log(item);
         const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
         //new mid
@@ -5867,7 +5879,13 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             item.sent = new Date().getDay() + 1;
             sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
         }
-        if (suggestion.type === 2) {
+        if (item.count < suggestion.sCount) {
+            suggestion.sCount = item.count;
+        }
+        if (item.amount < suggestion.bCount * suggestion.buy) {
+            suggestion.bCount = Math.floor(item.amount / suggestion.buy);
+        }
+        /*if (suggestion.type === 2) {
             if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
                 item.bTarget = item.bCurrent;
                 item.bCurrent = suggestion.buy;
@@ -5893,7 +5911,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         }
         if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
             sendWs(`${item.name} SELL NOW!!!`, 0, 0, true);
-        }
+        }*/
         /*
         const high = (!item.high || price > item.high) ? price : item.high;
         if (price > item.price) {
@@ -5919,13 +5937,14 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             }
         }*/
         return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
+            //3個改成存redis或local 給total用
             price,
             str: suggestion.str,
             sent: item.sent,
-            bTarget: item.bTarget,
-            bCurrent: item.bCurrent,
-            sTarget: item.sTarget,
-            sCurrent: item.sCurrent,
+            //bTarget: item.bTarget,
+            //bCurrent: item.bCurrent,
+            //sTarget: item.sTarget,
+            //sCurrent: item.sCurrent,
             newMid: item.newMid,
             tmpPT: item.tmpPT,
             previous: item.previous,
@@ -6135,7 +6154,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP--;
                 }
             }
-            if (pCount !== 0) {
+            if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
             }
@@ -6216,7 +6235,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP--;
                 }
             }
-            if (pCount !== 0) {
+            if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
             }

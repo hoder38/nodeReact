@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.usseTicker = exports.filterBitfinex = exports.checkSetOffer = exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
+exports.checkUsseInit = exports.usseInit = exports.filterBitfinex = exports.checkSetOffer = exports.setUserOffer = exports.rateCalculator = exports.checkStock = exports.dbBackup = exports.filterStock = exports.updateStock = exports.updateExternal = exports.checkMedia = exports.autoDownload = exports.autoUpload = undefined;
 
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
@@ -63,6 +63,7 @@ var stock_batch_list = [];
 var stock_batch_list_2 = [];
 
 var lastSetOffer = 0;
+var lastInitUsse = 0;
 
 function bgError(err, type) {
     (0, _sendWs2.default)(type + ': ' + (err.message || err.msg), 0, 0, true);
@@ -494,35 +495,38 @@ var rateCalculator = exports.rateCalculator = function rateCalculator() {
 };
 
 var setUserOffer = exports.setUserOffer = function setUserOffer() {
-    console.log('setUserOffer');
-    console.log(new Date());
     if ((0, _config.BITFINEX_LOAN)(_ver.ENV_TYPE)) {
         var _ret10 = function () {
+            console.log('setUserOffer');
+            console.log(new Date());
             var checkUser = function checkUser(index, userlist) {
                 return index >= userlist.length ? _promise2.default.resolve() : (0, _bitfinexTool.setWsOffer)(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(function () {
                     return checkUser(index + 1, userlist);
                 });
             };
             var setO = function setO() {
-                lastSetOffer = Math.round(new Date().getTime() / 1000);
-                return (0, _mongoTool2.default)('find', _constants.USERDB, { bitfinex: { $exists: true } }).then(function (userlist) {
-                    return checkUser(0, userlist).catch(function (err) {
-                        if ((err.message || err.msg).includes('Maximum call stack size exceeded')) {
-                            return (0, _bitfinexTool.resetBFX)();
-                        } else {
-                            (0, _bitfinexTool.resetBFX)(true);
-                            return bgError(err, 'Loop set offer');
-                        }
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - lastSetOffer > _constants.RATE_INTERVAL * 0.9) {
+                    lastSetOffer = now;
+                    return (0, _mongoTool2.default)('find', _constants.USERDB, { bitfinex: { $exists: true } }).then(function (userlist) {
+                        return checkUser(0, userlist).catch(function (err) {
+                            if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
+                                return (0, _bitfinexTool.resetBFX)();
+                            } else {
+                                (0, _bitfinexTool.resetBFX)(true);
+                                return bgError(err, 'Loop set offer');
+                            }
+                        });
+                    }).then(function () {
+                        return new _promise2.default(function (resolve, reject) {
+                            return setTimeout(function () {
+                                return resolve();
+                            }, _constants.RATE_INTERVAL * 1000);
+                        });
+                    }).then(function () {
+                        return setO();
                     });
-                }).then(function () {
-                    return new _promise2.default(function (resolve, reject) {
-                        return setTimeout(function () {
-                            return resolve();
-                        }, _constants.RATE_INTERVAL * 1000);
-                    });
-                }).then(function () {
-                    return setO();
-                });
+                }
             };
             if (lastSetOffer) {
                 return {
@@ -607,14 +611,81 @@ var filterBitfinex = exports.filterBitfinex = function filterBitfinex() {
     }
 };
 
-var usseTicker = exports.usseTicker = function usseTicker() {
-    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE)) {
-        return new _promise2.default(function (resolve, reject) {
-            return setTimeout(function () {
-                return resolve();
-            }, 50000);
-        }).then(function () {
-            return (0, _tdameritradeTool.usseTDTicker)();
-        });
+var usseInit = exports.usseInit = function usseInit() {
+    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
+        var _ret13 = function () {
+            console.log('initUsse');
+            console.log(new Date());
+            var setO = function setO() {
+                var now = Math.round(new Date().getTime() / 1000);
+                if (now - lastInitUsse > _constants.PRICE_INTERVAL * 0.9) {
+                    lastInitUsse = now;
+                    return (0, _tdameritradeTool.usseTDInit)().catch(function (err) {
+                        /*if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
+                            return resetBFX();
+                        } else {*/
+                        (0, _tdameritradeTool.resetTD)(true);
+                        return bgError(err, 'Loop usse init');
+                        //}
+                    }).then(function () {
+                        return new _promise2.default(function (resolve, reject) {
+                            return setTimeout(function () {
+                                return resolve();
+                            }, _constants.PRICE_INTERVAL * 1000);
+                        });
+                    }).then(function () {
+                        return setO();
+                    });
+                }
+            };
+            if (lastInitUsse) {
+                return {
+                    v: setO()
+                };
+            } else {
+                return {
+                    v: new _promise2.default(function (resolve, reject) {
+                        return setTimeout(function () {
+                            return resolve();
+                        }, 150000);
+                    }).then(function () {
+                        return setO();
+                    })
+                };
+            }
+        }();
+
+        if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+    }
+};
+
+var checkUsseInit = exports.checkUsseInit = function checkUsseInit() {
+    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
+        var _ret14 = function () {
+            var cso = function cso() {
+                if (Math.round(new Date().getTime() / 1000) - lastInitUsse > 7200) {
+                    (0, _sendWs2.default)('restart usse init', 0, 0, true);
+                    usseInit();
+                }
+                return new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, _constants.PRICE_INTERVAL * 1000);
+                }).then(function () {
+                    return cso();
+                });
+            };
+            return {
+                v: new _promise2.default(function (resolve, reject) {
+                    return setTimeout(function () {
+                        return resolve();
+                    }, 180000);
+                }).then(function () {
+                    return cso();
+                })
+            };
+        }();
+
+        if ((typeof _ret14 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret14)) === "object") return _ret14.v;
     }
 };

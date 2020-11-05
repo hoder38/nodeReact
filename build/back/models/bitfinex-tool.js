@@ -984,12 +984,13 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }).then(function () {
                 return userRest.fundingOffers('');
             }).then(function (fos) {
-                var risk = _constants.RISK_MAX;
+                var risk = {};
                 var temp = {};
                 fos.forEach(function (v) {
                     if (_constants.SUPPORT_COIN.indexOf(v.symbol) !== -1) {
                         if (!temp[v.symbol]) {
                             temp[v.symbol] = [];
+                            risk[v.symbol] = _constants.RISK_MAX;
                         }
                         temp[v.symbol].push({
                             id: v.id,
@@ -998,7 +999,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             rate: v.rate,
                             period: v.period,
                             status: v.status,
-                            risk: risk > 0 ? risk-- : 0
+                            risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : 0
                         });
                     }
                 });
@@ -1691,7 +1692,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         }).then(function () {
             updateTime[id]['trade']++;
             console.log(updateTime[id]['trade']);
-            if (updateTime[id]['trade'] % _constants.ORDER_INTERVAL !== 2) {
+            if (updateTime[id]['trade'] % Math.ceil(_constants.ORDER_INTERVAL / _constants.RATE_INTERVAL) !== Math.floor(180 / _constants.RATE_INTERVAL)) {
                 return _promise2.default.resolve();
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
@@ -1886,6 +1887,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 if (item.count < suggestion.sCount) {
                                     suggestion.sCount = item.count;
                                 }
+                                if (item.amount < suggestion.bCount * suggestion.buy) {
+                                    suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                }
                                 return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
                                         newMid: item.newMid,
                                         tmpPT: item.tmpPT,
@@ -2035,9 +2039,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 if (current.clear === true || current.clear[item.index] === true) {
                                     return recur_NewOrder(index + 1);
                                 }
-                                if (item.amount < suggestion.bCount * suggestion.buy) {
+                                /*if (item.amount < suggestion.bCount * suggestion.buy) {
                                     suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
-                                }
+                                }*/
                                 return userRest.wallets().then(function (wallet) {
                                     for (var _i17 = 0; _i17 < wallet.length; _i17++) {
                                         if (wallet[_i17].type === 'margin' && wallet[_i17].currency === current.type.substr(1)) {
