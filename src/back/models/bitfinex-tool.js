@@ -1466,7 +1466,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
-                const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                 const recur_status = index => {
                     if (index >= items.length) {
                         sendWs({
@@ -1477,6 +1476,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return Promise.resolve();
                     } else {
                         const item = items[index];
+                        const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                         item.count = 0;
                         item.amount = item.orig;
                         if (position[id][current.type]) {
@@ -1545,7 +1545,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                             console.log(suggestion);
                             let count = 0;
-                            let amount = item.amount;
+                            let amount = clearP ? 0 : item.amount;
                             if (suggestion.type === 7) {
                                 if (amount > item.orig * 7 / 8) {
                                     let tmpAmount = amount - item.orig * 3 / 4;
@@ -1753,10 +1753,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const item = newOrder[index].item;
                         const suggestion = newOrder[index].suggestion;
                         const submitBuy = () => {
-                            if (clearP) {
+                            /*if (current.clear === true || current.clear[item.index] === true) {
                                 return recur_NewOrder(index + 1);
                             }
-                            /*if (item.amount < suggestion.bCount * suggestion.buy) {
+                            if (item.amount < suggestion.bCount * suggestion.buy) {
                                 suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                             }*/
                             return userRest.wallets().then(wallet => {

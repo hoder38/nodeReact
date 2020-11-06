@@ -7538,8 +7538,11 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
         }*/
     };
     var finalBuy = function finalBuy() {
-        if (bCount === 0 && (pRemain > 9 / 10 || !sType && pCount === 0)) {
+        if (bCount === 0 && pRemain > 9 / 10) {
             bCount = bTimes * priceTimes;
+        }
+        if (pAmount === 0) {
+            bCount = 0;
         }
         /*if (pAmount && bCount) {
             const nowC = Math.floor(pAmount / buy)
@@ -7580,7 +7583,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                 bCount = bCount * (1 + bAdd);
             }
             //buy = Math.round(tmpB * 100) / 100;
-            //finalBuy();
+            finalBuy();
             str += 'Buy 3/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else if (bP > 5) {
             type = 3;
@@ -7591,7 +7594,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else {
                 bCount = bCount * (1 + bAdd);
             }
-            //finalBuy();
+            finalBuy();
             str += 'Buy 1/2 ' + buy + ' ( ' + bCount + ' ) ';
         } else if (bP > 4) {
             type = 7;
@@ -7603,7 +7606,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else {
                 bCount = bCount * (1 + bAdd);
             }
-            //finalBuy();
+            finalBuy();
             str += 'Buy 1/4 ' + buy + ' ( ' + bCount + ' ) ';
         } else {
             buy = Math.abs(priceArray[nowBP + 1]);
@@ -7618,7 +7621,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else {
                 bCount = bCount * (1 + bAdd);
             }
-            //finalBuy();
+            finalBuy();
             str += 'Buy ' + buy + ' ( ' + bCount + ' ) ';
         }
     }
@@ -7655,7 +7658,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
             sell = Math.abs(priceArray[nowSP - 1]);
             sell = sType === 0 ? fee === _constants.TRADE_FEE ? twseTicker(sell) : usseTicker(sell) : sType === 1 ? bitfinexTicker(sell) : sell;
-            //finalSell();
+            finalSell();
             str += 'Sell 3/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 3) {
             type = 5;
@@ -7671,7 +7674,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             }
             sell = Math.abs(priceArray[nowSP - 1]);
             sell = sType === 0 ? fee === _constants.TRADE_FEE ? twseTicker(sell) : usseTicker(sell) : sType === 1 ? bitfinexTicker(sell) : sell;
-            //finalSell();
+            finalSell();
             str += 'Sell 1/2 ' + sell + ' ( ' + sCount + ' ) ';
         } else if (sP < 4) {
             type = 9;
@@ -7688,7 +7691,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            //finalSell();
+            finalSell();
             str += 'Sell 1/4 ' + sell + ' ( ' + sCount + ' ) ';
         } else {
             sell = Math.abs(priceArray[nowSP - 1]);
@@ -7703,7 +7706,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            //finalSell();
+            finalSell();
             str += 'Sell ' + sell + ' ( ' + sCount + ' ) ';
         }
     }

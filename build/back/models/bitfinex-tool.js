@@ -1697,7 +1697,6 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
                 var newOrder = [];
-                var clearP = current.clear === true || current.clear[item.index] === true ? true : false;
                 var recur_status = function recur_status(index) {
                     if (index >= items.length) {
                         (0, _sendWs2.default)({
@@ -1709,6 +1708,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     } else {
                         var _ret6 = function () {
                             var item = items[index];
+                            var clearP = current.clear === true || current.clear[item.index] === true ? true : false;
                             item.count = 0;
                             item.amount = item.orig;
                             if (position[id][current.type]) {
@@ -1799,7 +1799,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 }
                                 console.log(suggestion);
                                 var count = 0;
-                                var amount = item.amount;
+                                var amount = clearP ? 0 : item.amount;
                                 if (suggestion.type === 7) {
                                     if (amount > item.orig * 7 / 8) {
                                         var tmpAmount = amount - item.orig * 3 / 4;
@@ -2037,10 +2037,10 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             var item = newOrder[index].item;
                             var suggestion = newOrder[index].suggestion;
                             var submitBuy = function submitBuy() {
-                                if (clearP) {
+                                /*if (current.clear === true || current.clear[item.index] === true) {
                                     return recur_NewOrder(index + 1);
                                 }
-                                /*if (item.amount < suggestion.bCount * suggestion.buy) {
+                                if (item.amount < suggestion.bCount * suggestion.buy) {
                                     suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                                 }*/
                                 return userRest.wallets().then(function (wallet) {
