@@ -1,3 +1,5 @@
+import { ENV_TYPE } from '../../../ver'
+import { CHECK_STOCK,USSE_TICKER } from '../config'
 import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants'
 import Htmlparser from 'htmlparser2'
 import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
@@ -5082,6 +5084,12 @@ export default {
                         //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                         //plus += p;
                         //minus += m;
+                        if (v.clear) {
+                            v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
+                        }
+                        if (v.ing === 2) {
+                            v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
+                        }
                         stock.push({
                             name: v.name,
                             type: v.type,
@@ -5199,7 +5207,7 @@ export default {
             const removeTotal = [];
             const single = v => {
                 //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
-                const cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
+                const cmd = v.match(/^([\da-zA-Z]+)\s+([\da-zA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     let remainM = null;
                     if (remainM = cmd[1].match(/^remain(.*)$/)) {
@@ -5217,23 +5225,58 @@ export default {
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
-                            if (index === items[i].index) {
+                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
                                 return getStockPrice(setype, items[i].index).then(price => {
                                     switch(setype) {
                                         case 'twse':
                                         remain += (price * items[i].count * (1 - TRADE_FEE));
                                         updateTotal[totalId] = {amount: remain};
+                                        if (items[i]._id) {
+                                            removeTotal.push(items[i]._id);
+                                        }
+                                        items.splice(i, 1);
                                         break;
                                         case 'usse':
-                                        remain1 += (price * items[i].count * (1 - USSE_FEE));
-                                        updateTotal[totalId1] = {amount: remain1};
+                                        if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+                                            items[i].ing = 2;
+                                            if (items[i]._id) {
+                                                if (updateTotal[items[i]._id]) {
+                                                    updateTotal[items[i]._id].ing = items[i].ing;
+                                                } else {
+                                                    updateTotal[items[i]._id] = {ing: items[i].ing};
+                                                }
+                                            }
+                                        } else {
+                                            remain1 += (price * items[i].count * (1 - USSE_FEE));
+                                            updateTotal[totalId1] = {amount: remain1};
+                                            if (items[i]._id) {
+                                                removeTotal.push(items[i]._id);
+                                            }
+                                            items.splice(i, 1);
+                                        }
                                         break;
                                     }
-                                    if (items[i]._id) {
+                                    /*if (items[i]._id) {
                                         removeTotal.push(items[i]._id);
                                     }
-                                    items.splice(i, 1);
+                                    items.splice(i, 1);*/
                                 });
+                                break;
+                            }
+                        }
+                    } else if (cmd[1] === 'clear') {
+                        const setype = cmd[2].substring(0, 4);
+                        const index = cmd[2].substring(4);
+                        for (let i in items) {
+                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
+                                items[i].clear = true;
+                                if (items[i]._id) {
+                                    if (updateTotal[items[i]._id]) {
+                                        updateTotal[items[i]._id].clear = items[i].clear;
+                                    } else {
+                                        updateTotal[items[i]._id] = {clear: items[i].clear};
+                                    }
+                                }
                                 break;
                             }
                         }
@@ -5242,7 +5285,7 @@ export default {
                         const setype = cmd[1].substring(0, 4);
                         const index = cmd[1].substring(4);
                         for (let i in items) {
-                            if (index === items[i].index) {
+                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
@@ -5254,6 +5297,10 @@ export default {
                                     items[i].times = newWeb.times;
                                     items[i].amount = items[i].amount + +cmd[2] - items[i].orig;
                                     items[i].orig = +cmd[2];
+                                    if (items[i].ing === 2) {
+                                        items[i].ing = 0;
+                                    }
+                                    items[i].clear = false;
                                     if (items[i]._id) {
                                         if (updateTotal[items[i]._id]) {
                                             updateTotal[items[i]._id].web = items[i].web;
@@ -5261,6 +5308,8 @@ export default {
                                             updateTotal[items[i]._id].times = items[i].times;
                                             updateTotal[items[i]._id].amount = items[i].amount;
                                             updateTotal[items[i]._id].orig = items[i].orig;
+                                            updateTotal[items[i]._id].ing = items[i].ing;
+                                            updateTotal[items[i]._id].clear = items[i].clear;
                                         } else {
                                             updateTotal[items[i]._id] = {
                                                 web: items[i].web,
@@ -5268,6 +5317,8 @@ export default {
                                                 times: items[i].times,
                                                 amount: items[i].amount,
                                                 orig: items[i].orig,
+                                                ing: items[i].ing,
+                                                clear: items[i].clear,
                                             };
                                         }
                                     }
@@ -5429,6 +5480,7 @@ export default {
                                             price,
                                             previous: {buy: [], sell: []},
                                             newMid: [],
+                                            ing: 0,
                                             //high: price,
                                         })
                                         //remain -= cost;
@@ -5506,6 +5558,12 @@ export default {
                             //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                             //plus += p;
                             //minus += m;
+                            if (v.clear) {
+                                v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
+                            }
+                            if (v.ing === 2) {
+                                v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
+                            }
                             stock.push({
                                 name: v.name,
                                 type: v.type,
@@ -5766,9 +5824,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     return 0;
                 }
                 const item = items[index];
-                if (item.setype === 'usse') {
-                    //item.count = 0;
-                    //item.amount = item.orig;
+                if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
+                    item.count = 0;
+                    item.amount = item.orig;
                     for (let i = 0; i < ussePosition.length; i++) {
                         if (ussePosition[i].symbol === item.index) {
                             item.count = ussePosition[i].amount;
@@ -5963,11 +6021,21 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     newMid: item.newMid,
                     tmpPT: item.tmpPT,
                     previous: item.previous,
+                    count: item.count,
+                    amount: item.amount,
                 }});
             }).then(() => recur_price(index + 1));
         }
     }
-    return recur_price(0);
+    return recur_price(0).then(() => {
+        if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+            return Mongo('update', TOTALDB, {index: 0, setype: 'usse'}, {$set : {
+                amount: ussePosition[ussePosition.length -1].price,
+            }});
+        } else {
+            return Promise.resolve();
+        }
+    });
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {

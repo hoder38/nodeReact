@@ -428,6 +428,18 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
             console.log('td ' + updateTime['trade']);
             if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1200 / /*PRICE_INTERVAL*/1200)) {
                 return _promise2.default.resolve();
+            } else {
+                //避開交易時間
+                var hour = new Date().getHours();
+                if (_constants.USSE_MATKET_TIME[0] > _constants.USSE_MATKET_TIME[1]) {
+                    if (hour > _constants.USSE_MATKET_TIME[0] || hour < _constants.USSE_MATKET_TIME[1]) {
+                        updateTime['trade']--;
+                        return _promise2.default.resolve();
+                    }
+                } else if (hour > _constants.USSE_MATKET_TIME[0] && hour < _constants.USSE_MATKET_TIME[1]) {
+                    updateTime['trade']--;
+                    return _promise2.default.resolve();
+                }
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', sType: { $exists: false } }).then(function (items) {
                 var newOrder = [];
@@ -538,6 +550,11 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
 //export const getUssePrice = () => ussePrice;
 var getUssePosition = exports.getUssePosition = function getUssePosition() {
     //sync first
+    position.push({
+        symbol: 0,
+        amount: 1,
+        price: available
+    });
     return position;
 };
 

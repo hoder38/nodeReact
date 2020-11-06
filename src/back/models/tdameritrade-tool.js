@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER } from '../constants'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility'
@@ -377,6 +377,18 @@ export const usseTDInit = () => checkOauth().then(() => {
         console.log(`td ${updateTime['trade']}`);
         if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1200 / /*PRICE_INTERVAL*/1200)) {
             return Promise.resolve();
+        } else {
+            //避開交易時間
+            const hour = new Date().getHours();
+            if (USSE_MATKET_TIME[0] > USSE_MATKET_TIME[1]) {
+                if (hour > USSE_MATKET_TIME[0] || hour < USSE_MATKET_TIME[1]) {
+                    updateTime['trade']--;
+                    return Promise.resolve();
+                }
+            } else if (hour > USSE_MATKET_TIME[0] && hour < USSE_MATKET_TIME[1]) {
+                updateTime['trade']--;
+                return Promise.resolve();
+            }
         }
         return Mongo('find', TOTALDB, {setype: 'usse', sType: {$exists: false}}).then(items => {
             const newOrder = [];
@@ -462,6 +474,11 @@ export const usseTDInit = () => checkOauth().then(() => {
 //export const getUssePrice = () => ussePrice;
 export const getUssePosition = () => {
     //sync first
+    position.push({
+        symbol: 0,
+        amount: 1,
+        price: available,
+    });
     return position;
 }
 

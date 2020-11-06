@@ -2547,7 +2547,7 @@ export default {
                             name: `${(o.side === 1) ? '放款' : '借款'} ${v.substr(1)} $${Math.floor(o.amount * 100) / 100} ${o.period}天期 ${o.pair}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
-                            rate: `${rate}%`,
+                            rate: `rate ? ${rate}% : FRR`,
                             count: rate,
                             boost: (o.period === 30) ? true : false,
                             utime: o.time + o.period * 86400,

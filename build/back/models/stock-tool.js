@@ -29,6 +29,10 @@ var _promise = require('babel-runtime/core-js/promise');
 
 var _promise2 = _interopRequireDefault(_promise);
 
+var _ver = require('../../../ver');
+
+var _config = require('../config');
+
 var _constants = require('../constants');
 
 var _htmlparser = require('htmlparser2');
@@ -6052,6 +6056,12 @@ exports.default = {
                     //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                     //plus += p;
                     //minus += m;
+                    if (v.clear) {
+                        v.str = v.str ? 'Clearing ' + v.str : 'Clearing';
+                    }
+                    if (v.ing === 2) {
+                        v.str = v.str ? 'Deleting ' + v.str : 'Deleting';
+                    }
                     stock.push({
                         name: v.name,
                         type: v.type,
@@ -6194,7 +6204,7 @@ exports.default = {
             var removeTotal = [];
             var single = function single(v) {
                 //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
-                var cmd = v.match(/^([\da-zA-Z]+)\s+([\dA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
+                var cmd = v.match(/^([\da-zA-Z]+)\s+([\da-zA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     var remainM = null;
                     if (remainM = cmd[1].match(/^remain(.*)$/)) {
@@ -6214,7 +6224,7 @@ exports.default = {
                             var index = cmd[2].substring(4);
 
                             var _loop = function _loop(i) {
-                                if (index === items[i].index) {
+                                if (index === items[i].index && (setype === items[i].setype || setype === 'twse' && !items[i].setype)) {
                                     return {
                                         v: {
                                             v: getStockPrice(setype, items[i].index).then(function (price) {
@@ -6222,16 +6232,35 @@ exports.default = {
                                                     case 'twse':
                                                         remain += price * items[i].count * (1 - _constants.TRADE_FEE);
                                                         updateTotal[totalId] = { amount: remain };
+                                                        if (items[i]._id) {
+                                                            removeTotal.push(items[i]._id);
+                                                        }
+                                                        items.splice(i, 1);
                                                         break;
                                                     case 'usse':
-                                                        remain1 += price * items[i].count * (1 - _constants.USSE_FEE);
-                                                        updateTotal[totalId1] = { amount: remain1 };
+                                                        if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
+                                                            items[i].ing = 2;
+                                                            if (items[i]._id) {
+                                                                if (updateTotal[items[i]._id]) {
+                                                                    updateTotal[items[i]._id].ing = items[i].ing;
+                                                                } else {
+                                                                    updateTotal[items[i]._id] = { ing: items[i].ing };
+                                                                }
+                                                            }
+                                                        } else {
+                                                            remain1 += price * items[i].count * (1 - _constants.USSE_FEE);
+                                                            updateTotal[totalId1] = { amount: remain1 };
+                                                            if (items[i]._id) {
+                                                                removeTotal.push(items[i]._id);
+                                                            }
+                                                            items.splice(i, 1);
+                                                        }
                                                         break;
                                                 }
-                                                if (items[i]._id) {
+                                                /*if (items[i]._id) {
                                                     removeTotal.push(items[i]._id);
                                                 }
-                                                items.splice(i, 1);
+                                                items.splice(i, 1);*/
                                             })
                                         }
                                     };
@@ -6253,78 +6282,102 @@ exports.default = {
                         }();
 
                         if ((typeof _ret13 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret13)) === "object") return _ret13.v;
+                    } else if (cmd[1] === 'clear') {
+                        var setype = cmd[2].substring(0, 4);
+                        var index = cmd[2].substring(4);
+                        for (var i in items) {
+                            if (index === items[i].index && (setype === items[i].setype || setype === 'twse' && !items[i].setype)) {
+                                items[i].clear = true;
+                                if (items[i]._id) {
+                                    if (updateTotal[items[i]._id]) {
+                                        updateTotal[items[i]._id].clear = items[i].clear;
+                                    } else {
+                                        updateTotal[items[i]._id] = { clear: items[i].clear };
+                                    }
+                                }
+                                break;
+                            }
+                        }
                     } else {
                         var _ret15 = function () {
                             var is_find = false;
                             var setype = cmd[1].substring(0, 4);
                             var index = cmd[1].substring(4);
 
-                            var _loop3 = function _loop3(i) {
-                                if (index === items[i].index) {
+                            var _loop3 = function _loop3(_i31) {
+                                if (index === items[_i31].index && (setype === items[_i31].setype || setype === 'twse' && !items[_i31].setype)) {
                                     is_find = true;
                                     if (cmd[3] === 'amount') {
-                                        var newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
+                                        var newWeb = adjustWeb(items[_i31].web, items[_i31].mid, +cmd[2]);
                                         if (!newWeb) {
                                             return {
                                                 v: {
-                                                    v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[i].mid * (items[i].web.length - 1) / 3)))
+                                                    v: (0, _utility.handleError)(new _utility.HoError('Amount need large than ' + Math.ceil(items[_i31].mid * (items[_i31].web.length - 1) / 3)))
                                                 }
                                             };
                                         }
-                                        items[i].web = newWeb.arr;
-                                        items[i].mid = newWeb.mid;
-                                        items[i].times = newWeb.times;
-                                        items[i].amount = items[i].amount + +cmd[2] - items[i].orig;
-                                        items[i].orig = +cmd[2];
-                                        if (items[i]._id) {
-                                            if (updateTotal[items[i]._id]) {
-                                                updateTotal[items[i]._id].web = items[i].web;
-                                                updateTotal[items[i]._id].mid = items[i].mid;
-                                                updateTotal[items[i]._id].times = items[i].times;
-                                                updateTotal[items[i]._id].amount = items[i].amount;
-                                                updateTotal[items[i]._id].orig = items[i].orig;
+                                        items[_i31].web = newWeb.arr;
+                                        items[_i31].mid = newWeb.mid;
+                                        items[_i31].times = newWeb.times;
+                                        items[_i31].amount = items[_i31].amount + +cmd[2] - items[_i31].orig;
+                                        items[_i31].orig = +cmd[2];
+                                        if (items[_i31].ing === 2) {
+                                            items[_i31].ing = 0;
+                                        }
+                                        items[_i31].clear = false;
+                                        if (items[_i31]._id) {
+                                            if (updateTotal[items[_i31]._id]) {
+                                                updateTotal[items[_i31]._id].web = items[_i31].web;
+                                                updateTotal[items[_i31]._id].mid = items[_i31].mid;
+                                                updateTotal[items[_i31]._id].times = items[_i31].times;
+                                                updateTotal[items[_i31]._id].amount = items[_i31].amount;
+                                                updateTotal[items[_i31]._id].orig = items[_i31].orig;
+                                                updateTotal[items[_i31]._id].ing = items[_i31].ing;
+                                                updateTotal[items[_i31]._id].clear = items[_i31].clear;
                                             } else {
-                                                updateTotal[items[i]._id] = {
-                                                    web: items[i].web,
-                                                    mid: items[i].mid,
-                                                    times: items[i].times,
-                                                    amount: items[i].amount,
-                                                    orig: items[i].orig
+                                                updateTotal[items[_i31]._id] = {
+                                                    web: items[_i31].web,
+                                                    mid: items[_i31].mid,
+                                                    times: items[_i31].times,
+                                                    amount: items[_i31].amount,
+                                                    orig: items[_i31].orig,
+                                                    ing: items[_i31].ing,
+                                                    clear: items[_i31].clear
                                                 };
                                             }
                                         }
                                     } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
                                         //} else if (cmd[4]) {
-                                        items[i].count = +cmd[2];
+                                        items[_i31].count = +cmd[2];
                                         switch (setype) {
                                             case 'twse':
-                                                remain = remain + items[i].orig - items[i].amount - +cmd[3];
+                                                remain = remain + items[_i31].orig - items[_i31].amount - +cmd[3];
                                                 updateTotal[totalId] = { amount: remain };
                                                 break;
                                             case 'usse':
-                                                remain1 = remain1 + items[i].orig - items[i].amount - +cmd[3];
+                                                remain1 = remain1 + items[_i31].orig - items[_i31].amount - +cmd[3];
                                                 updateTotal[totalId1] = { amount: remain1 };
                                                 break;
                                         }
-                                        items[i].amount = items[i].orig - +cmd[3];
-                                        if (items[i]._id) {
-                                            if (updateTotal[items[i]._id]) {
-                                                updateTotal[items[i]._id].count = items[i].count;
-                                                updateTotal[items[i]._id].amount = items[i].amount;
+                                        items[_i31].amount = items[_i31].orig - +cmd[3];
+                                        if (items[_i31]._id) {
+                                            if (updateTotal[items[_i31]._id]) {
+                                                updateTotal[items[_i31]._id].count = items[_i31].count;
+                                                updateTotal[items[_i31]._id].amount = items[_i31].amount;
                                             } else {
-                                                updateTotal[items[i]._id] = { count: items[i].count, amount: items[i].amount };
+                                                updateTotal[items[_i31]._id] = { count: items[_i31].count, amount: items[_i31].amount };
                                             }
                                         }
                                     } else if (!isNaN(+cmd[2])) {
-                                        var orig_count = items[i].count;
-                                        items[i].count += +cmd[2];
-                                        if (items[i].count < 0) {
+                                        var orig_count = items[_i31].count;
+                                        items[_i31].count += +cmd[2];
+                                        if (items[_i31].count < 0) {
                                             cmd[2] = -orig_count;
-                                            items[i].count = 0;
+                                            items[_i31].count = 0;
                                         }
                                         return {
                                             v: {
-                                                v: getStockPrice(setype, items[i].index).then(function (price) {
+                                                v: getStockPrice(setype, items[_i31].index).then(function (price) {
                                                     price = !isNaN(+cmd[3]) ? +cmd[3] : price;
                                                     var new_cost = 0;
                                                     switch (setype) {
@@ -6339,61 +6392,61 @@ exports.default = {
                                                             updateTotal[totalId1] = { amount: remain1 };
                                                             break;
                                                     }
-                                                    items[i].amount -= new_cost;
+                                                    items[_i31].amount -= new_cost;
                                                     var time = Math.round(new Date().getTime() / 1000);
                                                     var tradeType = +cmd[2] > 0 ? 'buy' : 'sell';
                                                     if (tradeType === 'buy') {
                                                         var is_insert = false;
-                                                        for (var k = 0; k < items[i].previous.buy.length; k++) {
-                                                            if (price < items[i].previous.buy[k].price) {
-                                                                items[i].previous.buy.splice(k, 0, { price: price, time: time });
+                                                        for (var k = 0; k < items[_i31].previous.buy.length; k++) {
+                                                            if (price < items[_i31].previous.buy[k].price) {
+                                                                items[_i31].previous.buy.splice(k, 0, { price: price, time: time });
                                                                 is_insert = true;
                                                                 break;
                                                             }
                                                         }
                                                         if (!is_insert) {
-                                                            items[i].previous.buy.push({ price: price, time: time });
+                                                            items[_i31].previous.buy.push({ price: price, time: time });
                                                         }
-                                                        items[i].previous = {
+                                                        items[_i31].previous = {
                                                             price: price,
                                                             time: time,
                                                             type: 'buy',
-                                                            buy: items[i].previous.buy.filter(function (v) {
+                                                            buy: items[_i31].previous.buy.filter(function (v) {
                                                                 return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                             }),
-                                                            sell: items[i].previous.sell
+                                                            sell: items[_i31].previous.sell
                                                         };
                                                     } else if (tradeType === 'sell') {
                                                         var _is_insert = false;
-                                                        for (var _k = 0; _k < items[i].previous.sell.length; _k++) {
-                                                            if (price > items[i].previous.sell[_k].price) {
-                                                                items[i].previous.sell.splice(_k, 0, { price: price, time: time });
+                                                        for (var _k = 0; _k < items[_i31].previous.sell.length; _k++) {
+                                                            if (price > items[_i31].previous.sell[_k].price) {
+                                                                items[_i31].previous.sell.splice(_k, 0, { price: price, time: time });
                                                                 _is_insert = true;
                                                                 break;
                                                             }
                                                         }
                                                         if (!_is_insert) {
-                                                            items[i].previous.sell.push({ price: price, time: time });
+                                                            items[_i31].previous.sell.push({ price: price, time: time });
                                                         }
-                                                        items[i].previous = {
+                                                        items[_i31].previous = {
                                                             price: price,
                                                             time: time,
                                                             type: 'sell',
-                                                            sell: items[i].previous.sell.filter(function (v) {
+                                                            sell: items[_i31].previous.sell.filter(function (v) {
                                                                 return time - v.time < _constants.RANGE_INTERVAL ? true : false;
                                                             }),
-                                                            buy: items[i].previous.buy
+                                                            buy: items[_i31].previous.buy
                                                         };
                                                     }
-                                                    if (items[i]._id) {
-                                                        if (updateTotal[items[i]._id]) {
-                                                            updateTotal[items[i]._id].count = items[i].count;
-                                                            updateTotal[items[i]._id].amount = items[i].amount;
-                                                            updateTotal[items[i]._id].previous = items[i].previous;
+                                                    if (items[_i31]._id) {
+                                                        if (updateTotal[items[_i31]._id]) {
+                                                            updateTotal[items[_i31]._id].count = items[_i31].count;
+                                                            updateTotal[items[_i31]._id].amount = items[_i31].amount;
+                                                            updateTotal[items[_i31]._id].previous = items[_i31].previous;
                                                         } else {
-                                                            updateTotal[items[i]._id] = { count: items[i].count,
-                                                                amount: items[i].amount,
-                                                                previous: items[i].previous
+                                                            updateTotal[items[_i31]._id] = { count: items[_i31].count,
+                                                                amount: items[_i31].amount,
+                                                                previous: items[_i31].previous
                                                             };
                                                         }
                                                     }
@@ -6421,8 +6474,8 @@ exports.default = {
                                 }
                             };
 
-                            _loop4: for (var i in items) {
-                                var _ret16 = _loop3(i);
+                            _loop4: for (var _i31 in items) {
+                                var _ret16 = _loop3(_i31);
 
                                 switch (_ret16) {
                                     case 'break':
@@ -6475,7 +6528,8 @@ exports.default = {
                                                                 //bottom: Math.floor(price * 0.95 * 100) / 100,
                                                                 price: price,
                                                                 previous: { buy: [], sell: [] },
-                                                                newMid: []
+                                                                newMid: [],
+                                                                ing: 0
                                                             });
                                                             //remain -= cost;
                                                             //updateTotal[totalId] = {cost: remain};
@@ -6569,6 +6623,12 @@ exports.default = {
                         //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
                         //plus += p;
                         //minus += m;
+                        if (v.clear) {
+                            v.str = v.str ? 'Clearing ' + v.str : 'Clearing';
+                        }
+                        if (v.ing === 2) {
+                            v.str = v.str ? 'Deleting ' + v.str : 'Deleting';
+                        }
                         stock.push({
                             name: v.name,
                             type: v.type,
@@ -6936,9 +6996,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                         return 0;
                     }
                     var item = items[index];
-                    if (item.setype === 'usse') {
-                        //item.count = 0;
-                        //item.amount = item.orig;
+                    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE) && item.setype === 'usse') {
+                        item.count = 0;
+                        item.amount = item.orig;
                         for (var i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
                                 item.count = ussePosition[i].amount;
@@ -7138,14 +7198,24 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                             //sCurrent: item.sCurrent,
                             newMid: item.newMid,
                             tmpPT: item.tmpPT,
-                            previous: item.previous
+                            previous: item.previous,
+                            count: item.count,
+                            amount: item.amount
                         } });
                 }).then(function () {
                     return recur_price(index + 1);
                 });
             }
         };
-        return recur_price(0);
+        return recur_price(0).then(function () {
+            if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE)) {
+                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { index: 0, setype: 'usse' }, { $set: {
+                        amount: ussePosition[ussePosition.length - 1].price
+                    } });
+            } else {
+                return _promise2.default.resolve();
+            }
+        });
     });
 };
 
@@ -7207,18 +7277,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                             if (Number(index)) {
                                                 var exist = false;
 
-                                                var _loop5 = function _loop5(_i31) {
-                                                    if (stock_list[_i31].index === index) {
+                                                var _loop5 = function _loop5(_i32) {
+                                                    if (stock_list[_i32].index === index) {
                                                         exist = true;
                                                         tag.forEach(function (v) {
-                                                            return stock_list[_i31].tag.push(v);
+                                                            return stock_list[_i32].tag.push(v);
                                                         });
                                                         return 'break';
                                                     }
                                                 };
 
-                                                for (var _i31 = 0; _i31 < stock_list.length; _i31++) {
-                                                    var _ret21 = _loop5(_i31);
+                                                for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
+                                                    var _ret21 = _loop5(_i32);
 
                                                     if (_ret21 === 'break') break;
                                                 }
@@ -8259,24 +8329,24 @@ var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
     }
     var volsum = 0;
     var maxlen = len && stair_start + len < raw_arr.length ? stair_start + len : raw_arr.length;
-    for (var _i32 = stair_start; _i32 < maxlen; _i32++) {
+    for (var _i33 = stair_start; _i33 < maxlen; _i33++) {
         var s = 0;
         var e = 100;
         for (var _j10 = 0; _j10 < 100; _j10++) {
-            if (raw_arr[_i32].l >= loga.arr[_j10]) {
+            if (raw_arr[_i33].l >= loga.arr[_j10]) {
                 s = _j10;
             }
-            if (raw_arr[_i32].h <= loga.arr[_j10]) {
+            if (raw_arr[_i33].h <= loga.arr[_j10]) {
                 e = _j10;
                 break;
             }
         }
-        volsum += raw_arr[_i32].v;
-        single_arr.push((raw_arr[_i32].h - raw_arr[_i32].l) / raw_arr[_i32].h * 100);
+        volsum += raw_arr[_i33].v;
+        single_arr.push((raw_arr[_i33].h - raw_arr[_i33].l) / raw_arr[_i33].h * 100);
         if (e - s === 0) {
-            final_arr[s] += raw_arr[_i32].v;
+            final_arr[s] += raw_arr[_i33].v;
         } else {
-            var v = raw_arr[_i32].v / (e - s);
+            var v = raw_arr[_i33].v / (e - s);
             for (var _j11 = s; _j11 < e; _j11++) {
                 final_arr[_j11] += v;
             }
@@ -8440,16 +8510,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i33 = mid - 1; _i33 >= 0; _i33--) {
-        if (webArr[_i33] >= 0) {
+    for (var _i34 = mid - 1; _i34 >= 0; _i34--) {
+        if (webArr[_i34] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i33]);
+                new_arr.splice(0, 0, webArr[_i34]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i33]);
+            new_arr.splice(0, 0, webArr[_i34]);
         }
     }
     return {
