@@ -1059,7 +1059,7 @@ exports.default = {
                     return list;
                 });
             case 'oec':
-                return (0, _apiTool2.default)('url', 'http://www.oecd.org/newsroom/').then(function (raw_data) {
+                return (0, _apiTool2.default)('url', 'https://www.oecd.org/newsroom/', { referer: 'https://www.oecd.org/newsroom/' }).then(function (raw_data) {
                     var date = new Date(url);
                     if (isNaN(date.getTime())) {
                         return (0, _utility.handleError)(new _utility.HoError('date invalid'));

@@ -2932,7 +2932,7 @@ exports.default = {
                             name: (o.side === 1 ? '放款' : '借款') + ' ' + v.substr(1) + ' $' + Math.floor(o.amount * 100) / 100 + ' ' + o.period + '\u5929\u671F ' + o.pair,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
-                            rate: 'rate ? ' + rate + '% : FRR',
+                            rate: rate ? rate + '%' : 'FRR',
                             count: rate,
                             boost: o.period === 30 ? true : false,
                             utime: o.time + o.period * 86400,

@@ -876,7 +876,7 @@ export default {
                 return list;
             });
             case 'oec':
-            return Api('url', 'http://www.oecd.org/newsroom/').then(raw_data => {
+            return Api('url', 'https://www.oecd.org/newsroom/', {referer: 'https://www.oecd.org/newsroom/'}).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
