@@ -66,7 +66,7 @@ var MONTH_NAMES = exports.MONTH_NAMES = ['January', 'February', 'March', 'April'
 var MONTH_SHORTS = exports.MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 var DOC_TYPE = exports.DOC_TYPE = {
-    am: ['bls', 'cen', 'bea', 'ism', 'cbo', 'oec', 'dol', 'rea', 'sca', 'fed'],
+    am: ['bls', 'cen', 'bea', 'ism', 'cbo' /*, 'oec'*/, 'dol', 'rea', 'sca', 'fed'],
     jp: ['sea'],
     tw: ['ndc', 'sta', 'mof', 'moe', 'cbc']
 };
