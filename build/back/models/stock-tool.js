@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.calStair = exports.logArray = exports.stockTest = exports.stockProcess = exports.getStockListV2 = exports.stockShow = exports.stockStatus = exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
+exports.getSuggestionData = exports.calStair = exports.logArray = exports.stockTest = exports.stockProcess = exports.getStockListV2 = exports.stockShow = exports.stockStatus = exports.getSingleAnnual = exports.getStockList = exports.initXml = undefined;
 
 var _stringify = require('babel-runtime/core-js/json/stringify');
 
@@ -83,6 +83,11 @@ var Xmlparser = new _xml2js2.default.Parser();
 var stockFiltering = false;
 var stockIntervaling = false;
 var stockPredicting = false;
+var suggestionData = {
+    twse: {},
+    usse: {}
+};
+var stringSent = 0;
 
 var show = function show(first, second) {
     var b = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 2;
@@ -6920,215 +6925,225 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
         }*/
         var ussePosition = (0, _tdameritradeTool.getUssePosition)();
         var recur_price = function recur_price(index) {
-            return index >= items.length ? _promise2.default.resolve() : items[index].index === 0 || !items[index].index ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
-                if (price === 0) {
-                    return 0;
+            if (index >= items.length) {
+                if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
+                    stringSent = new Date().getDay() + 1;
                 }
-                var item = items[index];
-                if (item.setype === 'usse') {
-                    item.count = 0;
-                    item.amount = item.orig;
-                    for (var i = 0; i < ussePosition.length; i++) {
-                        if (ussePosition[i].symbol === item.index) {
-                            item.count = ussePosition[i].amount;
-                            item.amount = item.amount - ussePosition[i].amount * ussePosition[i].price;
-                            break;
-                        }
+                return _promise2.default.resolve();
+            } else {
+                return items[index].index === 0 || !items[index].index ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(function (price) {
+                    if (price === 0) {
+                        return 0;
                     }
-                }
-                console.log(item);
-                var fee = items[index].setype === 'usse' ? _constants.USSE_FEE : _constants.TRADE_FEE;
-                //new mid
-                var newArr = item.newMid.length > 0 ? item.web.map(function (v) {
-                    return v * item.newMid[item.newMid.length - 1] / item.mid;
-                }) : item.web;
-                var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
-                while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && price < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid)) {
-                    item.newMid.pop();
-                    if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < _constants.RANGE_INTERVAL) {
-                        item.previous.price = item.tmpPT.price;
-                        item.previous.time = item.tmpPT.time;
-                        item.previous.type = item.tmpPT.type;
-                    } else {
-                        item.previous.time = 0;
-                    }
-                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
-                        return v * item.newMid[item.newMid.length - 1] / item.mid;
-                    }) : item.web;
-                    checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
-                }
-                var suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
-                while (suggestion.resetWeb) {
-                    if (item.newMid.length === 0) {
-                        item.tmpPT = {
-                            price: item.previous.price,
-                            time: item.previous.time,
-                            type: item.previous.type
-                        };
-                    }
-                    item.previous.time = 0;
-                    item.newMid.push(suggestion.newMid);
-                    newArr = item.newMid.length > 0 ? item.web.map(function (v) {
-                        return v * item.newMid[item.newMid.length - 1] / item.mid;
-                    }) : item.web;
-                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.amount, item.count, item.wType, 0, fee);
-                }
-                var count = 0;
-                var amount = item.amount;
-                if (suggestion.type === 7) {
-                    if (amount > item.orig * 7 / 8) {
-                        var tmpAmount = amount - item.orig * 3 / 4;
-                        while (tmpAmount - suggestion.buy > 0) {
-                            amount -= suggestion.buy;
-                            tmpAmount = amount - item.orig * 3 / 4;
-                            count++;
-                        }
-                        suggestion.str += '[new buy ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new buy no need] ';
-                    }
-                } else if (suggestion.type === 3) {
-                    if (amount > item.orig * 5 / 8) {
-                        var _tmpAmount = amount - item.orig / 2;
-                        while (_tmpAmount - suggestion.buy > 0) {
-                            amount -= suggestion.buy;
-                            _tmpAmount = amount - item.orig / 2;
-                            count++;
-                        }
-                        suggestion.str += '[new buy ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new buy no need] ';
-                    }
-                } else if (suggestion.type === 6) {
-                    if (amount > item.orig * 3 / 8) {
-                        var _tmpAmount2 = amount - item.orig / 4;
-                        while (_tmpAmount2 - suggestion.buy > 0) {
-                            amount -= suggestion.buy;
-                            _tmpAmount2 = amount - item.orig / 4;
-                            count++;
-                        }
-                        suggestion.str += '[new buy ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new buy no need] ';
-                    }
-                }
-                count = 0;
-                amount = item.amount;
-                if (suggestion.type === 9) {
-                    if (amount < item.orig / 8) {
-                        var _tmpAmount3 = item.orig / 4 - amount;
-                        while (_tmpAmount3 - suggestion.sell * (1 - fee) > 0) {
-                            amount += suggestion.sell * (1 - fee);
-                            _tmpAmount3 = item.orig / 4 - amount;
-                            count++;
-                        }
-                        suggestion.str += '[new sell ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new sell no need] ';
-                    }
-                } else if (suggestion.type === 5) {
-                    if (amount < item.orig * 3 / 8) {
-                        var _tmpAmount4 = item.orig / 2 - amount;
-                        while (_tmpAmount4 - suggestion.sell * (1 - fee) > 0) {
-                            amount += suggestion.sell * (1 - fee);
-                            _tmpAmount4 = item.orig / 2 - amount;
-                            count++;
-                        }
-                        suggestion.str += '[new sell ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new sell no need] ';
-                    }
-                } else if (suggestion.type === 8) {
-                    if (amount < item.orig * 5 / 8) {
-                        var _tmpAmount5 = item.orig * 3 / 4 - amount;
-                        while (_tmpAmount5 - suggestion.sell * (1 - fee) > 0) {
-                            amount += suggestion.sell * (1 - fee);
-                            _tmpAmount5 = item.orig * 3 / 4 - amount;
-                            count++;
-                        }
-                        suggestion.str += '[new sell ' + count + '] ';
-                    } else {
-                        suggestion.str += '[new sell no need] ';
-                    }
-                }
-                console.log(suggestion.str);
-                if (newStr && (!item.sent || item.sent !== new Date().getDay() + 1)) {
-                    item.sent = new Date().getDay() + 1;
-                    (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
-                }
-                if (item.count < suggestion.sCount) {
-                    suggestion.sCount = item.count;
-                }
-                if (item.amount < suggestion.bCount * suggestion.buy) {
-                    suggestion.bCount = Math.floor(item.amount / suggestion.buy);
-                }
-                /*if (suggestion.type === 2) {
-                    if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
-                        item.bTarget = item.bCurrent;
-                        item.bCurrent = suggestion.buy;
-                    }
-                } else if (price > item.bTarget * 1.05) {
-                    item.bCurrent = 0;
-                    item.bTarget = 0;
-                }
-                if (suggestion.type === 4) {
-                    if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + fee) * (1 + fee) * item.sCurrent) {
-                        item.sTarget = item.sCurrent;
-                        item.sCurrent = suggestion.sell;
-                    }
-                } else if (price < item.sTarget * 0.95) {
-                    item.sCurrent = 0;
-                    item.sTarget = 0;
-                }
-                if (item.count > 0 && suggestion.type === 1 && price < item.price) {
-                    sendWs(`${item.name} SELL ALL NOW!!!`, 0, 0, true);
-                }
-                if (item.bTarget && price >= item.bTarget && price > item.price && item.amount >= price) {
-                    sendWs(`${item.name} BUY NOW!!!`, 0, 0, true);
-                }
-                if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
-                    sendWs(`${item.name} SELL NOW!!!`, 0, 0, true);
-                }*/
-                /*
-                const high = (!item.high || price > item.high) ? price : item.high;
-                if (price > item.price) {
-                    if (price <= item.bottom * 1.05 && price >= item.bottom) {
-                        sendWs(`${item.name} BUY!!!`, 0, 0, true);
-                    }
-                } else if (item.count > 0 && price < item.price) {
-                    if (high > item.top && price < item.top) {
-                        sendWs(`${item.name} SELL!!!`, 0, 0, true);
-                    } else {
-                        let midB = item.bottom;
-                        let midT = item.bottom * 1.2;
-                        while(midB < item.top) {
-                            if (high < midT) {
-                                if (price < midB * 0.95 || price < high*0.9) {
-                                    sendWs(`${item.name} SELL!!!`, 0, 0, true);
-                                }
+                    var item = items[index];
+                    if (item.setype === 'usse') {
+                        //item.count = 0;
+                        //item.amount = item.orig;
+                        for (var i = 0; i < ussePosition.length; i++) {
+                            if (ussePosition[i].symbol === item.index) {
+                                item.count = ussePosition[i].amount;
+                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
                                 break;
                             }
-                            midB = midT;
-                            midT = midB * 1.2;
                         }
                     }
-                }*/
-                return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
-                        //3個改成存redis或local 給total用
-                        price: price,
-                        str: suggestion.str,
-                        sent: item.sent,
-                        //bTarget: item.bTarget,
-                        //bCurrent: item.bCurrent,
-                        //sTarget: item.sTarget,
-                        //sCurrent: item.sCurrent,
-                        newMid: item.newMid,
-                        tmpPT: item.tmpPT,
-                        previous: item.previous
-                    } });
-            }).then(function () {
-                return recur_price(index + 1);
-            });
+                    console.log(item);
+                    var fee = items[index].setype === 'usse' ? _constants.USSE_FEE : _constants.TRADE_FEE;
+                    //new mid
+                    var newArr = item.newMid.length > 0 ? item.web.map(function (v) {
+                        return v * item.newMid[item.newMid.length - 1] / item.mid;
+                    }) : item.web;
+                    var checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                    while (item.newMid.length > 0 && (item.newMid[item.newMid.length - 1] > checkMid && price < checkMid || item.newMid[item.newMid.length - 1] <= checkMid && price > checkMid)) {
+                        item.newMid.pop();
+                        if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < _constants.RANGE_INTERVAL) {
+                            item.previous.price = item.tmpPT.price;
+                            item.previous.time = item.tmpPT.time;
+                            item.previous.type = item.tmpPT.type;
+                        } else {
+                            item.previous.time = 0;
+                        }
+                        newArr = item.newMid.length > 0 ? item.web.map(function (v) {
+                            return v * item.newMid[item.newMid.length - 1] / item.mid;
+                        }) : item.web;
+                        checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
+                    }
+                    var suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                    while (suggestion.resetWeb) {
+                        if (item.newMid.length === 0) {
+                            item.tmpPT = {
+                                price: item.previous.price,
+                                time: item.previous.time,
+                                type: item.previous.type
+                            };
+                        }
+                        item.previous.time = 0;
+                        item.newMid.push(suggestion.newMid);
+                        newArr = item.newMid.length > 0 ? item.web.map(function (v) {
+                            return v * item.newMid[item.newMid.length - 1] / item.mid;
+                        }) : item.web;
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                    }
+                    var count = 0;
+                    var amount = item.amount;
+                    if (suggestion.type === 7) {
+                        if (amount > item.orig * 7 / 8) {
+                            var tmpAmount = amount - item.orig * 3 / 4;
+                            while (tmpAmount - suggestion.buy > 0) {
+                                amount -= suggestion.buy;
+                                tmpAmount = amount - item.orig * 3 / 4;
+                                count++;
+                            }
+                            suggestion.str += '[new buy ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new buy no need] ';
+                        }
+                    } else if (suggestion.type === 3) {
+                        if (amount > item.orig * 5 / 8) {
+                            var _tmpAmount = amount - item.orig / 2;
+                            while (_tmpAmount - suggestion.buy > 0) {
+                                amount -= suggestion.buy;
+                                _tmpAmount = amount - item.orig / 2;
+                                count++;
+                            }
+                            suggestion.str += '[new buy ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new buy no need] ';
+                        }
+                    } else if (suggestion.type === 6) {
+                        if (amount > item.orig * 3 / 8) {
+                            var _tmpAmount2 = amount - item.orig / 4;
+                            while (_tmpAmount2 - suggestion.buy > 0) {
+                                amount -= suggestion.buy;
+                                _tmpAmount2 = amount - item.orig / 4;
+                                count++;
+                            }
+                            suggestion.str += '[new buy ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new buy no need] ';
+                        }
+                    }
+                    count = 0;
+                    amount = item.amount;
+                    if (suggestion.type === 9) {
+                        if (amount < item.orig / 8) {
+                            var _tmpAmount3 = item.orig / 4 - amount;
+                            while (_tmpAmount3 - suggestion.sell * (1 - fee) > 0) {
+                                amount += suggestion.sell * (1 - fee);
+                                _tmpAmount3 = item.orig / 4 - amount;
+                                count++;
+                            }
+                            suggestion.str += '[new sell ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new sell no need] ';
+                        }
+                    } else if (suggestion.type === 5) {
+                        if (amount < item.orig * 3 / 8) {
+                            var _tmpAmount4 = item.orig / 2 - amount;
+                            while (_tmpAmount4 - suggestion.sell * (1 - fee) > 0) {
+                                amount += suggestion.sell * (1 - fee);
+                                _tmpAmount4 = item.orig / 2 - amount;
+                                count++;
+                            }
+                            suggestion.str += '[new sell ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new sell no need] ';
+                        }
+                    } else if (suggestion.type === 8) {
+                        if (amount < item.orig * 5 / 8) {
+                            var _tmpAmount5 = item.orig * 3 / 4 - amount;
+                            while (_tmpAmount5 - suggestion.sell * (1 - fee) > 0) {
+                                amount += suggestion.sell * (1 - fee);
+                                _tmpAmount5 = item.orig * 3 / 4 - amount;
+                                count++;
+                            }
+                            suggestion.str += '[new sell ' + count + '] ';
+                        } else {
+                            suggestion.str += '[new sell no need] ';
+                        }
+                    }
+                    console.log(suggestion.str);
+                    if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
+                        (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
+                    }
+                    if (item.count < suggestion.sCount) {
+                        suggestion.sCount = item.count;
+                    }
+                    if (item.amount < suggestion.bCount * suggestion.buy) {
+                        suggestion.bCount = Math.floor(item.amount / suggestion.buy);
+                    }
+                    if (item.setype === 'usse') {
+                        suggestionData['usse'][item.index] = suggestion;
+                    } else {
+                        suggestionData['twse'][item.index] = suggestion;
+                    }
+                    /*if (suggestion.type === 2) {
+                        if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
+                            item.bTarget = item.bCurrent;
+                            item.bCurrent = suggestion.buy;
+                        }
+                    } else if (price > item.bTarget * 1.05) {
+                        item.bCurrent = 0;
+                        item.bTarget = 0;
+                    }
+                    if (suggestion.type === 4) {
+                        if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + fee) * (1 + fee) * item.sCurrent) {
+                            item.sTarget = item.sCurrent;
+                            item.sCurrent = suggestion.sell;
+                        }
+                    } else if (price < item.sTarget * 0.95) {
+                        item.sCurrent = 0;
+                        item.sTarget = 0;
+                    }
+                    if (item.count > 0 && suggestion.type === 1 && price < item.price) {
+                        sendWs(`${item.name} SELL ALL NOW!!!`, 0, 0, true);
+                    }
+                    if (item.bTarget && price >= item.bTarget && price > item.price && item.amount >= price) {
+                        sendWs(`${item.name} BUY NOW!!!`, 0, 0, true);
+                    }
+                    if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
+                        sendWs(`${item.name} SELL NOW!!!`, 0, 0, true);
+                    }*/
+                    /*
+                    const high = (!item.high || price > item.high) ? price : item.high;
+                    if (price > item.price) {
+                        if (price <= item.bottom * 1.05 && price >= item.bottom) {
+                            sendWs(`${item.name} BUY!!!`, 0, 0, true);
+                        }
+                    } else if (item.count > 0 && price < item.price) {
+                        if (high > item.top && price < item.top) {
+                            sendWs(`${item.name} SELL!!!`, 0, 0, true);
+                        } else {
+                            let midB = item.bottom;
+                            let midT = item.bottom * 1.2;
+                            while(midB < item.top) {
+                                if (high < midT) {
+                                    if (price < midB * 0.95 || price < high*0.9) {
+                                        sendWs(`${item.name} SELL!!!`, 0, 0, true);
+                                    }
+                                    break;
+                                }
+                                midB = midT;
+                                midT = midB * 1.2;
+                            }
+                        }
+                    }*/
+                    return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: {
+                            price: price,
+                            str: suggestion.str,
+                            //sent: item.sent,
+                            //bTarget: item.bTarget,
+                            //bCurrent: item.bCurrent,
+                            //sTarget: item.sTarget,
+                            //sCurrent: item.sCurrent,
+                            newMid: item.newMid,
+                            tmpPT: item.tmpPT,
+                            previous: item.previous
+                        } });
+                }).then(function () {
+                    return recur_price(index + 1);
+                });
+            }
         };
         return recur_price(0);
     });
@@ -7275,14 +7290,15 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
 var stockProcess = exports.stockProcess = function stockProcess(price, priceArray) {
     var priceTimes = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var previous = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : { buy: [], sell: [] };
-    var pAmount = arguments[4];
-    var pCount = arguments[5];
-    var pType = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 0;
-    var sType = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
-    var fee = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : _constants.TRADE_FEE;
-    var ttime = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_TIME;
-    var tinterval = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : _constants.TRADE_INTERVAL;
-    var now = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : Math.round(new Date().getTime() / 1000);
+    var pOrig = arguments[4];
+    var pAmount = arguments[5];
+    var pCount = arguments[6];
+    var pType = arguments.length > 7 && arguments[7] !== undefined ? arguments[7] : 0;
+    var sType = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : 0;
+    var fee = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : _constants.TRADE_FEE;
+    var ttime = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : _constants.TRADE_TIME;
+    var tinterval = arguments.length > 11 && arguments[11] !== undefined ? arguments[11] : _constants.TRADE_INTERVAL;
+    var now = arguments.length > 12 && arguments[12] !== undefined ? arguments[12] : Math.round(new Date().getTime() / 1000);
 
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
@@ -7505,9 +7521,13 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
     var type = 0;
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
+    var pRemain = pAmount / pOrig;
     var finalSell = function finalSell() {
-        if (pAmount && sCount) {
-            var remain = pCount - sCount;
+        if (sCount === 0 && (pRemain < 1 / 10 || !sType && pAmount < price)) {
+            sCount = sTimes * priceTimes;
+        }
+        /*if (pAmount && sCount) {
+            const remain = pCount - sCount;
             if (pCount < 3 * priceTimes) {
                 sCount = priceTimes;
             } else if (pCount < 5 * priceTimes) {
@@ -7515,12 +7535,15 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else if (remain < 2 * priceTimes) {
                 sCount = sCount - 2 * priceTimes + remain;
             }
-        }
+        }*/
     };
     var finalBuy = function finalBuy() {
-        if (pAmount && bCount) {
-            var nowC = Math.floor(pAmount / buy);
-            var remain = nowC - bCount;
+        if (bCount === 0 && (pRemain > 9 / 10 || !sType && pCount === 0)) {
+            bCount = bTimes * priceTimes;
+        }
+        /*if (pAmount && bCount) {
+            const nowC = Math.floor(pAmount / buy)
+            const remain = nowC - bCount;
             if (nowC < 3 * priceTimes) {
                 bCount = priceTimes;
             } else if (nowC < 5 * priceTimes) {
@@ -7528,7 +7551,7 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
             } else if (remain < 2 * priceTimes) {
                 bCount = bCount - 2 * priceTimes + remain;
             }
-        }
+        }*/
     };
     if (is_buy) {
         /*if (bP > 4) {
@@ -7876,7 +7899,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             }) : web.arr;
             checkMid = newMid.length > 1 ? newMid[newMid.length - 2] : web.mid;
         }
-        suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
+        suggest = stockProcess(price, newArr, web.times, priviousTrade, maxAmount, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
         while (suggest.resetWeb) {
             if (newMid.length === 0) {
                 tmpPT = {
@@ -7895,7 +7918,7 @@ var stockTest = exports.stockTest = function stockTest(his_arr, loga, min) {
             newArr = newMid.length > 0 ? web.arr.map(function (v) {
                 return v * newMid[newMid.length - 1] / web.mid;
             }) : web.arr;
-            suggest = stockProcess(price, newArr, web.times, priviousTrade, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
+            suggest = stockProcess(price, newArr, web.times, priviousTrade, maxAmount, amount, count, pType, sType, fee, ttime, tinterval, now - i * tinterval);
             //console.log(price);
             //console.log(suggest);
             //console.log(newArr);
@@ -8590,4 +8613,9 @@ var getUsStock = function getUsStock(index) {
         });
     };
     return real();
+};
+
+var getSuggestionData = exports.getSuggestionData = function getSuggestionData() {
+    var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'twse';
+    return suggestionData[type];
 };

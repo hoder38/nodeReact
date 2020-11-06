@@ -1697,6 +1697,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, type: current.type }).then(function (items) {
                 var newOrder = [];
+                var clearP = current.clear === true || current.clear[item.index] === true ? true : false;
                 var recur_status = function recur_status(index) {
                     if (index >= items.length) {
                         (0, _sendWs2.default)({
@@ -1780,7 +1781,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     }) : item.web;
                                     checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                                 }
-                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                var suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 while (suggestion.resetWeb) {
                                     if (item.newMid.length === 0) {
                                         item.tmpPT = {
@@ -1794,7 +1795,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                                         return v * item.newMid[item.newMid.length - 1] / item.mid;
                                     }) : item.web;
-                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
+                                    suggestion = (0, _stockTool.stockProcess)(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, _constants.BITFINEX_FEE, _constants.BITFINEX_INTERVAL, _constants.BITFINEX_INTERVAL);
                                 }
                                 console.log(suggestion);
                                 var count = 0;
@@ -2036,7 +2037,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             var item = newOrder[index].item;
                             var suggestion = newOrder[index].suggestion;
                             var submitBuy = function submitBuy() {
-                                if (current.clear === true || current.clear[item.index] === true) {
+                                if (clearP) {
                                     return recur_NewOrder(index + 1);
                                 }
                                 /*if (item.amount < suggestion.bCount * suggestion.buy) {
@@ -2195,7 +2196,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                                 var delobj = deleteOrder.splice(_i21, 1);
                                                                 if (delobj.process) {
                                                                     return processOrderRest(delobj.amount, delobj.price, item).then(function () {
-                                                                        return recur_NewOrder(index + 1);
+                                                                        return submitBuy();
                                                                     });
                                                                 }
                                                                 break;

@@ -1,9 +1,10 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID } from '../constants'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility'
 import Mongo from '../models/mongo-tool'
+import { getSuggestionData } from '../models/stock-tool'
 import sendWs from '../util/sendWs'
 import Ws from 'ws'
 import Event from 'events'
@@ -316,6 +317,13 @@ export const usseTDInit = () => checkOauth().then(() => {
                 });
                 usseOnAccount(data => {
                     console.log(data);
+                    if (data) {
+                        data.forEach(d => {
+                            console.log(d[1]);
+                            console.log(d[2]);
+                            console.log(d[3]);
+                        })
+                    }
                 });
                 /*usseOnStock(data => {
                     console.log(data);
@@ -339,6 +347,8 @@ export const usseTDInit = () => checkOauth().then(() => {
         }
         const now = Math.round(new Date().getTime() / 1000);
         if ((now - updateTime['book']) > UPDATE_BOOK) {
+            updateTime['book'] = now;
+            console.log(updateTime['book']);
             return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 //init book
@@ -370,12 +380,17 @@ export const usseTDInit = () => checkOauth().then(() => {
         }
         return Mongo('find', TOTALDB, {setype: 'usse', sType: {$exists: false}}).then(items => {
             const newOrder = [];
-            const ussePrice = {};
+            const usseSuggestion = getSuggestionData('usse');
+            console.log(usseSuggestion);
             const recur_status = index => {
                 if (index >= items.length) {
                     return Promise.resolve();
                 } else {
                     const item = items[index];
+                    if (item.index === 0 || !usseSuggestion[item.index]) {
+                        return recur_status(index + 1);
+                    }
+                    const price = usseSuggestion[item.index].price;
                     /*item.count = 0;
                     item.amount = item.orig;
                     for (let i = 0; i < position.length; i++) {
@@ -387,23 +402,41 @@ export const usseTDInit = () => checkOauth().then(() => {
                     }*/
                     console.log(item);
                     const cancelOrder = rest => {
+                        //sync first
+                        return rest ? rest() : Promise.resolve();
                     }
-                    const startStatus = () => {
-                    }
+                    const startStatus = () => cancelOrder().then(() => {
+                        if (usseSuggestion[item.index]) {
+                            let is_insert = false;
+                            for (let i = 0; i < newOrder.length; i++) {
+                                if (item.orig > newOrder[i].item.orig) {
+                                    newOrder.splice(i, 0, {item, suggestion: usseSuggestion[item.index]});
+                                    is_insert = true;
+                                    break;
+                                }
+                            }
+                            if (!is_insert) {
+                                newOrder.push({item, suggestion: usseSuggestion[item.index]});
+                            }
+                        }
+                        return recur_status(index + 1);
+                    });
                     if (item.ing === 2) {
                         const sellAll = () => {
+                            const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
+                            return delTotal();
                         }
                         return cancelOrder(sellAll);
                     } else if (item.ing === 1) {
-                        if (ussePrice[item.index].lastPrice) {
+                        if (price) {
                             return startStatus();
                         } else {
                             return recur_status(index + 1);
                         }
                     } else {
-                        if ((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100 < USSE_ENTER_MID) {
+                        if ((price - item.mid) / item.mid * 100 < USSE_ENTER_MID) {
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
-                                if (ussePrice[item.index].lastPrice) {
+                                if (price) {
                                     return startStatus();
                                 } else {
                                     return recur_status(index + 1);
@@ -411,18 +444,26 @@ export const usseTDInit = () => checkOauth().then(() => {
                             });
                         } else {
                             console.log('enter_mid');
-                            console.log((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100);
+                            console.log((price - item.mid) / item.mid * 100);
                             return recur_status(index + 1);
                         }
                     }
                 }
             }
+            const recur_NewOrder = index => {
+                console.log(newOrder);
+                return Promise.resolve();
+            }
+            return recur_status(0).then(() => recur_NewOrder(0));
         });
     });
 });
 
 //export const getUssePrice = () => ussePrice;
-export const getUssePosition = () => position;
+export const getUssePosition = () => {
+    //sync first
+    return position;
+}
 
 export const resetTD = (update=false) => {
     console.log('TD reset');

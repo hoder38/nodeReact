@@ -41,6 +41,8 @@ var _mongoTool = require('../models/mongo-tool');
 
 var _mongoTool2 = _interopRequireDefault(_mongoTool);
 
+var _stockTool = require('../models/stock-tool');
+
 var _sendWs = require('../util/sendWs');
 
 var _sendWs2 = _interopRequireDefault(_sendWs);
@@ -361,6 +363,13 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                     });
                     usseOnAccount(function (data) {
                         console.log(data);
+                        if (data) {
+                            data.forEach(function (d) {
+                                console.log(d[1]);
+                                console.log(d[2]);
+                                console.log(d[3]);
+                            });
+                        }
                     });
                     /*usseOnStock(data => {
                         console.log(data);
@@ -384,6 +393,8 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
             }
             var now = Math.round(new Date().getTime() / 1000);
             if (now - updateTime['book'] > _constants.UPDATE_BOOK) {
+                updateTime['book'] = now;
+                console.log(updateTime['book']);
                 return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '?fields=positions,orders', { headers: { Authorization: 'Bearer ' + tokens.access_token } }).then(function (res) {
                     return res.json();
                 }).then(function (result) {
@@ -420,13 +431,20 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
             }
             return (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', sType: { $exists: false } }).then(function (items) {
                 var newOrder = [];
-                var ussePrice = {};
+                var usseSuggestion = (0, _stockTool.getSuggestionData)('usse');
+                console.log(usseSuggestion);
                 var recur_status = function recur_status(index) {
                     if (index >= items.length) {
                         return _promise2.default.resolve();
                     } else {
                         var _ret = function () {
                             var item = items[index];
+                            if (item.index === 0 || !usseSuggestion[item.index]) {
+                                return {
+                                    v: recur_status(index + 1)
+                                };
+                            }
+                            var price = usseSuggestion[item.index].price;
                             /*item.count = 0;
                             item.amount = item.orig;
                             for (let i = 0; i < position.length; i++) {
@@ -437,15 +455,42 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                 }
                             }*/
                             console.log(item);
-                            var cancelOrder = function cancelOrder(rest) {};
-                            var startStatus = function startStatus() {};
+                            var cancelOrder = function cancelOrder(rest) {
+                                //sync first
+                                return rest ? rest() : _promise2.default.resolve();
+                            };
+                            var startStatus = function startStatus() {
+                                return cancelOrder().then(function () {
+                                    if (usseSuggestion[item.index]) {
+                                        var is_insert = false;
+                                        for (var i = 0; i < newOrder.length; i++) {
+                                            if (item.orig > newOrder[i].item.orig) {
+                                                newOrder.splice(i, 0, { item: item, suggestion: usseSuggestion[item.index] });
+                                                is_insert = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!is_insert) {
+                                            newOrder.push({ item: item, suggestion: usseSuggestion[item.index] });
+                                        }
+                                    }
+                                    return recur_status(index + 1);
+                                });
+                            };
                             if (item.ing === 2) {
-                                var sellAll = function sellAll() {};
+                                var sellAll = function sellAll() {
+                                    var delTotal = function delTotal() {
+                                        return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
+                                            return recur_status(index + 1);
+                                        });
+                                    };
+                                    return delTotal();
+                                };
                                 return {
                                     v: cancelOrder(sellAll)
                                 };
                             } else if (item.ing === 1) {
-                                if (ussePrice[item.index].lastPrice) {
+                                if (price) {
                                     return {
                                         v: startStatus()
                                     };
@@ -455,10 +500,10 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                     };
                                 }
                             } else {
-                                if ((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100 < _constants.USSE_ENTER_MID) {
+                                if ((price - item.mid) / item.mid * 100 < _constants.USSE_ENTER_MID) {
                                     return {
                                         v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { ing: 1 } }).then(function (result) {
-                                            if (ussePrice[item.index].lastPrice) {
+                                            if (price) {
                                                 return startStatus();
                                             } else {
                                                 return recur_status(index + 1);
@@ -467,7 +512,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                     };
                                 } else {
                                     console.log('enter_mid');
-                                    console.log((ussePrice[item.index].lastPrice - item.mid) / item.mid * 100);
+                                    console.log((price - item.mid) / item.mid * 100);
                                     return {
                                         v: recur_status(index + 1)
                                     };
@@ -478,6 +523,13 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                         if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
                     }
                 };
+                var recur_NewOrder = function recur_NewOrder(index) {
+                    console.log(newOrder);
+                    return _promise2.default.resolve();
+                };
+                return recur_status(0).then(function () {
+                    return recur_NewOrder(0);
+                });
             });
         });
     });
@@ -485,6 +537,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
 
 //export const getUssePrice = () => ussePrice;
 var getUssePosition = exports.getUssePosition = function getUssePosition() {
+    //sync first
     return position;
 };
 

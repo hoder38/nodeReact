@@ -1466,6 +1466,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
+                const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                 const recur_status = index => {
                     if (index >= items.length) {
                         sendWs({
@@ -1528,7 +1529,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
-                            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -1540,7 +1541,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 item.previous.time = 0;
                                 item.newMid.push(suggestion.newMid);
                                 newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             console.log(suggestion);
                             let count = 0;
@@ -1678,7 +1679,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: -item.count,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() =>  new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
+                                    return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
@@ -1752,7 +1753,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const item = newOrder[index].item;
                         const suggestion = newOrder[index].suggestion;
                         const submitBuy = () => {
-                            if (current.clear === true || current.clear[item.index] === true) {
+                            if (clearP) {
                                 return recur_NewOrder(index + 1);
                             }
                             /*if (item.amount < suggestion.bCount * suggestion.buy) {
@@ -1881,7 +1882,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 isDelete = true;
                                                 const delobj = deleteOrder.splice(i, 1);
                                                 if (delobj.process){
-                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => recur_NewOrder(index + 1));
+                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => submitBuy());
                                                 }
                                                 break;
                                             }
