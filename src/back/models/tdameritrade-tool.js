@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME } from '../constants'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility'
@@ -8,8 +8,10 @@ import { getSuggestionData } from '../models/stock-tool'
 import sendWs from '../util/sendWs'
 import Ws from 'ws'
 import Event from 'events'
+import Xml2js from 'xml2js'
 
-//let ussePrice = [];
+const Xmlparser = new Xml2js.Parser();
+
 let eventEmitter = new Event.EventEmitter();
 let tokens = {};
 let userPrincipalsResponse = null;
@@ -258,6 +260,46 @@ const usseHandler = res => {
     console.log(res);
 }
 
+const cancelTDOrder = id => {
+    if (!usseWs || !userPrincipalsResponse) {
+        return handleError(new HoError('TD cannot cancel order!!!'));
+    }
+    return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
+        if (!res.ok) {
+            return res.json().then(err => handleError(new HoError(err.error)))
+        }
+    }));
+}
+
+const submitTDOrder = (id, price, count) => {
+    if (!usseWs || !userPrincipalsResponse) {
+        return handleError(new HoError('TD cannot cancel order!!!'));
+    }
+    const qspost = JSON.stringify(Object.assign({
+        session: "SEAMLESS",
+        duration: "GOOD_TILL_CANCEL",
+        orderStrategyType: "SINGLE",
+        orderLegCollection: [
+            {
+                "instruction": (count > 0) ? "Buy" : 'SELL',
+                "quantity": Math.abs(count),
+                "instrument": {
+                    "symbol": id,
+                    "assetType": "EQUITY"
+                }
+            }
+        ]
+    }, price === 'MARKET' ? {orderType: "MARKET"} : {orderType: 'LIMIT', price: price}));
+    return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        'Content-Type': 'application/json',
+    }, method: 'POST', body: qspost,}).then(res => {
+        if (!res.ok) {
+            return res.json().then(err => handleError(new HoError(err.error)))
+        }
+    }));
+}
+
 export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
         if (!usseWs || !userPrincipalsResponse) {
@@ -316,12 +358,72 @@ export const usseTDInit = () => checkOauth().then(() => {
                     console.log('TD usse ticker close');
                 });
                 usseOnAccount(data => {
-                    console.log(data);
                     if (data) {
                         data.forEach(d => {
-                            console.log(d[1]);
                             console.log(d[2]);
                             console.log(d[3]);
+                            if (d[2] === 'SUBSCRIBED') {
+                            } else if (d[2] === 'ERROR') {
+                                resetTD();
+                            } else {
+                                initialBook().then(() => new Promise((resolve, reject) => Xmlparser.parseString(d[3], (err, result) => err ? reject(err) : resolve(result)))).then(result => {
+                                    //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
+                                    const xmlMsg = result.OrderFillMessage;
+                                    if (xmlMsg && xmlMsg.ExecutionInformation) {
+                                        console.log(xmlMsg.Order[0].Security[0].Symbol[0]);
+                                        return Mongo('find', TOTALDB, {setype: 'usse', index: xmlMsg.Order[0].Security[0].Symbol[0]}).then(items => {
+                                            if (items.length > 0) {
+                                                const item = items[0];
+                                                const time = Math.round(new Date().getTime() / 1000);
+                                                const price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
+                                                if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
+                                                    let is_insert = false;
+                                                    for (let k = 0; k < item.previous.buy.length; k++) {
+                                                        if (price < item.previous.buy[k].price) {
+                                                            item.previous.buy.splice(k, 0, {price, time});
+                                                            is_insert = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (!is_insert) {
+                                                        item.previous.buy.push({price, time});
+                                                    }
+                                                    item.previous = {
+                                                        price,
+                                                        time,
+                                                        type: 'buy',
+                                                        buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                        sell: item.previous.sell,
+                                                    }
+                                                } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                    let is_insert = false;
+                                                    for (let k = 0; k < item.previous.sell.length; k++) {
+                                                        if (price > item.previous.sell[k].price) {
+                                                            item.previous.sell.splice(k, 0, {price, time});
+                                                            is_insert = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                    if (!is_insert) {
+                                                        item.previous.sell.push({price, time});
+                                                    }
+                                                    item.previous = {
+                                                        price,
+                                                        time,
+                                                        type: 'sell',
+                                                        sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                        buy: item.previous.buy,
+                                                    }
+                                                }
+                                                return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous}});
+                                            }
+                                        });
+                                    }
+                                }).catch(err => {
+                                    sendWs(`TD Ameritrade XML Error: ${err.code} ${err.message}`, 0, 0, true);
+                                    handleError(err, `TD Ameritrade XML Error`);
+                                })
+                            }
                         })
                     }
                 });
@@ -341,16 +443,19 @@ export const usseTDInit = () => checkOauth().then(() => {
             return Promise.resolve();
         }
     }
-    const initialBook = () => {
+    const initialBook = (force = false) => {
         if (!usseWs || !userPrincipalsResponse) {
             return handleError(new HoError('TD cannot be inital book!!!'));
         }
         const now = Math.round(new Date().getTime() / 1000);
-        if ((now - updateTime['book']) > UPDATE_BOOK) {
+        if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
             return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
+                if (result['error']) {
+                    return handleError(new HoError(result['error']));
+                }
                 //init book
                 if (result['securitiesAccount']['projectedBalances']) {
                     available = result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'];
@@ -360,11 +465,26 @@ export const usseTDInit = () => checkOauth().then(() => {
                         symbol: p.instrument.symbol,
                         amount: p.longQuantity,
                         price: p.averagePrice,
-                        //market: p.marketValue,
                     }));
+                } else {
+                    position = [];
                 }
+                order = [];
                 if (result['securitiesAccount']['orderStrategies']) {
-                    order = result['securitiesAccount']['orderStrategies'];
+                    result['securitiesAccount']['orderStrategies'].forEach(o => {
+                        //console.log(o);
+                        if (o.cancelable) {
+                            order.push({
+                                id: o.orderId,
+                                time: new Date(o.enteredTime).getTime() / 1000,
+                                amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
+                                type: o.orderType,
+                                symbol: o.orderLegCollection[0].instrument.symbol,
+                                price: o.price,
+                                duration: o.duration,
+                            });
+                        }
+                    });
                 }
             });
         } else {
@@ -375,7 +495,7 @@ export const usseTDInit = () => checkOauth().then(() => {
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
         console.log(`td ${updateTime['trade']}`);
-        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1200 / /*PRICE_INTERVAL*/1200)) {
+        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1200 / PRICE_INTERVAL)) {
             return Promise.resolve();
         } else {
             //避開交易時間
@@ -403,20 +523,21 @@ export const usseTDInit = () => checkOauth().then(() => {
                         return recur_status(index + 1);
                     }
                     const price = usseSuggestion[item.index].price;
-                    /*item.count = 0;
-                    item.amount = item.orig;
-                    for (let i = 0; i < position.length; i++) {
-                        if (position[i].symbol === item.index) {
-                            item.count = position[i].amount;
-                            item.amount = item.amount - position[i].amount * position[i].price;
-                            break;
-                        }
-                    }*/
                     console.log(item);
-                    const cancelOrder = rest => {
-                        //sync first
-                        return rest ? rest() : Promise.resolve();
-                    }
+                    const cancelOrder = rest => initialBook(true).then(() => {
+                        const real_id = order.filter(v => (v.symbol === item.index));
+                        const real_delete = index => {
+                            if (index >= real_id.length) {
+                                return rest ? rest() : Promise.resolve();
+                            }
+                            return cancelTDOrder(real_id[index].id).catch(err => {
+                                console.log(order);
+                                sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
+                                handleError(err, `${real_id[index].id} TDcancelOrder Error`);
+                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => real_delete(index + 1)));
+                        }
+                        return real_delete(0);
+                    });
                     const startStatus = () => cancelOrder().then(() => {
                         if (usseSuggestion[item.index]) {
                             let is_insert = false;
@@ -434,10 +555,23 @@ export const usseTDInit = () => checkOauth().then(() => {
                         return recur_status(index + 1);
                     });
                     if (item.ing === 2) {
-                        const sellAll = () => {
+                        const sellAll = () => initialBook(true).then(() => {
                             const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
-                            return delTotal();
-                        }
+                            item.count = 0;
+                            item.amount = item.orig;
+                            for (let i = 0; i < position.length; i++) {
+                                if (position[i].symbol === item.index) {
+                                    item.count = position[i].amount;
+                                    item.amount = item.orig - position[i].amount * position[i].price;
+                                    break;
+                                }
+                            }
+                            if (item.count > 0) {
+                                return submitTDOrder(item.index, 'MARKET', -item.count).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => delTotal());
+                            } else {
+                                return delTotal();
+                            }
+                        });
                         return cancelOrder(sellAll);
                     } else if (item.ing === 1) {
                         if (price) {
@@ -463,17 +597,40 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
             }
             const recur_NewOrder = index => {
-                console.log(newOrder);
-                return Promise.resolve();
+                if (index >= newOrder.length) {
+                    return Promise.resolve();
+                } else {
+                    const item = newOrder[index].item;
+                    const suggestion = newOrder[index].suggestion;
+                    const submitBuy = () => {
+                        return initialBook(true).then(() => {
+                            console.log(available);
+                            const order_avail = (available > 1) ? available - 1 : 0;
+                            if (order_avail < suggestion.bCount * suggestion.buy) {
+                                suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                            }
+                            if (suggestion.bCount > 0 && suggestion.buy) {
+                                console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                                return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => recur_NewOrder(index + 1));
+                            } else {
+                                return recur_NewOrder(index + 1);
+                            }
+                        });
+                    }
+                    if (suggestion.sCount > 0 && suggestion.sell) {
+                        console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
+                        return submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
+                    } else {
+                        return submitBuy();
+                    }
+                }
             }
             return recur_status(0).then(() => recur_NewOrder(0));
         });
     });
 });
 
-//export const getUssePrice = () => ussePrice;
 export const getUssePosition = () => {
-    //sync first
     position.push({
         symbol: 0,
         amount: 1,
@@ -482,14 +639,16 @@ export const getUssePosition = () => {
     return position;
 }
 
+export const getUsseOrder = () => order;
+
 export const resetTD = (update=false) => {
     console.log('TD reset');
-    if (update) {
-        const trade_count = updateTime['trade'];
-        updateTime = {};
-        updateTime['book'] = 0;
-        updateTime['trade'] = trade_count;
-    } else {
+    //if (update) {
+    //const trade_count = updateTime['trade'];
+    updateTime = {};
+    updateTime['book'] = 0;
+    updateTime['trade'] = 0;
+    if (!update) {
         usseLogout();
     }
 }

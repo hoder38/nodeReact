@@ -10,7 +10,7 @@ import Mongo from '../models/mongo-tool'
 import GoogleApi from '../models/api-tool-google'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
 import Api from './api-tool'
-import { getUssePosition } from '../models/tdameritrade-tool'
+import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool'
 import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility'
 import { getExtname } from '../util/mime'
 import sendWs from '../util/sendWs'
@@ -5106,6 +5106,7 @@ export default {
                             current,
                             str: v.str ? v.str : '',
                             se,
+                            order: v.order,
                         });
                         return Promise.resolve();
                     //});
@@ -5580,6 +5581,7 @@ export default {
                                 current,
                                 str: v.str ? v.str : '',
                                 se,
+                                order: v.order,
                             });
                             return Promise.resolve();
                         //});
@@ -5812,6 +5814,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         usseSubStock(addStock, false);
     }*/
     const ussePosition = getUssePosition();
+    const usseOrder = getUsseOrder();
+    console.log(ussePosition);
+    console.log(usseOrder);
     const recur_price = index => {
         if (index >= items.length) {
             if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
@@ -5832,6 +5837,15 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             item.count = ussePosition[i].amount;
                             item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
                             break;
+                        }
+                    }
+                    item.order = [];
+                    for (let i = 0; i < usseOrder.length; i++) {
+                        console.log(usseOrder[i].symbol);
+                        console.log(item.index);
+                        if (usseOrder[i].symbol === item.index) {
+                            const time = new Date(usseOrder[i].time * 1000);
+                            item.order.push(`${usseOrder[i].amount} ${usseOrder[i].type === 'MARKET' ? 'MARKET' : usseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
                         }
                     }
                 }
@@ -5876,6 +5890,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             tmpAmount = amount - item.orig * 3 / 4;
                             count++;
                         }
+                        if (count > suggestion.bCount) {
+                            suggestion.bCount = count;
+                        }
                         suggestion.str += `[new buy ${count}] `;
                     } else {
                         suggestion.str += '[new buy no need] ';
@@ -5888,6 +5905,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             tmpAmount = amount - item.orig / 2;
                             count++;
                         }
+                        if (count > suggestion.bCount) {
+                            suggestion.bCount = count;
+                        }
                         suggestion.str += `[new buy ${count}] `;
                     } else {
                         suggestion.str += '[new buy no need] ';
@@ -5899,6 +5919,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             amount -= suggestion.buy;
                             tmpAmount = amount - item.orig / 4;
                             count++;
+                        }
+                        if (count > suggestion.bCount) {
+                            suggestion.bCount = count;
                         }
                         suggestion.str += `[new buy ${count}] `;
                     } else {
@@ -5915,6 +5938,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             tmpAmount = item.orig / 4 - amount;
                             count++;
                         }
+                        if (count > suggestion.sCount) {
+                            suggestion.sCount = count;
+                        }
                         suggestion.str += `[new sell ${count}] `;
                     } else {
                         suggestion.str += '[new sell no need] ';
@@ -5926,6 +5952,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             amount += (suggestion.sell * (1 - fee));
                             tmpAmount = item.orig / 2 - amount;
                             count++;
+                        }
+                        if (count > suggestion.sCount) {
+                            suggestion.sCount = count;
                         }
                         suggestion.str += `[new sell ${count}] `;
                     } else {
@@ -5939,13 +5968,17 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             tmpAmount = item.orig * 3 / 4 - amount;
                             count++;
                         }
+                        if (count > suggestion.sCount) {
+                            suggestion.sCount = count;
+                        }
                         suggestion.str += `[new sell ${count}] `;
                     } else {
                         suggestion.str += '[new sell no need] ';
                     }
                 }
                 console.log(suggestion.str);
-                if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
+                if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
+                } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                     sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                 }
                 if (item.count < suggestion.sCount) {
@@ -6023,6 +6056,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     previous: item.previous,
                     count: item.count,
                     amount: item.amount,
+                    order: item.order,
                 }});
             }).then(() => recur_price(index + 1));
         }

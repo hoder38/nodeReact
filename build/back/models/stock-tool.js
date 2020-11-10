@@ -6077,7 +6077,8 @@ exports.default = {
                         //minus: m,
                         current: current,
                         str: v.str ? v.str : '',
-                        se: se
+                        se: se,
+                        order: v.order
                     });
                     return _promise2.default.resolve();
                     //});
@@ -6644,7 +6645,8 @@ exports.default = {
                             //minus: m,
                             current: current,
                             str: v.str ? v.str : '',
-                            se: se
+                            se: se,
+                            order: v.order
                         });
                         return _promise2.default.resolve();
                         //});
@@ -6984,6 +6986,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
             usseSubStock(addStock, false);
         }*/
         var ussePosition = (0, _tdameritradeTool.getUssePosition)();
+        var usseOrder = (0, _tdameritradeTool.getUsseOrder)();
+        console.log(ussePosition);
+        console.log(usseOrder);
         var recur_price = function recur_price(index) {
             if (index >= items.length) {
                 if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
@@ -7004,6 +7009,15 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 item.count = ussePosition[i].amount;
                                 item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
                                 break;
+                            }
+                        }
+                        item.order = [];
+                        for (var _i32 = 0; _i32 < usseOrder.length; _i32++) {
+                            console.log(usseOrder[_i32].symbol);
+                            console.log(item.index);
+                            if (usseOrder[_i32].symbol === item.index) {
+                                var time = new Date(usseOrder[_i32].time * 1000);
+                                item.order.push(usseOrder[_i32].amount + ' ' + (usseOrder[_i32].type === 'MARKET' ? 'MARKET' : usseOrder[_i32].price) + ' ' + (time.getMonth() + 1) + '/' + time.getDate());
                             }
                         }
                     }
@@ -7054,6 +7068,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 tmpAmount = amount - item.orig * 3 / 4;
                                 count++;
                             }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
+                            }
                             suggestion.str += '[new buy ' + count + '] ';
                         } else {
                             suggestion.str += '[new buy no need] ';
@@ -7066,6 +7083,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 _tmpAmount = amount - item.orig / 2;
                                 count++;
                             }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
+                            }
                             suggestion.str += '[new buy ' + count + '] ';
                         } else {
                             suggestion.str += '[new buy no need] ';
@@ -7077,6 +7097,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 amount -= suggestion.buy;
                                 _tmpAmount2 = amount - item.orig / 4;
                                 count++;
+                            }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
                             }
                             suggestion.str += '[new buy ' + count + '] ';
                         } else {
@@ -7093,6 +7116,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 _tmpAmount3 = item.orig / 4 - amount;
                                 count++;
                             }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
+                            }
                             suggestion.str += '[new sell ' + count + '] ';
                         } else {
                             suggestion.str += '[new sell no need] ';
@@ -7104,6 +7130,9 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 amount += suggestion.sell * (1 - fee);
                                 _tmpAmount4 = item.orig / 2 - amount;
                                 count++;
+                            }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
                             }
                             suggestion.str += '[new sell ' + count + '] ';
                         } else {
@@ -7117,13 +7146,16 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                                 _tmpAmount5 = item.orig * 3 / 4 - amount;
                                 count++;
                             }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
+                            }
                             suggestion.str += '[new sell ' + count + '] ';
                         } else {
                             suggestion.str += '[new sell no need] ';
                         }
                     }
                     console.log(suggestion.str);
-                    if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
+                    if ((0, _config.USSE_TICKER)(_ver.ENV_TYPE) && (0, _config.CHECK_STOCK)(_ver.ENV_TYPE) && item.setype === 'usse') {} else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                         (0, _sendWs2.default)(item.name + ' ' + suggestion.str, 0, 0, true);
                     }
                     if (item.count < suggestion.sCount) {
@@ -7200,7 +7232,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                             tmpPT: item.tmpPT,
                             previous: item.previous,
                             count: item.count,
-                            amount: item.amount
+                            amount: item.amount,
+                            order: item.order
                         } });
                 }).then(function () {
                     return recur_price(index + 1);
@@ -7277,18 +7310,18 @@ var getStockListV2 = exports.getStockListV2 = function getStockListV2(type, year
                                             if (Number(index)) {
                                                 var exist = false;
 
-                                                var _loop5 = function _loop5(_i32) {
-                                                    if (stock_list[_i32].index === index) {
+                                                var _loop5 = function _loop5(_i33) {
+                                                    if (stock_list[_i33].index === index) {
                                                         exist = true;
                                                         tag.forEach(function (v) {
-                                                            return stock_list[_i32].tag.push(v);
+                                                            return stock_list[_i33].tag.push(v);
                                                         });
                                                         return 'break';
                                                     }
                                                 };
 
-                                                for (var _i32 = 0; _i32 < stock_list.length; _i32++) {
-                                                    var _ret21 = _loop5(_i32);
+                                                for (var _i33 = 0; _i33 < stock_list.length; _i33++) {
+                                                    var _ret21 = _loop5(_i33);
 
                                                     if (_ret21 === 'break') break;
                                                 }
@@ -8329,24 +8362,24 @@ var calStair = exports.calStair = function calStair(raw_arr, loga, min) {
     }
     var volsum = 0;
     var maxlen = len && stair_start + len < raw_arr.length ? stair_start + len : raw_arr.length;
-    for (var _i33 = stair_start; _i33 < maxlen; _i33++) {
+    for (var _i34 = stair_start; _i34 < maxlen; _i34++) {
         var s = 0;
         var e = 100;
         for (var _j10 = 0; _j10 < 100; _j10++) {
-            if (raw_arr[_i33].l >= loga.arr[_j10]) {
+            if (raw_arr[_i34].l >= loga.arr[_j10]) {
                 s = _j10;
             }
-            if (raw_arr[_i33].h <= loga.arr[_j10]) {
+            if (raw_arr[_i34].h <= loga.arr[_j10]) {
                 e = _j10;
                 break;
             }
         }
-        volsum += raw_arr[_i33].v;
-        single_arr.push((raw_arr[_i33].h - raw_arr[_i33].l) / raw_arr[_i33].h * 100);
+        volsum += raw_arr[_i34].v;
+        single_arr.push((raw_arr[_i34].h - raw_arr[_i34].l) / raw_arr[_i34].h * 100);
         if (e - s === 0) {
-            final_arr[s] += raw_arr[_i33].v;
+            final_arr[s] += raw_arr[_i34].v;
         } else {
-            var v = raw_arr[_i33].v / (e - s);
+            var v = raw_arr[_i34].v / (e - s);
             for (var _j11 = s; _j11 < e; _j11++) {
                 final_arr[_j11] += v;
             }
@@ -8510,16 +8543,16 @@ var adjustWeb = function adjustWeb(webArr, webMid) {
         }
     }
     count = 0;
-    for (var _i34 = mid - 1; _i34 >= 0; _i34--) {
-        if (webArr[_i34] >= 0) {
+    for (var _i35 = mid - 1; _i35 >= 0; _i35--) {
+        if (webArr[_i35] >= 0) {
             count++;
             if (count === ignore) {
                 count = 0;
             } else {
-                new_arr.splice(0, 0, webArr[_i34]);
+                new_arr.splice(0, 0, webArr[_i35]);
             }
         } else {
-            new_arr.splice(0, 0, webArr[_i34]);
+            new_arr.splice(0, 0, webArr[_i35]);
         }
     }
     return {

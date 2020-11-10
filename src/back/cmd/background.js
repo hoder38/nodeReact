@@ -290,12 +290,8 @@ export const usseInit = () => {
             if ((now - lastInitUsse) > PRICE_INTERVAL * 0.9) {
                 lastInitUsse = now;
                 return usseTDInit().catch(err => {
-                    /*if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
-                        return resetBFX();
-                    } else {*/
-                        resetTD(true);
-                        return bgError(err, 'Loop usse init');
-                    //}
+                    resetTD();
+                    return bgError(err, 'Loop usse init');
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO());
             }
         }

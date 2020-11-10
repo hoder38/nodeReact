@@ -621,12 +621,8 @@ var usseInit = exports.usseInit = function usseInit() {
                 if (now - lastInitUsse > _constants.PRICE_INTERVAL * 0.9) {
                     lastInitUsse = now;
                     return (0, _tdameritradeTool.usseTDInit)().catch(function (err) {
-                        /*if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
-                            return resetBFX();
-                        } else {*/
-                        (0, _tdameritradeTool.resetTD)(true);
+                        (0, _tdameritradeTool.resetTD)();
                         return bgError(err, 'Loop usse init');
-                        //}
                     }).then(function () {
                         return new _promise2.default(function (resolve, reject) {
                             return setTimeout(function () {

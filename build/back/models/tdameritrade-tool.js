@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.resetTD = exports.getUssePosition = exports.usseTDInit = exports.usseSubStock = exports.getToken = exports.generateAuthUrl = undefined;
+exports.resetTD = exports.getUsseOrder = exports.getUssePosition = exports.usseTDInit = exports.usseSubStock = exports.getToken = exports.generateAuthUrl = undefined;
 
 var _typeof2 = require('babel-runtime/helpers/typeof');
 
@@ -55,9 +55,14 @@ var _events = require('events');
 
 var _events2 = _interopRequireDefault(_events);
 
+var _xml2js = require('xml2js');
+
+var _xml2js2 = _interopRequireDefault(_xml2js);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-//let ussePrice = [];
+var Xmlparser = new _xml2js2.default.Parser();
+
 var eventEmitter = new _events2.default.EventEmitter();
 var tokens = {};
 var userPrincipalsResponse = null;
@@ -299,6 +304,52 @@ var usseHandler = function usseHandler(res) {
     console.log(res);
 };
 
+var cancelTDOrder = function cancelTDOrder(id) {
+    if (!usseWs || !userPrincipalsResponse) {
+        return (0, _utility.handleError)(new _utility.HoError('TD cannot cancel order!!!'));
+    }
+    return checkOauth().then(function () {
+        return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '/orders/' + id, { headers: { Authorization: 'Bearer ' + tokens.access_token }, method: 'DELETE' }).then(function (res) {
+            if (!res.ok) {
+                return res.json().then(function (err) {
+                    return (0, _utility.handleError)(new _utility.HoError(err.error));
+                });
+            }
+        });
+    });
+};
+
+var submitTDOrder = function submitTDOrder(id, price, count) {
+    if (!usseWs || !userPrincipalsResponse) {
+        return (0, _utility.handleError)(new _utility.HoError('TD cannot cancel order!!!'));
+    }
+    var qspost = (0, _stringify2.default)((0, _assign2.default)({
+        session: "SEAMLESS",
+        duration: "GOOD_TILL_CANCEL",
+        orderStrategyType: "SINGLE",
+        orderLegCollection: [{
+            "instruction": count > 0 ? "Buy" : 'SELL',
+            "quantity": Math.abs(count),
+            "instrument": {
+                "symbol": id,
+                "assetType": "EQUITY"
+            }
+        }]
+    }, price === 'MARKET' ? { orderType: "MARKET" } : { orderType: 'LIMIT', price: price }));
+    return checkOauth().then(function () {
+        return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '/orders', { headers: {
+                Authorization: 'Bearer ' + tokens.access_token,
+                'Content-Type': 'application/json'
+            }, method: 'POST', body: qspost }).then(function (res) {
+            if (!res.ok) {
+                return res.json().then(function (err) {
+                    return (0, _utility.handleError)(new _utility.HoError(err.error));
+                });
+            }
+        });
+    });
+};
+
 var usseTDInit = exports.usseTDInit = function usseTDInit() {
     return checkOauth().then(function () {
         var initWs = function initWs() {
@@ -362,12 +413,87 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                         console.log('TD usse ticker close');
                     });
                     usseOnAccount(function (data) {
-                        console.log(data);
                         if (data) {
                             data.forEach(function (d) {
-                                console.log(d[1]);
                                 console.log(d[2]);
                                 console.log(d[3]);
+                                if (d[2] === 'SUBSCRIBED') {} else if (d[2] === 'ERROR') {
+                                    resetTD();
+                                } else {
+                                    initialBook().then(function () {
+                                        return new _promise2.default(function (resolve, reject) {
+                                            return Xmlparser.parseString(d[3], function (err, result) {
+                                                return err ? reject(err) : resolve(result);
+                                            });
+                                        });
+                                    }).then(function (result) {
+                                        //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
+                                        var xmlMsg = result.OrderFillMessage;
+                                        if (xmlMsg && xmlMsg.ExecutionInformation) {
+                                            console.log(xmlMsg.Order[0].Security[0].Symbol[0]);
+                                            return (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', index: xmlMsg.Order[0].Security[0].Symbol[0] }).then(function (items) {
+                                                if (items.length > 0) {
+                                                    var _ret = function () {
+                                                        var item = items[0];
+                                                        var time = Math.round(new Date().getTime() / 1000);
+                                                        var price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
+                                                        if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
+                                                            var is_insert = false;
+                                                            for (var k = 0; k < item.previous.buy.length; k++) {
+                                                                if (price < item.previous.buy[k].price) {
+                                                                    item.previous.buy.splice(k, 0, { price: price, time: time });
+                                                                    is_insert = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!is_insert) {
+                                                                item.previous.buy.push({ price: price, time: time });
+                                                            }
+                                                            item.previous = {
+                                                                price: price,
+                                                                time: time,
+                                                                type: 'buy',
+                                                                buy: item.previous.buy.filter(function (v) {
+                                                                    return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                                }),
+                                                                sell: item.previous.sell
+                                                            };
+                                                        } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                            var _is_insert = false;
+                                                            for (var _k = 0; _k < item.previous.sell.length; _k++) {
+                                                                if (price > item.previous.sell[_k].price) {
+                                                                    item.previous.sell.splice(_k, 0, { price: price, time: time });
+                                                                    _is_insert = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (!_is_insert) {
+                                                                item.previous.sell.push({ price: price, time: time });
+                                                            }
+                                                            item.previous = {
+                                                                price: price,
+                                                                time: time,
+                                                                type: 'sell',
+                                                                sell: item.previous.sell.filter(function (v) {
+                                                                    return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                                }),
+                                                                buy: item.previous.buy
+                                                            };
+                                                        }
+                                                        return {
+                                                            v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { previous: item.previous } })
+                                                        };
+                                                    }();
+
+                                                    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+                                                }
+                                            });
+                                        }
+                                    }).catch(function (err) {
+                                        (0, _sendWs2.default)('TD Ameritrade XML Error: ' + err.code + ' ' + err.message, 0, 0, true);
+                                        (0, _utility.handleError)(err, 'TD Ameritrade XML Error');
+                                    });
+                                }
                             });
                         }
                     });
@@ -388,17 +514,22 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
             }
         };
         var initialBook = function initialBook() {
+            var force = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+
             if (!usseWs || !userPrincipalsResponse) {
                 return (0, _utility.handleError)(new _utility.HoError('TD cannot be inital book!!!'));
             }
             var now = Math.round(new Date().getTime() / 1000);
-            if (now - updateTime['book'] > _constants.UPDATE_BOOK) {
+            if (force || now - updateTime['book'] > _constants.UPDATE_ORDER) {
                 updateTime['book'] = now;
                 console.log(updateTime['book']);
                 return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '?fields=positions,orders', { headers: { Authorization: 'Bearer ' + tokens.access_token } }).then(function (res) {
                     return res.json();
                 }).then(function (result) {
                     console.log(result);
+                    if (result['error']) {
+                        return (0, _utility.handleError)(new _utility.HoError(result['error']));
+                    }
                     //init book
                     if (result['securitiesAccount']['projectedBalances']) {
                         available = result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'];
@@ -411,9 +542,25 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                 price: p.averagePrice
                             };
                         });
+                    } else {
+                        position = [];
                     }
+                    order = [];
                     if (result['securitiesAccount']['orderStrategies']) {
-                        order = result['securitiesAccount']['orderStrategies'];
+                        result['securitiesAccount']['orderStrategies'].forEach(function (o) {
+                            //console.log(o);
+                            if (o.cancelable) {
+                                order.push({
+                                    id: o.orderId,
+                                    time: new Date(o.enteredTime).getTime() / 1000,
+                                    amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
+                                    type: o.orderType,
+                                    symbol: o.orderLegCollection[0].instrument.symbol,
+                                    price: o.price,
+                                    duration: o.duration
+                                });
+                            }
+                        });
                     }
                 });
             } else {
@@ -426,7 +573,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
         }).then(function () {
             updateTime['trade']++;
             console.log('td ' + updateTime['trade']);
-            if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1200 / /*PRICE_INTERVAL*/1200)) {
+            if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1200 / _constants.PRICE_INTERVAL)) {
                 return _promise2.default.resolve();
             } else {
                 //避開交易時間
@@ -449,7 +596,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                     if (index >= items.length) {
                         return _promise2.default.resolve();
                     } else {
-                        var _ret = function () {
+                        var _ret2 = function () {
                             var item = items[index];
                             if (item.index === 0 || !usseSuggestion[item.index]) {
                                 return {
@@ -457,19 +604,32 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                 };
                             }
                             var price = usseSuggestion[item.index].price;
-                            /*item.count = 0;
-                            item.amount = item.orig;
-                            for (let i = 0; i < position.length; i++) {
-                                if (position[i].symbol === item.index) {
-                                    item.count = position[i].amount;
-                                    item.amount = item.amount - position[i].amount * position[i].price;
-                                    break;
-                                }
-                            }*/
                             console.log(item);
                             var cancelOrder = function cancelOrder(rest) {
-                                //sync first
-                                return rest ? rest() : _promise2.default.resolve();
+                                return initialBook(true).then(function () {
+                                    var real_id = order.filter(function (v) {
+                                        return v.symbol === item.index;
+                                    });
+                                    var real_delete = function real_delete(index) {
+                                        if (index >= real_id.length) {
+                                            return rest ? rest() : _promise2.default.resolve();
+                                        }
+                                        return cancelTDOrder(real_id[index].id).catch(function (err) {
+                                            console.log(order);
+                                            (0, _sendWs2.default)(real_id[index].id + ' TD cancelOrder Error: ' + (err.message || err.msg), 0, 0, true);
+                                            (0, _utility.handleError)(err, real_id[index].id + ' TDcancelOrder Error');
+                                        }).then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 5000);
+                                            }).then(function () {
+                                                return real_delete(index + 1);
+                                            });
+                                        });
+                                    };
+                                    return real_delete(0);
+                                });
                             };
                             var startStatus = function startStatus() {
                                 return cancelOrder().then(function () {
@@ -491,12 +651,35 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             };
                             if (item.ing === 2) {
                                 var sellAll = function sellAll() {
-                                    var delTotal = function delTotal() {
-                                        return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
-                                            return recur_status(index + 1);
-                                        });
-                                    };
-                                    return delTotal();
+                                    return initialBook(true).then(function () {
+                                        var delTotal = function delTotal() {
+                                            return (0, _mongoTool2.default)('remove', _constants.TOTALDB, { _id: item._id, $isolated: 1 }).then(function () {
+                                                return recur_status(index + 1);
+                                            });
+                                        };
+                                        item.count = 0;
+                                        item.amount = item.orig;
+                                        for (var i = 0; i < position.length; i++) {
+                                            if (position[i].symbol === item.index) {
+                                                item.count = position[i].amount;
+                                                item.amount = item.orig - position[i].amount * position[i].price;
+                                                break;
+                                            }
+                                        }
+                                        if (item.count > 0) {
+                                            return submitTDOrder(item.index, 'MARKET', -item.count).then(function () {
+                                                return new _promise2.default(function (resolve, reject) {
+                                                    return setTimeout(function () {
+                                                        return resolve();
+                                                    }, 3000);
+                                                });
+                                            }).then(function () {
+                                                return delTotal();
+                                            });
+                                        } else {
+                                            return delTotal();
+                                        }
+                                    });
                                 };
                                 return {
                                     v: cancelOrder(sellAll)
@@ -532,12 +715,61 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             }
                         }();
 
-                        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
+                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
                     }
                 };
                 var recur_NewOrder = function recur_NewOrder(index) {
-                    console.log(newOrder);
-                    return _promise2.default.resolve();
+                    if (index >= newOrder.length) {
+                        return _promise2.default.resolve();
+                    } else {
+                        var _ret3 = function () {
+                            var item = newOrder[index].item;
+                            var suggestion = newOrder[index].suggestion;
+                            var submitBuy = function submitBuy() {
+                                return initialBook(true).then(function () {
+                                    console.log(available);
+                                    var order_avail = available > 1 ? available - 1 : 0;
+                                    if (order_avail < suggestion.bCount * suggestion.buy) {
+                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                    }
+                                    if (suggestion.bCount > 0 && suggestion.buy) {
+                                        console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
+                                        return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).then(function () {
+                                            return new _promise2.default(function (resolve, reject) {
+                                                return setTimeout(function () {
+                                                    return resolve();
+                                                }, 3000);
+                                            });
+                                        }).then(function () {
+                                            return recur_NewOrder(index + 1);
+                                        });
+                                    } else {
+                                        return recur_NewOrder(index + 1);
+                                    }
+                                });
+                            };
+                            if (suggestion.sCount > 0 && suggestion.sell) {
+                                console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
+                                return {
+                                    v: submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).then(function () {
+                                        return new _promise2.default(function (resolve, reject) {
+                                            return setTimeout(function () {
+                                                return resolve();
+                                            }, 3000);
+                                        });
+                                    }).then(function () {
+                                        return submitBuy();
+                                    })
+                                };
+                            } else {
+                                return {
+                                    v: submitBuy()
+                                };
+                            }
+                        }();
+
+                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                    }
                 };
                 return recur_status(0).then(function () {
                     return recur_NewOrder(0);
@@ -547,9 +779,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
     });
 };
 
-//export const getUssePrice = () => ussePrice;
 var getUssePosition = exports.getUssePosition = function getUssePosition() {
-    //sync first
     position.push({
         symbol: 0,
         amount: 1,
@@ -558,16 +788,20 @@ var getUssePosition = exports.getUssePosition = function getUssePosition() {
     return position;
 };
 
+var getUsseOrder = exports.getUsseOrder = function getUsseOrder() {
+    return order;
+};
+
 var resetTD = exports.resetTD = function resetTD() {
     var update = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
     console.log('TD reset');
-    if (update) {
-        var trade_count = updateTime['trade'];
-        updateTime = {};
-        updateTime['book'] = 0;
-        updateTime['trade'] = trade_count;
-    } else {
+    //if (update) {
+    //const trade_count = updateTime['trade'];
+    updateTime = {};
+    updateTime['book'] = 0;
+    updateTime['trade'] = 0;
+    if (!update) {
         usseLogout();
     }
 };

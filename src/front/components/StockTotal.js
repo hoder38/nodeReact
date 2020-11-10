@@ -89,6 +89,11 @@ const StockTotal = React.createClass({
             dropList.push({title: `Price: ${v.price}`, onclick: () => {}, key: 2})
             dropList.push({title: `mid: ${Math.round(v.mid * 100) / 100}`, onclick: () => {}, key: 3})
             dropList.push({title: `${v.str}`, onclick: () => {}, key: 4})
+            if (v.order) {
+                v.order.forEach((o, i) => {
+                    dropList.push({title: `Order: ${o}`, onclick: () => {}, key: i + 5})
+                })
+            }
             const percent = totals.se[v.se].total === 0 ? 0 : Math.floor(v.current / totals.se[v.se].total * 100);
             return (
                 <div className="input-group" key={key++}>
