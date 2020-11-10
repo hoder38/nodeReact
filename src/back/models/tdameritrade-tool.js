@@ -19,7 +19,7 @@ let usseWs = null;
 let requestid = 0;
 let emitter = [];
 let updateTime = {book: 0, trade: 0};
-let available = 0;
+let available = {tradable: 0, cash: 0};
 let order = [];
 let position = [];
 
@@ -458,7 +458,10 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
                 //init book
                 if (result['securitiesAccount']['projectedBalances']) {
-                    available = result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'];
+                    available = {
+                        tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'],
+                        cash: result['securitiesAccount']['currentBalances'].totalCash,
+                    }
                 }
                 if (result['securitiesAccount']['positions']) {
                     position = result['securitiesAccount']['positions'].map(p => ({
@@ -605,7 +608,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     const submitBuy = () => {
                         return initialBook(true).then(() => {
                             console.log(available);
-                            const order_avail = (available > 1) ? available - 1 : 0;
+                            const order_avail = (available.tradable > 1) ? available.tradable - 1 : 0;
                             if (order_avail < suggestion.bCount * suggestion.buy) {
                                 suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                             }
@@ -634,7 +637,7 @@ export const getUssePosition = () => {
     position.push({
         symbol: 0,
         amount: 1,
-        price: available,
+        price: available.cash,
     });
     return position;
 }

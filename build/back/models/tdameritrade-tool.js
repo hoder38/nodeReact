@@ -70,7 +70,7 @@ var usseWs = null;
 var requestid = 0;
 var emitter = [];
 var updateTime = { book: 0, trade: 0 };
-var available = 0;
+var available = { tradable: 0, cash: 0 };
 var order = [];
 var position = [];
 
@@ -532,7 +532,10 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                     }
                     //init book
                     if (result['securitiesAccount']['projectedBalances']) {
-                        available = result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'];
+                        available = {
+                            tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'],
+                            cash: result['securitiesAccount']['currentBalances'].totalCash
+                        };
                     }
                     if (result['securitiesAccount']['positions']) {
                         position = result['securitiesAccount']['positions'].map(function (p) {
@@ -728,7 +731,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             var submitBuy = function submitBuy() {
                                 return initialBook(true).then(function () {
                                     console.log(available);
-                                    var order_avail = available > 1 ? available - 1 : 0;
+                                    var order_avail = available.tradable > 1 ? available.tradable - 1 : 0;
                                     if (order_avail < suggestion.bCount * suggestion.buy) {
                                         suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
                                     }
@@ -783,7 +786,7 @@ var getUssePosition = exports.getUssePosition = function getUssePosition() {
     position.push({
         symbol: 0,
         amount: 1,
-        price: available
+        price: available.cash
     });
     return position;
 };

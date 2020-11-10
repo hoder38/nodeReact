@@ -7013,8 +7013,8 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                         }
                         item.order = [];
                         for (var _i32 = 0; _i32 < usseOrder.length; _i32++) {
-                            console.log(usseOrder[_i32].symbol);
-                            console.log(item.index);
+                            //console.log(usseOrder[i].symbol);
+                            //console.log(item.index);
                             if (usseOrder[_i32].symbol === item.index) {
                                 var time = new Date(usseOrder[_i32].time * 1000);
                                 item.order.push(usseOrder[_i32].amount + ' ' + (usseOrder[_i32].type === 'MARKET' ? 'MARKET' : usseOrder[_i32].price) + ' ' + (time.getMonth() + 1) + '/' + time.getDate());
