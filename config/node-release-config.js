@@ -44,5 +44,5 @@ exports.default = {
     //3: xml重抓 2: xml重parse 1: parse tag
     BITFINEX_LOAN: true,
     BITFINEX_FILTER: true,
-    USSE_TICKER: false,
+    USSE_TICKER: true,
 }
