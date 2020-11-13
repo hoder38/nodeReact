@@ -33,7 +33,7 @@ export const getToken = code => {
         code: decodeURIComponent(code),
         client_id: TDAMERITRADE_KEY,
         redirect_uri: GOOGLE_REDIRECT,
-    }) : (tokens && tokens.expiry_date < (Date.now() / 1000 + 30)) ? QStringify({
+    }) : (tokens && tokens.expiry_date < (Date.now() / 1000 + 590)) ? QStringify({
         grant_type: 'refresh_token',
         refresh_token: tokens.refresh_token,
         access_type: '',
@@ -498,7 +498,7 @@ export const usseTDInit = () => checkOauth().then(() => {
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
         console.log(`td ${updateTime['trade']}`);
-        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1200 / PRICE_INTERVAL)) {
+        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1800 / PRICE_INTERVAL)) {
             return Promise.resolve();
         } else {
             //避開交易時間

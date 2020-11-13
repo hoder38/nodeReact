@@ -86,7 +86,7 @@ var getToken = exports.getToken = function getToken(code) {
         code: decodeURIComponent(code),
         client_id: _ver.TDAMERITRADE_KEY,
         redirect_uri: _ver.GOOGLE_REDIRECT
-    }) : tokens && tokens.expiry_date < Date.now() / 1000 + 30 ? (0, _querystring.stringify)({
+    }) : tokens && tokens.expiry_date < Date.now() / 1000 + 590 ? (0, _querystring.stringify)({
         grant_type: 'refresh_token',
         refresh_token: tokens.refresh_token,
         access_type: '',
@@ -576,7 +576,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
         }).then(function () {
             updateTime['trade']++;
             console.log('td ' + updateTime['trade']);
-            if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1200 / _constants.PRICE_INTERVAL)) {
+            if (updateTime['trade'] % Math.ceil(_constants.USSE_ORDER_INTERVAL / _constants.PRICE_INTERVAL) !== Math.floor(1800 / _constants.PRICE_INTERVAL)) {
                 return _promise2.default.resolve();
             } else {
                 //避開交易時間
