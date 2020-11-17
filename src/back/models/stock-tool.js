@@ -5070,8 +5070,8 @@ export default {
                 } else {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = v.price * v.count;
-                        const vprofit = v.profit ? v.profit : 0;
-                        let p = current + v.amount - v.orig + vprofit;
+                        v.amount = v.profit ? v.amount + v.profit : v.amount;
+                        let p = current + v.amount - v.orig;
                         let se = 0;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;
@@ -5547,6 +5547,7 @@ export default {
                         //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                             let se = 0;
                             let current = v.price * v.count;
+                            v.amount = v.profit ? v.amount + v.profit : v.amount;
                             let p = current + v.amount - v.orig;
                             if (v.setype === 'usse') {
                                 totalPrice1 += current;

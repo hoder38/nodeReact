@@ -1754,8 +1754,8 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         return _promise2.default.resolve();
                     } else {
                         var _ret8 = function () {
-                            margin[id][current.type][item.index] = item.profit;
                             var item = items[index];
+                            margin[id][current.type][item.index] = item.profit;
                             var clearP = current.clear === true || current.clear[item.index] === true ? true : false;
                             item.count = 0;
                             item.amount = item.orig;

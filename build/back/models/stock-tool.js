@@ -6042,8 +6042,8 @@ exports.default = {
                 } else {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                     var current = v.price * v.count;
-                    var vprofit = v.profit ? v.profit : 0;
-                    var p = current + v.amount - v.orig + vprofit;
+                    v.amount = v.profit ? v.amount + v.profit : v.amount;
+                    var p = current + v.amount - v.orig;
                     var se = 0;
                     if (v.setype === 'usse') {
                         totalPrice1 += current;
@@ -6612,6 +6612,7 @@ exports.default = {
                         //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         var se = 0;
                         var current = v.price * v.count;
+                        v.amount = v.profit ? v.amount + v.profit : v.amount;
                         var p = current + v.amount - v.orig;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;

@@ -1512,8 +1512,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         });
                         return Promise.resolve();
                     } else {
-                        margin[id][current.type][item.index] = item.profit;
                         const item = items[index];
+                        margin[id][current.type][item.index] = item.profit;
                         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                         item.count = 0;
                         item.amount = item.orig;

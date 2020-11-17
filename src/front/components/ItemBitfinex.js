@@ -1,5 +1,6 @@
 import React from 'react'
 import Dropdown from './Dropdown'
+import { api, killEvent } from '../utility'
 
 const ItemBitfinex = React.createClass({
     render: function() {
