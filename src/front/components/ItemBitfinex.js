@@ -19,7 +19,7 @@ const ItemBitfinex = React.createClass({
             fileType = 'success';
             break;
         }
-        fileType = item.boost ? `${fileType} external` : fileType;
+        fileType = item.boost ? `${fileType} external` : item.taken ? `${fileType} recycled` : fileType;
         const dropList = item.str ? (
             <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={[{title: item.str, onclick: () => {}, key: 0}]}>
                 <button type="button" className="btn btn-default">
@@ -31,6 +31,12 @@ const ItemBitfinex = React.createClass({
                 <span className="caret"></span>
             </button>
         );
+        let click = () => {};
+        if (item.taken) {
+            click = () => {
+                this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot/close/${item.id}`).catch(err => this.props.addalert(err)), `Would you sure to close Credit ${item.id}?`);
+            }
+        }
         return (
             <tr className={fileType}>
                 <td className="text-center" style={{width: '56px'}}>
@@ -40,7 +46,7 @@ const ItemBitfinex = React.createClass({
                         ref={ref => this.props.getRef(ref)}
                         onChange={this.props.onchange} />
                 </td>
-                <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}}>{item.name}</td>
+                <td style={{whiteSpace: 'normal', wordBreak: 'break-all', wordWrap: 'break-word'}} onClick={e => killEvent(e, click)}>{item.name}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.rate}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.utime}</td>
                 <td style={{width: '50px'}}>{dropList}</td>

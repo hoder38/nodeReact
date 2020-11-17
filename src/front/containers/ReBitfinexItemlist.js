@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import { bitfinexPush, setBitfinex, alertPush } from '../actions'
+import { bitfinexPush, setBitfinex, alertPush, sendGlbCf } from '../actions'
 import Itemlist from '../components/Itemlist'
 import { arrayMerge } from '../utility'
 import { BITFINEX } from '../constants'
@@ -18,6 +18,7 @@ const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),
     set: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(bitfinexPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
     setSelect: item => dispatch(setBitfinex(item)),
+    sendglbcf: (callback, text) => dispatch(sendGlbCf(callback, text)),
 })
 
 const ReBitfinexItemlist = connect(

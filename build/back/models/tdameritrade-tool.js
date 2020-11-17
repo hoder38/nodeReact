@@ -311,6 +311,7 @@ var cancelTDOrder = function cancelTDOrder(id) {
     return checkOauth().then(function () {
         return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '/orders/' + id, { headers: { Authorization: 'Bearer ' + tokens.access_token }, method: 'DELETE' }).then(function (res) {
             if (!res.ok) {
+                updateTime['trade']--;
                 return res.json().then(function (err) {
                     return (0, _utility.handleError)(new _utility.HoError(err.error));
                 });
@@ -437,6 +438,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                         var item = items[0];
                                                         var time = Math.round(new Date().getTime() / 1000);
                                                         var price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
+                                                        var profit = 0;
                                                         if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
                                                             var is_insert = false;
                                                             for (var k = 0; k < item.previous.buy.length; k++) {
@@ -459,6 +461,15 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                                 sell: item.previous.sell
                                                             };
                                                         } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                            var sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
+                                                            for (var i = 0; i < position.length; i++) {
+                                                                if (position[i].symbol === item.index) {
+                                                                    if (sellcount >= position[i].amount) {
+                                                                        profit = price * sellcount * (1 - _constants.USSE_FEE) - position[i].amount * position[i].price;
+                                                                    }
+                                                                    break;
+                                                                }
+                                                            }
                                                             var _is_insert = false;
                                                             for (var _k = 0; _k < item.previous.sell.length; _k++) {
                                                                 if (price > item.previous.sell[_k].price) {
@@ -480,8 +491,9 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                                 buy: item.previous.buy
                                                             };
                                                         }
+                                                        item.profit = item.profit ? item.profit + profit : profit;
                                                         return {
-                                                            v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { previous: item.previous } })
+                                                            v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { previous: item.previous, profit: item.profit } })
                                                         };
                                                     }();
 
@@ -528,6 +540,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                 }).then(function (result) {
                     console.log(result);
                     if (result['error']) {
+                        updateTime['trade']--;
                         return (0, _utility.handleError)(new _utility.HoError(result['error']));
                     }
                     //init book

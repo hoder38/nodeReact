@@ -6042,7 +6042,8 @@ exports.default = {
                 } else {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                     var current = v.price * v.count;
-                    var p = current + v.amount - v.orig;
+                    var vprofit = v.profit ? v.profit : 0;
+                    var p = current + v.amount - v.orig + vprofit;
                     var se = 0;
                     if (v.setype === 'usse') {
                         totalPrice1 += current;

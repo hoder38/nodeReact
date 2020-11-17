@@ -31,6 +31,7 @@ const deleteOffer = [];
 const deleteOrder = [];
 
 let credit = {};
+const closeCredit = {};
 let ledger = {};
 let position = {};
 
@@ -371,9 +372,22 @@ export const setWsOffer = (id, curArr=[], uid) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
+    const closeRestCredit = () => {
+        if (closeCredit[id] && closeCredit[id].length > 0) {
+            const close_id = closeCredit[id].splice(0, closeCredit[id].length);
+            const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: close_id[index]}).then(result => {
+                console.log(result);
+                return recur_close(index + 1);
+            });
+            return recur_close(0);
+        } else {
+            return Promise.resolve();
+        }
+    }
     const processOrderRest = (amount, price, item) => {
         const time = Math.round(new Date().getTime() / 1000);
         const tradeType = amount > 0 ? 'buy' : 'sell';
+        let profit = 0;
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
@@ -394,6 +408,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 sell: item.previous.sell,
             }
         } else if (tradeType === 'sell') {
+            let count = 0;
+            let basePrice = 0;
+            if (position[id][`f${item.index.substr(-3)}`]) {
+                position[id][`f${item.index.substr(-3)}`].forEach(v => {
+                    if (v.symbol === item.index) {
+                        count += v.amount;
+                        basePrice = basePrice + v.amount * v.price;
+                    }
+                });
+                if (count > 0 && (-amount >= count)) {
+                    profit = price * (-amount) * (1 - BITFINEX_FEE) - basePrice;
+                }
+            }
             let is_insert = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
                 if (price > item.previous.sell[k].price) {
@@ -413,9 +440,12 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 buy: item.previous.buy,
             }
         }
+        item.profit = item.profit ? item.profit + profit : profit;
+        margin[id][`f${item.index.substr(-3)}`][item.index] = item.profit;
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
             //amount: item.amount - price * amount,
             //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
+            profit: item.profit,
             previous: item.previous,
         }});
     }
@@ -1389,6 +1419,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (margin[id][current.type] && margin[id][current.type].avail > 0) {
                         availableMargin = -margin[id][current.type].avail;
                     }
+                    if (credit[id] && credit[id][current.type]) {
+                        credit[id][current.type].forEach(o => {
+                            if (o.side !== 1) {
+                                availableMargin = availableMargin - o.amount;
+                            }
+                        });
+                    }
                     if (availableMargin <= needTrans && current.clear !== true) {
                         availableMargin = needTrans;
                     } else {
@@ -1475,6 +1512,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         });
                         return Promise.resolve();
                     } else {
+                        margin[id][current.type][item.index] = item.profit;
                         const item = items[index];
                         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                         item.count = 0;
@@ -1945,7 +1983,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         });
     }
     const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => singleTrade(curArr[index]).then(() => recurLoan(index + 1)))) : recurLoan(index + 1);
-    return initialBook().then(() => recurLoan(0));
+    return initialBook().then(() => closeRestCredit()).then(() => recurLoan(0));
 }
 
 export const resetBFX = (update=false) => {
@@ -2464,8 +2502,15 @@ export default {
             }
             let vid = SUPPORT_COIN.length;
             for (let i in priceData) {
+                let profit = 0;
+                if (margin[id] && margin[id][`f${i.substr(-3)}`] && margin[id][`f${i.substr(-3)}`][i]) {
+                    profit = margin[id][`f${i.substr(-3)}`][i];
+                }
+                if (position[id] && position[id][`f${i.substr(-3)}`]) {
+                    position[id][`f${i.substr(-3)}`].forEach(o => profit = profit + o.pl);
+                }
                 tempList.push({
-                    name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 10000) / 10000}`,
+                    name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 10000) / 10000} ${(profit > 0) ? '+' : ''}${Math.round(profit * 1000) / 1000}`,
                     id: vid++,
                     tags: [i.substr(1, 4), i.substr(-3), 'rate', '利率'],
                     rate: `${Math.floor(priceData[i].dailyChange * 100) / 100}%`,
@@ -2510,7 +2555,7 @@ export default {
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'offer', '掛單'],
                             rate: `${rate}%`,
-                            boost: (o.period === 30) ? true : false,
+                            boost: (o.period >= 30) ? true : false,
                             count: rate,
                             utime: o.time,
                             type: 2,
@@ -2549,7 +2594,7 @@ export default {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate ? `${rate}%` : 'FRR',
                             count: rate,
-                            boost: (o.period === 30) ? true : false,
+                            taken: true,
                             utime: o.time + o.period * 86400,
                             type: 3,
                         })
@@ -2601,6 +2646,13 @@ export default {
     },
     parent: function() {
         return BITNIFEX_PARENT;
+    },
+    closeCredit: function(id, cId) {
+        if (!closeCredit[id]) {
+            closeCredit[id] = [cId];
+        } else {
+            closeCredit[id].push(cId);
+        }
     }
 }
 

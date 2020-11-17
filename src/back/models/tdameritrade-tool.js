@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL } from '../constants'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility'
@@ -266,6 +266,7 @@ const cancelTDOrder = id => {
     }
     return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
+            updateTime['trade']--;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));
@@ -376,6 +377,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                 const item = items[0];
                                                 const time = Math.round(new Date().getTime() / 1000);
                                                 const price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
+                                                let profit = 0;
                                                 if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
                                                     let is_insert = false;
                                                     for (let k = 0; k < item.previous.buy.length; k++) {
@@ -396,6 +398,15 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                         sell: item.previous.sell,
                                                     }
                                                 } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                    const sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
+                                                    for (let i = 0; i < position.length; i++) {
+                                                        if (position[i].symbol === item.index) {
+                                                            if (sellcount >= position[i].amount) {
+                                                                profit = price * sellcount * (1 - USSE_FEE) - position[i].amount * position[i].price;
+                                                            }
+                                                            break;
+                                                        }
+                                                    }
                                                     let is_insert = false;
                                                     for (let k = 0; k < item.previous.sell.length; k++) {
                                                         if (price > item.previous.sell[k].price) {
@@ -415,7 +426,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                         buy: item.previous.buy,
                                                     }
                                                 }
-                                                return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous}});
+                                                item.profit = item.profit ? item.profit + profit : profit;
+                                                return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}});
                                             }
                                         });
                                     }
@@ -454,6 +466,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
+                    updateTime['trade']--;
                     return handleError(new HoError(result['error']));
                 }
                 //init book
