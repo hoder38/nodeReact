@@ -2507,7 +2507,11 @@ export default {
                     profit = margin[id][`f${i.substr(-3)}`][i];
                 }
                 if (position[id] && position[id][`f${i.substr(-3)}`]) {
-                    position[id][`f${i.substr(-3)}`].forEach(o => profit = profit + o.pl);
+                    position[id][`f${i.substr(-3)}`].forEach(o => {
+                        if (o.symbol === i) {
+                            profit = profit + o.pl;
+                        }
+                    });
                 }
                 tempList.push({
                     name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 10000) / 10000} ${(profit > 0) ? '+' : ''}${Math.round(profit * 1000) / 1000}`,
@@ -2594,7 +2598,7 @@ export default {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate ? `${rate}%` : 'FRR',
                             count: rate,
-                            taken: true,
+                            taken: (o.side === 1) ? false : true,
                             utime: o.time + o.period * 86400,
                             type: 3,
                         })

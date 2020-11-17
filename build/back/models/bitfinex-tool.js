@@ -2906,7 +2906,9 @@ exports.default = {
                 }
                 if (position[id] && position[id]['f' + _i25.substr(-3)]) {
                     position[id]['f' + _i25.substr(-3)].forEach(function (o) {
-                        return profit = profit + o.pl;
+                        if (o.symbol === _i25) {
+                            profit = profit + o.pl;
+                        }
                     });
                 }
                 tempList.push({
@@ -2998,7 +3000,7 @@ exports.default = {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate ? rate + '%' : 'FRR',
                             count: rate,
-                            taken: true,
+                            taken: o.side === 1 ? false : true,
                             utime: o.time + o.period * 86400,
                             type: 3
                         });
