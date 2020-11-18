@@ -461,10 +461,12 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                                 sell: item.previous.sell
                                                             };
                                                         } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                            console.log(position);
                                                             var sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
                                                             for (var i = 0; i < position.length; i++) {
                                                                 if (position[i].symbol === item.index) {
                                                                     if (sellcount >= position[i].amount) {
+                                                                        console.log('td position close');
                                                                         profit = price * sellcount * (1 - _constants.USSE_FEE) - position[i].amount * position[i].price;
                                                                     }
                                                                     break;

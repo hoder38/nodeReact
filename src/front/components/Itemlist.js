@@ -123,7 +123,7 @@ const Itemlist = React.createClass({
                 rows.push(<ReItemLottery key={item.id} item={item} owner={this.props.owner} />)
                 break
                 case BITFINEX:
-                rows.push(<ItemBitfinex key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} check={select} />)
+                rows.push(<ItemBitfinex key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} check={select} mainUrl={this.props.mainUrl} sendglbcf={this.props.sendglbcf} />)
                 break
             }
             if (select) {

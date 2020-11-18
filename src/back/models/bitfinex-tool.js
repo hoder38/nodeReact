@@ -387,7 +387,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
     const processOrderRest = (amount, price, item) => {
         const time = Math.round(new Date().getTime() / 1000);
         const tradeType = amount > 0 ? 'buy' : 'sell';
-        let profit = 0;
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
@@ -408,19 +407,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 sell: item.previous.sell,
             }
         } else if (tradeType === 'sell') {
-            let count = 0;
-            let basePrice = 0;
-            if (position[id][`f${item.index.substr(-3)}`]) {
-                position[id][`f${item.index.substr(-3)}`].forEach(v => {
-                    if (v.symbol === item.index) {
-                        count += v.amount;
-                        basePrice = basePrice + v.amount * v.price;
-                    }
-                });
-                if (count > 0 && (-amount >= count)) {
-                    profit = price * (-amount) * (1 - BITFINEX_FEE) - basePrice;
-                }
-            }
             let is_insert = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
                 if (price > item.previous.sell[k].price) {
@@ -440,12 +426,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 buy: item.previous.buy,
             }
         }
-        item.profit = item.profit ? item.profit + profit : profit;
-        margin[id][`f${item.index.substr(-3)}`][item.index] = item.profit;
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
             //amount: item.amount - price * amount,
             //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
-            profit: item.profit,
             previous: item.previous,
         }});
     }
@@ -724,11 +707,27 @@ export const setWsOffer = (id, curArr=[], uid) => {
         });
         userWs[id].onPositionClose({ }, fc => {
             const symbol = `f${fc.symbol.substr(-3)}`;
+            console.log(fc);
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
                 if (position[id][symbol]) {
                     for (let j = 0; j < position[id][symbol].length; j++) {
                         if (position[id][symbol][j].id === fc.id) {
                             position[id][symbol].splice(j, 1);
+                            Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
+                                console.log(items);
+                                if (items.length < 1) {
+                                    return handleError(new HoError(`miss ${fc.symbol}`));
+                                }
+                                const profit = items[0].profit ? items[0].profit + Number(fc.pl) : Number(fc.pl);
+                                console.log(profit);
+                                margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
+                                return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
+                                    console.log(result);
+                                });
+                            }).catch(err => {
+                                sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
+                                handleError(err, `${id} Position close Error`);
+                            });
                             break;
                         }
                     }
@@ -1514,6 +1513,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     } else {
                         const item = items[index];
                         margin[id][current.type][item.index] = item.profit;
+                        console.log('margin');
+                        console.log(margin[id]);
                         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                         item.count = 0;
                         item.amount = item.orig;
@@ -2516,7 +2517,7 @@ export default {
                 tempList.push({
                     name: `${i.substr(1)} $${Math.floor(priceData[i].lastPrice * 10000) / 10000} ${(profit > 0) ? '+' : ''}${Math.round(profit * 1000) / 1000}`,
                     id: vid++,
-                    tags: [i.substr(1, 4), i.substr(-3), 'rate', '利率'],
+                    tags: [i.substr(1, 3), i.substr(-3), 'rate', '利率'],
                     rate: `${Math.floor(priceData[i].dailyChange * 100) / 100}%`,
                     count: priceData[i].dilyChange,
                     utime: priceData[i].time,
@@ -2585,7 +2586,7 @@ export default {
                             count: rate,
                             utime: o.time,
                             type: 3,
-                            boost: (o.pl < 0) ? true : false,
+                            taken: (o.pl < 0) ? true : false,
                         })
                     })
                 }
@@ -2598,6 +2599,7 @@ export default {
                             tags: [v.substr(1).toLowerCase(), 'credit', '放款'],
                             rate: rate ? `${rate}%` : 'FRR',
                             count: rate,
+                            boost: (o.period >= 30) ? true : false,
                             taken: (o.side === 1) ? false : true,
                             utime: o.time + o.period * 86400,
                             type: 3,

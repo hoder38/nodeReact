@@ -20,7 +20,7 @@ const ItemBitfinex = React.createClass({
             fileType = 'success';
             break;
         }
-        fileType = item.boost ? `${fileType} external` : item.taken ? `${fileType} recycled` : fileType;
+        fileType = item.taken ? `${fileType} recycled` : item.boost ? `${fileType} external` : fileType;
         const dropList = item.str ? (
             <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={[{title: item.str, onclick: () => {}, key: 0}]}>
                 <button type="button" className="btn btn-default">
