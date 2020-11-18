@@ -499,10 +499,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             user: id,
                         });
                     } else if (wallet.type === 'margin') {
-                        margin[id][t] = {
-                            avail: wallet.balanceAvailable,
-                            time: Math.round(new Date().getTime() / 1000),
-                            total: wallet.balance,
+                        if (margin[id][t]) {
+                            margin[id][t]['avail'] = wallet.balanceAvailable;
+                            margin[id][t]['time'] = Math.round(new Date().getTime() / 1000);
+                            margin[id][t]['total'] = wallet.balance;
+                        } else {
+                            margin[id][t] = {
+                                avail: wallet.balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet.balance,
+                            }
                         }
                         sendWs({
                             type: 'bitfinex',
@@ -883,10 +889,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 total: w.balance,
                             }
                         } else if (w.type === 'margin') {
-                            margin[id][symbol] = {
-                                avail: w.balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: w.balance,
+                            if (margin[id][symbol]) {
+                                margin[id][symbol]['avail'] = w.balanceAvailable;
+                                margin[id][symbol]['time'] = Math.round(new Date().getTime() / 1000);
+                                margin[id][symbol]['total'] = w.balance;
+                            } else {
+                                margin[id][symbol] = {
+                                    avail: w.balanceAvailable,
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    total: w.balance,
+                                }
                             }
                         }
                     }
@@ -1407,10 +1419,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 return userRest.wallets().then(wallet => {
                     for (let i = 0; i < wallet.length; i++){
                         if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {
-                            margin[id][current.type] = {
-                                avail: wallet[i].balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: wallet[i].balance,
+                            if (margin[id][current.type]) {
+                                margin[id][current.type]['avail'] = wallet[i].balanceAvailable;
+                                margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
+                                margin[id][current.type]['total'] = wallet[i].balance;
+                            } else {
+                                margin[id][current.type] = {
+                                    avail: wallet[i].balanceAvailable,
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    total: wallet[i].balance,
+                                }
                             }
                             break;
                         }
@@ -1802,10 +1820,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             return userRest.wallets().then(wallet => {
                                 for (let i = 0; i < wallet.length; i++){
                                     if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {
-                                        margin[id][current.type] = {
-                                            avail: wallet[i].balanceAvailable,
-                                            time: Math.round(new Date().getTime() / 1000),
-                                            total: wallet[i].balance,
+                                        if (margin[id][current.type]) {
+                                            margin[id][current.type]['avail'] = wallet[i].balanceAvailable;
+                                            margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
+                                            margin[id][current.type]['total'] = wallet[i].balance;
+                                        } else {
+                                            margin[id][current.type] = {
+                                                avail: wallet[i].balanceAvailable,
+                                                time: Math.round(new Date().getTime() / 1000),
+                                                total: wallet[i].balance,
+                                            }
                                         }
                                         break;
                                     }
@@ -2505,10 +2529,6 @@ export default {
             let vid = SUPPORT_COIN.length;
             for (let i in priceData) {
                 let profit = 0;
-                console.log(i);
-                console.log(margin[id]);
-                console.log(margin[id][`f${i.substr(-3)}`]);
-                console.log(margin[id][`f${i.substr(-3)}`][i]);
                 if (margin[id] && margin[id][`f${i.substr(-3)}`] && margin[id][`f${i.substr(-3)}`][i]) {
                     profit = margin[id][`f${i.substr(-3)}`][i];
                 }

@@ -623,11 +623,17 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             user: id
                         });
                     } else if (wallet.type === 'margin') {
-                        margin[id][t] = {
-                            avail: wallet.balanceAvailable,
-                            time: Math.round(new Date().getTime() / 1000),
-                            total: wallet.balance
-                        };
+                        if (margin[id][t]) {
+                            margin[id][t]['avail'] = wallet.balanceAvailable;
+                            margin[id][t]['time'] = Math.round(new Date().getTime() / 1000);
+                            margin[id][t]['total'] = wallet.balance;
+                        } else {
+                            margin[id][t] = {
+                                avail: wallet.balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: wallet.balance
+                            };
+                        }
                         (0, _sendWs2.default)({
                             type: 'bitfinex',
                             data: (i + 1) * 100,
@@ -1011,11 +1017,17 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 total: w.balance
                             };
                         } else if (w.type === 'margin') {
-                            margin[id][symbol] = {
-                                avail: w.balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: w.balance
-                            };
+                            if (margin[id][symbol]) {
+                                margin[id][symbol]['avail'] = w.balanceAvailable;
+                                margin[id][symbol]['time'] = Math.round(new Date().getTime() / 1000);
+                                margin[id][symbol]['total'] = w.balance;
+                            } else {
+                                margin[id][symbol] = {
+                                    avail: w.balanceAvailable,
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    total: w.balance
+                                };
+                            }
                         }
                     }
                 });
@@ -1620,11 +1632,17 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 return userRest.wallets().then(function (wallet) {
                     for (var _i13 = 0; _i13 < wallet.length; _i13++) {
                         if (wallet[_i13].type === 'margin' && wallet[_i13].currency === current.type.substr(1)) {
-                            margin[id][current.type] = {
-                                avail: wallet[_i13].balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: wallet[_i13].balance
-                            };
+                            if (margin[id][current.type]) {
+                                margin[id][current.type]['avail'] = wallet[_i13].balanceAvailable;
+                                margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
+                                margin[id][current.type]['total'] = wallet[_i13].balance;
+                            } else {
+                                margin[id][current.type] = {
+                                    avail: wallet[_i13].balanceAvailable,
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    total: wallet[_i13].balance
+                                };
+                            }
                             break;
                         }
                     }
@@ -2094,11 +2112,17 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 return userRest.wallets().then(function (wallet) {
                                     for (var _i17 = 0; _i17 < wallet.length; _i17++) {
                                         if (wallet[_i17].type === 'margin' && wallet[_i17].currency === current.type.substr(1)) {
-                                            margin[id][current.type] = {
-                                                avail: wallet[_i17].balanceAvailable,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                total: wallet[_i17].balance
-                                            };
+                                            if (margin[id][current.type]) {
+                                                margin[id][current.type]['avail'] = wallet[_i17].balanceAvailable;
+                                                margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
+                                                margin[id][current.type]['total'] = wallet[_i17].balance;
+                                            } else {
+                                                margin[id][current.type] = {
+                                                    avail: wallet[_i17].balanceAvailable,
+                                                    time: Math.round(new Date().getTime() / 1000),
+                                                    total: wallet[_i17].balance
+                                                };
+                                            }
                                             break;
                                         }
                                     }
@@ -2901,10 +2925,6 @@ exports.default = {
 
             var _loop = function _loop(_i25) {
                 var profit = 0;
-                console.log(_i25);
-                console.log(margin[id]);
-                console.log(margin[id]['f' + _i25.substr(-3)]);
-                console.log(margin[id]['f' + _i25.substr(-3)][_i25]);
                 if (margin[id] && margin[id]['f' + _i25.substr(-3)] && margin[id]['f' + _i25.substr(-3)][_i25]) {
                     profit = margin[id]['f' + _i25.substr(-3)][_i25];
                 }
