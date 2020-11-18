@@ -485,6 +485,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
     var closeRestCredit = function closeRestCredit() {
         if (_closeCredit[id] && _closeCredit[id].length > 0) {
             var _ret3 = function () {
+                console.log(_closeCredit[id]);
                 var close_id = _closeCredit[id].splice(0, _closeCredit[id].length);
                 var recur_close = function recur_close(index) {
                     return index >= close_id.length ? _promise2.default.resolve() : userRest.closeFunding({ id: close_id[index] }).then(function (result) {
@@ -3067,6 +3068,7 @@ exports.default = {
         } else {
             _closeCredit[id].push(cId);
         }
+        return _promise2.default.resolve();
     }
 };
 
