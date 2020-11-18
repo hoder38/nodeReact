@@ -2505,6 +2505,10 @@ export default {
             let vid = SUPPORT_COIN.length;
             for (let i in priceData) {
                 let profit = 0;
+                console.log(i);
+                console.log(margin[id]);
+                console.log(margin[id][`f${i.substr(-3)}`]);
+                console.log(margin[id][`f${i.substr(-3)}`][i]);
                 if (margin[id] && margin[id][`f${i.substr(-3)}`] && margin[id][`f${i.substr(-3)}`][i]) {
                     profit = margin[id][`f${i.substr(-3)}`][i];
                 }

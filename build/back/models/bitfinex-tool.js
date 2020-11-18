@@ -2901,6 +2901,10 @@ exports.default = {
 
             var _loop = function _loop(_i25) {
                 var profit = 0;
+                console.log(_i25);
+                console.log(margin[id]);
+                console.log(margin[id]['f' + _i25.substr(-3)]);
+                console.log(margin[id]['f' + _i25.substr(-3)][_i25]);
                 if (margin[id] && margin[id]['f' + _i25.substr(-3)] && margin[id]['f' + _i25.substr(-3)][_i25]) {
                     profit = margin[id]['f' + _i25.substr(-3)][_i25];
                 }
