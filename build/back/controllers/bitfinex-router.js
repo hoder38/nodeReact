@@ -70,7 +70,7 @@ router.get('/bot/del/:type', function (req, res, next) {
 
 router.get('/bot/close/:credit', function (req, res, next) {
     console.log('close credit');
-    _bitfinexTool2.default.closeCredit(req.params.credit).then(function () {
+    _bitfinexTool2.default.closeCredit(req.user._id, req.params.credit).then(function () {
         return res.json({ apiOK: true });
     }).catch(function (err) {
         return (0, _utility.handleError)(err, next);

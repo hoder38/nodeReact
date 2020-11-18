@@ -3068,6 +3068,7 @@ exports.default = {
         } else {
             _closeCredit[id].push(cId);
         }
+        console.log(_closeCredit);
         return _promise2.default.resolve();
     }
 };

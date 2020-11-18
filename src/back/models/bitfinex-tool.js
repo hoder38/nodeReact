@@ -2660,6 +2660,7 @@ export default {
         } else {
             closeCredit[id].push(cId);
         }
+        console.log(closeCredit);
         return Promise.resolve();
     }
 }
