@@ -488,7 +488,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                 console.log(_closeCredit[id]);
                 var close_id = _closeCredit[id].splice(0, _closeCredit[id].length);
                 var recur_close = function recur_close(index) {
-                    return index >= close_id.length ? _promise2.default.resolve() : userRest.closeFunding({ id: close_id[index] }).then(function (result) {
+                    return index >= close_id.length ? _promise2.default.resolve() : userRest.closeFunding({ id: Number(close_id[index]) }).then(function (result) {
                         console.log(result);
                         return recur_close(index + 1);
                     });

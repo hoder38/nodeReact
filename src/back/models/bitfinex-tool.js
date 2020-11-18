@@ -376,7 +376,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         if (closeCredit[id] && closeCredit[id].length > 0) {
             console.log(closeCredit[id]);
             const close_id = closeCredit[id].splice(0, closeCredit[id].length);
-            const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: Number(close_id[index]})).then(result => {
+            const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: Number(close_id[index])}).then(result => {
                 console.log(result);
                 return recur_close(index + 1);
             });
