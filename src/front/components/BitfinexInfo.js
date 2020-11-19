@@ -40,6 +40,15 @@ const BitfinexInfo = React.createClass({
             } else {
                 this.props.addalert('Reserved Amount 1 not vaild!!!')
             }
+        } else if (this.state['keepAmountRate1']) {
+            if (isValidString(this.state['keepAmountRate1'], 'zeroint') && isValidString(this.state['keepAmountMoney1'], 'zeroint')) {
+                ka1 = {
+                    keepAmountRate1: this.state['keepAmountRate1'],
+                    keepAmountMoney1: this.state['keepAmountMoney1'],
+                }
+            } else {
+                this.props.addalert('Reserved Amount 1 not vaild!!!')
+            }
         }
         if (item.dynamicRate1 && item.dynamicDay1 && (this.state['dynamicRate1'].toString() !== item.dynamicRate1.toString() || this.state['dynamicDay1'].toString() !== item.dynamicDay1.toString())) {
             if (isValidString(this.state['dynamicRate1'], 'zeroint') && isValidString(this.state['dynamicDay1'], 'zeroint')) {
@@ -50,8 +59,26 @@ const BitfinexInfo = React.createClass({
             } else {
                 this.props.addalert('Boost Rate 1 not vaild!!!')
             }
+        } else if (this.state['dynamicRate1'] && this.state['dynamicDay1']) {
+            if (isValidString(this.state['dynamicRate1'], 'zeroint') && isValidString(this.state['dynamicDay1'], 'zeroint')) {
+                dr1 = {
+                    dynamicRate1: this.state['dynamicRate1'],
+                    dynamicDay1: this.state['dynamicDay1'],
+                }
+            } else {
+                this.props.addalert('Boost Rate 1 not vaild!!!')
+            }
         }
         if (item.dynamicRate2 && item.dynamicDay2 && (this.state['dynamicRate2'].toString() !== item.dynamicRate2.toString() || this.state['dynamicDay2'].toString() !== item.dynamicDay2.toString())) {
+            if (isValidString(this.state['dynamicRate2'], 'zeroint') && isValidString(this.state['dynamicDay2'], 'zeroint')) {
+                dr2 = {
+                    dynamicRate2: this.state['dynamicRate2'],
+                    dynamicDay2: this.state['dynamicDay2'],
+                }
+            } else {
+                this.props.addalert('Boost Rate 2 not vaild!!!')
+            }
+        } else if (this.state['dynamicRate2'] && this.state['dynamicDay2']) {
             if (isValidString(this.state['dynamicRate2'], 'zeroint') && isValidString(this.state['dynamicDay2'], 'zeroint')) {
                 dr2 = {
                     dynamicRate2: this.state['dynamicRate2'],
