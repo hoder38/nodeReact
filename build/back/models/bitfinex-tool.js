@@ -799,7 +799,11 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                         position[id][symbol][j].symbol = fc.symbol;
                         position[id][symbol][j].price = Math.round(fc.basePrice * 1000) / 1000;
                         position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
-                        position[id][symbol][j].pl = fc.pl;
+                        if (!fc.pl) {
+                            console.log(fc);
+                        } else {
+                            position[id][symbol][j].pl = fc.pl;
+                        }
                         break;
                     }
                 }
@@ -815,6 +819,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
             }
         });
         userWs[id].onPositionNew({}, function (fc) {
+            console.log(fc);
             var symbol = 'f' + fc.symbol.substr(-3);
             if (_constants.SUPPORT_COIN.indexOf(symbol) !== -1) {
                 if (!position[id][symbol]) {
@@ -1206,7 +1211,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
         console.log(MR);
         var DR = [];
         var pushDR = function pushDR(rate, day) {
-            if (rate > 0 && day >= 2 && day <= 30) {
+            if (rate > 0 && day >= 2 && day <= 120) {
                 var DRT = {
                     rate: rate / 100 * _constants.BITFINEX_EXP,
                     day: day,
@@ -1653,7 +1658,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     if (credit[id] && credit[id][current.type]) {
                         credit[id][current.type].forEach(function (o) {
                             if (o.side !== 1) {
-                                availableMargin = availableMargin - o.amount;
+                                availableMargin = availableMargin + o.amount;
                             }
                         });
                     }
@@ -2519,7 +2524,7 @@ exports.default = {
             }
             if (dynamicRate1 > 0 && set.dynamicDay1) {
                 var dynamicDay1 = (0, _utility.isValidString)(set.dynamicDay1, 'zeroint');
-                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 30) {
+                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 120) {
                     return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 1 is not valid'));
                 }
                 data['dynamicRate1'] = dynamicRate1;
@@ -2533,7 +2538,7 @@ exports.default = {
             }
             if (dynamicRate2 > 0 && set.dynamicDay2) {
                 var dynamicDay2 = (0, _utility.isValidString)(set.dynamicDay2, 'zeroint');
-                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 30) {
+                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 120) {
                     return (0, _utility.handleError)(new _utility.HoError('Dynamic Rate 2 is not valid'));
                 }
                 data['dynamicRate2'] = dynamicRate2;

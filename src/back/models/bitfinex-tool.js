@@ -675,7 +675,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         position[id][symbol][j].symbol = fc.symbol;
                         position[id][symbol][j].price = Math.round(fc.basePrice * 1000) / 1000;
                         position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
-                        position[id][symbol][j].pl = fc.pl;
+                        if (!fc.pl) {
+                            console.log(fc);
+                        } else {
+                            position[id][symbol][j].pl = fc.pl;
+                        }
                         break;
                     }
                 }
@@ -691,6 +695,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
         });
         userWs[id].onPositionNew({ }, fc => {
+            console.log(fc);
             const symbol = `f${fc.symbol.substr(-3)}`;
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
                 if (!position[id][symbol]) {
@@ -1025,7 +1030,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         console.log(MR);
         const DR = [];
         const pushDR = (rate, day) => {
-            if (rate > 0 && day >= 2 && day <= 30) {
+            if (rate > 0 && day >= 2 && day <= 120) {
                 const DRT = {
                     rate: rate / 100 * BITFINEX_EXP,
                     day: day,
@@ -1440,7 +1445,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (credit[id] && credit[id][current.type]) {
                         credit[id][current.type].forEach(o => {
                             if (o.side !== 1) {
-                                availableMargin = availableMargin - o.amount;
+                                availableMargin = availableMargin + o.amount;
                             }
                         });
                     }
@@ -2147,7 +2152,7 @@ export default {
             }
             if (dynamicRate1 > 0 && set.dynamicDay1) {
                 const dynamicDay1 = isValidString(set.dynamicDay1, 'zeroint');
-                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 30) {
+                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 120) {
                     return handleError(new HoError('Dynamic Rate 1 is not valid'));
                 }
                 data['dynamicRate1'] = dynamicRate1;
@@ -2161,7 +2166,7 @@ export default {
             }
             if (dynamicRate2 > 0 && set.dynamicDay2) {
                 const dynamicDay2 = isValidString(set.dynamicDay2, 'zeroint');
-                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 30) {
+                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 120) {
                     return handleError(new HoError('Dynamic Rate 2 is not valid'));
                 }
                 data['dynamicRate2'] = dynamicRate2;

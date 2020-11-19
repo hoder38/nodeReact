@@ -7044,7 +7044,7 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                         }) : item.web;
                         checkMid = item.newMid.length > 1 ? item.newMid[item.newMid.length - 2] : item.mid;
                     }
-                    var suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                    var suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.wType, 0, fee);
                     while (suggestion.resetWeb) {
                         if (item.newMid.length === 0) {
                             item.tmpPT = {
@@ -7058,10 +7058,11 @@ var stockStatus = exports.stockStatus = function stockStatus(newStr) {
                         newArr = item.newMid.length > 0 ? item.web.map(function (v) {
                             return v * item.newMid[item.newMid.length - 1] / item.mid;
                         }) : item.web;
-                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.wType, 0, fee);
                     }
                     var count = 0;
-                    var amount = item.amount;
+                    //let amount = item.amount;
+                    var amount = item.clear ? 0 : item.amount;
                     if (suggestion.type === 7) {
                         if (amount > item.orig * 7 / 8) {
                             var tmpAmount = amount - item.orig * 3 / 4;
@@ -7530,8 +7531,10 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     pP++;
                 }
             }
-            nowSP = previousP < nowSP ? previousP : nowSP;
-            sP = pP < sP ? pP : sP;
+            if (pAmount !== 0) {
+                nowSP = previousP < nowSP ? previousP : nowSP;
+                sP = pP < sP ? pP : sP;
+            }
         }
         if (previous.price < price) {
             var _previousP = 0;
@@ -7545,8 +7548,10 @@ var stockProcess = exports.stockProcess = function stockProcess(price, priceArra
                     _pP++;
                 }
             }
-            nowSP = _previousP < nowSP ? _previousP : nowSP;
-            sP = _pP < sP ? _pP : sP;
+            if (pAmount !== 0) {
+                nowSP = _previousP < nowSP ? _previousP : nowSP;
+                sP = _pP < sP ? _pP : sP;
+            }
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);

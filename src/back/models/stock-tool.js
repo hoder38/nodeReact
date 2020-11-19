@@ -5868,7 +5868,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                 }
-                let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.wType, 0, fee);
                 while(suggestion.resetWeb) {
                     if (item.newMid.length === 0) {
                         item.tmpPT = {
@@ -5880,10 +5880,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     item.previous.time = 0;
                     item.newMid.push(suggestion.newMid);
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.amount, item.count, item.wType, 0, fee);
+                    suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.wType, 0, fee);
                 }
                 let count = 0;
-                let amount = item.amount;
+                //let amount = item.amount;
+                let amount = item.clear ? 0 : item.amount;
                 if (suggestion.type === 7) {
                     if (amount > item.orig * 7 / 8) {
                         let tmpAmount = amount - item.orig * 3 / 4;
@@ -6309,8 +6310,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            nowSP = previousP < nowSP ? previousP : nowSP;
-            sP = pP < sP ? pP : sP;
+            if (pAmount !== 0) {
+                nowSP = previousP < nowSP ? previousP : nowSP;
+                sP = pP < sP ? pP : sP;
+            }
         }
         if (previous.price < price) {
             let previousP = 0;
@@ -6324,8 +6327,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            nowSP = previousP < nowSP ? previousP : nowSP;
-            sP = pP < sP ? pP : sP;
+            if (pAmount !== 0) {
+                nowSP = previousP < nowSP ? previousP : nowSP;
+                sP = pP < sP ? pP : sP;
+            }
             //console.log(now);
             //console.log(previous.time);
             //console.log(nowSP);
