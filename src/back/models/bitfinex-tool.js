@@ -674,8 +674,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         position[id][symbol][j].amount = fc.amount;
                         position[id][symbol][j].symbol = fc.symbol;
                         position[id][symbol][j].price = Math.round(fc.basePrice * 1000) / 1000;
-                        position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
+                        if (fc.lp) {
+                            position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
+                        }
                         if (!fc.pl) {
+                            console.log('pl is null');
                             console.log(fc);
                         } else {
                             position[id][symbol][j].pl = fc.pl;
@@ -724,22 +727,30 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 if (position[id][symbol]) {
                     for (let j = 0; j < position[id][symbol].length; j++) {
                         if (position[id][symbol][j].id === fc.id) {
-                            position[id][symbol].splice(j, 1);
-                            Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
-                                console.log(items);
-                                if (items.length < 1) {
-                                    return handleError(new HoError(`miss ${fc.symbol}`));
+                            const lastP = position[id][symbol].splice(j, 1);
+                            console.log(lastP);
+                            if (curArr[i].type === symbol && curArr[i].pair) {
+                                for (let j = 0; j < curArr[i].pair.length; j++) {
+                                    if (curArr[i].pair[j].type === fc.symbol) {
+                                        Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
+                                            console.log(items);
+                                            if (items.length < 1) {
+                                                return handleError(new HoError(`miss ${fc.symbol}`));
+                                            }
+                                            const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
+                                            console.log(profit);
+                                            margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
+                                            return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
+                                                console.log(result);
+                                            });
+                                        }).catch(err => {
+                                            sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
+                                            handleError(err, `${id} Position close Error`);
+                                        });
+                                        break;
+                                    }
                                 }
-                                const profit = items[0].profit ? items[0].profit + Number(fc.pl) : Number(fc.pl);
-                                console.log(profit);
-                                margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
-                                return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
-                                    console.log(result);
-                                });
-                            }).catch(err => {
-                                sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
-                                handleError(err, `${id} Position close Error`);
-                            });
+                            }
                             break;
                         }
                     }
