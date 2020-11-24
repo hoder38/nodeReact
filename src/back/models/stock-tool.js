@@ -1958,7 +1958,7 @@ const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, inde
     tags.forEach(i => {
         const valid_name = isValidString(i, 'name');
         if (valid_name) {
-            valid_tags.push(valid_name);
+            valid_tags.push(valid_name.replace('&amp;', '&'));
         }
     });
     return [basic.stock_name[0], valid_tags];

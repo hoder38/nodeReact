@@ -15,6 +15,7 @@ DAEMON=/usr/sbin/nginx
 #DAEMON=/usr/local/sbin/nginx
 NAME=nginx
 DESC=nginx
+DAEMON_OPTS="-c /usr/local/nginx/conf/nginx.conf"
 
 # Include nginx defaults if available
 if [ -f /etc/default/nginx ]; then
@@ -62,7 +63,7 @@ case "$1" in
 	restart|force-reload)
 		echo -n "Restarting $DESC: "
 		#start-stop-daemon --stop --quiet --pidfile \
-		#    /var/run/$NAME.pid 
+		#    /var/run/$NAME.pid
 		start-stop-daemon --stop --quiet \
 			--exec $DAEMON || true
 		sleep 1
@@ -73,7 +74,7 @@ case "$1" in
 			ulimit $ULIMIT
 		fi
 		#start-stop-daemon --start --quiet --pidfile \
-		#    /var/run/$NAME.pid 
+		#    /var/run/$NAME.pid
 		start-stop-daemon --start --quiet \
 			--exec $DAEMON -- $DAEMON_OPTS || true
 		echo "$NAME."

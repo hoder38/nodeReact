@@ -2121,7 +2121,7 @@ var handleStockTagV2 = function handleStockTagV2(type, index, indexTag) {
         tags.forEach(function (i) {
             var valid_name = (0, _utility.isValidString)(i, 'name');
             if (valid_name) {
-                valid_tags.push(valid_name);
+                valid_tags.push(valid_name.replace('&amp;', '&'));
             }
         });
         return [basic.stock_name[0], valid_tags];
