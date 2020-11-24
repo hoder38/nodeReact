@@ -8657,7 +8657,7 @@ var getUsStock = function getUsStock(index) {
             var app = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(_htmlparser2.default.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
             if (stat.indexOf('price') !== -1) {
                 var price = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-                ret['price'] = Number(price);
+                ret['price'] = Number(price.replace(',', ''));
             }
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
                 var table = (0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)((0, _utility.findTag)(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
@@ -8685,22 +8685,22 @@ var getUsStock = function getUsStock(index) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1], 'span')[0]) {
                             ret['per'] = 0;
                         } else {
-                            var per = (0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                            var per = (0, _utility.findTag)((0, _utility.findTag)(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                             if (!per) {
                                 return (0, _utility.handleError)(new _utility.HoError('usa stock parse error'));
                             }
-                            ret['per'] = per[2] ? Number(per[1]) * 1000 : Number(per[1]);
+                            ret['per'] = per[2] ? Number(per[1].replace(',', '')) * 1000 : Number(per[1].replace(',', ''));
                         }
                     }
                     if (stat.indexOf('pbr') !== -1) {
                         if ((0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1], 'span')[0]) {
                             ret['pbr'] = 0;
                         } else {
-                            var pbr = (0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                            var pbr = (0, _utility.findTag)((0, _utility.findTag)(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                             if (!pbr) {
                                 return (0, _utility.handleError)(new _utility.HoError('usa stock parse error'));
                             }
-                            ret['pbr'] = pbr[2] ? Number(pbr[1]) * 1000 : Number(pbr[1]);
+                            ret['pbr'] = pbr[2] ? Number(pbr[1].replace(',', '')) * 1000 : Number(pbr[1].replace(',', ''));
                         }
                     }
                 }
@@ -8710,7 +8710,7 @@ var getUsStock = function getUsStock(index) {
                         ret['pdr'] = 0;
                     } else {
                         var stockYield = (0, _utility.findTag)((0, _utility.findTag)(trs1[3], 'td')[1])[0];
-                        stockYield = Number(stockYield.substring(0, stockYield.length - 1));
+                        stockYield = Number(stockYield.substring(0, stockYield.length - 1).replace(',', ''));
                         ret['pdr'] = Math.round(100 / stockYield * 100) / 100;
                     }
                 }

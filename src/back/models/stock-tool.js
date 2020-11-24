@@ -7381,7 +7381,7 @@ const getUsStock = (index, stat=['price']) => {
         const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
         if (stat.indexOf('price') !== -1) {
             const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-            ret['price'] = Number(price);
+            ret['price'] = Number(price.replace(',', ''));
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
             const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
@@ -7409,22 +7409,22 @@ const getUsStock = (index, stat=['price']) => {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
                         ret['per'] = 0;
                     } else {
-                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                         if (!per) {
                             return handleError(new HoError('usa stock parse error'));
                         }
-                        ret['per'] = per[2] ? Number(per[1]) * 1000 : Number(per[1]);
+                        ret['per'] = per[2] ? Number(per[1].replace(',', '')) * 1000 : Number(per[1].replace(',', ''));
                     }
                 }
                 if (stat.indexOf('pbr') !== -1) {
                     if (findTag(findTag(trs[6], 'td')[1], 'span')[0]) {
                         ret['pbr'] = 0;
                     } else {
-                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^(\d+\.?\d*)(k)?$/);
+                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                         if (!pbr) {
                             return handleError(new HoError('usa stock parse error'));
                         }
-                        ret['pbr'] = pbr[2] ? Number(pbr[1]) * 1000 : Number(pbr[1]);
+                        ret['pbr'] = pbr[2] ? Number(pbr[1].replace(',', '')) * 1000 : Number(pbr[1].replace(',', ''));
                     }
                 }
             }
@@ -7434,7 +7434,7 @@ const getUsStock = (index, stat=['price']) => {
                     ret['pdr'] = 0;
                 } else {
                     let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
-                    stockYield = Number(stockYield.substring(0, stockYield.length -1));
+                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(',', ''));
                     ret['pdr'] = Math.round(100 / stockYield * 100) / 100;
                 }
             }
