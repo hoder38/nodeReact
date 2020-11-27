@@ -729,26 +729,29 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         if (position[id][symbol][j].id === fc.id) {
                             const lastP = position[id][symbol].splice(j, 1);
                             console.log(lastP);
-                            if (curArr[i].type === symbol && curArr[i].pair) {
-                                for (let j = 0; j < curArr[i].pair.length; j++) {
-                                    if (curArr[i].pair[j].type === fc.symbol) {
-                                        Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
-                                            console.log(items);
-                                            if (items.length < 1) {
-                                                return handleError(new HoError(`miss ${fc.symbol}`));
-                                            }
-                                            const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
-                                            console.log(profit);
-                                            margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
-                                            return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
-                                                console.log(result);
+                            for (let i = 0; i < curArr.length; i++) {
+                                if (curArr[i].type === symbol && curArr[i].pair) {
+                                    for (let k = 0; k < curArr[i].pair.length; k++) {
+                                        if (curArr[i].pair[k].type === fc.symbol) {
+                                            Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
+                                                console.log(items);
+                                                if (items.length < 1) {
+                                                    return handleError(new HoError(`miss ${fc.symbol}`));
+                                                }
+                                                const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
+                                                console.log(profit);
+                                                margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
+                                                return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
+                                                    console.log(result);
+                                                });
+                                            }).catch(err => {
+                                                sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
+                                                handleError(err, `${id} Position close Error`);
                                             });
-                                        }).catch(err => {
-                                            sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
-                                            handleError(err, `${id} Position close Error`);
-                                        });
-                                        break;
+                                            break;
+                                        }
                                     }
+                                    break;
                                 }
                             }
                             break;
