@@ -733,7 +733,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (curArr[i].type === symbol && curArr[i].pair) {
                                     for (let k = 0; k < curArr[i].pair.length; k++) {
                                         if (curArr[i].pair[k].type === fc.symbol) {
-                                            Mongo('find', TOTALDB, {owner: id, sType: 1, index: fc.symbol}).then(items => {
+                                            Mongo('find', TOTALDB, {owner: uid, sType: 1, index: fc.symbol}).then(items => {
                                                 console.log(items);
                                                 if (items.length < 1) {
                                                     return handleError(new HoError(`miss ${fc.symbol}`));

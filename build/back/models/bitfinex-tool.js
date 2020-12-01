@@ -858,7 +858,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                     if (curArr[_i2].type === symbol && curArr[_i2].pair) {
                                         for (var k = 0; k < curArr[_i2].pair.length; k++) {
                                             if (curArr[_i2].pair[k].type === fc.symbol) {
-                                                (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: id, sType: 1, index: fc.symbol }).then(function (items) {
+                                                (0, _mongoTool2.default)('find', _constants.TOTALDB, { owner: uid, sType: 1, index: fc.symbol }).then(function (items) {
                                                     console.log(items);
                                                     if (items.length < 1) {
                                                         return (0, _utility.handleError)(new _utility.HoError('miss ' + fc.symbol));
