@@ -663,7 +663,7 @@ function downloadMedia(data) {
     }).catch(err => {
         console.log(index);
         handleError(err, 'Youtubedl Fetch');
-        if (++index > MAX_RETRY) {
+        if (++index >= MAX_RETRY) {
             console.log(data['key']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }

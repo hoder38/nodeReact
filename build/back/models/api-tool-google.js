@@ -1088,7 +1088,7 @@ function downloadMedia(data) {
         }).catch(function (err) {
             console.log(index);
             (0, _utility.handleError)(err, 'Youtubedl Fetch');
-            if (++index > _constants.MAX_RETRY) {
+            if (++index >= _constants.MAX_RETRY) {
                 console.log(data['key']);
                 return (0, _utility.handleError)(new _utility.HoError('timeout'), data['errhandle']);
             }
