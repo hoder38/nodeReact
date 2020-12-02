@@ -34,7 +34,7 @@ exports.default = {
     CHECK_MEDIA: false,
     STOCK_FILTER: false,
     DB_BACKUP: false,
-    CHECK_STOCK: true,
+    CHECK_STOCK: false,
     BITFINEX_FILTER: false,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,

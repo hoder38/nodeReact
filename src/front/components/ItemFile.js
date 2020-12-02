@@ -200,13 +200,13 @@ const ItemFile = React.createClass({
             let error = '';
             if (item.media.err) {
                 Object.keys(item.media.err).forEach(i => error = `${error} ${i}: ${item.media.err[i]}`)
-            }
+            }JSON.stringify
             content = (
                 <span>
                     {item.name}<br />
                     type: {item.media.type}<br />
                     key: {item.media.key}<br />
-                    err: {error}<br />
+                    err: {item.media.err ? JSON.stringify(item.media.err) : ''}<br />
                     timeout: {item.media.timeout}<br />
                     complete: {item.media.complete}
                 </span>

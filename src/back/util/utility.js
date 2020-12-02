@@ -251,7 +251,7 @@ export const getStorageItem = (user, items, mediaHandle) => items.map(item => {
                     media['media']['key'] = `${media['media']['key']}${i}.${v.key} `;
                 }
                 if (v.err) {
-                    media['media']['err'] = `${media['media']['err']}${i}.${v.err} `;
+                    media['media']['err'] = `${media['media']['err']}${i}.${JSON.stringify(v.err)} `;
                 }
                 if (v.timeout) {
                     media['media']['timeout'] = `${media['media']['timeout']}${i}.${v.timeout} `;

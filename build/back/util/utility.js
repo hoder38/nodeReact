@@ -9,6 +9,10 @@ var _assign = require('babel-runtime/core-js/object/assign');
 
 var _assign2 = _interopRequireDefault(_assign);
 
+var _stringify = require('babel-runtime/core-js/json/stringify');
+
+var _stringify2 = _interopRequireDefault(_stringify);
+
 var _slicedToArray2 = require('babel-runtime/helpers/slicedToArray');
 
 var _slicedToArray3 = _interopRequireDefault(_slicedToArray2);
@@ -369,7 +373,7 @@ var getStorageItem = exports.getStorageItem = function getStorageItem(user, item
                         media['media']['key'] = '' + media['media']['key'] + i + '.' + v.key + ' ';
                     }
                     if (v.err) {
-                        media['media']['err'] = '' + media['media']['err'] + i + '.' + v.err + ' ';
+                        media['media']['err'] = '' + media['media']['err'] + i + '.' + (0, _stringify2.default)(v.err) + ' ';
                     }
                     if (v.timeout) {
                         media['media']['timeout'] = '' + media['media']['timeout'] + i + '.' + v.timeout + ' ';
