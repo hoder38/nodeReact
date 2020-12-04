@@ -9,6 +9,10 @@ var _typeof2 = require('babel-runtime/helpers/typeof');
 
 var _typeof3 = _interopRequireDefault(_typeof2);
 
+var _toConsumableArray2 = require('babel-runtime/helpers/toConsumableArray');
+
+var _toConsumableArray3 = _interopRequireDefault(_toConsumableArray2);
+
 var _keys = require('babel-runtime/core-js/object/keys');
 
 var _keys2 = _interopRequireDefault(_keys);
@@ -73,6 +77,7 @@ var updateTime = { book: 0, trade: 0 };
 var available = { tradable: 0, cash: 0 };
 var order = [];
 var position = [];
+var processedOrder = [];
 
 var generateAuthUrl = exports.generateAuthUrl = function generateAuthUrl() {
     return _constants.TD_AUTH_URL + 'response_type=code&redirect_uri=' + _ver.GOOGLE_REDIRECT + '&client_id=' + _ver.TDAMERITRADE_KEY + '%40AMER.OAUTHAP';
@@ -421,92 +426,77 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                 if (d[2] === 'SUBSCRIBED') {} else if (d[2] === 'ERROR') {
                                     resetTD();
                                 } else {
-                                    initialBook().then(function () {
-                                        return new _promise2.default(function (resolve, reject) {
-                                            return Xmlparser.parseString(d[3], function (err, result) {
-                                                return err ? reject(err) : resolve(result);
-                                            });
-                                        });
-                                    }).then(function (result) {
-                                        //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
-                                        var xmlMsg = result.OrderFillMessage;
-                                        if (xmlMsg && xmlMsg.ExecutionInformation) {
-                                            console.log(xmlMsg.Order[0].Security[0].Symbol[0]);
-                                            return (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', index: xmlMsg.Order[0].Security[0].Symbol[0] }).then(function (items) {
-                                                if (items.length > 0) {
-                                                    var _ret = function () {
-                                                        var item = items[0];
-                                                        var time = Math.round(new Date().getTime() / 1000);
-                                                        var price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
-                                                        var profit = 0;
-                                                        if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
-                                                            var is_insert = false;
-                                                            for (var k = 0; k < item.previous.buy.length; k++) {
-                                                                if (price < item.previous.buy[k].price) {
-                                                                    item.previous.buy.splice(k, 0, { price: price, time: time });
-                                                                    is_insert = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                            if (!is_insert) {
-                                                                item.previous.buy.push({ price: price, time: time });
-                                                            }
-                                                            item.previous = {
-                                                                price: price,
-                                                                time: time,
-                                                                type: 'buy',
-                                                                buy: item.previous.buy.filter(function (v) {
-                                                                    return time - v.time < _constants.RANGE_INTERVAL ? true : false;
-                                                                }),
-                                                                sell: item.previous.sell
-                                                            };
-                                                        } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
-                                                            console.log(position);
-                                                            var sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
-                                                            for (var i = 0; i < position.length; i++) {
-                                                                if (position[i].symbol === item.index) {
-                                                                    if (sellcount >= position[i].amount) {
-                                                                        console.log('td position close');
-                                                                        profit = price * sellcount * (1 - _constants.USSE_FEE) - position[i].amount * position[i].price;
-                                                                    }
-                                                                    break;
-                                                                }
-                                                            }
-                                                            var _is_insert = false;
-                                                            for (var _k = 0; _k < item.previous.sell.length; _k++) {
-                                                                if (price > item.previous.sell[_k].price) {
-                                                                    item.previous.sell.splice(_k, 0, { price: price, time: time });
-                                                                    _is_insert = true;
-                                                                    break;
-                                                                }
-                                                            }
-                                                            if (!_is_insert) {
-                                                                item.previous.sell.push({ price: price, time: time });
-                                                            }
-                                                            item.previous = {
-                                                                price: price,
-                                                                time: time,
-                                                                type: 'sell',
-                                                                sell: item.previous.sell.filter(function (v) {
-                                                                    return time - v.time < _constants.RANGE_INTERVAL ? true : false;
-                                                                }),
-                                                                buy: item.previous.buy
-                                                            };
-                                                        }
-                                                        item.profit = item.profit ? item.profit + profit : profit;
-                                                        return {
-                                                            v: (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { previous: item.previous, profit: item.profit } })
-                                                        };
-                                                    }();
-
-                                                    if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
-                                                }
-                                            });
-                                        }
-                                    }).catch(function (err) {
-                                        (0, _sendWs2.default)('TD Ameritrade XML Error: ' + err.code + ' ' + err.message, 0, 0, true);
-                                        (0, _utility.handleError)(err, 'TD Ameritrade XML Error');
-                                    });
+                                    initialBook(); /*.then(() => new Promise((resolve, reject) => Xmlparser.parseString(d[3], (err, result) => err ? reject(err) : resolve(result)))).then(result => {
+                                                   //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
+                                                   const xmlMsg = result.OrderFillMessage;
+                                                   if (xmlMsg && xmlMsg.ExecutionInformation) {
+                                                   console.log(xmlMsg.Order[0].Security[0].Symbol[0]);
+                                                   return Mongo('find', TOTALDB, {setype: 'usse', index: xmlMsg.Order[0].Security[0].Symbol[0]}).then(items => {
+                                                   if (items.length > 0) {
+                                                      const item = items[0];
+                                                      //const time = Math.round(new Date().getTime() / 1000);
+                                                      const time = Math.round(new Date(xmlMsg.ExecutionInformation[0].Timestamp[0]).getTime() / 1000);
+                                                      const price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
+                                                      let profit = 0;
+                                                      if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
+                                                          let is_insert = false;
+                                                          for (let k = 0; k < item.previous.buy.length; k++) {
+                                                              if (price < item.previous.buy[k].price) {
+                                                                  item.previous.buy.splice(k, 0, {price, time});
+                                                                  is_insert = true;
+                                                                  break;
+                                                              }
+                                                          }
+                                                          if (!is_insert) {
+                                                              item.previous.buy.push({price, time});
+                                                          }
+                                                          item.previous = {
+                                                              price,
+                                                              time,
+                                                              type: 'buy',
+                                                              buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                              sell: item.previous.sell,
+                                                          }
+                                                      } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
+                                                          console.log(position);
+                                                          const sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
+                                                          for (let i = 0; i < position.length; i++) {
+                                                              if (position[i].symbol === item.index) {
+                                                                  if (sellcount >= position[i].amount) {
+                                                                      console.log('td position close');
+                                                                      profit = price * sellcount * (1 - USSE_FEE) - position[i].amount * position[i].price;
+                                                                  }
+                                                                  break;
+                                                              }
+                                                          }
+                                                          let is_insert = false;
+                                                          for (let k = 0; k < item.previous.sell.length; k++) {
+                                                              if (price > item.previous.sell[k].price) {
+                                                                  item.previous.sell.splice(k, 0, {price, time});
+                                                                  is_insert = true;
+                                                                  break;
+                                                              }
+                                                          }
+                                                          if (!is_insert) {
+                                                              item.previous.sell.push({price, time});
+                                                          }
+                                                          item.previous = {
+                                                              price,
+                                                              time,
+                                                              type: 'sell',
+                                                              sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                              buy: item.previous.buy,
+                                                          }
+                                                      }
+                                                      item.profit = item.profit ? item.profit + profit : profit;
+                                                      return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}});
+                                                   }
+                                                   });
+                                                   }
+                                                   }).catch(err => {
+                                                   sendWs(`TD Ameritrade XML Error: ${err.code} ${err.message}`, 0, 0, true);
+                                                   handleError(err, `TD Ameritrade XML Error`);
+                                                   });*/
                                 }
                             });
                         }
@@ -552,6 +542,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             cash: result['securitiesAccount']['currentBalances'].totalCash
                         };
                     }
+                    var lastP = [].concat((0, _toConsumableArray3.default)(position));
                     if (result['securitiesAccount']['positions']) {
                         position = result['securitiesAccount']['positions'].map(function (p) {
                             return {
@@ -565,20 +556,145 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                     }
                     order = [];
                     if (result['securitiesAccount']['orderStrategies']) {
-                        result['securitiesAccount']['orderStrategies'].forEach(function (o) {
-                            //console.log(o);
-                            if (o.cancelable) {
-                                order.push({
-                                    id: o.orderId,
-                                    time: new Date(o.enteredTime).getTime() / 1000,
-                                    amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
-                                    type: o.orderType,
-                                    symbol: o.orderLegCollection[0].instrument.symbol,
-                                    price: o.price,
-                                    duration: o.duration
-                                });
-                            }
-                        });
+                        var _ret = function () {
+                            var order_recur = function order_recur(index) {
+                                if (index >= result['securitiesAccount']['orderStrategies'].length) {
+                                    return _promise2.default.resolve();
+                                } else {
+                                    var _ret2 = function () {
+                                        var o = result['securitiesAccount']['orderStrategies'][index];
+                                        //console.log(o);
+                                        if (o.cancelable) {
+                                            order.push({
+                                                id: o.orderId,
+                                                time: new Date(o.enteredTime).getTime() / 1000,
+                                                amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
+                                                type: o.orderType,
+                                                symbol: o.orderLegCollection[0].instrument.symbol,
+                                                price: o.price,
+                                                duration: o.duration
+                                            });
+                                            return {
+                                                v: order_recur(index + 1)
+                                            };
+                                        } else if (o.orderActivityCollection && processedOrder.indexOf(o.orderId) === -1 && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                                            var _ret3 = function () {
+                                                console.log(o);
+                                                console.log(o.orderActivityCollection[0].executionLegs[0]);
+                                                processedOrder.push(o.orderId);
+                                                var symbol = o.orderLegCollection[0].instrument.symbol;
+                                                var profit = 0;
+                                                return {
+                                                    v: {
+                                                        v: (0, _mongoTool2.default)('find', _constants.TOTALDB, { setype: 'usse', index: symbol }).then(function (items) {
+                                                            if (items.length < 1) {
+                                                                console.log('miss ' + symbol);
+                                                                return order_recur(index + 1);
+                                                            }
+                                                            var type = o.orderLegCollection[0].instruction;
+                                                            var time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
+                                                            var price = o.orderActivityCollection[0].executionLegs[0].price;
+                                                            console.log(symbol);
+                                                            console.log(type);
+                                                            console.log(time);
+                                                            console.log(price);
+                                                            var item = items[0];
+                                                            if (type === 'BUY') {
+                                                                if (item.previous.buy[0] && item.previous.buy[0].time === time && item.previous.buy[0].price === price) {
+                                                                    return order_recur(index + 1);
+                                                                }
+                                                                var is_insert = false;
+                                                                for (var k = 0; k < item.previous.buy.length; k++) {
+                                                                    if (price < item.previous.buy[k].price) {
+                                                                        item.previous.buy.splice(k, 0, { price: price, time: time });
+                                                                        is_insert = true;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (!is_insert) {
+                                                                    item.previous.buy.push({ price: price, time: time });
+                                                                }
+                                                                item.previous = {
+                                                                    price: price,
+                                                                    time: time,
+                                                                    type: 'buy',
+                                                                    buy: item.previous.buy.filter(function (v) {
+                                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                                    }),
+                                                                    sell: item.previous.sell
+                                                                };
+                                                            } else {
+                                                                if (item.previous.sell[0] && item.previous.sell[0].time === time && item.previous.sell[0].price === price) {
+                                                                    return order_recur(index + 1);
+                                                                }
+                                                                var _is_insert = false;
+                                                                for (var _k = 0; _k < item.previous.sell.length; _k++) {
+                                                                    if (price > item.previous.sell[_k].price) {
+                                                                        item.previous.sell.splice(_k, 0, { price: price, time: time });
+                                                                        _is_insert = true;
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                if (!_is_insert) {
+                                                                    item.previous.sell.push({ price: price, time: time });
+                                                                }
+                                                                item.previous = {
+                                                                    price: price,
+                                                                    time: time,
+                                                                    type: 'sell',
+                                                                    sell: item.previous.sell.filter(function (v) {
+                                                                        return time - v.time < _constants.RANGE_INTERVAL ? true : false;
+                                                                    }),
+                                                                    buy: item.previous.buy
+                                                                };
+                                                                //calculate profit
+                                                                console.log(LastP);
+                                                                console.log(position);
+                                                                if (LastP.length > 0) {
+                                                                    var pp = 0;
+                                                                    var cp = 0;
+                                                                    for (var i = 0; i < LastP.length; i++) {
+                                                                        if (LastP[i].symbol === item.index) {
+                                                                            pp = LastP[i].amount * LastP[i].price;
+                                                                            break;
+                                                                        }
+                                                                    }
+                                                                    if (pp !== 0) {
+                                                                        for (var _i = 0; _i < position.length; _i++) {
+                                                                            if (position[_i].symbol === item.index) {
+                                                                                cp = position[_i].amount * position[_i].price;
+                                                                                break;
+                                                                            }
+                                                                        }
+                                                                        console.log(pp);
+                                                                        console.log(cp);
+                                                                        profit = price * o.orderActivityCollection[0].executionLegs[0].quantity * (1 - _constants.USSE_FEE) - pp + cp;
+                                                                        console.log(profit);
+                                                                    }
+                                                                }
+                                                            }
+                                                            item.profit = item.profit ? item.profit + profit : profit;
+                                                            return (0, _mongoTool2.default)('update', _constants.TOTALDB, { _id: item._id }, { $set: { previous: item.previous, profit: item.profit } }).then(function () {
+                                                                return order_recur(index + 1);
+                                                            });
+                                                        })
+                                                    }
+                                                };
+                                            }();
+
+                                            if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                        }
+                                    }();
+
+                                    if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                                }
+                            };
+                            return {
+                                v: order_recur(0)
+                            };
+                        }();
+
+                        if ((typeof _ret === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret)) === "object") return _ret.v;
                     }
                 });
             } else {
@@ -614,7 +730,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                     if (index >= items.length) {
                         return _promise2.default.resolve();
                     } else {
-                        var _ret2 = function () {
+                        var _ret4 = function () {
                             var item = items[index];
                             if (item.index === 0 || !usseSuggestion[item.index]) {
                                 return {
@@ -733,14 +849,14 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             }
                         }();
 
-                        if ((typeof _ret2 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret2)) === "object") return _ret2.v;
+                        if ((typeof _ret4 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret4)) === "object") return _ret4.v;
                     }
                 };
                 var recur_NewOrder = function recur_NewOrder(index) {
                     if (index >= newOrder.length) {
                         return _promise2.default.resolve();
                     } else {
-                        var _ret3 = function () {
+                        var _ret5 = function () {
                             var item = newOrder[index].item;
                             var suggestion = newOrder[index].suggestion;
                             var submitBuy = function submitBuy() {
@@ -786,7 +902,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             }
                         }();
 
-                        if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                        if ((typeof _ret5 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret5)) === "object") return _ret5.v;
                     }
                 };
                 return recur_status(0).then(function () {
