@@ -297,10 +297,6 @@ const submitTDOrder = (id, price, count) => {
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
-            if () {
-
-            }
-            This order may result in an oversold/overbought position in your account.  Please check your position quantity and/or open orders.
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));

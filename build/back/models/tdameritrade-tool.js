@@ -868,7 +868,15 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                     }
                                     if (suggestion.bCount > 0 && suggestion.buy) {
                                         console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
-                                        return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).then(function () {
+                                        return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).catch(function (err) {
+                                            var msg = err.message || err.msg;
+                                            if (msg.includes('oversold/overbought position in your account')) {
+                                                (0, _sendWs2.default)(item.index + ' TD Buy Order Error: ' + (err.message || err.msg), 0, 0, true);
+                                                (0, _utility.handleError)(err, item.index + ' TD Buy Order Error');
+                                            } else {
+                                                throw err;
+                                            }
+                                        }).then(function () {
                                             return new _promise2.default(function (resolve, reject) {
                                                 return setTimeout(function () {
                                                     return resolve();
@@ -885,7 +893,15 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                             if (suggestion.sCount > 0 && suggestion.sell) {
                                 console.log('sell ' + item.index + ' ' + suggestion.sCount + ' ' + suggestion.sell);
                                 return {
-                                    v: submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).then(function () {
+                                    v: submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).catch(function (err) {
+                                        var msg = err.message || err.msg;
+                                        if (msg.includes('oversold/overbought position in your account')) {
+                                            (0, _sendWs2.default)(item.index + ' TD Sell Order Error: ' + (err.message || err.msg), 0, 0, true);
+                                            (0, _utility.handleError)(err, item.index + ' TD Sell Order Error');
+                                        } else {
+                                            throw err;
+                                        }
+                                    }).then(function () {
                                         return new _promise2.default(function (resolve, reject) {
                                             return setTimeout(function () {
                                                 return resolve();
