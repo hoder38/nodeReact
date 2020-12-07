@@ -297,6 +297,10 @@ const submitTDOrder = (id, price, count) => {
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
+            if () {
+
+            }
+            This order may result in an oversold/overbought position in your account.  Please check your position quantity and/or open orders.
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));
@@ -731,7 +735,15 @@ export const usseTDInit = () => checkOauth().then(() => {
                             }
                             if (suggestion.bCount > 0 && suggestion.buy) {
                                 console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
-                                return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => recur_NewOrder(index + 1));
+                                return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).catch(err => {
+                                        const msg = err.message || err.msg;
+                                        if (msg.includes('oversold/overbought position in your account')) {
+                                            sendWs(`${item.index} TD Buy Order Error: ${err.message||err.msg}`, 0, 0, true);
+                                            handleError(err, `${item.index} TD Buy Order Error`);
+                                        } else {
+                                            throw err;
+                                        }
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => recur_NewOrder(index + 1));
                             } else {
                                 return recur_NewOrder(index + 1);
                             }
@@ -739,7 +751,15 @@ export const usseTDInit = () => checkOauth().then(() => {
                     }
                     if (suggestion.sCount > 0 && suggestion.sell) {
                         console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
-                        return submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
+                        return submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).catch(err => {
+                            const msg = err.message || err.msg;
+                            if (msg.includes('oversold/overbought position in your account')) {
+                                sendWs(`${item.index} TD Sell Order Error: ${err.message||err.msg}`, 0, 0, true);
+                                handleError(err, `${item.index} TD Sell Order Error`);
+                            } else {
+                                throw err;
+                            }
+                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
                     } else {
                         return submitBuy();
                     }
