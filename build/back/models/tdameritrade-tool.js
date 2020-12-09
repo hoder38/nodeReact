@@ -342,12 +342,14 @@ var submitTDOrder = function submitTDOrder(id, price, count) {
             }
         }]
     }, price === 'MARKET' ? { orderType: "MARKET" } : { orderType: 'LIMIT', price: price }));
+    console.log(Math.abs(count));
     return checkOauth().then(function () {
         return (0, _nodeFetch2.default)('https://api.tdameritrade.com/v1/accounts/' + userPrincipalsResponse.accounts[0].accountId + '/orders', { headers: {
                 Authorization: 'Bearer ' + tokens.access_token,
                 'Content-Type': 'application/json'
             }, method: 'POST', body: qspost }).then(function (res) {
             if (!res.ok) {
+                updateTime['trade']--;
                 return res.json().then(function (err) {
                     return (0, _utility.handleError)(new _utility.HoError(err.error));
                 });
@@ -864,13 +866,15 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                     console.log(available);
                                     var order_avail = available.tradable > 1 ? available.tradable - 1 : 0;
                                     if (order_avail < suggestion.bCount * suggestion.buy) {
-                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy);
                                     }
                                     if (suggestion.bCount > 0 && suggestion.buy) {
                                         console.log('buy ' + item.index + ' ' + suggestion.bCount + ' ' + suggestion.buy);
                                         return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).catch(function (err) {
                                             var msg = err.message || err.msg;
                                             if (msg.includes('oversold/overbought position in your account')) {
+                                                //恢復update time
+                                                updateTime['trade']++;
                                                 (0, _sendWs2.default)(item.index + ' TD Buy Order Error: ' + (err.message || err.msg), 0, 0, true);
                                                 (0, _utility.handleError)(err, item.index + ' TD Buy Order Error');
                                             } else {
@@ -896,6 +900,8 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                     v: submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).catch(function (err) {
                                         var msg = err.message || err.msg;
                                         if (msg.includes('oversold/overbought position in your account')) {
+                                            //恢復update time
+                                            updateTime['trade']++;
                                             (0, _sendWs2.default)(item.index + ' TD Sell Order Error: ' + (err.message || err.msg), 0, 0, true);
                                             (0, _utility.handleError)(err, item.index + ' TD Sell Order Error');
                                         } else {

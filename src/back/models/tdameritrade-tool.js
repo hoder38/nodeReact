@@ -292,11 +292,13 @@ const submitTDOrder = (id, price, count) => {
             }
         ]
     }, price === 'MARKET' ? {orderType: "MARKET"} : {orderType: 'LIMIT', price: price}));
+    console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
+            updateTime['trade']--;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));
@@ -727,13 +729,15 @@ export const usseTDInit = () => checkOauth().then(() => {
                             console.log(available);
                             const order_avail = (available.tradable > 1) ? available.tradable - 1 : 0;
                             if (order_avail < suggestion.bCount * suggestion.buy) {
-                                suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                suggestion.bCount = Math.floor(order_avail / suggestion.buy);
                             }
                             if (suggestion.bCount > 0 && suggestion.buy) {
                                 console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
                                 return submitTDOrder(item.index, suggestion.buy, suggestion.bCount).catch(err => {
                                         const msg = err.message || err.msg;
                                         if (msg.includes('oversold/overbought position in your account')) {
+                                            //恢復update time
+                                            updateTime['trade']++;
                                             sendWs(`${item.index} TD Buy Order Error: ${err.message||err.msg}`, 0, 0, true);
                                             handleError(err, `${item.index} TD Buy Order Error`);
                                         } else {
@@ -750,6 +754,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                         return submitTDOrder(item.index, suggestion.sell, -suggestion.sCount).catch(err => {
                             const msg = err.message || err.msg;
                             if (msg.includes('oversold/overbought position in your account')) {
+                                //恢復update time
+                                updateTime['trade']++;
                                 sendWs(`${item.index} TD Sell Order Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${item.index} TD Sell Order Error`);
                             } else {
