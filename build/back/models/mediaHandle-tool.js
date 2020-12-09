@@ -898,7 +898,7 @@ exports.default = {
         var handleFile = function handleFile() {
             var name = (0, _utility.toValidName)(metadata.title);
             if ((0, _tagTool.isDefaultTag)((0, _tagTool.normalize)(name))) {
-                name = (0, _utility.addPost)(name, '1');
+                name = (0, _mime.addPost)(name, '1');
             }
             var adultonly = 0;
             if ((0, _utility.checkAdmin)(2, user)) {
