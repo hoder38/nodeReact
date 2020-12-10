@@ -685,6 +685,10 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                             }();
 
                                             if ((typeof _ret3 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret3)) === "object") return _ret3.v;
+                                        } else {
+                                            return {
+                                                v: order_recur(index + 1)
+                                            };
                                         }
                                     }();
 

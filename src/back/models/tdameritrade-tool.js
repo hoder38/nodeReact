@@ -603,6 +603,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     item.profit = item.profit ? item.profit + profit : profit;
                                     return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(index + 1));
                                 });
+                            } else {
+                                return order_recur(index + 1);
                             }
                         }
                     }
