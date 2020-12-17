@@ -650,14 +650,14 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                                     buy: item.previous.buy
                                                                 };
                                                                 //calculate profit
-                                                                console.log(LastP);
+                                                                console.log(lastP);
                                                                 console.log(position);
-                                                                if (LastP.length > 0) {
+                                                                if (lastP.length > 0) {
                                                                     var pp = 0;
                                                                     var cp = 0;
-                                                                    for (var i = 0; i < LastP.length; i++) {
-                                                                        if (LastP[i].symbol === item.index) {
-                                                                            pp = LastP[i].amount * LastP[i].price;
+                                                                    for (var i = 0; i < lastP.length; i++) {
+                                                                        if (lastP[i].symbol === item.index) {
+                                                                            pp = lastP[i].amount * lastP[i].price;
                                                                             break;
                                                                         }
                                                                     }

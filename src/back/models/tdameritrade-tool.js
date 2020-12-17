@@ -575,14 +575,14 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             buy: item.previous.buy,
                                         }
                                         //calculate profit
-                                        console.log(LastP);
+                                        console.log(lastP);
                                         console.log(position);
-                                        if (LastP.length > 0) {
+                                        if (lastP.length > 0) {
                                             let pp = 0;
                                             let cp = 0;
-                                            for (let i = 0; i < LastP.length; i++) {
-                                                if (LastP[i].symbol === item.index) {
-                                                    pp = LastP[i].amount * LastP[i].price;
+                                            for (let i = 0; i < lastP.length; i++) {
+                                                if (lastP[i].symbol === item.index) {
+                                                    pp = lastP[i].amount * lastP[i].price;
                                                     break;
                                                 }
                                             }
