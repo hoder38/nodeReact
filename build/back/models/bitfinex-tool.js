@@ -1489,7 +1489,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
-                        }, 10000);
+                        }, _constants.API_WAIT * 1000);
                     }).then(function () {
                         return cancelOffer(index + 1);
                     });
@@ -1525,7 +1525,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                             return new _promise2.default(function (resolve, reject) {
                                 return setTimeout(function () {
                                     return resolve();
-                                }, 10000);
+                                }, _constants.API_WAIT * 1000);
                             }).then(function () {
                                 var isExist = false;
                                 for (var _i12 = 0; _i12 < offer[id][current.type].length; _i12++) {
@@ -1634,7 +1634,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                             return new _promise2.default(function (resolve, reject) {
                                                 return setTimeout(function () {
                                                     return resolve();
-                                                }, 10000);
+                                                }, _constants.API_WAIT * 1000);
                                             }).then(function () {
                                                 return real_delete(index + 1);
                                             });
@@ -1715,7 +1715,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         return new _promise2.default(function (resolve, reject) {
                                             return setTimeout(function () {
                                                 return resolve();
-                                            }, 10000);
+                                            }, _constants.API_WAIT * 1000);
                                         }).then(function () {
                                             return real_delete(index + 1);
                                         });
@@ -1749,7 +1749,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
-                        }, 10000);
+                        }, _constants.API_WAIT * 1000);
                     });
                 }).then(function () {
                     current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
@@ -1765,7 +1765,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                     return new _promise2.default(function (resolve, reject) {
                         return setTimeout(function () {
                             return resolve();
-                        }, 10000);
+                        }, _constants.API_WAIT * 1000);
                     });
                 }).then(function () {
                     current.used = current.used > 0 && current.used + availableMargin > 1 ? current.used + availableMargin : 0;
@@ -1834,7 +1834,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
                                                         return resolve();
-                                                    }, 10000);
+                                                    }, _constants.API_WAIT * 1000);
                                                 }).then(function () {
                                                     return real_delete(index + 1);
                                                 });
@@ -2032,7 +2032,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 10000);
+                                                        }, _constants.API_WAIT * 1000);
                                                     });
                                                 }).then(function () {
                                                     var isExist = false;
@@ -2178,7 +2178,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                         return new _promise2.default(function (resolve, reject) {
                                                             return setTimeout(function () {
                                                                 return resolve();
-                                                            }, 10000);
+                                                            }, _constants.API_WAIT * 1000);
                                                         }).then(function () {
                                                             return submitOrderBuy(quotaChk - 1);
                                                         });
@@ -2195,7 +2195,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                     return new _promise2.default(function (resolve, reject) {
                                                         return setTimeout(function () {
                                                             return resolve();
-                                                        }, 10000);
+                                                        }, _constants.API_WAIT * 1000);
                                                     });
                                                 }).then(function () {
                                                     if (or1) {
@@ -2271,7 +2271,7 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
                                                         return resolve();
-                                                    }, 10000);
+                                                    }, _constants.API_WAIT * 1000);
                                                 });
                                             }).then(function () {
                                                 if (or) {

@@ -762,7 +762,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                             return new _promise2.default(function (resolve, reject) {
                                                 return setTimeout(function () {
                                                     return resolve();
-                                                }, 5000);
+                                                }, _constants.API_WAIT * 1000);
                                             }).then(function () {
                                                 return real_delete(index + 1);
                                             });
@@ -811,7 +811,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                                 return new _promise2.default(function (resolve, reject) {
                                                     return setTimeout(function () {
                                                         return resolve();
-                                                    }, 3000);
+                                                    }, _constants.API_WAIT * 1000);
                                                 });
                                             }).then(function () {
                                                 return delTotal();
@@ -888,7 +888,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                             return new _promise2.default(function (resolve, reject) {
                                                 return setTimeout(function () {
                                                     return resolve();
-                                                }, 3000);
+                                                }, _constants.API_WAIT * 1000);
                                             });
                                         }).then(function () {
                                             return recur_NewOrder(index + 1);
@@ -915,7 +915,7 @@ var usseTDInit = exports.usseTDInit = function usseTDInit() {
                                         return new _promise2.default(function (resolve, reject) {
                                             return setTimeout(function () {
                                                 return resolve();
-                                            }, 3000);
+                                            }, _constants.API_WAIT * 1000);
                                         });
                                     }).then(function () {
                                         return submitBuy();

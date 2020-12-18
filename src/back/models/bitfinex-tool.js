@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL } from '../constants'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants'
 import BFX from 'bitfinex-api-node'
 import { FundingOffer, Order } from 'bfx-api-node-models'
 import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool'
@@ -1298,7 +1298,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
                 sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
                 handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
-            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => cancelOffer(index + 1)));
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => cancelOffer(index + 1)));
             const submitOffer = index => {
                 if (index >= finalNew.length) {
                     if ((finalNew.length + needDelete.length) > 0) {
@@ -1325,7 +1325,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         }, userRest);
                         console.log(finalNew[index].amount);
                         console.log(keep_available);
-                        return fo.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => {
+                        return fo.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => {
                             let isExist = false;
                             for (let i = 0; i < offer[id][current.type].length; i++) {
                                 if (fo.id === offer[id][current.type][i].id) {
@@ -1425,7 +1425,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 availableMargin = needTrans;
                                             }
                                         }
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => real_delete(index + 1));
+                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1));
                                     });
                                 }
                             }
@@ -1492,7 +1492,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             availableMargin = needTrans;
                                         }
                                     }
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => real_delete(index + 1))
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1))
                                 });
                             }
                             return real_delete(0);
@@ -1514,7 +1514,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     to: 'margin',
                     amount: availableMargin.toString(),
                     currency: current.type.substr(1),
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000))).then(() => {
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
                     current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
                     return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
                 });
@@ -1524,7 +1524,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     to: 'funding',
                     amount: (-availableMargin).toString(),
                     currency: current.type.substr(1),
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000))).then(() => {
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
                     current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
                     if (margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
                         current.used = 0;
@@ -1583,7 +1583,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                         handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
-                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => real_delete(index + 1)));
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
                                 }
                                 return real_delete(0);
                             } else {
@@ -1756,7 +1756,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         amount: -item.count,
                                         flags: 1024,
                                     }, userRest);
-                                    return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000))).then(() => {
+                                    return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
@@ -1878,7 +1878,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             if (msg.includes('not enough tradable balance')) {
                                                 //sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                 handleError(err, `${id} Total Updata Error`);
-                                                return new Promise((resolve, reject) => setTimeout(() => resolve(), 10000)).then(() => submitOrderBuy(quotaChk - 1));
+                                                return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => submitOrderBuy(quotaChk - 1));
                                             } else if (msg.includes('minimum size')) {
                                                 or1 = null;
                                                 return Promise.resolve();
@@ -1887,7 +1887,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             }
                                         });
                                     }
-                                    return submitOrderBuy(10).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000))).then(() => {
+                                    return submitOrderBuy(10).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
                                         if (or1) {
                                             let isExist = false;
                                             for (let i = 0; i < order[id][current.type].length; i++) {
@@ -1948,7 +1948,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 } else {
                                     throw err;
                                 }
-                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 10000))).then(() => {
+                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
                                 if (or) {
                                     let isExist = false;
                                     for (let i = 0; i < order[id][current.type].length; i++) {

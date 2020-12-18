@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE } from '../constants'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility'
@@ -658,7 +658,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 console.log(order);
                                 sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${real_id[index].id} TDcancelOrder Error`);
-                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => real_delete(index + 1)));
+                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
                         }
                         return real_delete(0);
                     });
@@ -691,7 +691,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             }
                             if (item.count > 0) {
-                                return submitTDOrder(item.index, 'MARKET', -item.count).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => delTotal());
+                                return submitTDOrder(item.index, 'MARKET', -item.count).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => delTotal());
                             } else {
                                 return delTotal();
                             }
@@ -745,7 +745,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         } else {
                                             throw err;
                                         }
-                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => recur_NewOrder(index + 1));
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => recur_NewOrder(index + 1));
                             } else {
                                 return recur_NewOrder(index + 1);
                             }
@@ -763,7 +763,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             } else {
                                 throw err;
                             }
-                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 3000))).then(() => submitBuy());
+                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => submitBuy());
                     } else {
                         return submitBuy();
                     }
