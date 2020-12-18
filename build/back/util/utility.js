@@ -252,6 +252,7 @@ function showLog(req, next) {
 function checkLogin(req, res, next) {
     var type = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
 
+    console.log(req);
     if (!req.isAuthenticated()) {
         if (type) {
             if (new _mobileDetect2.default(req.headers['user-agent']).mobile() || req.headers['user-agent'].match(/Firefox/i) || req.headers['user-agent'].match(/armv7l/i)) {

@@ -169,6 +169,7 @@ export function showLog(req, next) {
 }
 
 export function checkLogin(req, res, next, type=0) {
+    console.log(req);
     if(!req.isAuthenticated()) {
         if (type) {
             if (new MobileDetect(req.headers['user-agent']).mobile() || req.headers['user-agent'].match(/Firefox/i)|| req.headers['user-agent'].match(/armv7l/i)) {
