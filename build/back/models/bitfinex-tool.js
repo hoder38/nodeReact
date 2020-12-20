@@ -1691,6 +1691,9 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                 var real_delete = function real_delete(index) {
                                     var is_error = false;
                                     if (index >= real_id.length || availableMargin <= needTrans && current.clear !== true) {
+                                        if (availableMargin > 0) {
+                                            availableMargin = 0;
+                                        }
                                         return _promise2.default.resolve(availableMargin);
                                     }
                                     return userRest.cancelOrder(real_id[index].id).catch(function (err) {
@@ -1721,9 +1724,22 @@ var setWsOffer = exports.setWsOffer = function setWsOffer(id) {
                                         });
                                     });
                                 };
-                                return {
-                                    v: real_delete(0)
-                                };
+                                var delOrderNumber = 0;
+                                real_id.forEach(function (r) {
+                                    return delOrderNumber = delOrderNumber - r.amount * r.price;
+                                });
+                                if (availableMargin + delOrderNumber < 0) {
+                                    return {
+                                        v: real_delete(0)
+                                    };
+                                } else {
+                                    if (availableMargin > 0) {
+                                        availableMargin = 0;
+                                    }
+                                    return {
+                                        v: _promise2.default.resolve(availableMargin)
+                                    };
+                                }
                             }();
 
                             if ((typeof _ret7 === 'undefined' ? 'undefined' : (0, _typeof3.default)(_ret7)) === "object") return _ret7.v;

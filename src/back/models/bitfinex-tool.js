@@ -1471,6 +1471,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             const real_delete = index => {
                                 let is_error = false;
                                 if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
+                                    if (availableMargin > 0) {
+                                        availableMargin = 0;
+                                    }
                                     return Promise.resolve(availableMargin);
                                 }
                                 return userRest.cancelOrder(real_id[index].id).catch(err => {
@@ -1495,7 +1498,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1))
                                 });
                             }
-                            return real_delete(0);
+                            let delOrderNumber = 0;
+                            real_id.forEach(r => delOrderNumber = delOrderNumber - r.amount * r.price);
+                            if ((availableMargin + delOrderNumber) < 0) {
+                                return real_delete(0);
+                            } else {
+                                if (availableMargin > 0) {
+                                    availableMargin = 0;
+                                }
+                                return Promise.resolve(availableMargin);
+                            }
                         }
                     }
                     return Promise.resolve(availableMargin);
