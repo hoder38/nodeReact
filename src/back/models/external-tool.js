@@ -860,7 +860,13 @@ export default {
                 return Api('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                     console.log(docDate);
-                    if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container fixedheader')[0], 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
+                    let type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid fixedheader')[0];
+                    if (type) {
+                        type = findTag(type, 'div', 'container')[0];
+                    } else {
+                        type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container fixedheader')[0];
+                    }
+                    if (findTag(findTag(findTag(findTag(type, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                         list.push({
                             url: 'https://www.conference-board.org/data/bcicountry.cfm?cid=1',
                             name: toValidName('US Business Cycle Indicators'),
@@ -922,16 +928,34 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main', 'cd-main-content')[0], 'div', 'layout-content inner-content-page')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
+                let divs = null;
+                const typeDiv = findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main')[0], 'div', 'layout-content')[0];
+                if (typeDiv) {
+                    divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(typeDiv, 'div', 'block-opa-theme-content')[0], 'article')[0], 'div')[0], 'div')[0], 'div', 'layout__region layout__region--second')[0], 'div', 'homepage-block homepage-news-block')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
+                } else {
+                    const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main')[0], 'div', 'layout-content inner-content-page')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
+                }
                 for (let i in divs) {
-                    const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
-                    const a = findTag(div, 'a')[0];
-                    if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
-                        list.push({
-                            url: addPre(a.attribs.href.trim(), 'https://www.dol.gov'),
-                            name: toValidName('Unemployment Insurance Weekly Claims Report'),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
+                    if (typeDiv) {
+                        const a = findTag(findTag(divs[i], 'div')[0], 'a')[0];
+                        const div = findTag(findTag(a, 'div')[0], 'div')[0];
+                        if (findTag(findTag(findTag(div, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
+                            list.push({
+                                url: addPre(a.attribs.href.trim(), 'https://www.dol.gov'),
+                                name: toValidName('Unemployment Insurance Weekly Claims Report'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                    } else {
+                        const div = findTag(findTag(findTag(divs[i], 'div', 'image-left-teaser')[0], 'div', 'row dol-feed-block')[0], 'div', 'left-teaser-text')[0];
+                        const a = findTag(div, 'a')[0];
+                        if (a && findTag(findTag(findTag(a, 'h3')[0], 'span')[0])[0] === 'Unemployment Insurance Weekly Claims Report' && findTag(findTag(div, 'p')[0])[0].match(/[a-zA-Z]+ \d+, \d\d\d\d$/)[0] === docDate) {
+                            list.push({
+                                url: addPre(a.attribs.href.trim(), 'https://www.dol.gov'),
+                                name: toValidName('Unemployment Insurance Weekly Claims Report'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
                     }
                 }
                 return list;
