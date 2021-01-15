@@ -29,6 +29,12 @@ export const init = () => {
             }
         }
     });
+    client.on('shardError', error => {
+        console.error('A discord websocket connection encountered an error:', error);
+    });
+    client.on('error', error => {
+        console.error('discord error:', error);
+    });
     client.login(DISCORD_TOKEN);
 }
 

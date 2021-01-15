@@ -443,7 +443,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             updateTime[id]['credit'] = 0;
             updateTime[id]['position'] = 0;
             updateTime[id]['order'] = 0;
-            updateTime[id]['trade'] = 0;
+            updateTime[id]['trade'] = Math.round(new Date().getTime() / 1000) - ORDER_INTERVAL + 180;
         }
         if (!available[id]) {
             available[id] = {}
@@ -1049,7 +1049,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 const DRT = {
                     rate: rate / 100 * BITFINEX_EXP,
                     day: day,
-                    speed: (58 - day) / 56,
+                    speed: (day > 30) ? ((210 - day) / 360) : ((58 - day) / 56),
                 };
                 for (let i = DR.length; i >= 0; i--) {
                     if (i === 0 || DRT.rate < DR[i - 1].rate) {
@@ -1379,7 +1379,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
         const getAM = () => {
             console.log(current);
-            const needTrans = (current.used > 0) ? current.amount - current.used : current.amount;
+            let needTrans = 0;
+            if (margin[id][current.type] && margin[id][current.type]['total'] > 0) {
+                if (Math.abs(current.amount - margin[id][current.type]['total']) > current.amount * 0.05) {
+                    needTrans = current.amount - margin[id][current.type]['total'];
+                }
+                console.log(`margin total: ${margin[id][current.type]['total']}`);
+            } else {
+                needTrans = current.amount;
+            }
+            console.log(`need trans: ${needTrans}`);
             //let needTrans = needAmount;
             //check need amount
             /*if (needTrans > 0) {
@@ -1387,6 +1396,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     needTrans = needTrans - margin[id][current.type].avail;
                 }
             }*/
+            //const needTrans = (current.used > 0) ? current.amount - current.used : current.amount;
             let availableMargin = 0;
             if (needTrans > 1 && current.clear !== true) {
                 return userRest.wallets().then(wallet => {
@@ -1527,9 +1537,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     to: 'margin',
                     amount: availableMargin.toString(),
                     currency: current.type.substr(1),
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
-                    current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
-                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(data => {
+                    console.log(data);
+                    return Promise.resolve();
+                    /*current.used = current.used > 0 ? current.used + availableMargin : availableMargin;
+                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});*/
                 });
             } else {
                 return userRest.transfer({
@@ -1537,20 +1549,27 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     to: 'funding',
                     amount: (-availableMargin).toString(),
                     currency: current.type.substr(1),
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
-                    current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(data => {
+                    console.log(data);
+                    return Promise.resolve();
+                    /*current.used = (current.used > 0 && current.used + availableMargin > 1) ? current.used + availableMargin : 0;
                     if (margin[id][current.type] && (margin[id][current.type].total < 1 || !margin[id][current.type].total)) {
                         current.used = 0;
                     }
-                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});
+                    return Mongo('update', USERDB, {"username": id, "bitfinex.type": current.type}, {$set:{"bitfinex.$.used": current.used}});*/
                 });
             }
         }).then(() => {
-            updateTime[id]['trade']++;
-            console.log(updateTime[id]['trade']);
-            if (updateTime[id]['trade'] % Math.ceil(ORDER_INTERVAL / RATE_INTERVAL) !== Math.floor(180 / RATE_INTERVAL)) {
+            const now = Math.round(new Date().getTime() / 1000);
+            //console.log(`STcount ${updateTime[id]['trade']}`);
+            /*if (updateTime[id]['trade'] % Math.ceil(ORDER_INTERVAL / RATE_INTERVAL) !== Math.floor(180 / RATE_INTERVAL)) {
+                return Promise.resolve();
+            }*/
+            if ((now - updateTime[id]['trade']) < ORDER_INTERVAL) {
                 return Promise.resolve();
             }
+            updateTime[id]['trade'] = now;
+            console.log(`real singleTrade ${updateTime[id]['trade']}`);
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 const recur_status = index => {

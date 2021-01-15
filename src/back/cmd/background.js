@@ -137,7 +137,7 @@ export const updateStock = () => {
             }*/
             let use_stock_list = [];
             const sd = new Date();
-            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 14) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
+            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 2) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {

@@ -58,7 +58,6 @@ router.get('/2drive/:uid', function(req, res, next){
                 if (downloadedList.length < 1) {
                     return handleError(new HoError('do not have downloaded folder!!!'));
                 }
-                console.log(downloadedList);
                 const downloaded = downloadedList[0].id;
                 StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
                 if (items[0].status === 9) {
