@@ -1,8 +1,8 @@
-import { FITNESSDB, FITNESS_POINT, CHART_LIMIT } from '../constants'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import Mongo, { objectID } from '../models/mongo-tool'
-import Redis from '../models/redis-tool'
-import { isValidString, handleError, HoError, completeZero } from '../util/utility'
+import { FITNESSDB, FITNESS_POINT, CHART_LIMIT } from '../constants.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import Redis from '../models/redis-tool.js'
+import { isValidString, handleError, HoError, completeZero } from '../util/utility.js'
 
 const FitnessTagTool = TagTool(FITNESSDB);
 
@@ -110,13 +110,7 @@ export default {
             if (items.length < 1) {
                 return handleError(new HoError('fitness row does not exist!!!'));
             }
-            return Mongo('remove', FITNESSDB, {
-                _id: items[0]._id,
-                $isolated: 1,
-            }).then(item => Mongo('remove', `${FITNESSDB}Count`, {
-                itemId: items[0]._id,
-                $isolated: 1,
-            }));
+            return Mongo('deleteMany', FITNESSDB, {_id: items[0]._id}).then(item => Mongo('deleteMany', `${FITNESSDB}Count`, {itemId: items[0]._id}));
         });
     },
     getPoint: function(user) {
@@ -320,9 +314,6 @@ export default {
         return Mongo('update', `${FITNESSDB}Stat`, {owner: id}, {$set: {
             start: Number(`${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`),
             chart: [],
-        }}).then(item => Mongo('remove', `${FITNESSDB}Count`, {
-            owner: id,
-            $isolated: 1,
-        }).then(item1 => Redis('del', `chart: ${id}`)));
+        }}).then(item => Mongo('deleteMany', `${FITNESSDB}Count`, {owner: id}).then(item1 => Redis('del', `chart: ${id}`)));
     }
 }

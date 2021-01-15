@@ -1,13 +1,13 @@
-import { STORAGEDB, RELATIVE_LIMIT, ADULT_LIST, GENRE_LIST_CH, GAME_LIST_CH, MUSIC_LIST } from '../constants'
+import { STORAGEDB, RELATIVE_LIMIT, ADULT_LIST, GENRE_LIST_CH, GAME_LIST_CH, MUSIC_LIST } from '../constants.js'
 import Express from 'express'
-import { checkLogin, handleError, checkAdmin, isValidString, selectRandom, getStorageItem, HoError } from '../util/utility'
-import TagTool from '../models/tag-tool'
-import GoogleApi from '../models/api-tool-google'
-import External from '../models/external-tool'
-import Mongo from '../models/mongo-tool'
-import Redis from '../models/redis-tool'
-import { getOptionTag, isImage, isMusic, isVideo, isDoc, isZipbook } from '../util/mime'
-import sendWs from '../util/sendWs'
+import { checkLogin, handleError, checkAdmin, isValidString, selectRandom, getStorageItem, HoError } from '../util/utility.js'
+import TagTool from '../models/tag-tool.js'
+import GoogleApi from '../models/api-tool-google.js'
+import External from '../models/external-tool.js'
+import Mongo from '../models/mongo-tool.js'
+import Redis from '../models/redis-tool.js'
+import { getOptionTag, isImage, isMusic, isVideo, isDoc, isZipbook } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const OPTION_TAG = getOptionTag();
 const router = Express.Router();
@@ -164,40 +164,40 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
         if (random_tag[0] === '影片') {
             let mtype = 0;
             if (random_tag[1] === '電影') {
-                mtype = selectRandom([10, 1, 1, 1, 1]);
+                mtype = selectRandom([11, 1, 1, 1]);
                 if (mtype === 3) {
                     //yify
                     random_tag = ['yify movie', 'no local', random_tag.splice(random_tag.length -1, 1)[0]];
-                } else if (mtype === 4) {
+                }/* else if (mtype === 4) {
                     //bilibili
                     random_tag = ['bilibili movie', 'no local'];
-                }
+                }*/
             } else if (random_tag[1] === '動畫') {
-                mtype = selectRandom([8, 1, 1, 1]);
-                if (mtype === 3) {
+                mtype = selectRandom([9, 1, 1]);
+                /*if (mtype === 3) {
                     //bilibili
                     random_tag = ['bilibili animation', 'no local'];
-                }
+                }*/
             } else if (random_tag[1] === '電視劇') {
-                mtype = selectRandom([8, 1, 1]);
+                mtype = selectRandom([10]);
             }
-            if (mtype === 1) {
+            /*if (mtype === 1) {
                 random_tag = ['youtube video', 'no local'];
             } else if (mtype === 2) {
                 random_tag = ['youtube playlist', 'no local'];
-            }
+            }*/
         } else if (random_tag[0] === '圖片' && (random_tag[1] === '漫畫' || random_tag[2] === '漫畫')) {
             const mtype = selectRandom([4, 1]);
             if (mtype === 1) {
                 random_tag = ['dm5 comic', 'no local', OPTION_TAG[selectRandom(count, [24, 25, 27, 28, 32, 34, 35, 37, 38, 39, 40])]];
             }
         } else if (random_tag[0] === '音頻') {
-            const mtype = selectRandom([4, 1, 1]);
-            if (mtype === 1) {
+            const mtype = selectRandom([6]);
+            /*if (mtype === 1) {
                 random_tag = ['music','youtube music', 'no local'];
             } else if (mtype === 2) {
                 random_tag = ['music','youtube music playlist', 'no local'];
-            }
+            }*/
         }
         return random_tag;
     }).then(random => {
@@ -280,19 +280,19 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 2,
         count: 0,
-    }))]).then(() => StorageTagTool.getYoutubeQuery(parentList.cur, req.params.sortName, pageToken)).then(query => query ? GoogleApi('y search', query).then(data => GoogleApi('y video', {id: data.video}).then(list => {
+    }))]).then(() => /*StorageTagTool.getYoutubeQuery(parentList.cur, req.params.sortName, pageToken)).then(query => query ? GoogleApi('y search', query).then(data => GoogleApi('y video', {id: data.video}).then(list => {
         itemList = [...itemList, ...getYoutubeItem(list, data.type)];
         return GoogleApi('y playlist', {id: data.playlist})
     }).then(list => res.json({
         itemList: [...itemList, ...getYoutubeItem(list, data.type)],
         pageToken: data.nextPageToken ? `${index + 1}${data.nextPageToken}` : `${index + 1}`,
-    }))) : res.json({
+    }))) : */res.json({
         itemList: itemList,
         pageToken: `${index + 1}`,
     })).catch(err => handleError(err, next));
 });
 
-function getYoutubeItem(items, type) {
+/*function getYoutubeItem(items, type) {
     let itemList = [];
     for (let i of items) {
         if (i.snippet) {
@@ -313,7 +313,7 @@ function getYoutubeItem(items, type) {
         }
     }
     return itemList;
-}
+}*/
 
 router.post('/getOptionTag', function(req, res, next) {
     console.log('storage option tag');
@@ -456,15 +456,16 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(req, res, next){
     console.log('media setTime');
-    let id = req.params.id.match(/^(you|ypl|yif|mad|bbl|kub)_(.*)$/);
+    //let id = req.params.id.match(/^(you|ypl|yif|mad|bbl|kub)_(.*)$/);
+    let id = req.params.id.match(/^(yif|mad|bbl|kub)_(.*)$/);
     let playlist = 0;
     let playlistId = null;
     let obj = req.params.obj;
     if (id) {
-        if (id[1] === 'ypl') {
+        /*if (id[1] === 'ypl') {
             playlist = 1;
             playlistId = id[2];
-        } else if (id[1] === 'kub') {
+        } else*/ if (id[1] === 'kub') {
             playlist = 3;
             playlistId = id[2];
         } else if (id[1] === 'yif') {
@@ -486,7 +487,8 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
         if (!id) {
             return handleError(new HoError('file is not vaild'), next);
         }
-        if (obj && obj.match(/^(you_.*|external|\d+(\.\d+)?)$/)) {
+        //if (obj && obj.match(/^(you_.*|external|\d+(\.\d+)?)$/)) {
+        if (obj && obj.match(/^(external|\d+(\.\d+)?)$/)) {
             playlist = 2;
             if (obj === 'external') {
                 obj = null;
@@ -499,7 +501,8 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
     }
     const first = () => {
         if (playlist && obj) {
-            if (!obj.match(/^(you_|\d+(\.\d+)?$)/)) {
+            //if (!obj.match(/^(you_|\d+(\.\d+)?$)/)) {
+            if (!obj.match(/^(\d+(\.\d+)?$)/)) {
                 return handleError(new HoError('external is not vaild'));
             }
             obj = isValidString(obj, 'name');
@@ -556,9 +559,9 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             }});
         }
         if (playlist) {
-            if (playlist === 1) {
+            /*if (playlist === 1) {
                 return External.youtubePlaylist(playlistId, recordTime, rPageToken, req.params.back).then(([obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new]) => ret_rest(obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new));
-            } else if (playlist === 2) {
+            } else */if (playlist === 2) {
                 return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items1 => {
                     if (items1.length < 1) {
                         return handleError(new HoError('cannot find external'));
@@ -642,7 +645,7 @@ router.get('/media/more/:type(\\d+)/:page(\\d+)/:back(back)?', function(req, res
         } else {
             sql.nosql['status'] = type;
         }
-        Mongo('find', STORAGEDB, sql.nosql, sql.select, sql.options).then(items => res.json({
+        Mongo('find', STORAGEDB, sql.nosql, Object.assign(sql.options, {projection: sql.select})).then(items => res.json({
             itemList: getStorageItem(req.user, items),
             parentList: sql.parentList,
         })).catch(err => handleError(err, next));

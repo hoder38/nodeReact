@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf, setRdirs, rdirPush} from '../actions'
-import Rank from '../components/Rank'
+import { alertPush, sendGlbCf, setRdirs, rdirPush} from '../actions/index.js'
+import Rank from '../components/Rank.js'
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),

@@ -1,20 +1,23 @@
-import { RE_WEBURL } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { NAS_PREFIX } from '../config'
-import { objectID } from '../models/mongo-tool'
+import { RE_WEBURL } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
+import { NAS_PREFIX } from '../config.js'
+import { objectID } from '../models/mongo-tool.js'
 import MobileDetect from 'mobile-detect'
 import { createHash } from 'crypto'
-import { encode as IconvEncode, decode as IconvDecode } from 'iconv-lite'
-import { join as PathJoin } from 'path'
-import { existsSync as FsExistsSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, unlinkSync as FsUnlinkSync, rmdirSync as FsRmdirSync, readFile as FsReadFile, writeFile as FsWriteFile, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream } from 'fs'
-import { detectCharset } from 'node-icu-charset-detector'
+import iconvLite from 'iconv-lite'
+const { encode: IconvEncode, decode: IconvDecode } = iconvLite;
+import pathModule from 'path'
+const { join: PathJoin } = pathModule;
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, unlinkSync: FsUnlinkSync, rmdirSync: FsRmdirSync, readFile: FsReadFile, writeFile: FsWriteFile, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
+import detectCharacterEncoding from 'detect-character-encoding'
 import Ass2vtt from 'ass-to-vtt'
 
 let pwCheck = {}
 
 export function isValidString(str, type) {
     if (typeof str === 'string' || typeof str === 'number') {
-        str = typeof str === 'string' ? new Buffer(str, 'utf-8').toString() : str.toString()
+        str = typeof str === 'string' ? Buffer.from(str, 'utf-8').toString() : str.toString()
         switch (type) {
             case 'name':
             const trim = str.trim()
@@ -96,7 +99,7 @@ export function isValidString(str, type) {
 }
 
 export function toValidName(str) {
-    str = new Buffer(str, 'utf-8').toString().replace(/&#\d+;/g, ' ').trim();
+    str = Buffer.from(str, 'utf-8').toString().replace(/&#\d+;/g, ' ').trim();
     if (str.replace(/[\s　]+/g, '') === '') {
         str = 'empty';
     }
@@ -348,11 +351,15 @@ export const SRT2VTT = (filePath, ext) => new Promise((resolve, reject) => FsRea
 })).then(() => FsUnlinkSync(`${filePath}.sub`)));
 
 export const bufferToString = (buffer, big5=false) => {
-    const charset = detectCharset(buffer).toString();
-    try {
-        return buffer.toString(big5 ? 'big5' : charset);
-    } catch (x) {
-        return IconvDecode(buffer, big5 ? 'big5' : charset);
+    const charset = detectCharacterEncoding(buffer);
+    if (charset) {
+        try {
+            return buffer.toString(big5 ? 'big5' : charset.encoding);
+        } catch (x) {
+            return IconvDecode(buffer, big5 ? 'big5' : charset.encoding);
+        }
+    } else {
+        return 'Unknown Charset';
     }
 }
 

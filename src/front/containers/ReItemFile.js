@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { setItem, alertPush, sendGlbIn, feedbackPush, sendGlbCf, bookmarkPush, itemPush } from '../actions'
-import ItemFile from '../components/ItemFile'
+import { setItem, alertPush, sendGlbIn, feedbackPush, sendGlbCf, bookmarkPush, itemPush } from '../actions/index.js'
+import ItemFile from '../components/ItemFile.js'
 
 const mapStateToProps = state => ({
     select: state.itemDataHandle.select,

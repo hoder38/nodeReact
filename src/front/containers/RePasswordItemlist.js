@@ -1,8 +1,8 @@
 import { connect } from 'react-redux'
-import { passPush, alertPush, setPass, sendGlbCf } from '../actions'
-import Itemlist from '../components/Itemlist'
-import { arrayMerge } from '../utility'
-import { PASSWORD } from '../constants'
+import { passPush, alertPush, setPass, sendGlbCf } from '../actions/index.js'
+import Itemlist from '../components/Itemlist.js'
+import { arrayMerge } from '../utility.js'
+import { PASSWORD } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: PASSWORD,

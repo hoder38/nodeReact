@@ -1,7 +1,7 @@
-import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB, BITFINEX } from '../constants'
+import { STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB, BITFINEX } from '../constants.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
-import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility'
+import TagTool from '../models/tag-tool.js'
+import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);

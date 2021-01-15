@@ -1,35 +1,36 @@
 import React from 'react'
-import UserInput from './UserInput'
-import Tooltip from './Tooltip'
-import { killEvent, clearText, checkInput, api, isValidString } from '../utility'
-import { FILE_ZINDEX, COPY_HERE } from '../constants'
+import UserInput from './UserInput.js'
+import Tooltip from './Tooltip.js'
+import { killEvent, clearText, checkInput, api, isValidString } from '../utility.js'
+import { FILE_ZINDEX, COPY_HERE } from '../constants.js'
 
-const PasswordInfo = React.createClass({
-    getInitialState: function() {
+class PasswordInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['name', 'username', 'password', 'password2', 'url', 'email'], this._handleSubmit, this._handleChange)
         this._important = null
         this._password = ''
         this._password2 = ''
         this._pwdShow = COPY_HERE
         this._pwd2Show = COPY_HERE
-        return Object.assign({
+        this.state = Object.assign({
             edit: this.props.item.newable ? true : false,
             pwdShow: false,
             pwd2Show: false,
             important: this.props.item.important ? true : false,
         }, this._input.initValue(this.props.item))
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         if (this.props.item.newable) {
             this._input.initFocus()
         }
-    },
-    componentDidUpdate: function(prevProps, prevState) {
+    }
+    componentDidUpdate(prevProps, prevState) {
         if (this.state.edit && !prevState.edit) {
             this._input.initFocus()
         }
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (this.state.edit) {
             const important = this.state.important !== this.props.item.important ? {important: this.state.important} : {}
             const set_obj = Object.assign({},
@@ -93,11 +94,11 @@ const PasswordInfo = React.createClass({
         } else {
             this.props.onclose()
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue(), {important: this._important.checked}))
-    },
-    _selectValue: function(target, important=true, id='') {
+    }
+    _selectValue = (target, important=true, id='') => {
         if ((target === 'password' || target === 'password2') && !this[target === 'password' ? '_password' : '_password2']) {
             this._getPassword(important, target === 'password' ? false : true, id, () => {
                 this._input.ref.get(target).focus()
@@ -107,13 +108,13 @@ const PasswordInfo = React.createClass({
             this._input.ref.get(target).focus()
             this._input.ref.get(target).selectionStart = 0
         }
-    },
-    _copyValue: function(e, value) {
+    }
+    _copyValue = (e, value) => {
         e.clipboardData.setData('text/plain', value)
         e.preventDefault()
         e.stopPropagation()
-    },
-    _getPassword: function(important, isPre, id, callback) {
+    }
+    _getPassword = (important, isPre, id, callback) => {
         important ? this.props.sendglbpw(userPW => {
             if (!isValidString(userPW, 'passwd')) {
                 this.props.addalert('User password not vaild!!!')
@@ -133,16 +134,16 @@ const PasswordInfo = React.createClass({
             isPre ? this._password2 = result.password : this._password = result.password
             callback()
         }).catch(err => this.props.addalert(err))
-    },
-    _generatePassword: function(type) {
+    }
+    _generatePassword = type => {
         api(`/api/password/generate/${type}`).then(result => {
             this.setState(Object.assign({}, this.state, {
                 password: result.password,
                 password2: result.password,
             }))
         }).catch(err => this.props.addalert(err))
-    },
-    _showPassword: function(important, id, isPre=false) {
+    }
+    _showPassword = (important, id, isPre=false) => {
         const show = isPre ? 'pwd2Show' : 'pwdShow'
         const pwd = isPre ? '_pwd2Show' : '_pwdShow'
         const password = isPre ? '_password2' : '_password'
@@ -160,8 +161,8 @@ const PasswordInfo = React.createClass({
                 this.setState(Object.assign({}, this.state, {[show]: true}))
             }
         }
-    },
-    render: function() {
+    }
+    render() {
         const item = this.props.item
         const username = (
             <div className="input-group">
@@ -367,6 +368,6 @@ const PasswordInfo = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default PasswordInfo

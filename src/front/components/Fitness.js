@@ -1,26 +1,27 @@
 import React from 'react'
-import { RIGHT, TOP_SECTION_ZINDEX } from '../constants'
-import ReFitnessCategorylist from '../containers/ReFitnessCategorylist'
-import ReItemInput from '../containers/ReItemInput'
-import ReFitnessItemPath from '../containers/ReFitnessItemPath'
-import ReFitnessItemHead from '../containers/ReFitnessItemHead'
-import ReFitnessItemlist from '../containers/ReFitnessItemlist'
-import ReFitnessStatis from '../containers/ReFitnessStatis'
-import { api } from '../utility'
+import { RIGHT, TOP_SECTION_ZINDEX } from '../constants.js'
+import ReFitnessCategorylist from '../containers/ReFitnessCategorylist.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import ReFitnessItemPath from '../containers/ReFitnessItemPath.js'
+import ReFitnessItemHead from '../containers/ReFitnessItemHead.js'
+import ReFitnessItemlist from '../containers/ReFitnessItemlist.js'
+import ReFitnessStatis from '../containers/ReFitnessStatis.js'
+import { api } from '../utility.js'
 
-const Fitness = React.createClass({
-    getInitialState: function() {
-        return {open: false}
-    },
-    componentWillMount: function() {
+class Fitness extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {open: false}
+    }
+    componentDidMount() {
         api('/api/fitness/getPoint').then(result => {
             if (result.point) {
                 this.props.basicset(result.point);
             }
             return api('/api/parent/fitness/list').then(result => this.props.fdirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/fitness/add', {name: dir.name, tag: tag}).then(result => this.props.pushfdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)}))).catch(err => this.props.addalert(err))
         });
-    },
-    render: function() {
+    }
+    render() {
         const path = this.state.open ? null : <ReFitnessItemPath />
         const head = this.state.open ? null : <ReFitnessItemHead />
         const fitness = this.state.open ? <ReFitnessStatis onclose={() => this.setState(Object.assign({}, this.state, {open: false}))}/> : <ReFitnessItemlist />
@@ -39,6 +40,6 @@ const Fitness = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Fitness

@@ -1,15 +1,15 @@
-import { DOCDB } from '../constants'
-import { DISCORD_TOKEN, DISCORD_CHANNEL } from '../../../ver'
+import { DOCDB } from '../constants.js'
+import { DISCORD_TOKEN, DISCORD_CHANNEL } from '../../../ver.js'
 import Discord from 'discord.js'
-import Mongo from '../models/mongo-tool'
-import { stockShow } from '../models/stock-tool'
+import Mongo from '../models/mongo-tool.js'
+import { stockShow } from '../models/stock-tool.js'
 
 let channel = null;
 export const init = () => {
     const client = new Discord.Client();
     client.on('ready', () => {
         console.log(`Logged in as ${client.user.tag}!`);
-        channel = client.channels.find(val => val.id === DISCORD_CHANNEL);
+        channel = client.channels.cache.get(DISCORD_CHANNEL);
         channel.send('Nice to serve you!!!');
     });
     client.on('message', msg=> {

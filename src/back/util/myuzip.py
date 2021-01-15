@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # uzip.py
 # list: xxx.zip
@@ -10,28 +10,25 @@ import sys
 import shutil
 import zipfile
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-print "Processing File " + sys.argv[1]
+print ("Processing File " + sys.argv[1])
 
 file=zipfile.ZipFile(sys.argv[1],"r");
 
 if len(sys.argv) >= 5:
-    file.setpassword(sys.argv[4])
+    file.setpassword(sys.argv[4].encode('cp437'))
 
 for name in file.namelist():
     try:
-        utf8name=name.decode('gbk')
+        utf8name=name.encode('cp437').decode('gbk')
     except:
         try:
-            utf8name=name.decode('big5')
+            utf8name=name.encode('cp437').decode('big5')
         except:
             utf8name=name
     if len(sys.argv) >= 3:
         if len(sys.argv) >= 4:
             if utf8name == sys.argv[3]:
-                print "Extracting " + utf8name
+                print ("Extracting " + utf8name)
                 fullname = sys.argv[2] + "/" + utf8name
                 pathname = os.path.dirname(fullname)
                 if not os.path.exists(pathname) and pathname!= "":
@@ -42,7 +39,7 @@ for name in file.namelist():
                     with source, fo:
                         shutil.copyfileobj(source, fo)
         else:
-            print "Extracting " + utf8name
+            print ("Extracting " + utf8name)
             fullname = sys.argv[2] + "/" + utf8name
             pathname = os.path.dirname(fullname)
             if not os.path.exists(pathname) and pathname!= "":
@@ -53,6 +50,6 @@ for name in file.namelist():
                 with source, fo:
                     shutil.copyfileobj(source, fo)
     else:
-        print utf8name
+        print (utf8name)
 file.close()
 

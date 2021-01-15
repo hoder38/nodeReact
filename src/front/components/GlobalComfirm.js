@@ -1,6 +1,6 @@
 import React from 'react'
-import { BLOCK_ZINDEX } from '../constants'
-import { killEvent } from '../utility'
+import { BLOCK_ZINDEX } from '../constants.js'
+import { killEvent } from '../utility.js'
 
 const toggle = function*() {
     let text1, text2
@@ -11,12 +11,15 @@ const toggle = function*() {
 }()
 toggle.next()
 
-const GlobalComfirm = React.createClass({
-    _handleSubmit: function() {
+class GlobalComfirm extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    _handleSubmit = () => {
         this.props.callback()
         this.props.onclose()
-    },
-    render: function() {
+    }
+    render() {
         const text_show = toggle.next(this.props.text).value
         return (
             <section style={{position: 'fixed', zIndex: BLOCK_ZINDEX, top: '0px', right: '0px', width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.3)'}}>
@@ -39,6 +42,6 @@ const GlobalComfirm = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default GlobalComfirm

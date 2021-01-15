@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { closeGlbIn, alertPush } from '../actions'
-import ItemInput from '../components/ItemInput'
+import { closeGlbIn, alertPush } from '../actions/index.js'
+import ItemInput from '../components/ItemInput.js'
 
 const mapStateToProps = state => state.glbInHandle.length > 0 ? {
     input: state.glbInHandle[0].input,

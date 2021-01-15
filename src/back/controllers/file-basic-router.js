@@ -1,5 +1,5 @@
 import Express from 'express'
-import { checkLogin } from '../util/utility'
+import { checkLogin } from '../util/utility.js'
 
 const router = Express.Router();
 

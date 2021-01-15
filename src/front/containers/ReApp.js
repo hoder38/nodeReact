@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush, bitfinexPush, bitfinexPop, setItem } from '../actions'
-import App from '../components/App'
+import { alertPush, setBasic, sendGlbCf, feedbackPush, bookmarkPush, setDirs, userPush, itemPop, itemPush, dirPush, passPop, passPush, stockPop, stockPush, closeGlbPw, fitnessPop, fitnessPush, rankPop, rankPush, bitfinexPush, bitfinexPop, setItem } from '../actions/index.js'
+import App from '../components/App.js'
 
 const mapStateToProps = state => ({
     id: state.basicDataHandle.id,

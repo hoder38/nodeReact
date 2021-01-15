@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbPw, setBasic, sendGlbCf, userPush, userPop } from '../actions'
-import UserInfo from '../components/UserInfo'
+import { alertPush, sendGlbPw, setBasic, sendGlbCf, userPush, userPop } from '../actions/index.js'
+import UserInfo from '../components/UserInfo.js'
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),

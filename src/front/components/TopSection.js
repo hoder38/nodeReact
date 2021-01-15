@@ -1,11 +1,14 @@
 import React from 'react'
-import { TOP_SECTION_ZINDEX } from '../constants'
-import ReItemInput from '../containers/ReItemInput'
-import ReItemPath from '../containers/ReItemPath'
-import ReItemHead from '../containers/ReItemHead'
+import { TOP_SECTION_ZINDEX } from '../constants.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import ReItemPath from '../containers/ReItemPath.js'
+import ReItemHead from '../containers/ReItemHead.js'
 
-const TopSection = React.createClass({
-    render: function() {
+class TopSection extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    render() {
         return (
             <section id="top-section" style={{float: 'left', position: 'fixed', left: '0px', width: '100%', zIndex: TOP_SECTION_ZINDEX}}>
                 <ReItemInput />
@@ -14,6 +17,6 @@ const TopSection = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default TopSection

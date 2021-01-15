@@ -1,6 +1,6 @@
 import React from 'react'
-import AlertMsg from './AlertMsg'
-import { ALERT_ZINDEX } from '../constants'
+import AlertMsg from './AlertMsg.js'
+import { ALERT_ZINDEX } from '../constants.js'
 
 export default function Alertlist({ alertlist, onclose }) {
     let rows = []

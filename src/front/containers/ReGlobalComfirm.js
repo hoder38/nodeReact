@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { closeGlbCf } from '../actions'
-import GlobalComfirm from '../components/GlobalComfirm'
+import { closeGlbCf } from '../actions/index.js'
+import GlobalComfirm from '../components/GlobalComfirm.js'
 
 const mapDispatchToProps = dispatch => ({
     onclose: () => dispatch(closeGlbCf()),

@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { rankPush, alertPush, rbookmarkPush, sendGlbIn, setRank } from '../actions'
-import ItemPath from '../components/ItemPath'
-import { RANK } from '../constants'
+import { rankPush, alertPush, rbookmarkPush, sendGlbIn, setRank } from '../actions/index.js'
+import ItemPath from '../components/ItemPath.js'
+import { RANK } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: RANK,

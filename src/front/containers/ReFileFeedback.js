@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, feedbackPop, feedbackPush } from '../actions'
-import FileFeedback from '../components/FileFeedback'
+import { alertPush, feedbackPop, feedbackPush } from '../actions/index.js'
+import FileFeedback from '../components/FileFeedback.js'
 
 const mapStateToProps = state => {
     let tmp = state.feedbackDataHandle.values().next().value

@@ -1,12 +1,13 @@
-import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants'
+import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, TOMG_SYM, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
 import BFX from 'bitfinex-api-node'
-import { FundingOffer, Order } from 'bfx-api-node-models'
-import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool'
-import Mongo from '../models/mongo-tool'
-import Redis from '../models/redis-tool'
-import { handleError, HoError, isValidString } from '../util/utility'
-import sendWs from '../util/sendWs'
+import bfxApiNodeModels from 'bfx-api-node-models'
+const { FundingOffer, Order } = bfxApiNodeModels;
+import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool.js'
+import Mongo from '../models/mongo-tool.js'
+import Redis from '../models/redis-tool.js'
+import { handleError, HoError, isValidString } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 //system
 const bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
@@ -1759,7 +1760,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     });
                                 }
                                 item_count = (item.count < item_count) ? item.count : item_count;*/
-                                const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
+                                const delTotal = () => Mongo('deleteMany', TOTALDB, {_id: item._id}).then(() => recur_status(index + 1));
                                 if (item.count > 0) {
                                     const or = new Order({
                                         cid: Date.now(),

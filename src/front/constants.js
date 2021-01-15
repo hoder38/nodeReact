@@ -14,9 +14,9 @@ export const BITFINEX_PAGE = '/Bitfinex'
 export const STORAGE = 'storage'
 export const PASSWORD = 'password'
 export const STOCK = 'stock'
-export const FITNESS = 'fitness'
-export const RANK = 'rank'
-export const LOTTERY = 'lottery'
+//export const FITNESS = 'fitness'
+//export const RANK = 'rank'
+//export const LOTTERY = 'lottery'
 export const BITFINEX = 'bitfinex'
 
 //action
@@ -62,6 +62,7 @@ export const SDIR_POP = 'SDIR_POP'
 export const SDIR_PUSH = 'SDIR_PUSH'
 export const SBOOKMARK_POP = 'SBOOKMARK_POP'
 export const SBOOKMARK_PUSH = 'SBOOKMARK_PUSH'
+/*
 //fitness
 export const FITNESS_PUSH = 'FITNESS_PUSH'
 export const FITNESS_POP = 'FITNESS_POP'
@@ -83,7 +84,7 @@ export const RBOOKMARK_PUSH = 'RBOOKMARK_PUSH'
 //lottery
 export const LOTTERY_PUSH = 'LOTTERY_PUSH'
 export const LOTTERY_POP = 'LOTTERY_POP'
-export const SET_LOTTERY = 'SET_LOTTERY'
+export const SET_LOTTERY = 'SET_LOTTERY'*/
 //bitfinex
 export const BITFINEX_PUSH = 'BITFINEX_PUSH'
 export const BITFINEX_POP = 'BITFINEX_POP'

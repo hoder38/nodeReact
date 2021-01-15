@@ -1,20 +1,23 @@
 import React from 'react'
-import { killEvent } from '../utility'
+import { killEvent } from '../utility.js'
 
-const DropdownMenu = React.createClass({
-    componentDidMount: function() {
+class DropdownMenu extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    componentDidMount() {
         this.props.globalClick(true)
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this.props.globalClick(false)
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         this.props.droplist.forEach(drop => {
             if (drop.title) {
                 rows.push(
                     <li key={drop.key}>
-                        <a href="#" onClick={e => killEvent(e, () => drop.onclick(this.props.param))}>
+                        <a href="#" onMouseDown={e => killEvent(e, () => drop.onclick(this.props.param))}>
                             <i className={drop.className}></i>&nbsp;{drop.title}
                         </a>
                     </li>
@@ -26,6 +29,6 @@ const DropdownMenu = React.createClass({
         const style = this.props.style ? this.props.style : {}
         return <ul className="dropdown-menu" style={style}>{rows}</ul>
     }
-})
+}
 
 export default DropdownMenu

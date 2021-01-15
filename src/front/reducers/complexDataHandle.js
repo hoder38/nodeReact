@@ -1,5 +1,5 @@
-import { arrayObject, arrayId } from '../utility'
-import { SET_LOTTERY, SET_BITFINEX, BITFINEX_PUSH } from '../constants'
+import { arrayObject, arrayId } from '../utility.js'
+import { /*SET_LOTTERY, */SET_BITFINEX, BITFINEX_PUSH } from '../constants.js'
 
 const rest_item = item => {
     if (item.utime) {
@@ -9,7 +9,7 @@ const rest_item = item => {
     return item
 }
 
-const rest_item1 = item => {
+/*const rest_item1 = item => {
     if (item.utime > 10000) {
         const date = new Date(item.utime * 1000)
         const h = date.getHours();
@@ -18,7 +18,7 @@ const rest_item1 = item => {
         item.utime = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} ${h < 10 ? '0' + h : h}:${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`
     }
     return item
-}
+}*/
 
 const rest_item2 = item => {
     if (item.utime > 10000) {
@@ -112,7 +112,7 @@ export default function complexDataHandle (push, pop, set) {
                         window.scrollTo(0, 0)
                     }
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id',/*(set === SET_LOTTERY) ? rest_item1 :*/ (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         latest: action.latest === null ? '' : action.latest,
                         path: action.path === null ? state.path : action.path,
                         select: new Set(),
@@ -132,11 +132,11 @@ export default function complexDataHandle (push, pop, set) {
             } else {
                 if (action.pageToken === null) {
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id',/*(set === SET_LOTTERY) ? rest_item1 :*/ (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             page: action.item.length ? state[action.list].page + action.item.length : state[action.list].page,
                             more: (Array.isArray(action.item) && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id',/* (set === SET_LOTTERY) ? rest_item1 :*/ (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         }),
                     })
                 } else {
@@ -146,11 +146,11 @@ export default function complexDataHandle (push, pop, set) {
                         }
                     }
                     return Object.assign({}, state, {
-                        list: arrayObject('push', state.list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
+                        list: arrayObject('push', state.list, action.item, 'id',/* (set === SET_LOTTERY) ? rest_item1 :*/ (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         [action.list]: Object.assign({}, state[action.list], {
                             pageToken: action.pageToken,
                             more: (!state[action.list].more && action.item.length === 0) ? false : true,
-                            list: arrayId('push', state[action.list].list, action.item, 'id', (set === SET_LOTTERY) ? rest_item1 : (set === SET_BITFINEX) ? rest_item2 : rest_item),
+                            list: arrayId('push', state[action.list].list, action.item, 'id',/* (set === SET_LOTTERY) ? rest_item1 :*/ (set === SET_BITFINEX) ? rest_item2 : rest_item),
                         }),
                     })
                 }

@@ -1,9 +1,4 @@
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = {
+export default {
     EXTENT_IP: 'www.anomopi.com',
     EXTENT_FILE_IP: 'www.anomopi.com',
     APP_HTML: 'release.html',
@@ -30,7 +25,7 @@ exports.default = {
     AUTO_UPLOAD: true,
     AUTO_DOWNLOAD: true,
     UPDATE_STOCK: true,
-    UPDATE_EXTERNAL: true,
+    //UPDATE_EXTERNAL: true,
     CHECK_MEDIA: true,
     STOCK_FILTER: true,
     DB_BACKUP: true,

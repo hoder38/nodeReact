@@ -1,6 +1,6 @@
-import { DEV, RELEASE } from './constants'
-import DevConfig from '../../config/node-dev-config'
-import ReleaseConfig from '../../config/node-release-config'
+import { DEV, RELEASE } from './constants.js'
+import DevConfig from '../../config/node-dev-config.js'
+import ReleaseConfig from '../../config/node-release-config.js'
 
 export const EXTENT_IP = env => env === RELEASE ? ReleaseConfig.EXTENT_IP : DevConfig.EXTENT_IP
 export const EXTENT_FILE_IP = env => env === RELEASE ? ReleaseConfig.EXTENT_FILE_IP : DevConfig.EXTENT_FILE_IP
@@ -27,7 +27,7 @@ export const HINT = env => env === RELEASE ? ReleaseConfig.HINT : DevConfig.HINT
 export const AUTO_UPLOAD = env => env === RELEASE ? ReleaseConfig.AUTO_UPLOAD : DevConfig.AUTO_UPLOAD
 export const AUTO_DOWNLOAD = env => env === RELEASE ? ReleaseConfig.AUTO_DOWNLOAD : DevConfig.AUTO_DOWNLOAD
 export const UPDATE_STOCK = env => env === RELEASE ? ReleaseConfig.UPDATE_STOCK : DevConfig.UPDATE_STOCK
-export const UPDATE_EXTERNAL = env => env === RELEASE ? ReleaseConfig.UPDATE_EXTERNAL : DevConfig.UPDATE_EXTERNAL
+//export const UPDATE_EXTERNAL = env => env === RELEASE ? ReleaseConfig.UPDATE_EXTERNAL : DevConfig.UPDATE_EXTERNAL
 export const CHECK_MEDIA = env => env === RELEASE ? ReleaseConfig.CHECK_MEDIA : DevConfig.CHECK_MEDIA
 export const API_LIMIT = env => env === RELEASE ? ReleaseConfig.API_LIMIT : DevConfig.API_LIMIT
 export const TORRENT_LIMIT = env => env === RELEASE ? ReleaseConfig.TORRENT_LIMIT : DevConfig.TORRENT_LIMIT

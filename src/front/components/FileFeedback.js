@@ -1,55 +1,54 @@
 import React from 'react'
-import { FEEDBACK } from '../constants'
-import { isValidString, api, killEvent } from '../utility'
-import Tooltip from './Tooltip'
-import UserInput from './UserInput'
-import Dropdown from './Dropdown'
+import { FEEDBACK } from '../constants.js'
+import { isValidString, api, killEvent } from '../utility.js'
+import Tooltip from './Tooltip.js'
+import UserInput from './UserInput.js'
+import Dropdown from './Dropdown.js'
 
 let key = 0
 
-const FileFeedback = React.createClass({
-    getInitialState: function() {
+class FileFeedback extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['url'], this._handleSubmit, this._handleChange)
         this._select = []
         this._history = []
         this._historySelect = []
-        return Object.assign({
+        this.state = Object.assign({
             show: false,
             tags: [],
             selects: [],
             historys: [],
             sending: false,
         }, this._input.initValue())
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         if (this.props.id) {
             this.setState(Object.assign({}, this.state, this._setList()))
         }
-    },
-    componentDidMount: function() {
         this._targetArr = Array.from(document.querySelectorAll('[data-widget]')).filter(node => node.getAttribute('data-widget') === FEEDBACK)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.addEventListener('click', this._toggle)
             })
         }
-    },
-    componentWillReceiveProps: function(nextProps) {
-        if (this.props.id !== nextProps.id) {
-            this.setState(Object.assign({}, this.state, this._setList(nextProps), {sending: false}))
-            if (!nextProps.id) {
+    }
+    componentDidUpdate(prevProps) {
+        if (this.props.id !== prevProps.id) {
+            this.setState(Object.assign({}, this.state, this._setList(this.props), {sending: false}))
+            if (!this.props.id) {
                 api(`${this.props.mainUrl}/api/file/feedback`).then(result => this.props.feedbackset(result.feedbacks)).catch(err => this.props.addalert(err))
             }
         }
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)
             })
         }
-    },
-    _setList: function(props=this.props) {
+    }
+    _setList = (props=this.props) => {
         let tmp_list = {
             tags: [
                 ...props.select,
@@ -65,11 +64,11 @@ const FileFeedback = React.createClass({
             ],
         }
         return (this._history.length > 0) ? Object.assign(tmp_list, this._addTag(this._history, props, tmp_list, this._historySelect)) : tmp_list
-    },
-    _toggle: function(e) {
+    }
+    _toggle = e => {
         killEvent(e, () => this.setState(Object.assign({}, this.state, {show: !this.state.show})))
-    },
-    _addTag: function(tags, props=this.props, state=this.state, historySelect=[]) {
+    }
+    _addTag = (tags, props=this.props, state=this.state, historySelect=[]) => {
         let ret = {}
         let t = [], s = [], h = []
         tags.forEach((tag, i) => {
@@ -118,8 +117,8 @@ const FileFeedback = React.createClass({
             h.forEach(history => ret['historys'].unshift(history))
         }
         return ret
-    },
-    _sendTag: function() {
+    }
+    _sendTag = () => {
         if (this.state.sending) {
             return false
         }
@@ -146,22 +145,22 @@ const FileFeedback = React.createClass({
         } else {
             this.props.addalert('Feedback name is not valid!!!')
         }
-    },
-    _handleSelect: function() {
+    }
+    _handleSelect = () => {
         this.setState(Object.assign({}, this.state, {selects: this.state.selects.map((select, i) => this._select[i] === null ? false : this._select[i].checked)}))
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         this._input.allBlur()
         if (!isValidString(this.state.url, 'url')) {
             this.setState(Object.assign({}, this.state, this._input.initValue(), this._addTag([this.state.url])))
         } else {
             api('/api/storage/addTagUrl', {url: this.state.url}, 'PUT').then(result => this.setState(Object.assign({}, this.state, this._input.initValue(), this._addTag(result.tags)))).catch(err => this.props.addalert(err))
         }
-    },
-    render: function() {
+    }
+    render() {
         const show = (this.state.show && this.props.id) ? {} : {display: 'none'}
         let rows = []
         this.state.tags.forEach((tag, i) => {
@@ -239,6 +238,6 @@ const FileFeedback = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default FileFeedback

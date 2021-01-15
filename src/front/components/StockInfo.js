@@ -1,7 +1,7 @@
 import React from 'react'
 import Chart from 'chart.js'
-import Tooltip from './Tooltip'
-import { api, killEvent, addCommas, getRandomColor } from '../utility'
+import Tooltip from './Tooltip.js'
+import { api, killEvent, addCommas, getRandomColor } from '../utility.js'
 
 const optionQuarter = [
     <option value={1} key={0}>One</option>,
@@ -10,8 +10,9 @@ const optionQuarter = [
     <option value={4} key={3}>Four</option>,
 ]
 
-const StockInfo = React.createClass({
-    getInitialState: function() {
+class StockInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._parse = null
         this._parseYear = []
         this._assetTotalCommas = 0
@@ -41,7 +42,7 @@ const StockInfo = React.createClass({
         this._managementInv = null
         this._managementRec = null
         this._managementPay = null
-        return {
+        this.state = {
             assetStartYear: 2010,
             assetStartQuarter: 1,
             assetEndYear: 2010,
@@ -78,8 +79,8 @@ const StockInfo = React.createClass({
             managementRec: true,
             managementPay: true,
         }
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         api(`/api/stock/querySimple/${this.props.item.id}`).then(result => {
             if (result) {
                 this._parse = result
@@ -100,8 +101,8 @@ const StockInfo = React.createClass({
                 this.props.addalert('empty stock parse!!!')
             }
         }).catch(err => this.props.addalert(err))
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._asset) {
             this._asset.destroy()
         }
@@ -123,8 +124,8 @@ const StockInfo = React.createClass({
         if (this._safety) {
             this._safety.destroy()
         }
-    },
-    _caculateDate: function(year, quarter, is_start=false) {
+    }
+    _caculateDate = (year, quarter, is_start=false) => {
         quarter = quarter ? quarter : is_start ? this._parse.earliestQuarter : this._parse.latestQuarter
         year = year ? year : is_start ? this._parse.earliestYear : this._parse.latestYear
         year = year > this._parse.latestYear ? this._parse.latestYear : year < this._parse.earliestYear ? this._parse.earliestYear : year
@@ -134,8 +135,8 @@ const StockInfo = React.createClass({
             year,
             quarter,
         }
-    },
-    _drawAsset: function(startYear=null, startQuarter=null, endYear=null, endQuarter=null) {
+    }
+    _drawAsset = (startYear=null, startQuarter=null, endYear=null, endQuarter=null) => {
         let assetStartDate = this._caculateDate(startYear, startQuarter)
         const assetEndDate = this._caculateDate(endYear, endQuarter)
         if (assetStartDate.year > assetEndDate.year) {
@@ -260,8 +261,8 @@ const StockInfo = React.createClass({
             assetEndYear: assetEndDate.year,
             assetEndQuarter: assetEndDate.quarter,
         }))
-    },
-    _drawSales: function(comprehensive, year=null, quarter=null) {
+    }
+    _drawSales = (comprehensive, year=null, quarter=null) => {
         let salesDate = this._caculateDate(year, quarter)
         let salesTotal = 0
         let labels = []
@@ -335,8 +336,8 @@ const StockInfo = React.createClass({
             salesYear: salesDate.year,
             salesQuarter: salesDate.quarter,
         }))
-    },
-    _drawCash: function(mode, accumulate, startYear=null, startQuarter=null, endYear=null, endQuarter=null) {
+    }
+    _drawCash = (mode, accumulate, startYear=null, startQuarter=null, endYear=null, endQuarter=null) => {
         const cashStartDate = this._caculateDate(startYear, startQuarter, true)
         let cashEndDate = this._caculateDate(endYear, endQuarter)
         if (cashStartDate.year > cashEndDate.year) {
@@ -520,8 +521,8 @@ const StockInfo = React.createClass({
             cashEndQuarter: cashEndDate.quarter,
             cashMode: mode,
         }))
-    },
-    _drawSafety: function(mode, startYear=null, startQuarter=null, endYear=null, endQuarter=null) {
+    }
+    _drawSafety = (mode, startYear=null, startQuarter=null, endYear=null, endQuarter=null) => {
         const safetyStartDate = this._caculateDate(startYear, startQuarter, true)
         let safetyEndDate = this._caculateDate(endYear, endQuarter)
         if (safetyStartDate.year > safetyEndDate.year) {
@@ -596,8 +597,8 @@ const StockInfo = React.createClass({
             safetyEndYear: safetyEndDate.year,
             safetyEndQuarter: safetyEndDate.quarter,
         }))
-    },
-    _drawProfit: function(mode, startYear=null, startQuarter=null, endYear=null, endQuarter=null) {
+    }
+    _drawProfit = (mode, startYear=null, startQuarter=null, endYear=null, endQuarter=null) => {
         const profitStartDate = this._caculateDate(startYear, startQuarter, true)
         let profitEndDate = this._caculateDate(endYear, endQuarter)
         if (profitStartDate.year > profitEndDate.year) {
@@ -832,8 +833,8 @@ const StockInfo = React.createClass({
             profitEndYear: profitEndDate.year,
             profitEndQuarter: profitEndDate.quarter,
         }))
-    },
-    _drawManagement: function(mode, revenue, profit, cash, inventories, receivable, payable, startYear=null, startQuarter=null, endYear=null, endQuarter=null) {
+    }
+    _drawManagement = (mode, revenue, profit, cash, inventories, receivable, payable, startYear=null, startQuarter=null, endYear=null, endQuarter=null) => {
         const managementStartDate = this._caculateDate(startYear, startQuarter, true)
         let managementEndDate = this._caculateDate(endYear, endQuarter)
         if (managementStartDate.year > managementEndDate.year) {
@@ -1105,11 +1106,11 @@ const StockInfo = React.createClass({
             managementEndYear: managementEndDate.year,
             managementEndQuarter: managementEndDate.quarter,
         }))
-    },
-    _handleSelect: function(e, target) {
+    }
+    _handleSelect = (e, target) => {
         this.setState(Object.assign({}, this.state, {[target]: Number(e.target.value)}))
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         let data = {}
         if (this._salesCom !== null) {
             data['salesCom'] = this._salesCom.checked
@@ -1136,8 +1137,8 @@ const StockInfo = React.createClass({
             data['managementPay'] = this._managementPay.checked
         }
         this.setState(Object.assign({}, this.state, data))
-    },
-    render: function() {
+    }
+    render() {
         return (
             <section style={{paddingTop: '50px', overflowX: 'hidden'}} id="stock-info">
                 <section className="panel panel-default" style={{marginBottom: '0px'}}>
@@ -1489,6 +1490,6 @@ const StockInfo = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default StockInfo

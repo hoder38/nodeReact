@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf } from '../actions'
-import StockTotal from '../components/StockTotal'
+import { alertPush, sendGlbCf } from '../actions/index.js'
+import StockTotal from '../components/StockTotal.js'
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),

@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { sendGlbIn, itemPush } from '../actions'
-import TopSection from '../components/TopSection'
+import { sendGlbIn, itemPush } from '../actions/index.js'
+import TopSection from '../components/TopSection.js'
 
 const mapStateToProps = state => ({
     sortName: state.itemDataHandle.item.sortName,

@@ -1,4 +1,4 @@
-import { arrayObject } from '../utility'
+import { arrayObject } from '../utility.js'
 
 const initialState = new Map()
 

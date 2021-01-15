@@ -1,7 +1,7 @@
 import React from 'react'
-import { FILE_ZINDEX } from '../constants'
-import ReFileAdd from '../containers/ReFileAdd'
-import ReFileFeedback from '../containers/ReFileFeedback'
+import { FILE_ZINDEX } from '../constants.js'
+import ReFileAdd from '../containers/ReFileAdd.js'
+import ReFileFeedback from '../containers/ReFileFeedback.js'
 
 export default function FileManage() {
     return (

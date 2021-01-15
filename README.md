@@ -95,7 +95,7 @@ megadl
 avconv or ffmpeg
 
 cmd:
-sudo -i babel-node /home/pi/app/nodeReact/src/back/cmd/cmd.js
+sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/cmd.js
 sudo -i node /home/pi/release/nodeReact/build/back/cmd/cmd.js
 記得等db connect
 
@@ -136,3 +136,57 @@ sudo -i node /home/pi/release/nodeReact/build/back/cmd/tdameritrade.js
 
 遊戲: 請在pacjage.json加入     "redux-saga": ">=0.15.4",
 並uncommnet configureStore.js
+
+==============================================================
+x86
+
+需要安裝
+node & npm
+redis-server
+mongodb (到官網)
+youtubedl
+python3
+nginx
+git
+unrar
+p7zip-full
+megatools
+pdffk
+ffmpeg
+
+sudo npm install webpack webpack-cli -g
+
+在package.json 加"type": "module",
+
+node temp.js --async-stack-traces 追蹤異步錯誤
+
+sudo systemctl restart mongod
+
+修改bfx-api-node-rest/lib/rest2.js
+<   return notification
+---
+>   return notification.notifyInfo
+
+<   orderBook (symbol = 'tBTCUSD', prec = 'P0', cb) {
+<     return this._makePublicRequest(`/book/${symbol}/${prec}`, cb)
+---
+>   orderBook (symbol = 'tBTCUSD', prec = 'P0', len=25, cb) {
+>     return this._makePublicRequest(`/book/${symbol}/${prec}?len=${len}`, cb)
+
+>     period = null,
+<     let url = `/candles/trade:${timeframe}:${symbol}/${section}`
+<
+---
+>     let url = period ? `/candles/trade:${timeframe}:${symbol}:${period}/${section}`  : `/candles/trade:${timeframe}:${symbol}/${section}`
+
+<         const orders = _takeResNotify(res).notifyInfo || []
+<         return orders[0] || []
+---
+>       const orders = _takeResNotify(res) || []
+>         return orders || []
+
+修改ffmpeg/lib/ffmpeg.js
+utils.exec(['ffmpeg','-i',`"${fileInput}"`,'2>&1'], settings, function (error, stdout, stderr) {
+
+ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 記得設定crontab 去更新ssl
+(crontab 設定) sudo certbot renew --pre-hook "service nginx-dev stop" --post-hook "service nginx-dev restart; service nginx-dev restart" 記得改為線上，restart 2次才會正常

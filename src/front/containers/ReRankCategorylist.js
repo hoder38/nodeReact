@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { rbookmarkPush, rbookmarkPop, rdirPush, rdirPop, rankPush, alertPush } from '../actions'
-import Categorylist from '../components/Categorylist'
-import { RANK } from '../constants'
+import { rbookmarkPush, rbookmarkPop, rdirPush, rdirPop, rankPush, alertPush } from '../actions/index.js'
+import Categorylist from '../components/Categorylist.js'
+import { RANK } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: RANK,

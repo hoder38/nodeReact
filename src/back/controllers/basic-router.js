@@ -1,9 +1,9 @@
-import { STORAGEDB } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, WS_PORT } from '../config'
+import { STORAGEDB } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, WS_PORT } from '../config.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
-import { checkAdmin, checkLogin } from '../util/utility'
+import TagTool from '../models/tag-tool.js'
+import { checkAdmin, checkLogin } from '../util/utility.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);

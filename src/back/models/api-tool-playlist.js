@@ -1,19 +1,21 @@
-import { ENV_TYPE } from '../../../ver'
-import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config'
-import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION } from '../constants'
-import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, renameSync as FsRenameSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync } from 'fs'
-import { basename as PathBasename, join as PathJoin, dirname as PathDirname } from 'path'
+import { ENV_TYPE } from '../../../ver.js'
+import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config.js'
+import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION, __dirname } from '../constants.js'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync } = fsModule;
+import pathModule from 'path'
+const { basename: PathBasename, join: PathJoin, dirname: PathDirname } = pathModule
 import Child_process from 'child_process'
 import TorrentStream from 'torrent-stream'
 import Mkdirp from 'mkdirp'
-import OpenSubtitle from 'opensubtitles-api'
-import Mongo from '../models/mongo-tool'
-import Api from './api-tool'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import { handleError, HoError, getFileLocation, checkAdmin, SRT2VTT, deleteFolderRecursive, sortList } from '../util/utility'
-import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime'
-import { computeHash } from '../util/os-torrent-hash.js'
-import sendWs from '../util/sendWs'
+//import OpenSubtitle from 'opensubtitles-api'
+import Mongo from '../models/mongo-tool.js'
+import Api from './api-tool.js'
+import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import { handleError, HoError, getFileLocation, checkAdmin, SRT2VTT, deleteFolderRecursive, sortList } from '../util/utility.js'
+import { isVideo, isDoc, isZipbook, extType, extTag } from '../util/mime.js'
+//import computeHash from '../util/os-torrent-hash.js'
+import sendWs from '../util/sendWs.js'
 
 let torrent_pool = [];
 let zip_pool = [];
@@ -258,7 +260,7 @@ function handle_err(err, user, type, id=false) {
 const startMega = (user, url, filePath, data) => {
     const real = `${filePath}/real`;
     console.log(real);
-    return new Promise((resolve, reject) => Mkdirp(real, err => err ? megaComplete().then(() => reject(err)) : resolve())).then(() => {
+    return Mkdirp(real).then(() => {
         const cmdline = `megadl --no-progress --path "${real}" "${url}"`;
         console.log(cmdline);
         return new Promise((resolve, reject) => {
@@ -425,15 +427,15 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
     } else {
         const realPath = `${filePath}/real`;
         const regName = name.replace(/"/g, '\\"');
-        let cmdline = `${PathJoin(__dirname, '../util/myuzip.py')} ${filePath}_zip ${realPath}  "${regName}"${pwd ? ` '${pwd}'` : ''}`;
+        let cmdline = `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}_zip ${realPath}  "${regName}"${pwd ? ` '${pwd}'` : " '123'"}`;
         if (zip_type === 2) {
-            cmdline = `unrar x ${filePath}.1.rar ${realPath} "${regName}"${pwd ? ` -p${pwd}` : ''}`;
+            cmdline = `unrar x ${filePath}.1.rar ${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
         } else if (zip_type === 3) {
-            cmdline = `7za x ${filePath}_7z -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ''}`;
+            cmdline = `7za x ${filePath}_7z -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
         } else if (zip_type === 4) {
-            cmdline = `${PathJoin(__dirname, '../util/myuzip.py')} ${filePath}_zip_c ${realPath} "${regName}"${pwd ? ` '${pwd}'` : ''}`;
+            cmdline = `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}_zip_c ${realPath} "${regName}"${pwd ? ` '${pwd}'` : " '123'"}`;
         } else if (zip_type === 5) {
-            cmdline = `7za x ${filePath}_7z_c -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ''}`;
+            cmdline = `7za x ${filePath}_7z_c -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
         }
         console.log(cmdline);
         const realName = `${realPath}/${name}`;
@@ -575,14 +577,17 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                 fileStream.on('end', () => resolve(torrentComplete(true, file.path)));
             });
         } else {
-            if (isVideo(file.name)) {
+            /*if (isVideo(file.name)) {
                 new Promise((resolve, reject) => computeHash(tIndex, engine, (err, hash_ret) => err ? reject(err) : resolve(hash_ret))).then(hash_ret => {
                     console.log(hash_ret);
-                    const openSubtitles = new OpenSubtitle('hoder agent v0.1');
+                    const openSubtitles = new OpenSubtitle({
+                        useragent: 'hoder agent v0.1',
+                        ssl: true,
+                    });
                     return openSubtitles.search({
                         extensions: 'srt',
                         hash: hash_ret.movieHash,
-                        filesize: hash_ret.fileSize
+                        filesize: hash_ret.fileSize.toString(),
                     });
                 }).then(subtitles => {
                     console.log(subtitles);
@@ -628,7 +633,7 @@ const startTorrent = (user, id, owner, index, hash, engine) => Mongo('update', S
                     console.log('res body:', error.body);
                     handleError(error, 'Open srt');
                 });
-            }
+            }*/
             return new Promise((resolve, reject) => {
                 const fileStream = file.createReadStream();
                 fileStream.pipe(FsCreateWriteStream(bufferPath));

@@ -1,6 +1,6 @@
 import Express from 'express'
 import BitfinexTool from '../models/bitfinex-tool.js'
-import { checkLogin, handleError } from '../util/utility'
+import { checkLogin, handleError } from '../util/utility.js'
 
 const router = Express.Router();
 

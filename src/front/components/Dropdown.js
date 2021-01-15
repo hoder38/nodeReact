@@ -1,24 +1,26 @@
 import React from 'react'
-import DropdownMenu from './DropdownMenu'
-import { killEvent } from '../utility'
+import DropdownMenu from './DropdownMenu.js'
+import { killEvent } from '../utility.js'
 
-const Dropdown = React.createClass({
-    getInitialState: function() {
-        return {
+class Dropdown extends React.Component {
+    constructor(props) {
+        super(props);
+        this.wrapperRef = React.createRef();
+        this.state = {
             open: false,
-        }
-    },
-    _globalClick: function(listen) {
+        };
+    }
+    _globalClick = listen => {
         if (listen) {
-            document.addEventListener("click", this._closeDrop)
+            document.addEventListener("mouseup", this._closeDrop)
         } else {
-            document.removeEventListener("click", this._closeDrop)
+            document.removeEventListener("mouseup", this._closeDrop)
         }
-    },
-    _closeDrop: function(e) {
+    }
+    _closeDrop = e => {
         killEvent(e, () => this.setState({open: false}))
-    },
-    render: function() {
+    }
+    render() {
         let ul = this.state.open ? <DropdownMenu droplist={this.props.droplist} globalClick={this._globalClick} style={this.props.style} param={this.props.param} /> : ''
         const className = this.props.className ? this.props.className + ' dropdown' : 'dropdown'
         return (
@@ -28,6 +30,6 @@ const Dropdown = React.createClass({
             </this.props.headelement>
         )
     }
-})
+}
 
 export default Dropdown

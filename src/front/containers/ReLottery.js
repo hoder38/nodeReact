@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { sendGlbIn, alertPush, sendGlbCf, lotteryPush } from '../actions'
-import Lottery from '../components/Lottery'
+import { sendGlbIn, alertPush, sendGlbCf, lotteryPush } from '../actions/index.js'
+import Lottery from '../components/Lottery.js'
 
 const mapStateToProps = state => ({
     mainUrl: state.basicDataHandle.url,

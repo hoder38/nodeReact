@@ -1,5 +1,6 @@
-import { createInterface } from 'readline'
-import { generateAuthUrl, getToken } from '../models/tdameritrade-tool'
+import readline from 'readline'
+const { createInterface } = readline;
+import { generateAuthUrl, getToken } from '../models/tdameritrade-tool.js'
 
 const rl = createInterface({
     input: process.stdin,

@@ -1,14 +1,18 @@
-import { ENV_TYPE } from '../../../ver'
-import { API_LIMIT } from '../config'
-import { API_EXPIRE, MAX_RETRY } from '../constants'
+import { ENV_TYPE } from '../../../ver.js'
+import { API_LIMIT } from '../config.js'
+import { API_EXPIRE, MAX_RETRY } from '../constants.js'
 import Fetch from 'node-fetch'
-import { stringify as QStringify } from 'querystring'
-import { createWriteStream as FsCreateWriteStream, statSync as FsStatSync, unlink as FsUnlink, existsSync as FsExistsSync, renameSync as FsRenameSync } from 'fs'
-import { basename as PathBasename } from 'path'
-import { parse as UrlParse } from 'url'
+import querystring from 'querystring'
+const { stringify: QStringify } = querystring;
+import fsModule from 'fs'
+const { createWriteStream: FsCreateWriteStream, statSync: FsStatSync, unlink: FsUnlink, existsSync: FsExistsSync, renameSync: FsRenameSync } = fsModule;
+import pathModule from 'path'
+const { basename: PathBasename } = pathModule;
+import urlModule from 'url'
+const { parse: UrlParse } = urlModule;
 import utf8 from 'utf8';
-import { handleError, HoError, big5Encode } from '../util/utility'
-import sendWs from '../util/sendWs'
+import { handleError, HoError, big5Encode, bufferToString } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 let api_ing = 0;
 let api_pool = [];
@@ -142,12 +146,12 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 dest.on('finish', () => resolve());
                 dest.on('error', err => reject(err));
             }).then(() => {
-                if (is_check && (!res.headers['content-length'] || Number(res.headers['content-length']) !== FsStatSync(filePath)['size'])) {
+                FsRenameSync(temp, filePath);
+                if (is_check && (!res.headers.get('content-length') || Number(res.headers.get('content-length')) !== FsStatSync(filePath)['size'])) {
                     return handleError(new HoError('incomplete download'), errHandle);
                 }
-                FsRenameSync(temp, filePath);
                 if (rest) {
-                    const filename = res.headers['content-disposition'] ? res.headers['content-disposition'].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : res.headers['_headers']['content-disposition'] ? res.headers['_headers']['content-disposition'][0].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : null;
+                    const filename = res.headers.get('content-disposition') ? res.headers.get('content-disposition').match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : res.headers.get('_headers') && res.headers.get('_headers')['content-disposition'] ? res.headers.get('_headers')['content-disposition'][0].match(/^attachment; filename=[\'\"]?(.*?)[\'\"]?$/) : null;
                     const pathname = UrlParse(url).pathname;
                     return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => rest([pathname, filename ? filename[1] : PathBasename(pathname)])).catch(err => errHandle(err));
                     }
@@ -159,7 +163,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 const dest = FsCreateWriteStream(temp);
                 res.body.pipe(dest);
                 dest.on('finish', () => resolve());
-            })).then(() => FsRenameSync(temp, filePath)) : res.text();
+            })).then(() => FsRenameSync(temp, filePath)) : res.buffer().then(buffer => bufferToString(buffer));
         }
     }).catch(err => {
         if (err.code === 'HPE_INVALID_CONSTANT') {

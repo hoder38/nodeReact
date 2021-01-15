@@ -1,22 +1,25 @@
 import React from 'react'
-import Tooltip from './Tooltip'
-import Dropdown from './Dropdown'
-import { getItemList, resetItemList, isValidString, api, killEvent } from '../utility'
-import { STORAGE } from '../constants'
+import Tooltip from './Tooltip.js'
+import Dropdown from './Dropdown.js'
+import { getItemList, resetItemList, isValidString, api, killEvent } from '../utility.js'
+import { STORAGE } from '../constants.js'
 
 let key = 0
 
-const ItemPath = React.createClass({
-    componentWillMount: function() {
+class ItemPath extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    componentDidMount() {
         this.props.globalinput(0, 'Search Tag...', (name, exact) => (this.props.pathLength > 0 && !name) ? Promise.reject('') : getItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set, 0, '', false, (name ? name : null), 0, exact, this.props.multi, true))
-    },
-    _resetPath: function() {
+    }
+    _resetPath = () => {
         resetItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set).catch(err => this.props.addalert(err))
-    },
-    _gotoPath: function(name, index, exact) {
+    }
+    _gotoPath = (name, index, exact) => {
         getItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set, 0, '', false, name, index, exact).catch(err => this.props.addalert(err))
-    },
-    _addBookmark: function(name) {
+    }
+    _addBookmark = name => {
         if (this.props.current.length === 0) {
             return Promise.reject('Empty parent list!!!')
         }
@@ -35,8 +38,8 @@ const ItemPath = React.createClass({
                 }
             }
         })
-    },
-    render: function() {
+    }
+    render() {
         let bookmarkList = [
             {
                 title: 'new...',
@@ -102,6 +105,6 @@ const ItemPath = React.createClass({
             </ol>
         )
     }
-})
+}
 
 export default ItemPath

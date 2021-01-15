@@ -1,5 +1,5 @@
-import { ENV_TYPE, SESS_PWD } from '../../../ver'
-import { SESS_IP, SESS_PORT } from '../config'
+import { ENV_TYPE, SESS_PWD } from '../../../ver.js'
+import { SESS_IP, SESS_PORT } from '../config.js'
 
 import Redis from 'redis'
 

@@ -1,4 +1,4 @@
-import { SET_UPLOAD } from '../constants'
+import { SET_UPLOAD } from '../constants.js'
 
 const initialState = 0
 

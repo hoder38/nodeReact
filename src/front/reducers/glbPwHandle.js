@@ -1,4 +1,4 @@
-import { SEND_GLB_PW, CLOSE_GLB_PW } from '../constants'
+import { SEND_GLB_PW, CLOSE_GLB_PW } from '../constants.js'
 
 const initialState = []
 

@@ -1,10 +1,10 @@
 import React from 'react'
-import { RIGHT, TOP_SECTION_ZINDEX } from '../constants'
-import ReCategorylist from '../containers/ReCategorylist'
-import ReItemlist from '../containers/ReItemlist'
-import ReItemInput from '../containers/ReItemInput'
-import ReItemPath from '../containers/ReItemPath'
-import ReItemHead from '../containers/ReItemHead'
+import { RIGHT, TOP_SECTION_ZINDEX } from '../constants.js'
+import ReCategorylist from '../containers/ReCategorylist.js'
+import ReItemlist from '../containers/ReItemlist.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import ReItemPath from '../containers/ReItemPath.js'
+import ReItemHead from '../containers/ReItemHead.js'
 
 export default function Storage() {
     return (

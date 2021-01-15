@@ -1,24 +1,25 @@
 import React from 'react'
-import { BLOCK_ZINDEX, AUTH_TIME } from '../constants'
-import UserInput from './UserInput'
-import { killEvent } from '../utility'
+import { BLOCK_ZINDEX, AUTH_TIME } from '../constants.js'
+import UserInput from './UserInput.js'
+import { killEvent } from '../utility.js'
 
 let global_password = {}
 
 let auth_timer = {}
 
-const GlobalPassword = React.createClass({
-    getInitialState: function() {
+class GlobalPassword extends React.Component {
+    constructor(props) {
+        super(props);
         if (this.props.delay && !global_password[this.props.delay]) {
             global_password[this.props.delay] = null
         }
         this._input = new UserInput.Input(['userPW'], this._handleSubmit, this._handleChange)
-        return this._input.initValue()
-    },
-    componentDidMount: function() {
+        this.state = this._input.initValue()
+    }
+    componentDidMount() {
         this._input.initFocus()
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         Promise.resolve(this.props.callback(this.state.userPW)).then(() => {
             if (this.props.delay) {
                 global_password[this.props.delay] = 'goodboy'
@@ -34,11 +35,11 @@ const GlobalPassword = React.createClass({
             }
             this.setState(this._input.initValue())
         })
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(this._input.getValue())
-    },
-    render: function() {
+    }
+    render() {
         if (!this.props.delay || global_password[this.props.delay] === null) {
             return (
                 <section style={{position: 'fixed', zIndex: BLOCK_ZINDEX, top: '0px', right: '0px', width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.3)'}}>
@@ -74,6 +75,6 @@ const GlobalPassword = React.createClass({
             return null
         }
     }
-})
+}
 
 export default GlobalPassword

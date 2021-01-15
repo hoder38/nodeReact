@@ -1,9 +1,9 @@
-import { FITNESSDB } from '../constants'
+import { FITNESSDB } from '../constants.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
+import TagTool from '../models/tag-tool.js'
 import FitnessTool from '../models/fitness-tool.js'
-import { checkLogin, handleError, getFitnessItem, checkAdmin, HoError } from '../util/utility'
-import sendWs from '../util/sendWs'
+import { checkLogin, handleError, getFitnessItem, checkAdmin, HoError } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const FitnessTagTool = TagTool(FITNESSDB);

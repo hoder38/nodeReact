@@ -1,7 +1,7 @@
 import Express from 'express'
-import Lottery from '../models/lottery-tool'
-import { checkLogin, isValidString, handleError, HoError } from '../util/utility'
-import sendWs from '../util/sendWs'
+import Lottery from '../models/lottery-tool.js'
+import { checkLogin, isValidString, handleError, HoError } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 

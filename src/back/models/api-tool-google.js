@@ -1,19 +1,22 @@
-import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE, KINDLE_LIMIT } from '../constants'
-import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver'
-import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config'
-import googleapis from 'googleapis'
+import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE, KINDLE_LIMIT, __dirname } from '../constants.js'
+import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver.js'
+import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config.js'
+import googleapisModule from 'googleapis'
+const { google: googleapis } = googleapisModule;
 import Fetch from 'node-fetch'
 import Youtubedl from 'youtube-dl'
-import { join as PathJoin } from 'path'
+import pathModule from 'path'
+const { join: PathJoin } = pathModule;
 import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
-import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, unlink as FsUnlink, renameSync as FsRenameSync, createWriteStream as FsCreateWriteStream, statSync as FsStatSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, writeFile as FsWriteFile } from 'fs'
-import Mongo from '../models/mongo-tool'
-import MediaHandleTool from '../models/mediaHandle-tool'
-import External from '../models/external-tool'
-import { handleError, HoError, deleteFolderRecursive, SRT2VTT, isValidString } from '../util/utility'
-import { mediaMIME, isSub, isKindle } from '../util/mime'
-import sendWs from '../util/sendWs'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: FsUnlink, renameSync: FsRenameSync, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, writeFile: FsWriteFile } = fsModule
+import Mongo from '../models/mongo-tool.js'
+import MediaHandleTool from '../models/mediaHandle-tool.js'
+import External from '../models/external-tool.js'
+import { handleError, HoError, deleteFolderRecursive, SRT2VTT, isValidString } from '../util/utility.js'
+import { mediaMIME, isSub, isKindle } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const OAuth2 = googleapis.auth.OAuth2;
 const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
@@ -285,7 +288,7 @@ function sendName(data) {
                 'MIME-Version: 1.0\r\n',
                 'From: me\r\n',
                 `To: ${data['mail']}\r\n`,
-                `Subject: =?utf-8?B?${new Buffer(subject).toString('base64')}?=\r\n\r\n`,
+                `Subject: =?utf-8?B?${Buffer.from(subject).toString('base64')}?=\r\n\r\n`,
                 '--foo_bar_baz\r\n',
                 'Content-Type: text/plain; charset="UTF-8"\r\n',
                 'MIME-Version: 1.0\r\n',
@@ -465,7 +468,7 @@ function upload(data) {
     }).files.insert(param, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
         console.log(metadata);
         if (data['rest']) {
-            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](metadata)).catch(err => data['errhandle'](err));
+            return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](metadata.data)).catch(err => data['errhandle'](err));
         }
     }).catch(err => {
         console.log(index);
@@ -497,8 +500,8 @@ function list(data) {
         q: `'${data['folderId']}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'${find_name}`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
     }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => {
-        if (metadata && metadata.items) {
-            return metadata.items;
+        if (metadata && metadata.data && metadata.data.items) {
+            return metadata.data.items;
         } else {
             console.log('drive empty');
             console.log(metadata);
@@ -523,7 +526,7 @@ function listFile(data) {
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), OATH_WAITING * 1000)) : handleError(err));
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.data.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), OATH_WAITING * 1000)) : handleError(err));
     return proc();
 }
 
@@ -538,7 +541,7 @@ function create(data) {
         title: data['name'],
         mimeType: 'application/vnd.google-apps.folder',
         parents: [{id: data['parent']}],
-    }}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
+    }}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data)));
 }
 
 function download(data) {
@@ -554,13 +557,17 @@ function download(data) {
     }}).then(res => checkTmp().then(() => new Promise((resolve, reject) => {
         const dest = FsCreateWriteStream(temp);
         res.body.pipe(dest);
-        dest.on('finish', () => (res.headers['content-length'] && Number(res.headers['content-length']) !== FsStatSync(data['filePath'])['size']) ? handleError(new HoError('incomplete download')) : resolve()).on('error', err => reject(err));
-    }))).then(() => {
+        dest.on('finish', () => resolve());
+        dest.on('error', err => reject(err));
+    })).then(() => {
         FsRenameSync(temp, data['filePath']);
+        if (res.headers.get('content-length') && Number(res.headers.get('content-length')) !== FsStatSync(data['filePath'])['size']) {
+            return handleError(new HoError('incomplete download'));
+        }
         if (data['rest']) {
             return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest']()).catch(err => data['errhandle'](err));
         }
-    }).catch(err => {
+    })).catch(err => {
         console.log(index);
         handleError(err, 'Google Fetch');
         if (++index > MAX_RETRY) {
@@ -589,7 +596,7 @@ function getFile(data) {
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
-    }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
+    }).files.get({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data ? metadata.data : metadata)));
 }
 
 function copyFile(data) {
@@ -599,7 +606,7 @@ function copyFile(data) {
     return new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
-    }).files.copy({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata)));
+    }).files.copy({fileId: data['fileId']}, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata.data ? metadata.data : metadata)));
 }
 
 function moveParent(data) {
@@ -684,7 +691,7 @@ function downloadPresent(data) {
     }).then(() => {
         const exportlink = data['exportlink'].replace('=pdf', '=svg&pageid=p');
         const dir = `${data['filePath']}_present`;
-        const presentDir = () => FsExistsSync(dir) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(dir, err => err ? reject(err) : resolve()));
+        const presentDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
         const recur_present = () => new Promise((resolve, reject) => Child_process.exec(`grep -o "12,\\\"p[0-9][0-9]*\\\",${number},0" ${present_html}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
             console.log(output);
             number++;
@@ -723,8 +730,8 @@ function downloadDoc(data) {
             return handleError(new HoError('cannot find zip'));
         }
         const dir = `${data['filePath']}_doc`;
-        const docDir = () => FsExistsSync(dir) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(dir, err => err ? reject(err) : resolve()));
-        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, '../util/myuzip.py')} ${zip} ${dir}`, (err, output) => err ? reject(err) : resolve(output)))).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(() => {
+        const docDir = () => FsExistsSync(dir) ? Promise.resolve() : Mkdirp(dir);
+        return docDir().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000))).then(() => new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/myuzip.py')} ${zip} ${dir}`, (err, output) => err ? reject(err) : resolve(output)))).then(output => new Promise((resolve, reject) => FsUnlink(zip, err => err ? reject(err) : resolve()))).then(() => {
             let doc_index = 1;
             if(FsExistsSync(dir)) {
                 FsReaddirSync(dir).forEach((file,index) => {
@@ -796,7 +803,7 @@ export function googleBackup(user, id, name, filePath, tags, recycle, append='')
 export function googleDownloadSubtitle(url, filePath) {
     const sub_location = `${filePath}_sub/youtube`;
     console.log(sub_location);
-    const mkfolder = () => FsExistsSync(sub_location) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(sub_location, err => err ? reject(err) : resolve()));
+    const mkfolder = () => FsExistsSync(sub_location) ? Promise.resolve() : Mkdirp(sub_location);
     return mkfolder().then(() => new Promise((resolve, reject) => Youtubedl.getSubs(url, {
             auto: true,
             all: false,

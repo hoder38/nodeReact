@@ -1,16 +1,16 @@
 import { combineReducers } from 'redux'
-import { routerReducer } from 'react-router-redux'
-import { FEEDBACK_POP, FEEDBACK_PUSH, USER_POP, USER_PUSH, ITEM_PUSH, ITEM_POP, SET_ITEM, SET_DIRS, DIR_POP, DIR_PUSH, BOOKMARK_POP, BOOKMARK_PUSH, PASS_PUSH, PASS_POP, SET_PASS, SET_PDIRS, PDIR_PUSH, PDIR_POP, PBOOKMARK_POP, PBOOKMARK_PUSH, STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH, RANK_PUSH, RANK_POP, SET_RANK, SET_RDIRS, RDIR_PUSH, RDIR_POP, RBOOKMARK_POP, RBOOKMARK_PUSH, LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY, BITFINEX_PUSH, BITFINEX_POP, SET_BITFINEX } from '../constants'
-import alertHandle from './alertHandle'
-import basicDataHandle from './basicDataHandle'
-import uploadDataHandle from './uploadDataHandle'
-import simpleDataHandle from './simpleDataHandle'
-import bookmarkDataHandle from './bookmarkDataHandle'
-import dirDataHandle from './dirDataHandle'
-import complexDataHandle from './complexDataHandle'
-import glbPwHandle from './glbPwHandle'
-import glbCfHandle from './glbCfHandle'
-import glbInHandle from './glbInHandle'
+import { connectRouter } from 'connected-react-router'
+import { FEEDBACK_POP, FEEDBACK_PUSH, USER_POP, USER_PUSH, ITEM_PUSH, ITEM_POP, SET_ITEM, SET_DIRS, DIR_POP, DIR_PUSH, BOOKMARK_POP, BOOKMARK_PUSH, PASS_PUSH, PASS_POP, SET_PASS, SET_PDIRS, PDIR_PUSH, PDIR_POP, PBOOKMARK_POP, PBOOKMARK_PUSH, STOCK_PUSH, STOCK_POP, SET_STOCK, SET_SDIRS, SDIR_PUSH, SDIR_POP, SBOOKMARK_POP, SBOOKMARK_PUSH/*, FITNESS_PUSH, FITNESS_POP, SET_FITNESS, SET_FDIRS, FDIR_PUSH, FDIR_POP, FBOOKMARK_POP, FBOOKMARK_PUSH, RANK_PUSH, RANK_POP, SET_RANK, SET_RDIRS, RDIR_PUSH, RDIR_POP, RBOOKMARK_POP, RBOOKMARK_PUSH, LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY*/, BITFINEX_PUSH, BITFINEX_POP, SET_BITFINEX } from '../constants.js'
+import alertHandle from './alertHandle.js'
+import basicDataHandle from './basicDataHandle.js'
+import uploadDataHandle from './uploadDataHandle.js'
+import simpleDataHandle from './simpleDataHandle.js'
+import bookmarkDataHandle from './bookmarkDataHandle.js'
+import dirDataHandle from './dirDataHandle.js'
+import complexDataHandle from './complexDataHandle.js'
+import glbPwHandle from './glbPwHandle.js'
+import glbCfHandle from './glbCfHandle.js'
+import glbInHandle from './glbInHandle.js'
 
 const feedbackDataHandle = simpleDataHandle(FEEDBACK_PUSH, FEEDBACK_POP)
 const userDataHandle = simpleDataHandle(USER_PUSH, USER_POP)
@@ -20,7 +20,7 @@ const passDataHandle = complexDataHandle(PASS_PUSH, PASS_POP, SET_PASS)
 const stockDataHandle = complexDataHandle(STOCK_PUSH, STOCK_POP, SET_STOCK)
 //const fitnessDataHandle = complexDataHandle(FITNESS_PUSH, FITNESS_POP, SET_FITNESS)
 //const rankDataHandle = complexDataHandle(RANK_PUSH, RANK_POP, SET_RANK)
-const lotteryDataHandle = complexDataHandle(LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY)
+//const lotteryDataHandle = complexDataHandle(LOTTERY_PUSH, LOTTERY_POP, SET_LOTTERY)
 const bitfinexDataHandle = complexDataHandle(BITFINEX_PUSH, BITFINEX_POP, SET_BITFINEX)
 
 const idirDataHandle = dirDataHandle(DIR_PUSH, DIR_POP, SET_DIRS)
@@ -35,8 +35,8 @@ const sbookmarkDataHandle = bookmarkDataHandle(SBOOKMARK_PUSH, SBOOKMARK_POP)
 //const fbookmarkDataHandle = bookmarkDataHandle(FBOOKMARK_PUSH, FBOOKMARK_POP)
 //const rbookmarkDataHandle = bookmarkDataHandle(RBOOKMARK_PUSH, RBOOKMARK_POP)
 
-const ANoMoPi = combineReducers({
-    routing: routerReducer,
+const ANoMoPi = history => combineReducers({
+    router: connectRouter(history),
     alertHandle,
     basicDataHandle,
     uploadDataHandle,
@@ -57,7 +57,7 @@ const ANoMoPi = combineReducers({
     stockDataHandle,
     //fitnessDataHandle,
     //rankDataHandle,
-    lotteryDataHandle,
+    //lotteryDataHandle,
     bitfinexDataHandle,
     glbPwHandle,
     glbCfHandle,

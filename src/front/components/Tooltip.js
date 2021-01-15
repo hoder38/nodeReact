@@ -1,32 +1,33 @@
 import React from 'react'
 import { findDOMNode } from 'react-dom'
 
-const Tooltip = React.createClass({
-    getInitialState: function() {
+class Tooltip extends React.Component {
+    constructor(props) {
+        super(props);
         this._showed = false
         this._show = {visibility: 'hidden', whiteSpace: 'nowrap'}
         this._self = null
         this._target = null
-        return {show: false}
-    },
-    componentDidMount: function() {
+        this.state = {show: false}
+    }
+    componentDidMount() {
         this._self = findDOMNode(this)
         this._target = this._self.parentNode
         this._target.addEventListener('mouseenter', this._showTooltip)
         this._target.addEventListener('mouseleave', this._hideTooltip)
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this._target.removeEventListener('mouseenter', this._showTooltip)
         this._target.removeEventListener('mouseleave', this._hideTooltip)
-    },
-    _showTooltip: function() {
+    }
+    _showTooltip = () => {
         this.setState({show: true})
-    },
-    _hideTooltip: function() {
+    }
+    _hideTooltip = () => {
         this._showed = false
         this.setState({show: false})
-    },
-    render: function() {
+    }
+    render() {
         if (!this._showed || !this.state.show) {
             if (this.state.show) {
                 this._showed = true
@@ -72,6 +73,6 @@ const Tooltip = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Tooltip

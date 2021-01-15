@@ -1,9 +1,9 @@
-import { ENV_TYPE } from '../../../ver'
-import { HINT } from '../config'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants'
-import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility'
-import Mongo, { objectID } from '../models/mongo-tool'
-import { getOptionTag } from '../util/mime'
+import { ENV_TYPE } from '../../../ver.js'
+import { HINT } from '../config.js'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
+import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import { getOptionTag } from '../util/mime.js'
 
 export default function process(collection) {
     let getQuerySql = null;
@@ -54,8 +54,9 @@ export default function process(collection) {
     };
     const getLatest = bookmark => Mongo('find', `${collection}User`, {_id: objectID(bookmark)}, {limit: 1}).then(items => {
         if (items.length > 0 && items[0].latest) {
-            const youtubeMatch = items[0].latest.toString().match(/^y_(.*)$/);
-            return youtubeMatch ? youtubeMatch[1] : items[0].latest;
+            //const youtubeMatch = items[0].latest.toString().match(/^y_(.*)$/);
+            //return youtubeMatch ? youtubeMatch[1] : items[0].latest;
+            return items[0].latest;
         } else {
             return false;
         }
@@ -109,7 +110,8 @@ export default function process(collection) {
                 parentList = tags.getArray(validTagName, exactly, validIndex);
             }
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
-            return sql ? Mongo('find', collection, sql.nosql, sql.select ? sql.select : {}, Object.assign({
+            return sql ? Mongo('find', collection, sql.nosql, Object.assign({
+                projection: sql.select ? sql.select : {},
                 limit: customLimit,
                 skip: page,
                 sort: [[
@@ -146,7 +148,8 @@ export default function process(collection) {
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
             if (sql) {
                 sql.nosql['_id'] = id;
-                return Mongo('find', collection, sql.nosql, sql.select ? sql.select : {}, {
+                return Mongo('find', collection, sql.nosql, {
+                    projection: sql.select ? sql.select : {},
                     limit: 1,
                     hint: {_id: 1},
                 }).then(items => {
@@ -166,7 +169,8 @@ export default function process(collection) {
         resetQuery: function(sortName, sortType, user, session) {
             const parentList = this.searchTags(session).resetArray();
             const sql = getQuerySql(user, parentList.cur, parentList.exactly);
-            return sql ? Mongo('find', collection, sql.nosql, sql.select ? sql.select : {}, Object.assign({
+            return sql ? Mongo('find', collection, sql.nosql, Object.assign({
+                projection: sql.select ? sql.select : {},
                 limit: QUERY_LIMIT,
                 sort: [[
                     getSortName(sortName),
@@ -195,7 +199,7 @@ export default function process(collection) {
                 parentList: parentList,
             };
         },
-        getYoutubeQuery: function(search_arr, sortName, pageToken) {
+        /*getYoutubeQuery: function(search_arr, sortName, pageToken) {
             let query = {
                 type: 0,
                 maxResults: QUERY_LIMIT,
@@ -252,7 +256,7 @@ export default function process(collection) {
                 }
             }
             return query;
-        },
+        },*/
         getYifyQuery: function(search_arr, sortName, page) {
             let search = false;
             let genre = null;
@@ -534,11 +538,12 @@ export default function process(collection) {
                 exactly_arr = [true, false];
             }
             const sql = getQuerySql(user, q_path, exactly_arr ? exactly_arr : q_path.map(q => false));
-            return Mongo('find', collection, sql.nosql, {
-                _id: 0,
-                tags: 1,
-                name: 1,
-            }, Object.assign({
+            return Mongo('find', collection, sql.nosql, Object.assign({
+                projection: {
+                    _id: 0,
+                    tags: 1,
+                    name: 1,
+                },
                 limit: RELATIVE_LIMIT,
                 sort: [[
                     getSortName('name'),
@@ -972,10 +977,7 @@ export default function process(collection) {
             if (!validId) {
                 return handleError(new HoError('bookmark is not vaild!!!'));
             }
-            return Mongo('remove', `${collection}User`, {
-                _id: validId,
-                $isolated: 1,
-            }).then(item => ({id: id}));
+            return Mongo('deleteMany', `${collection}User`, {_id: validId}).then(item => ({id: id}));
         },
         parentList: function() {
             return parent_arr;
@@ -1071,10 +1073,7 @@ export default function process(collection) {
             if (!id) {
                 return handleError(new HoError('parent is not vaild!!!'));
             }
-            return Mongo('remove', `${collection}Dir`, {
-                _id: id,
-                $isolated: 1,
-            }).then(parent => parent ? {id} : {apiOK: true});
+            return Mongo('deleteMany', `${collection}Dir`, {_id: id}).then(parent => parent ? {id} : {apiOK: true});
         },
         setLatest: function(latest, session, saveName=false) {
             const tags = this.searchTags(session);

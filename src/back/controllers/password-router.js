@@ -1,9 +1,9 @@
-import { PASSWORDDB } from '../constants'
+import { PASSWORDDB } from '../constants.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
+import TagTool from '../models/tag-tool.js'
 import PasswordTool from '../models/password-tool.js'
-import { checkLogin, handleError, getPasswordItem } from '../util/utility'
-import sendWs from '../util/sendWs'
+import { checkLogin, handleError, getPasswordItem } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const PasswordTagTool = TagTool(PASSWORDDB);

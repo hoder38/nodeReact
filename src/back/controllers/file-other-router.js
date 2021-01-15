@@ -1,21 +1,22 @@
-import { STORAGEDB, STATIC_PATH } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { NAS_TMP } from '../config'
+import { STORAGEDB, STATIC_PATH } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
+import { NAS_TMP } from '../config.js'
 import Express from 'express'
-import { existsSync as FsExistsSync, createReadStream as FsCreateReadStream, statSync as FsStatSync, createWriteStream as FsCreateWriteStream, unlink as FsUnlink, renameSync as FsRenameSync, writeFileSync as FsWriteFileSync } from 'fs'
-import { dirname as PathDirname } from 'path'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, statSync: FsStatSync, createWriteStream: FsCreateWriteStream, unlink: FsUnlink, renameSync: FsRenameSync, writeFileSync: FsWriteFileSync } = fsModule;
+import pathModule from 'path'
+const { dirname: PathDirname } = pathModule;
 import Mkdirp from 'mkdirp'
-import Avconv from 'avconv'
 import ReadTorrent from 'read-torrent'
-import Redis from '../models/redis-tool'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import Mongo, { objectID } from '../models/mongo-tool'
-import PlaylistApi from '../models/api-tool-playlist'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import Lottery from '../models/lottery-tool'
-import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility'
-import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub, isCSV } from '../util/mime'
-import sendWs from '../util/sendWs'
+import Redis from '../models/redis-tool.js'
+import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import PlaylistApi from '../models/api-tool-playlist.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import Lottery from '../models/lottery-tool.js'
+import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility.js'
+import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub, isCSV } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -461,7 +462,7 @@ router.post('/upload/file', function(req, res, next) {
         console.log(req.files);
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
-        const mkdir = folderPath => !FsExistsSync(folderPath) ? new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve())) : Promise.resolve();
+        const mkdir = folderPath => !FsExistsSync(folderPath) ? Mkdirp(folderPath) : Promise.resolve();
         mkdir(PathDirname(filePath)).then(() => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(req.files.file.path);
             stream.on('error', err => reject(err));
@@ -479,7 +480,7 @@ router.post('/upload/file', function(req, res, next) {
                 if (!shortTorrent) {
                     return handleError(new HoError('magnet create fail'));
                 }
-                return new Promise((resolve2, reject2) => FsUnlink(filePath, err => err ? reject2(err) : resolve2())).then(() => new Promise((resolve2, reject2) => Mkdirp(filePath, err => err ? reject2(err) : resolve2()))).then(() => Mongo('find', STORAGEDB, {magnet: {
+                return new Promise((resolve2, reject2) => FsUnlink(filePath, err => err ? reject2(err) : resolve2())).then(() => Mkdirp(filePath)).then(() => Mongo('find', STORAGEDB, {magnet: {
                     $regex: shortTorrent[0].match(/[^:]+$/)[0],
                     $options: 'i',
                 }}, {limit: 1})).then(items => {
@@ -535,85 +536,64 @@ router.post('/upload/file', function(req, res, next) {
                 untag: 1,
                 status: db_obj['magnet'] ? 9 : 0,
             }, name, '', 0).then(([mediaType, mediaTag, DBdata]) => {
-                const isPreview = () => (mediaType.type === 'video') ? new Promise((resolve, reject) => {
-                    let is_preview = true;
-                    Avconv(['-i', filePath]).once('exit', function(exitCode, signal, metadata2) {
-                        if (metadata2 && metadata2.input && metadata2.input.stream) {
-                            for (let m of metadata2.input.stream[0]) {
-                                console.log(m.type);
-                                console.log(m.codec);
-                                if (m.type === 'video' && m.codec !== 'h264') {
-                                    is_preview = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (is_preview) {
-                            DBdata['status'] = 3;
-                        }
-                        return resolve();
-                    });
-                }) : Promise.resolve();
-                return isPreview().then(() => {
-                    setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
-                    if (req.body.path) {
-                        const bodyPath = getJson(req.body.path);
-                        if (bodyPath === false) {
-                            return handleError(new HoError('json parse error!!!'));
-                        }
-                        if (Array.isArray(bodyPath) && bodyPath.length > 0) {
-                            bodyPath.forEach(p => setTag.add(normalize(p)));
-                        }
+                setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
+                if (req.body.path) {
+                    const bodyPath = getJson(req.body.path);
+                    if (bodyPath === false) {
+                        return handleError(new HoError('json parse error!!!'));
                     }
-                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
-                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
-                    let setArr = [];
-                    setTag.forEach(s => {
-                        const is_d = isDefaultTag(s);
-                        if (!is_d) {
-                            setArr.push(s);
-                        } else if (is_d.index === 0) {
-                            DBdata['adultonly'] = 1;
+                    if (Array.isArray(bodyPath) && bodyPath.length > 0) {
+                        bodyPath.forEach(p => setTag.add(normalize(p)));
+                    }
+                }
+                mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                let setArr = [];
+                setTag.forEach(s => {
+                    const is_d = isDefaultTag(s);
+                    if (!is_d) {
+                        setArr.push(s);
+                    } else if (is_d.index === 0) {
+                        DBdata['adultonly'] = 1;
+                    }
+                });
+                let optArr = [];
+                optTag.forEach(o => {
+                    if (!isDefaultTag(o) && !setArr.includes(o)) {
+                        optArr.push(o);
+                    }
+                });
+                return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                    tags: setArr,
+                    [req.user._id]: setArr,
+                }, db_obj)).then(item => {
+                    console.log(item);
+                    console.log('save end');
+                    sendWs({
+                        type: 'file',
+                        data: item[0]._id,
+                    }, item[0].adultonly);
+                    return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                        const reli = relative.length < 5 ? relative.length : 5;
+                        if (checkAdmin(2 ,req.user)) {
+                            (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
                         }
-                    });
-                    let optArr = [];
-                    optTag.forEach(o => {
-                        if (!isDefaultTag(o) && !setArr.includes(o)) {
-                            optArr.push(o);
-                        }
-                    });
-                    return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
-                        tags: setArr,
-                        [req.user._id]: setArr,
-                    }, db_obj)).then(item => {
-                        console.log(item);
-                        console.log('save end');
-                        sendWs({
-                            type: 'file',
-                            data: item[0]._id,
-                        }, item[0].adultonly);
-                        return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
-                            const reli = relative.length < 5 ? relative.length : 5;
-                            if (checkAdmin(2 ,req.user)) {
-                                (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
-                            }
-                            (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
-                            for (let i = 0; i < reli; i++) {
-                                const normal = normalize(relative[i]);
-                                if (!isDefaultTag(normal)) {
-                                    if (!setArr.includes(normal) && !optArr.includes(normal)) {
-                                        optArr.push(normal);
-                                    }
+                        (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                        for (let i = 0; i < reli; i++) {
+                            const normal = normalize(relative[i]);
+                            if (!isDefaultTag(normal)) {
+                                if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                    optArr.push(normal);
                                 }
                             }
-                            return MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]['_id'], req.user).then(() => res.json({
-                                id: item[0]._id,
-                                name: item[0].name,
-                                select: setArr,
-                                option: supplyTag(setArr, optArr),
-                                other: [],
-                            })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
-                        });
+                        }
+                        return MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]['_id'], req.user).then(() => res.json({
+                            id: item[0]._id,
+                            name: item[0].name,
+                            select: setArr,
+                            option: supplyTag(setArr, optArr),
+                            other: [],
+                        })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
                     });
                 });
             });
@@ -641,7 +621,7 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
         }));
         const saveSub = (filePath, id) => {
             const folderPath = PathDirname(filePath);
-            const mkFolder = filePath => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+            const mkFolder = filePath => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
             return mkFolder().then(() => {
                 if (FsExistsSync(`${filePath}.srt`)) {
                     FsRenameSync(`${filePath}.srt`, `${filePath}.srt1`);

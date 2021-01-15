@@ -1,48 +1,48 @@
 import React from 'react'
-import UserInput from './UserInput'
-import FileUploader from './FileUploader'
-import Tooltip from './Tooltip'
-import { killEvent, clearText } from '../utility'
+import UserInput from './UserInput.js'
+import FileUploader from './FileUploader.js'
+import Tooltip from './Tooltip.js'
+import { killEvent, clearText } from '../utility.js'
 
-const ItemInput = React.createClass({
-    getInitialState: function() {
+class ItemInput extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['input1', 'input2'], this._handleSubmit, this._handleChange)
-        return Object.assign({
+        this.state = Object.assign({
             exact: false,
             lang: 'ch',
             progress: 0,
             loading: false,
             showPwd: false,
         }, this._input.initValue())
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this.props.inputclose(-1)
-    },
-    componentWillReceiveProps: function(nextProps) {
-        if (nextProps.index !== this.props.index) {
-            this.setState(Object.assign({}, this.state, this._input.initValue({input1: nextProps.value}), {showPwd: false, loading: false}))
+    }
+    componentDidUpdate(prevProps) {
+        if (prevProps.index !== this.props.index) {
+            this.setState(Object.assign({}, this.state, this._input.initValue({input1: this.props.value}), {showPwd: false, loading: false}));
+        } else {
+            if (this.props.input === 3) {
+                this._input.initFocus()
+                this._input.ref.get('input1').selectionStart = 0
+            } else if (this.props.input !== 0 && this.props.input !== 4 && prevProps.index !== this.props.index) {
+                this._input.initFocus()
+            }
         }
-    },
-    componentDidUpdate: function(prevProps) {
-        if (this.props.input === 3) {
-            this._input.initFocus()
-            this._input.ref.get('input1').selectionStart = 0
-        } else if (this.props.input !== 0 && this.props.input !== 4 && prevProps.index !== this.props.index) {
-            this._input.initFocus()
-        }
-    },
-    _copyPassword: function(e) {
+    }
+    _copyPassword = e => {
         e.clipboardData.setData('text/plain', this.state.input1)
         e.preventDefault()
         e.stopPropagation()
         this.props.inputclose(this.props.input)
         this._input.allBlur()
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (this.props.index === -1 || this.props.input === 3 || this.props.input === 4 || this.state.loading) {
             return true
         }
-        this.setState(Object.assign({}, this.state,{loading: true}), () => {
+        this.setState(Object.assign({}, this.state, {loading: true}), () => {
             let input = this.props.input
             this.props.callback(this.state.input1, this.state.exact, this.state.input2).then(() => {
                 if (input !== 0) {
@@ -56,17 +56,17 @@ const ItemInput = React.createClass({
             this.setState(Object.assign({}, this.state, this._input.initValue()))
             this._input.allBlur()
         })
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _handleSelect: function(e) {
+    }
+    _handleSelect = e => {
         this.setState(Object.assign({}, this.state, {lang: e.target.value}))
-    },
-    _setUpload: function(progress) {
+    }
+    _setUpload = progress => {
         this.setState(Object.assign({}, this.state, {progress}))
-    },
-    render: function() {
+    }
+    render() {
         if (this.props.index === -1) {
             return null
         }
@@ -202,6 +202,6 @@ const ItemInput = React.createClass({
             </form>
         )
     }
-})
+}
 
 export default ItemInput

@@ -1,19 +1,20 @@
 import React from 'react'
-import UserInput from './UserInput'
-import { isValidString, api, killEvent, checkInput } from '../utility'
+import UserInput from './UserInput.js'
+import { isValidString, api, killEvent, checkInput } from '../utility.js'
 
-const UserInfo = React.createClass({
-    getInitialState: function() {
+class UserInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['name', 'auto', 'kindle', 'perm', 'desc', 'unDay', 'unHit', 'newPwd', 'conPwd'], this._handleSubmit, this._handleChange)
         const edit = this.props.user.newable ? true : false
-        return Object.assign({edit}, this._input.initValue(this.props.user))
-    },
-    componentDidUpdate: function(prevProps, prevState) {
+        this.state = Object.assign({edit}, this._input.initValue(this.props.user))
+    }
+    componentDidUpdate(prevProps, prevState) {
         if (this.state.edit && !prevState.edit) {
             this._input.initFocus()
         }
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         const set_obj = Object.assign({},
             checkInput('name', this.state, this.props.addalert, this.props.user.name, 'name'),
             checkInput('auto', this.state, this.props.addalert, this.props.user.auto, 'url'),
@@ -80,11 +81,11 @@ const UserInfo = React.createClass({
                 }, this._input.initValue(this.props.user)))
             }
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _delUser: function() {
+    }
+    _delUser = () => {
         this.props.sendglbcf(() => this.props.sendglbpw(userPW => {
             if (!isValidString(userPW, 'passwd')) {
                 this.props.addalert('User password not vaild!!!')
@@ -99,11 +100,11 @@ const UserInfo = React.createClass({
                 })
             }
         }), `Would you sure to delete USER: ${this.props.user.name} ?`)
-    },
-    _showCode: function() {
+    }
+    _showCode = () => {
         api('/api/user/verify').then(info => alert(info.verify)).catch(err => this.props.addalert(err));
-    },
-    render: function() {
+    }
+    render() {
         const editClick = () => {
             this.setState(Object.assign({
                 edit: !this.state.edit
@@ -257,6 +258,6 @@ const UserInfo = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default UserInfo

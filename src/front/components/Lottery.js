@@ -1,16 +1,17 @@
 import React from 'react'
-import { RIGHT, TOP_SECTION_ZINDEX, LOTTERY } from '../constants'
-import Categorylist from './Categorylist'
-import ReLotteryItemlist from '../containers/ReLotteryItemlist'
-import ReItemInput from '../containers/ReItemInput'
-import ItemHead from './ItemHead'
-import { api, isValidString, killEvent } from '../utility'
+import { RIGHT, TOP_SECTION_ZINDEX, LOTTERY } from '../constants.js'
+import Categorylist from './Categorylist.js'
+import ReLotteryItemlist from '../containers/ReLotteryItemlist.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import ItemHead from './ItemHead.js'
+import { api, isValidString, killEvent } from '../utility.js'
 
-const Lottery = React.createClass({
-    getInitialState: function() {
+class Lottery extends React.Component {
+    constructor(props) {
+        super(props);
         this._namelist = [];
         this._id = null;
-        return {
+        this.state = {
             name: false,
             user: {},
             reward: [],
@@ -19,8 +20,8 @@ const Lottery = React.createClass({
             rewardName: '',
             nameIndex: -1,
         }
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         api('/api/lottery/get').then(init => {
             if (init.name !== false) {
                 document.getElementById('root').addEventListener('lottery', this._ws);
@@ -37,12 +38,12 @@ const Lottery = React.createClass({
                 }));
             }
         }).catch(err => this.props.addalert(err));
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         document.getElementById('root').removeEventListener('lottery', this._ws);
         this.props.lotteryset([], null, null, null, 'name', 'asc')
-    },
-    _newLottery: function() {
+    }
+    _newLottery = () => {
         this.props.globalinput(1, 'New Lottery...', 'danger', (name, exact, type) => isValidString(name, 'name') ? Promise.resolve(this.props.globalinput(2, `${this.props.mainUrl}/upload/lottery/${name}/${(type === '0' || type === '1' || type === '2' || type === '3' || type === '4' || type === '5') ? type : '0'}`, 'danger', () => {
             api('/api/lottery/get').then(init => {
                 if (init.name === false) {
@@ -64,8 +65,8 @@ const Lottery = React.createClass({
             });
             return Promise.resolve(this.props.addalert('csv upload success'));
         }, true)) : Promise.reject('Lottery name is not vaild!!!'), null, '0:不可重複得獎, 1:可重複得獎, 2:不刪已得獎,3:不可重複得獎(匿名), 4:可重複得獎(匿名), 5:不刪已得獎(匿名)');
-    },
-    _ws: function(e) {
+    }
+    _ws = e => {
         if (this._id) {
             this._update(this._id);
         }
@@ -79,8 +80,8 @@ const Lottery = React.createClass({
                 this._update(this._id);
             }
         });
-    },
-    _nextName: function(all=false) {
+    }
+    _nextName = (all=false) => {
         if (this.state.nameIndex + 1 < this._namelist.length) {
             if (all) {
                 this.setState(Object.assign({}, this.state, {
@@ -97,8 +98,8 @@ const Lottery = React.createClass({
                 });
             }
         }
-    },
-    _update: function(id) {
+    }
+    _update = id => {
         this._id = null;
         api(`/api/lottery/single/${id}`).then(data => {
             this.props.lotteryset(data.item);
@@ -113,8 +114,8 @@ const Lottery = React.createClass({
                 },
             }));
         }).catch(err => this.props.addalert(err));
-    },
-    render: function() {
+    }
+    render() {
         const show = (this.state.name === false) ? '' : (this.state.nameIndex > -1) ? `現在是${this.state.name}，恭喜${this._namelist.slice(0, this.state.nameIndex + 1).join('、')}獲得${this.state.rewardName}！！！` : `現在是${this.state.name}`;
         const open = (this.state.nameIndex > -1) ? this._namelist[this.state.nameIndex] : 'The winner is ...';
         const content = this.state.name === false ? (
@@ -161,6 +162,6 @@ const Lottery = React.createClass({
         )
         return content
     }
-})
+}
 
 export default Lottery

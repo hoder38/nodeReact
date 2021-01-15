@@ -1,4 +1,4 @@
-import { ALERT_PUSH, ALERT_POP } from '../constants'
+import { ALERT_PUSH, ALERT_POP } from '../constants.js'
 
 const initialState = []
 

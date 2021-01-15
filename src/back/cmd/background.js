@@ -1,18 +1,18 @@
-import { ENV_TYPE } from '../../../ver'
-import { AUTO_UPLOAD, CHECK_MEDIA, UPDATE_EXTERNAL, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, PING_SERVER, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER } from '../config'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants'
-import Mongo from '../models/mongo-tool'
+import { ENV_TYPE } from '../../../ver.js'
+import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER } from '../config.js'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants.js'
+import Mongo from '../models/mongo-tool.js'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
-import MediaHandleTool from '../models/mediaHandle-tool'
-import { completeMimeTag } from '../models/tag-tool'
-import External from '../models/external-tool'
-import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool'
-import PlaylistApi from '../models/api-tool-playlist'
-import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google'
-import { usseTDInit, resetTD } from '../models/tdameritrade-tool'
-import { dbDump } from './cmd'
-import { handleError, completeZero } from '../util/utility'
-import sendWs from '../util/sendWs'
+import MediaHandleTool from '../models/mediaHandle-tool.js'
+import { completeMimeTag } from '../models/tag-tool.js'
+import External from '../models/external-tool.js'
+import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool.js'
+import PlaylistApi from '../models/api-tool-playlist.js'
+import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google.js'
+import { usseTDInit, resetTD } from '../models/tdameritrade-tool.js'
+import { dbDump } from './cmd.js'
+import { handleError, completeZero } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 let stock_batch_list = [];
 let stock_batch_list_2 = [];
@@ -72,7 +72,7 @@ export const checkMedia = () => {
     }
 }
 
-export const updateExternal = () => {
+/*export const updateExternal = () => {
     if (UPDATE_EXTERNAL(ENV_TYPE)) {
         const loopUpdateExternal = () => {
             console.log('loopUpdateExternal');
@@ -83,9 +83,9 @@ export const updateExternal = () => {
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 240000)).then(() => loopUpdateExternal());
     }
-}
+}*/
 
-const updateStockAnnual = (year, folderList, updateList, index, uIndex) => {
+/*const updateStockAnnual = (year, folderList, updateList, index, uIndex) => {
     console.log('updateAnnual');
     console.log(new Date());
     console.log(year);
@@ -102,7 +102,7 @@ const updateStockAnnual = (year, folderList, updateList, index, uIndex) => {
             }
         }
     });
-}
+}*/
 
 const updateStockList = (list, type) => {
     console.log('updateStockList');
@@ -137,7 +137,7 @@ export const updateStock = () => {
             }*/
             let use_stock_list = [];
             const sd = new Date();
-            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 2) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
+            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 14) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
                 let annualList = [];
                 const year = new Date().getFullYear();
                 items.forEach(i => {
@@ -177,7 +177,7 @@ export const updateStock = () => {
             }) : Promise.resolve();
             return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => loopUpdateStock());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => loopUpdateStock());
     }
 }
 

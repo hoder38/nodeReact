@@ -1,31 +1,32 @@
 import React from 'react'
-import { RIGHT, TOP_SECTION_ZINDEX } from '../constants'
-import ReItemInput from '../containers/ReItemInput'
-import ReStockCategorylist from '../containers/ReStockCategorylist'
-import ReStockItemHead from '../containers/ReStockItemHead'
-import ReStockItemPath from '../containers/ReStockItemPath'
-import ReStockItemlist from '../containers/ReStockItemlist'
-import ReStockInfo from '../containers/ReStockInfo'
-import ReStockTotal from '../containers/ReStockTotal'
-import { api } from '../utility'
+import { RIGHT, TOP_SECTION_ZINDEX } from '../constants.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import ReStockCategorylist from '../containers/ReStockCategorylist.js'
+import ReStockItemHead from '../containers/ReStockItemHead.js'
+import ReStockItemPath from '../containers/ReStockItemPath.js'
+import ReStockItemlist from '../containers/ReStockItemlist.js'
+import ReStockInfo from '../containers/ReStockInfo.js'
+import ReStockTotal from '../containers/ReStockTotal.js'
+import { api } from '../utility.js'
 
-const Stock = React.createClass({
-    getInitialState: function() {
-        return {
+class Stock extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
             item: null,
             open: false,
             open2: false,
         }
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         api('/api/parent/stock/list').then(result => this.props.sdirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/stock/add', {name: dir.name, tag: tag}).then(result => this.props.pushsdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)}))).catch(err => {
             this.props.addalert(err)
         })
-    },
-    _toggle:function() {
+    }
+    _toggle = () => {
         this.setState(Object.assign({}, this.state, {open2: !this.state.open2}))
-    },
-    render: function() {
+    }
+    render() {
         const stock = this.state.item && this.state.open ? <ReStockInfo item={this.state.item} /> : <ReStockItemlist setstock={item => this.setState({item, open: true, open2: this.state.open2})} />
         const path = this.state.item && this.state.open ? null : <ReStockItemPath />
         const head = this.state.item && this.state.open ? null : <ReStockItemHead />
@@ -42,6 +43,6 @@ const Stock = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Stock

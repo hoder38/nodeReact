@@ -1,27 +1,31 @@
 import React from 'react'
-import { isValidString } from '../utility'
-import ReAlertlist from '../containers/ReAlertlist'
-import { browserHistory } from 'react-router'
-import { doLogin, killEvent } from '../utility'
-import UserInput from './UserInput'
+import { ROOT_PAGE } from '../constants.js'
+import { isValidString } from '../utility.js'
+import ReAlertlist from '../containers/ReAlertlist.js'
+import { history } from '../configureStore.js'
+import { doLogin, killEvent, testLogin } from '../utility.js'
+import UserInput from './UserInput.js'
 
-const Login = React.createClass({
-    getInitialState: function() {
+class Login extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['username', 'password'], this._handleSubmit, this._handleChange, 'form-control input-lg')
-        return this._input.initValue()
-    },
-    componentDidMount: function() {
+        this.state = this._input.initValue()
+    }
+    componentDidMount() {
         this._input.initFocus()
-    },
-    _handleChange: function() {
+        testLogin().then(() => history.push(ROOT_PAGE)).catch(err => console.log(err))
+    }
+    _handleChange = () => {
         this.setState(this._input.getValue())
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (isValidString(this.state.username, 'name') && (isValidString(this.state.password, 'passwd') || isValidString(this.state.password, 'verify'))) {
             doLogin(this.state.username, this.state.password)
             .then(() => {
                 this.setState(this._input.initValue())
-                browserHistory.goBack()
+                console.log(history);
+                history.goBack()
             }).catch(err => {
                 this.props.addalert(err)
                 this.setState(this._input.initValue())
@@ -32,8 +36,8 @@ const Login = React.createClass({
             this.setState(this._input.initValue())
             this._input.initFocus()
         }
-    },
-    render: function() {
+    }
+    render() {
         return (
             <div>
                 <ReAlertlist />
@@ -69,6 +73,6 @@ const Login = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Login

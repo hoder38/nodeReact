@@ -1,9 +1,12 @@
 import React from 'react'
-import { killEvent, api } from '../utility'
-import Dropdown from './Dropdown'
+import { killEvent, api } from '../utility.js'
+import Dropdown from './Dropdown.js'
 
-const ItemLottery = React.createClass({
-    _select: function(id, name) {
+class ItemLottery extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    _select = (id, name) => {
         if (!this.props.owner) {
             return this.props.addalert('You are not the owner');
         }
@@ -11,8 +14,8 @@ const ItemLottery = React.createClass({
             return this.props.addalert('Prize has already opened!!!');
         }
         this.props.sendglbcf(() => api(`/api/lottery/select/${id}`).catch(err => this.props.addalert(err)), `Would you sure to open ${name}?`)
-    },
-    render: function() {
+    }
+    render() {
         const item = this.props.item;
         const dropList = item.utime ? item.tags.map((t, i) => ({title: t, onclick: () => {}, key: i})) : [{title: 'UNOPENED', onclick: () => {}, key: 0}];
         const fileType = (typeof this.props.item.utime === 'string') ? 'recycled' : '';
@@ -36,6 +39,6 @@ const ItemLottery = React.createClass({
             </tr>
         )
     }
-})
+}
 
 export default ItemLottery

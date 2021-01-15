@@ -1,18 +1,19 @@
-import { STORAGEDB } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { STREAM_LIMIT } from '../config'
+import { STORAGEDB } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
 import Express from 'express'
 import Child_process from 'child_process'
-import Avconv from 'avconv'
-import { basename as PathBasename, dirname as PathDirname } from 'path'
-import { existsSync as FsExistsSync, unlink as FsUnlink, createReadStream as FsCreateReadStream, createWriteStream as FsCreateWriteStream, statSync as FsStatSync } from 'fs'
-import Mongo, { objectID } from '../models/mongo-tool'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import PlaylistApi from '../models/api-tool-playlist'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility'
-import { extType, isVideo, supplyTag, addPost } from '../util/mime'
-import sendWs from '../util/sendWs'
+import pathModule from 'path'
+import Mkdirp from 'mkdirp'
+const { basename: PathBasename, dirname: PathDirname } = pathModule;
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync } = fsModule;
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import PlaylistApi from '../models/api-tool-playlist.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility.js'
+import { extType, isVideo, supplyTag, addPost } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -154,7 +155,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
         const oOID = objectID();
         const filePath = getFileLocation(req.user._id, oOID);
         const folderPath = PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         return mkfolder().then(() => new Promise((resolve, reject) => {
             const stream = FsCreateReadStream(origPath);
             stream.on('error', err => reject(err));
@@ -178,98 +179,67 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
                 untag: 1,
                 status: 0,
             }, name, '', 0).then(([mediaType, mediaTag, DBdata]) => {
-                const isPreview = () => (mediaType.type === 'video') ? new Promise((resolve, reject) => {
-                    let is_preview = true;
-                    Avconv(['-i', filePath]).once('exit', function(exitCode, signal, metadata2) {
-                        if (metadata2 && metadata2.input && metadata2.input.stream) {
-                            for (let m of metadata2.input.stream[0]) {
-                                console.log(m.type);
-                                console.log(m.codec);
-                                if (m.type === 'video' && m.codec !== 'h264') {
-                                    is_preview = false;
-                                    break;
-                                }
-                            }
+                let setTag = new Set();
+                let optTag = new Set();
+                setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
+                if (req.body.path) {
+                    req.body.path.forEach(p => setTag.add(normalize(p)));
+                }
+                if (items[0].tags) {
+                    items[0].tags.forEach(i => {
+                        if (i !== '壓縮檔' && i !== 'zip'&& i !== '播放列表' && i !== 'playlist') {
+                            setTag.add(normalize(i));
                         }
-                        if (is_preview) {
-                            DBdata['status'] = 3;
-                            if (mediaType.ext === 'mp4') {
-                                mediaType = false;
-                                if (FsExistsSync(origPath + '_s.jpg')) {
-                                    new Promise((resolve, reject) => {
-                                        const streamJpg = FsCreateReadStream(`${origPath}_s.jpg`);
-                                        streamJpg.on('error', err => reject(err));
-                                        streamJpg.pipe(FsCreateWriteStream(`${filePath}_s.jpg`));
-                                    }).catch(err => handleError(err, 'Save jpg'));
-                                }
-                            }
-                        }
-                        return resolve();
                     });
-                }) : Promise.resolve();
-                return isPreview().then(() => {
-                    let setTag = new Set();
-                    let optTag = new Set();
-                    setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username));
-                    if (req.body.path) {
-                        req.body.path.forEach(p => setTag.add(normalize(p)));
+                }
+                mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                let setArr = [];
+                setTag.forEach(s => {
+                    const is_d = isDefaultTag(s);
+                    if (!is_d) {
+                        setArr.push(s);
+                    } else if (is_d.index === 0) {
+                        DBdata['adultonly'] = 1;
                     }
-                    if (items[0].tags) {
-                        items[0].tags.forEach(i => {
-                            if (i !== '壓縮檔' && i !== 'zip'&& i !== '播放列表' && i !== 'playlist') {
-                                setTag.add(normalize(i));
-                            }
-                        });
+                });
+                let optArr = [];
+                optTag.forEach(o => {
+                    if (!isDefaultTag(o) && !setArr.includes(o)) {
+                        optArr.push(o);
                     }
-                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
-                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
-                    let setArr = [];
-                    setTag.forEach(s => {
-                        const is_d = isDefaultTag(s);
-                        if (!is_d) {
-                            setArr.push(s);
-                        } else if (is_d.index === 0) {
-                            DBdata['adultonly'] = 1;
+                });
+                return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                    tags: setArr,
+                    [req.user._id]: setArr,
+                })).then(item => {
+                    console.log(item);
+                    console.log('save end');
+                    sendWs({
+                        type: 'file',
+                        data: item[0]._id,
+                    }, item[0].adultonly);
+                    return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                        const reli = relative.length < 5 ? relative.length : 5;
+                        if (checkAdmin(2 ,req.user)) {
+                            (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
                         }
-                    });
-                    let optArr = [];
-                    optTag.forEach(o => {
-                        if (!isDefaultTag(o) && !setArr.includes(o)) {
-                            optArr.push(o);
-                        }
-                    });
-                    return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
-                        tags: setArr,
-                        [req.user._id]: setArr,
-                    })).then(item => {
-                        console.log(item);
-                        console.log('save end');
-                        sendWs({
-                            type: 'file',
-                            data: item[0]._id,
-                        }, item[0].adultonly);
-                        return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
-                            const reli = relative.length < 5 ? relative.length : 5;
-                            if (checkAdmin(2 ,req.user)) {
-                                (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
-                            }
-                            (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
-                            for (let i = 0; i < reli; i++) {
-                                const normal = normalize(relative[i]);
-                                if (!isDefaultTag(normal)) {
-                                    if (!setArr.includes(normal) && !optArr.includes(normal)) {
-                                        optArr.push(normal);
-                                    }
+                        (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                        for (let i = 0; i < reli; i++) {
+                            const normal = normalize(relative[i]);
+                            if (!isDefaultTag(normal)) {
+                                if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                    optArr.push(normal);
                                 }
                             }
-                            return MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]['_id'], req.user).then(() => res.json({
-                                id: item[0]._id,
-                                name: item[0].name,
-                                select: setArr,
-                                option: supplyTag(setArr, optArr),
-                                other: [],
-                            })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
-                        });
+                        }
+                        return MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]['_id'], req.user).then(() => res.json({
+                            id: item[0]._id,
+                            name: item[0].name,
+                            select: setArr,
+                            option: supplyTag(setArr, optArr),
+                            other: [],
+                        })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
                     });
                 });
             });

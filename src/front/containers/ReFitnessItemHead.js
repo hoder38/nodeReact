@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { fitnessPush, alertPush, setFitness, sendGlbIn } from '../actions'
-import { FITNESS } from '../constants'
-import ItemHead from '../components/ItemHead'
+import { fitnessPush, alertPush, setFitness, sendGlbIn } from '../actions/index.js'
+import { FITNESS } from '../constants.js'
+import ItemHead from '../components/ItemHead.js'
 
 const mapStateToProps = state => ({
     itemType: FITNESS,

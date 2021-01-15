@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf } from '../actions'
-import ItemFitness from '../components/ItemFitness'
+import { alertPush, sendGlbCf } from '../actions/index.js'
+import ItemFitness from '../components/ItemFitness.js'
 
 const mapStateToProps = state => ({
     level: state.basicDataHandle.level,

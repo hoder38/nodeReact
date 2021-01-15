@@ -1,4 +1,4 @@
-import { SET_BASIC } from '../constants'
+import { SET_BASIC } from '../constants.js'
 
 const initialState = {
     id: 'guest',

@@ -1,7 +1,7 @@
-import { RANKDB, RANK_LIMIT, USERDB, FITNESSDB, FITNESS_POINT } from '../constants'
-import Mongo, { objectID } from '../models/mongo-tool'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { isValidString, handleError, HoError, completeZero } from '../util/utility'
+import { RANKDB, RANK_LIMIT, USERDB, FITNESSDB, FITNESS_POINT } from '../constants.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import { isValidString, handleError, HoError, completeZero } from '../util/utility.js'
 
 const RankTagTool = TagTool(RANKDB);
 
@@ -152,10 +152,7 @@ export default {
             if (items.length < 1) {
                 return handleError(new HoError('rank row does not exist!!!'));
             }
-            return Mongo('remove', RANKDB, {
-                _id: items[0]._id,
-                $isolated: 1,
-            });
+            return Mongo('deleteMany', RANKDB, {_id: items[0]._id});
         });
     },
     getItem: function() {

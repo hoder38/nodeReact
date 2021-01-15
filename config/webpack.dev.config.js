@@ -1,12 +1,24 @@
-var webpack = require('webpack');
-var ExtractTextPlugin = require("extract-text-webpack-plugin");
+import webpack from 'webpack'
+import MiniCssExtractPlugin from 'mini-css-extract-plugin'
 
-module.exports = {
+export default {
     entry: './src/front/index.js',
     output: {
         path: './public',
         publicPath: 'public/',
         filename: 'app.js',
+    },
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                styles: {
+                    name: 'styles',
+                    test: /\.css$/,
+                    chunks: 'all',
+                    enforce: true,
+                },
+            },
+        },
     },
     module: {
         loaders: [
@@ -15,7 +27,7 @@ module.exports = {
                 loader: 'babel',
             },
             { test: /\.css$/,
-                loader: ExtractTextPlugin.extract('style', 'css'),
+                use: [MiniCssExtractPlugin.loader, 'css-loader'],
             },
             { test: /\.(woff|woff2)(\?v=\d+\.\d+\.\d+)?$/,
                 loader: 'url?mimetype=application/font-woff'
@@ -31,5 +43,5 @@ module.exports = {
             },
         ]
     },
-    plugins: [new ExtractTextPlugin("app.css")]
- };
+    plugins: [new MiniCssExtractPlugin({filename: 'app.css'})],
+};

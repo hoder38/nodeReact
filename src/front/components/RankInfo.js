@@ -1,25 +1,24 @@
 import React from 'react'
-import { FILE_ZINDEX, FITNESS } from '../constants'
-import UserInput from './UserInput'
-import { killEvent, checkInput, api } from '../utility'
+import { FILE_ZINDEX, FITNESS } from '../constants.js'
+import UserInput from './UserInput.js'
+import { killEvent, checkInput, api } from '../utility.js'
 
-const RankInfo = React.createClass({
-    getInitialState: function() {
+class RankInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['name'], this._handleSubmit, this._handleChange);
-        return Object.assign({
+        this.state = Object.assign({
             select: [],
             item: '',
         }, this._input.initValue());
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         api('/api/rank/getItem').then(result => {
             this.setState(Object.assign({}, this.state, {select: result.item.map((v, i) => <option value={v.id} key={i}>{v.name}</option>)}, (result.item.length > 0) ? {item: result.item[0].id} : {}));
         }).catch(err => this.props.addalert(err));
-    },
-    componentDidMount: function() {
         this._input.initFocus()
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (this.props.level !== 2) {
             this.props.addalert('permission denied!!!');
         }
@@ -32,14 +31,14 @@ const RankInfo = React.createClass({
         } else {
              api('/api/rank/newRow', set_obj).then(result => this.props.onclose()).catch(err => this.props.addalert(err))
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _handleOpt: function(e) {
+    }
+    _handleOpt = e => {
         this.setState(Object.assign({}, this.state, {item: e.target.value}));
-    },
-    render: function() {
+    }
+    render() {
         return (
             <div className="modal-content" style={{
                 position: 'fixed',
@@ -87,6 +86,6 @@ const RankInfo = React.createClass({
             </div>
         )
     }
-});
+}
 
 export default RankInfo

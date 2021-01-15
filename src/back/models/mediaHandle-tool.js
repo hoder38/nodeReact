@@ -1,15 +1,17 @@
-import { STORAGEDB, STATIC_PATH, NOISE_SIZE } from '../constants'
+import { STORAGEDB, STATIC_PATH, NOISE_SIZE, __dirname } from '../constants.js'
 import Mkdirp from 'mkdirp'
-import { existsSync as FsExistsSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, renameSync as FsRenameSync, statSync as FsStatSync } from 'fs'
-import { join as PathJoin, dirname as PathDirname } from 'path'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, renameSync: FsRenameSync, statSync: FsStatSync } = fsModule
+import pathModule from 'path'
+const { join: PathJoin, dirname: PathDirname } = pathModule;
 import Child_process from 'child_process'
-import Mongo, { objectID } from '../models/mongo-tool'
-import GoogleApi from '../models/api-tool-google'
-import TagTool, { normalize, isDefaultTag } from '../models/tag-tool'
-import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName } from '../util/utility'
-import { extTag, extType, isZip, isImage, changeExt, addPost } from '../util/mime'
-import Transcoder from '../util/stream-transcoder.js'
-import sendWs from '../util/sendWs'
+import Ffmpeg from 'ffmpeg'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import GoogleApi from '../models/api-tool-google.js'
+import TagTool, { normalize, isDefaultTag } from '../models/tag-tool.js'
+import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName } from '../util/utility.js'
+import { extTag, extType, isZip, isImage, changeExt, addPost } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const StorageTagTool = TagTool(STORAGEDB);
 
@@ -150,7 +152,9 @@ export default {
                     } else if (isVideo && mediaType['type'] === 'video') {
                         if (first) {
                             mediaType['time'] = DBdata['time'];
-                            DBdata['status'] = 1;
+                            if (DBdata['status'] !== 3) {
+                                DBdata['status'] = 1;
+                            }
                         }
                         mediaTag.def = mediaTag.def.concat(getTimeTag(DBdata['time'], mediaTag.opt));
                         if (ret_mediaType && first) {
@@ -171,21 +175,21 @@ export default {
                 switch(mediaType['type']) {
                     case 'video':
                     case 'music':
-                    if (!DBdata['height'] && !DBdata['time']) {
-                        return new Promise((resolve, reject) => new Transcoder(filePath).on('metadata', meta => resolve(meta)).on('error', err => reject(err)).exec()).then(meta => {
-                            console.log(meta);
-                            if (meta.input.streams) {
-                                let isVideo = false;
-                                for (let i of meta.input.streams) {
-                                    if (i.size) {
-                                        DBdata['height'] = (i.size.width/16*9) > i.size.height ? (i.size.width/16*9) : i.size.height;
-                                        break;
-                                    }
+                    if (!DBdata['height'] && !DBdata['time'] && FsExistsSync(filePath)) {
+                        console.log(filePath);
+                        return new Ffmpeg(filePath).then(info => {
+                            console.log(info.metadata);
+                            if (info.metadata.video) {
+                                if (info.metadata.video.codec === 'h264') {
+                                    DBdata['status'] = 3;
                                 }
-                                DBdata['time'] = meta.input.duration;
+                                DBdata['height'] = info.metadata.video.resolutionSquare.h;
+                            }
+                            if (info.metadata.duration) {
+                                DBdata['time'] = info.metadata.duration.seconds * 1000;
                             }
                             handleRest(first);
-                            return [mediaType, mediaTag, DBdata];
+                            return Promise.resolve([mediaType, mediaTag, DBdata]);
                         });
                     } else {
                         handleRest(first);
@@ -238,7 +242,7 @@ export default {
             const pdfPath = `${filePath}_pdf`;
             console.log(pdfPath);
             deleteFolderRecursive(pdfPath);
-            return new Promise((resolve, reject) => Mkdirp(pdfPath, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Child_process.exec(`pdftk ${comPath} burst output ${pdfPath}/%03d.pdf`, (err, output) => err ? reject(err) : resolve(output)))).then(() => {
+            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`pdftk ${comPath} burst output ${pdfPath}/%03d.pdf`, (err, output) => err ? reject(err) : resolve(output)))).then(() => {
                 let number = 0;
                 FsReaddirSync(pdfPath).forEach((file,index) => number++);
                 return completeMedia(fileID, 10, mediaType['fileIndex'], number);
@@ -249,7 +253,7 @@ export default {
             const tempPath = `${imgPath}/temp`;
             deleteFolderRecursive(imgPath);
             deleteFolderRecursive(tempPath);
-            return new Promise((resolve, reject) => Mkdirp(tempPath, err => err ? reject(err) : resolve())).then(() => {
+            return Mkdirp(tempPath).then(() => {
                 let is_processed = false;
                 let append = '';
                 const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
@@ -269,7 +273,7 @@ export default {
                 } else if (FsExistsSync(`${filePath}_7z_c`)) {
                     zipPath = `${filePath}_7z_c`;
                 }
-                const cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar x ${zipPath} ${tempPath}` : (mediaType['ext'] === '7z') ? `7za x ${zipPath} -o${tempPath}` : `${PathJoin(__dirname, '../util/myuzip.py')} ${zipPath} ${tempPath}`;
+                const cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar x ${zipPath} ${tempPath}  -p123` : (mediaType['ext'] === '7z') ? `7za x ${zipPath} -o${tempPath}  -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${zipPath} ${tempPath} '123'`;
                 console.log(cmdline);
                 return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => {
                     let zip_arr = [];
@@ -315,7 +319,7 @@ export default {
                 });
             });
         } else if (mediaType['type'] === 'zip') {
-            let cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar v -v ${filePath}` : (mediaType['ext'] === '7z') ? `7za l ${filePath}` : `${PathJoin(__dirname, '../util/myuzip.py')} ${filePath}`;
+            let cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar v -v ${filePath}` : (mediaType['ext'] === '7z') ? `7za l ${filePath}` : `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}`;
             const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
             let is_processed = false;
             let append = '';
@@ -345,13 +349,12 @@ export default {
                 if (zip_type === 2) {
                     let start = false;
                     for (let i in tmplist) {
-                        if (tmplist[i].match(/^-------------------/)) {
+                        if (tmplist[i].match(/^-----------/)) {
                             start = start ? false : true;
                         } else if (start) {
-                            const tmp = tmplist[i].match(/^[\s]+(\d+)[\s]+\d+[\s]+(\d+%|-->)/);
+                            const tmp = tmplist[i].match(/([\d]+)\%[\s]+\d\d\d\d\-\d\d\-\d\d[\s]+\d\d\:\d\d[\s]+[\dA-Z]+[\s]+(.+)$/);
                             if (tmp && tmp[1] !== '0') {
-                                const previous = tmplist[i-1].trim();
-                                playlist.push(previous.match(/^\*/) ? previous.substr(1) : previous);
+                                playlist.push(tmp[2]);
                             }
                         }
                     }
@@ -407,7 +410,7 @@ export default {
                             return Promise.resolve();
                         } else {
                             FsRenameSync(filePath, (zip_type === 2) ? `${filePath}.1.rar` : (zip_type === 3) ? `${filePath}_7z` : `${filePath}_zip`);
-                            return new Promise((resolve, reject) => Mkdirp(`${filePath}/real`, err => err ? reject(err) : resolve()));
+                            return Mkdirp(`${filePath}/real`);
                         }
                     }
                     return process().then(() => Mongo('update', STORAGEDB, {_id: fileID}, {$set: {
@@ -536,7 +539,7 @@ export default {
         console.log(metadata);
         const oOID = objectID();
         const filePath = getFileLocation(user._id, oOID);
-        const mkFolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const mkFolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         const handleDelete = () => (!metadata.userPermission || metadata.userPermission.role !== 'owner') ? GoogleApi('move parent', {
             fileId: metadata.id,
             rmFolderId: handling,

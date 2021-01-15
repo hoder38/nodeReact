@@ -1,6 +1,7 @@
-import { ENV_TYPE, SESS_SECRET, SESS_PWD } from '../../../ver'
-import { SESS_IP, SESS_PORT } from '../config'
+import { ENV_TYPE, SESS_SECRET, SESS_PWD } from '../../../ver.js'
+import { SESS_IP, SESS_PORT } from '../config.js'
 import ConnectRedis from 'connect-redis'
+import Redis from 'redis'
 
 export default function (express) {
     const redisStore = ConnectRedis(express)
@@ -12,9 +13,7 @@ export default function (express) {
                 secure: true,
             },
             store: new redisStore({
-                host: SESS_IP(ENV_TYPE),
-                port: SESS_PORT(ENV_TYPE),
-                pass: SESS_PWD,
+                client: Redis.createClient(SESS_PORT(ENV_TYPE), SESS_IP(ENV_TYPE), {auth_pass: SESS_PWD}),
             }),
             resave: false,
             saveUninitialized: false,

@@ -1,8 +1,8 @@
 import { connect } from 'react-redux'
-import { fitnessPush, alertPush, setFitness, sendGlbCf } from '../actions'
-import Itemlist from '../components/Itemlist'
-import { arrayMerge } from '../utility'
-import { FITNESS } from '../constants'
+import { fitnessPush, alertPush, setFitness, sendGlbCf } from '../actions/index.js'
+import Itemlist from '../components/Itemlist.js'
+import { arrayMerge } from '../utility.js'
+import { FITNESS } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: FITNESS,

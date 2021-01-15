@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, feedbackPush, setUpload } from '../actions'
-import FileAdd from '../components/FileAdd'
+import { alertPush, feedbackPush, setUpload } from '../actions/index.js'
+import FileAdd from '../components/FileAdd.js'
 
 const mapStateToProps = state => ({
     mainUrl: state.basicDataHandle.url,

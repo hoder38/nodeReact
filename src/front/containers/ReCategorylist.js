@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { bookmarkPush, bookmarkPop, dirPush, dirPop, itemPush, alertPush } from '../actions'
-import Categorylist from '../components/Categorylist'
-import { STORAGE } from '../constants'
+import { bookmarkPush, bookmarkPop, dirPush, dirPop, itemPush, alertPush } from '../actions/index.js'
+import Categorylist from '../components/Categorylist.js'
+import { STORAGE } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: STORAGE,

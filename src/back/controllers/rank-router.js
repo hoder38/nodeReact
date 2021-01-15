@@ -1,9 +1,9 @@
-import { RANKDB } from '../constants'
+import { RANKDB } from '../constants.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
+import TagTool from '../models/tag-tool.js'
 import RankTool from '../models/rank-tool.js'
-import { checkLogin, getRankItem, handleError, checkAdmin } from '../util/utility'
-import sendWs from '../util/sendWs'
+import { checkLogin, getRankItem, handleError, checkAdmin } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const RankTagTool = TagTool(RANKDB);

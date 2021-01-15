@@ -3,7 +3,7 @@ import { render } from 'react-dom'
 import './css/bootstrap.min.css'
 import './css/bootstrap-theme.min.css'
 import './css/style.css'
-import Root from './containers/Root'
+import Root from './containers/Root.js'
 
 render(
     <Root />,

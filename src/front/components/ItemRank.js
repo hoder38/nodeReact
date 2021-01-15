@@ -1,23 +1,24 @@
 import React from 'react'
-import Dropdown from './Dropdown'
-import RankStatis from './RankStatis'
-import { killEvent, api } from '../utility'
+import Dropdown from './Dropdown.js'
+import RankStatis from './RankStatis.js'
+import { killEvent, api } from '../utility.js'
 
-const ItemRank = React.createClass({
-    getInitialState: function() {
-        return {open: false}
-    },
-    _openChart: function(id) {
+class ItemRank extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {open: false}
+    }
+    _openChart = id => {
         api(`/api/rank/getChart/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this._item = result;
             this.setState({open: true});
         }).catch(err => this.props.addalert(err));
-    },
-    _delRank: function(id, name) {
+    }
+    _delRank = (id, name) => {
         this.props.sendglbcf(() => api(`/api/rank/delRow/${id}`, {}, 'DELETE').catch(err => this.props.addalert(err)), `Would you sure to delete ${name} ?`);
-    },
-    render: function() {
+    }
+    render() {
         const item = this.props.item;
         let dropList = [{title: 'Details', onclick: () => this._openChart(item.id), key: 0}];
         if (this.props.level === 2) {
@@ -49,6 +50,6 @@ const ItemRank = React.createClass({
             </tr>
         )
     }
-})
+}
 
 export default ItemRank

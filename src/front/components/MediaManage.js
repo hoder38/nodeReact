@@ -1,21 +1,22 @@
 import React from 'react'
-import { MEDIA_ZINDEX, MUSIC, VIDEO, IMAGE, PLAYLIST } from '../constants'
-import ReMediaWidget from '../containers/ReMediaWidget'
+import { MEDIA_ZINDEX, MUSIC, VIDEO, IMAGE, PLAYLIST } from '../constants.js'
+import ReMediaWidget from '../containers/ReMediaWidget.js'
 
-const MediaManage = React.createClass({
-    getInitialState: function() {
-        return {
+class MediaManage extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
             full: false,
             show: [false, false, false, false],
         }
-    },
-    _toggleFull: function() {
+    }
+    _toggleFull = () => {
         this.setState(Object.assign({}, this.state, {full: !this.state.full}))
-    },
-    _toggleShow: function(index, open) {
+    }
+    _toggleShow = (index, open) => {
         this.setState(Object.assign({}, this.state, {show: this.state.show.map((item, i) => i === index ? open === null ? !item : open : false)}))
-    },
-    render: function() {
+    }
+    render() {
         const sectionCss = this.state.full ? {
             position: 'fixed',
             top: '0px',
@@ -38,6 +39,6 @@ const MediaManage = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default MediaManage

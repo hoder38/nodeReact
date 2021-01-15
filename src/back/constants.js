@@ -1,4 +1,6 @@
-import { join as PathJoin } from 'path'
+import { join as PathJoin, dirname } from 'path'
+import { fileURLToPath } from 'url';
+export const __dirname = dirname(fileURLToPath(import.meta.url));
 export const STATIC_PATH = PathJoin(__dirname, '../../public')
 
 //env
@@ -880,7 +882,7 @@ export const TRADE_FEE = 0.005;
 export const TRADE_INTERVAL = 86400;
 export const TRADE_TIME = 21600;
 export const RANGE_INTERVAL = 7776000;
-export const API_WAIT = 10;
+export const API_WAIT = 5;
 //export const MINIMAL_DS_RATE = 0.05;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
 export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];

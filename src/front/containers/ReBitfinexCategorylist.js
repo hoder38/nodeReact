@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { bitfinexPush, alertPush } from '../actions'
-import Categorylist from '../components/Categorylist'
-import { BITFINEX } from '../constants'
+import { bitfinexPush, alertPush } from '../actions/index.js'
+import Categorylist from '../components/Categorylist.js'
+import { BITFINEX } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: BITFINEX,

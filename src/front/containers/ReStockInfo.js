@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, setStock } from '../actions'
-import StockInfo from '../components/StockInfo'
+import { alertPush, setStock } from '../actions/index.js'
+import StockInfo from '../components/StockInfo.js'
 
 const mapStateToProps = state => ({
     bookmark: state.stockDataHandle.item.bookmark,

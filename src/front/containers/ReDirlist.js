@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf } from '../actions'
-import Dirlist from '../components/Dirlist'
+import { alertPush, sendGlbCf } from '../actions/index.js'
+import Dirlist from '../components/Dirlist.js'
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),

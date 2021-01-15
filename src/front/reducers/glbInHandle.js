@@ -1,4 +1,4 @@
-import { SEND_GLB_IN, CLOSE_GLB_IN } from '../constants'
+import { SEND_GLB_IN, CLOSE_GLB_IN } from '../constants.js'
 
 const initialState = []
 

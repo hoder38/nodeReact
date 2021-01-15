@@ -1,23 +1,27 @@
-import { USERDB, STORAGEDB } from '../constants'
+import { USERDB, STORAGEDB, __dirname } from '../constants.js'
 import Express from 'express'
-import { getInfo as YouGetInfo} from 'youtube-dl'
-import { existsSync as FsExistsSync, unlink as FsUnlink, statSync as FsStatSync, renameSync as FsRenameSync, readdirSync as FsReaddirSync, lstatSync as FsLstatSync, createReadStream as FsCreateReadStream, writeFile as FsWriteFile } from 'fs'
-import { dirname as PathDirname, basename as PathBasename, join as PathJoin } from 'path'
+//import youtubeDl from 'youtube-dl'
+//const { getInfo: YouGetInfo} = youtubeDl;
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, unlink: FsUnlink, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, createReadStream: FsCreateReadStream, writeFile: FsWriteFile } = fsModule;
+import pathModule from 'path'
+const { dirname: PathDirname, basename: PathBasename, join: PathJoin } = pathModule;
 import Mkdirp from 'mkdirp'
-import { createInterface } from 'readline'
+import readline from 'readline'
+const { createInterface } = readline;
 import ReadTorrent from 'read-torrent'
 import OpenSubtitle from 'opensubtitles-api'
 import Child_process from 'child_process'
-import Mongo, { objectID } from '../models/mongo-tool'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool'
-import GoogleApi, { googleDownloadSubtitle } from '../models/api-tool-google'
-import PlaylistApi from '../models/api-tool-playlist'
-import Api from '../models/api-tool'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import External, { bilibiliVideoUrl, youtubeVideoUrl, kuboVideoUrl, subHdUrl } from '../models/external-tool'
-import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime'
-import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility'
-import sendWs from '../util/sendWs'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import GoogleApi, { googleDownloadSubtitle } from '../models/api-tool-google.js'
+import PlaylistApi from '../models/api-tool-playlist.js'
+import Api from '../models/api-tool.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import External, { bilibiliVideoUrl, youtubeVideoUrl, kuboVideoUrl/*, subHdUrl*/ } from '../models/external-tool.js'
+import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime.js'
+import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -54,6 +58,7 @@ router.get('/2drive/:uid', function(req, res, next){
                 if (downloadedList.length < 1) {
                     return handleError(new HoError('do not have downloaded folder!!!'));
                 }
+                console.log(downloadedList);
                 const downloaded = downloadedList[0].id;
                 StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
                 if (items[0].status === 9) {
@@ -241,7 +246,7 @@ router.get('/getSingle/:uid', function(req, res, next) {
         url = `http://www.58b.tv/168player/youtube.php?${idsub[1]}`;
         break;
         case 'kur':
-        url = `http://www.99kubo.tv${new Buffer(id[2], 'base64').toString()}`;
+        url = `http://www.99kubo.tv${Buffer.from(id[2], 'base64').toString()}`;
         break;
         case 'bil':
         idsub = id[2].match(/^([^_]+)_(\d+)$/);
@@ -252,7 +257,7 @@ router.get('/getSingle/:uid', function(req, res, next) {
         break;
         case 'ope':
         //url = `https://openload.co/embed/${id[2]}/`;
-        url = new Buffer(id[2], 'base64').toString();
+        url = Buffer.from(id[2], 'base64').toString();
         break;
         case 'iqi':
         url = `http://www.iqiyi.com/${id[2]}.html`;
@@ -361,7 +366,7 @@ router.post('/upload/url', function(req, res, next) {
         const filePath = getFileLocation(req.user._id, oOID);
         const shortTorrentMatch = decodeUrl.match(/^magnet:[^&]+/);
         const folderPath = shortTorrentMatch ? filePath : PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         let is_media = 0;
         mkfolder().then(() => {
             if (shortTorrentMatch) {
@@ -415,7 +420,7 @@ router.post('/upload/url', function(req, res, next) {
                     });
                 }
             } else {
-                if (decodeUrl.match(/^(https|http):\/\/(www\.youtube\.com|youtu\.be)\//)) {
+                /*if (decodeUrl.match(/^(https|http):\/\/(www\.youtube\.com|youtu\.be)\//)) {
                     const is_music = decodeUrl.match(/^(.*):music$/);
                     if (is_music) {
                         is_media = 4;
@@ -486,7 +491,7 @@ router.post('/upload/url', function(req, res, next) {
                             }).then(detaildata => getYoutubeInfo(detaildata));
                         }
                     });
-                } else if (decodeUrl.match(/^(https|http):\/\/yts\.ag\/movie\//)) {
+                } else */if (decodeUrl.match(/^(https|http):\/\/yts\.ag\/movie\//)) {
                     return Mongo('find', STORAGEDB, {
                         owner: 'yify',
                         url: encodeURIComponent(decodeUrl),
@@ -566,6 +571,27 @@ router.post('/upload/url', function(req, res, next) {
                             url: url,
                         }]);
                     });*/
+                } else if (decodeUrl.match(/^(https|http):\/\/eztv.re\//)) {
+                    console.log('eztv');
+                    return Mongo('find', STORAGEDB, {
+                        owner: 'eztv',
+                        url: encodeURIComponent(decodeUrl),
+                    }, {limit: 1}).then(items => {
+                        if (items.length > 0) {
+                            return handleError(new HoError('already has one'));
+                        }
+                        const eztv_id = decodeUrl.match(/^(https|http):\/\/eztv\.re\/shows\/([^\/]+)/);
+                        if (!eztv_id) {
+                            return handleError(new HoError('eztv url invalid'));
+                        }
+                        is_media = 3;
+                        return External.saveSingle('eztv', eztv_id[2]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
+                            owner: owner,
+                            untag: 0,
+                            thumb: thumb,
+                            url: url,
+                        }]);
+                    });
                 } else if (decodeUrl.match(/^(https|http):\/\/mega\./)) {
                     return PlaylistApi('mega add', req.user, decodeUrl, filePath, {
                         rest: ([filename, setTag, optTag, db_obj]) => streamClose(filename, setTag, optTag, db_obj),
@@ -597,7 +623,7 @@ router.post('/upload/url', function(req, res, next) {
                         if (!shortTorrent) {
                             return handleError(new HoError('magnet create fail'));
                         }
-                        return new Promise((resolve, reject) => FsUnlink(filePath, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Mkdirp(filePath, err => err ? reject(err) : resolve()))).then(() => Mongo('find', STORAGEDB, {magnet: {
+                        return new Promise((resolve, reject) => FsUnlink(filePath, err => err ? reject(err) : resolve())).then(() => Mkdirp(filePath)).then(() => Mongo('find', STORAGEDB, {magnet: {
                             $regex: shortTorrent[0].match(/[^:]+$/)[0],
                             $options: 'i',
                         }}, {limit: 1})).then(items => {
@@ -676,105 +702,84 @@ router.post('/upload/url', function(req, res, next) {
                     }
                     DBdata = tmp;
                 }
-                const isPreview = () => (mediaType.type === 'video' && DBdata['status'] === 1) ? new Promise((resolve, reject) => {
-                    let is_preview = true;
-                    Avconv(['-i', filePath]).once('exit', function(exitCode, signal, metadata2) {
-                        if (metadata2 && metadata2.input && metadata2.input.stream) {
-                            for (let m of metadata2.input.stream[0]) {
-                                console.log(m.type);
-                                console.log(m.codec);
-                                if (m.type === 'video' && m.codec !== 'h264') {
-                                    is_preview = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (is_preview) {
-                            DBdata['status'] = 3;
-                        }
-                        return resolve();
-                    });
-                }) : Promise.resolve();
-                return isPreview().then(() => {
-                    setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username)).add('url upload');
-                    if (req.body.path) {
-                        req.body.path.forEach(p => setTag.add(normalize(p)));
+                setTag.add(normalize(DBdata['name'])).add(normalize(req.user.username)).add('url upload');
+                if (req.body.path) {
+                    req.body.path.forEach(p => setTag.add(normalize(p)));
+                }
+                mediaTag.def.forEach(i => setTag.add(normalize(i)));
+                mediaTag.opt.forEach(i => optTag.add(normalize(i)));
+                let setArr = [];
+                setTag.forEach(s => {
+                    const is_d = isDefaultTag(s);
+                    if (!is_d) {
+                        setArr.push(s);
+                    } else if (is_d.index === 0) {
+                        DBdata['adultonly'] = 1;
                     }
-                    mediaTag.def.forEach(i => setTag.add(normalize(i)));
-                    mediaTag.opt.forEach(i => optTag.add(normalize(i)));
-                    let setArr = [];
-                    setTag.forEach(s => {
-                        const is_d = isDefaultTag(s);
-                        if (!is_d) {
-                            setArr.push(s);
-                        } else if (is_d.index === 0) {
-                            DBdata['adultonly'] = 1;
+                });
+                let optArr = [];
+                optTag.forEach(o => {
+                    if (!isDefaultTag(o) && !setArr.includes(o)) {
+                        optArr.push(o);
+                    }
+                });
+                return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
+                    tags: setArr,
+                    [req.user._id]: setArr,
+                }, db_obj)).then(item => {
+                    console.log(item);
+                    console.log('save end');
+                    sendWs({
+                        type: 'file',
+                        data: item[0]._id,
+                    }, item[0].adultonly);
+                    sendWs({
+                        type: req.user.username,
+                        data: `${item[0]['name']} upload complete`,
+                    }, item[0].adultonly);
+                    return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
+                        const reli = relative.length < 5 ? relative.length : 5;
+                        if (checkAdmin(2 ,req.user)) {
+                            (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
                         }
-                    });
-                    let optArr = [];
-                    optTag.forEach(o => {
-                        if (!isDefaultTag(o) && !setArr.includes(o)) {
-                            optArr.push(o);
-                        }
-                    });
-                    return Mongo('insert', STORAGEDB, Object.assign(DBdata, {
-                        tags: setArr,
-                        [req.user._id]: setArr,
-                    }, db_obj)).then(item => {
-                        console.log(item);
-                        console.log('save end');
-                        sendWs({
-                            type: 'file',
-                            data: item[0]._id,
-                        }, item[0].adultonly);
-                        sendWs({
-                            type: req.user.username,
-                            data: `${item[0]['name']} upload complete`,
-                        }, item[0].adultonly);
-                        return StorageTagTool.getRelativeTag(setArr, req.user, optArr).then(relative => {
-                            const reli = relative.length < 5 ? relative.length : 5;
-                            if (checkAdmin(2 ,req.user)) {
-                                (item[0].adultonly === 1) ? setArr.push('18+') : optArr.push('18+');
-                            }
-                            (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
-                            for (let i = 0; i < reli; i++) {
-                                const normal = normalize(relative[i]);
-                                if (!isDefaultTag(normal)) {
-                                    if (!setArr.includes(normal) && !optArr.includes(normal)) {
-                                        optArr.push(normal);
-                                    }
+                        (item[0].first === 1) ? setArr.push('first item') : optArr.push('first item');
+                        for (let i = 0; i < reli; i++) {
+                            const normal = normalize(relative[i]);
+                            if (!isDefaultTag(normal)) {
+                                if (!setArr.includes(normal) && !optArr.includes(normal)) {
+                                    optArr.push(normal);
                                 }
                             }
-                            const recur_mhandle = index => {
-                                const singel_mhandle = () => {
-                                    if (!isVideo(db_obj['playList'][index]) && !isDoc(db_obj['playList'][index]) && !isZipbook(db_obj['playList'][index])) {
-                                        return Promise.resolve();
-                                    }
-                                    return MediaHandleTool.handleTag(`${filePath}/real/${db_obj['playList'][index]}`, {}, PathBasename(db_obj['playList'][index]), '', 0).then(([mediaType, mediaTag, DBdata]) => {
-                                        mediaType['fileIndex'] = index;
-                                        mediaType['realPath'] = db_obj['playList'][index];
-                                        DBdata['status'] = 9;
-                                        DBdata[`mediaType.${index}`] = mediaType;
-                                        console.log(DBdata);
-                                        return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
-                                    });
+                        }
+                        const recur_mhandle = index => {
+                            const singel_mhandle = () => {
+                                if (!isVideo(db_obj['playList'][index]) && !isDoc(db_obj['playList'][index]) && !isZipbook(db_obj['playList'][index])) {
+                                    return Promise.resolve();
                                 }
-                                return singel_mhandle().then(() => {
-                                    index++;
-                                    if (index < db_obj['playList'].length) {
-                                        return recur_mhandle(index);
-                                    }
+                                return MediaHandleTool.handleTag(`${filePath}/real/${db_obj['playList'][index]}`, {}, PathBasename(db_obj['playList'][index]), '', 0).then(([mediaType, mediaTag, DBdata]) => {
+                                    mediaType['fileIndex'] = index;
+                                    mediaType['realPath'] = db_obj['playList'][index];
+                                    DBdata['status'] = 9;
+                                    DBdata[`mediaType.${index}`] = mediaType;
+                                    console.log(DBdata);
+                                    return Mongo('update', STORAGEDB, {_id: item[0]._id}, {$set: DBdata}).then(item2 => MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex'])))
                                 });
                             }
-                            const rest_handle = () => (db_obj && db_obj['mega'] && db_obj['playList']) ? recur_mhandle(0) : is_media ? Promise.resolve() : MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex']));
-                            return rest_handle().then(() => DBdata['untag'] ? res.json({
-                                id: item[0]._id,
-                                name: item[0].name,
-                                select: setArr,
-                                option: supplyTag(setArr, optArr),
-                                other: [],
-                            }) : res.json({id: item[0]._id}));
-                        });
+                            return singel_mhandle().then(() => {
+                                index++;
+                                if (index < db_obj['playList'].length) {
+                                    return recur_mhandle(index);
+                                }
+                            });
+                        }
+                        const rest_handle = () => (db_obj && db_obj['mega'] && db_obj['playList']) ? recur_mhandle(0) : is_media ? Promise.resolve() : MediaHandleTool.handleMediaUpload(mediaType, filePath, item[0]._id, req.user).catch(err => handleError(err, errorMedia, item[0]._id, mediaType['fileIndex']));
+                        return rest_handle().then(() => DBdata['untag'] ? res.json({
+                            id: item[0]._id,
+                            name: item[0].name,
+                            select: setArr,
+                            option: supplyTag(setArr, optArr),
+                            other: [],
+                        }) : res.json({id: item[0]._id}));
                     });
                 });
             });
@@ -836,7 +841,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     }
     console.log(season);
     console.log(episode);
-    const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
+    //const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
+    const idMatch = req.params.uid.match(/^(dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
     let type = 'youtube';
     if (idMatch) {
         switch(idMatch[1]) {
@@ -883,6 +889,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                     return handleError(new HoError('external file, please open video'));
                 }
                 let filePath = getFileLocation(items[0].owner, items[0]._id);
+                let fileName = items[0].name;
+                let size = items[0].size;
                 if (items[0].status === 9) {
                     let fileIndex = 0;
                     if (req.params.index) {
@@ -899,18 +907,39 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                         return handleError(new HoError('file type error!!!'));
                     }
                     filePath = `${filePath}/${fileIndex}`;
+                    if (!FsExistsSync(filePath)) {
+                        filePath = `${filePath}_complete`;
+                    }
+                    fileName = items[0]['playList'][fileIndex].substr(items[0]['playList'][fileIndex].indexOf('/') + 1);
+                    size = FsStatSync(filePath).size;
                 }
-                return [items[0]._id, filePath];
+                return [items[0]._id, filePath, fileName, size];
             }) : handleError(new HoError('uid is not vaild'));
         }
     }
-    getId().then(([id, filePath]) => {
+    getId().then(([id, filePath, fileName, size]) => {
         const folderPath = PathDirname(filePath);
-        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+        const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();
         const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
-        const OpenSubtitles = new OpenSubtitle('hoder agent v0.1');
+        const OpenSubtitles = new OpenSubtitle({
+            useragent: 'hoder agent v0.1',
+            ssl: true,
+        });
+        console.log(Object.assign({
+            filesize: size,
+            path: filePath,
+            filename: fileName,
+            extensions: 'srt',
+            imdbid: name,
+        }, episode ? {
+            episode,
+            season,
+        } : {}));
         return name.match(/^tt\d+$/i) ? OpenSubtitles.search(Object.assign({
+            filesize: size,
+            path: filePath,
+            filename: fileName,
             extensions: 'srt',
             imdbid: name,
         }, episode ? {
@@ -931,6 +960,9 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 res.json({apiOK: true});
             });
         }) : OpenSubtitles.search(Object.assign({
+            //filesize: size,
+            //path: filePath,
+            //filename: fileName,
             extensions: 'srt',
             query: name,
         }, episode ? {
@@ -939,8 +971,15 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
         } : {})).then(subtitles => {
             console.log(subtitles);
             const sub_en_url = subtitles.en ? subtitles.en.url : null;
-            const restSub = () => sub_en_url ? mkfolder().then(() => getEn(sub_en_url)) : Promise.resolve();
-            const getSub = name => subHdUrl(name).then(subtitles2 => {
+            const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
+            const restSub = () => (sub_url || sub_en_url) ? mkfolder().then(() => getZh(sub_url).then(() => getEn(sub_en_url))).then(() => {
+                sendWs({
+                    type: 'sub',
+                    data: id,
+                }, 0, 0);
+                res.json({apiOK: true});
+            }) : handleError(new HoError('cannot find subtitle!!!'));
+            /*const getSub = name => subHdUrl(name).then(subtitles2 => {
                 if (!subtitles2) {
                     return handleError(new HoError('cannot find eng or cht subtitle!!!'));
                 }
@@ -949,7 +988,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                     return handleError(new HoError('is not zip!!!'));
                 }
                 const sub_location = `${filePath}_sub`;
-                const mkfolder2 = () => FsExistsSync(sub_location) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(sub_location, err => err ? reject(err) : resolve()));
+                const mkfolder2 = () => FsExistsSync(sub_location) ? Promise.resolve() : Mkdirp(sub_location);
                 return mkfolder2().then(() => {
                     let sub_temp_location = `${sub_location}/0`;
                     let sub_zip_location = `${sub_location}/0.${zip_ext}`;
@@ -964,7 +1003,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                             break;
                         }
                     }
-                    return Api('url', subtitles2, {filePath: sub_zip_location}).then(() => new Promise((resolve, reject) => Mkdirp(sub_temp_location, err => err ? reject(err) : resolve())).then(() => new Promise((resolve, reject) => Child_process.exec((zip_ext === 'rar' || zip_ext === 'cbr') ? `unrar x ${sub_zip_location} ${sub_temp_location}` : (zip_ext === '7z') ? `7za x ${sub_zip_location} -o${sub_temp_location}` : `${PathJoin(__dirname, '../util/myuzip.py')} ${sub_zip_location} ${sub_temp_location}`, (err, output) => err ? reject(err) : resolve())).then(output => {
+                    return Api('url', subtitles2, {filePath: sub_zip_location}).then(() => Mkdirp(sub_temp_location).then(() => new Promise((resolve, reject) => Child_process.exec((zip_ext === 'rar' || zip_ext === 'cbr') ? `unrar x ${sub_zip_location} ${sub_temp_location} -p123` : (zip_ext === '7z') ? `7za x ${sub_zip_location} -o${sub_temp_location} -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${sub_zip_location} ${sub_temp_location} '123'`, (err, output) => err ? reject(err) : resolve())).then(output => {
                         let choose = null;
                         let pri_choose = 9;
                         let pri_choose_temp = 8;
@@ -1021,7 +1060,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                     })));
                 });
             });
-            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleError(err)) : (season === 1) ? getSub(name) : handleError(err)) : getSub(name));
+            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleError(err)) : (season === 1) ? getSub(name) : handleError(err)) : getSub(name));*/
+            return restSub().catch(err => handleError(err, next));
         });
         function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
             if (!choose_subtitle) {

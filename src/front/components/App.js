@@ -1,39 +1,54 @@
 import React from 'react'
-import { IndexLink, browserHistory } from 'react-router'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE, BITFINEX_PAGE } from '../constants'
-import { collapseToggle } from '../actions'
-import { api, doLogout, isValidString } from '../utility'
-import Navlist from './Navlist'
-import ToggleNav from './ToggleNav'
-import ReAlertlist from '../containers/ReAlertlist'
-import Dropdown from './Dropdown'
-import GlobalPassword from './GlobalPassword'
-import ReGlobalComfirm from '../containers/ReGlobalComfirm'
-import FileManage from './FileManage'
-import ReWidgetManage from '../containers/ReWidgetManage'
-import MediaManage from './MediaManage'
+import { NavLink, Route, Redirect, Switch } from 'react-router-dom'
+import { history } from '../configureStore.js'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD/*, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE*/, BITFINEX_PAGE, STOCK_PAGE } from '../constants.js'
+import { collapseToggle } from '../actions/index.js'
+import { api, doLogout, isValidString } from '../utility.js'
+import Navlist from './Navlist.js'
+import ToggleNav from './ToggleNav.js'
+import ReAlertlist from '../containers/ReAlertlist.js'
+import Dropdown from './Dropdown.js'
+import GlobalPassword from './GlobalPassword.js'
+import ReGlobalComfirm from '../containers/ReGlobalComfirm.js'
+import FileManage from './FileManage.js'
+import ReWidgetManage from '../containers/ReWidgetManage.js'
+import MediaManage from './MediaManage.js'
+import Homepage from './Homepage.js'
+import Storage from './Storage.js'
+import RePassword from '../containers/RePassword.js'
+import ReStock from '../containers/ReStock.js'
+//import ReLottery from '../containers/ReLottery.js'
+import ReBitfinex from '../containers/ReBitfinex.js'
+import ReUserlist from '../containers/ReUserlist.js'
+//import ReFitness from './ReFitness'
+//import ReRank from './ReRank'
+//要用rank fitess記得router加上
+//<Route path={FITNESS_PAGE} component={ReFitness} />
+//<Route path={RANK_PAGE} component={ReRank} />
+//<Route path={LOTTERY_PAGE} component={ReLottery} />
 
-const App = React.createClass({
-    getInitialState: function() {
+class App extends React.Component {
+    constructor(props) {
+        super(props);
         this._userDrop = [
-            {title: 'Profile', className: 'glyphicon glyphicon-user', onclick: () => browserHistory.push(USER_PAGE), key: 0},
+            {title: 'Profile', className: 'glyphicon glyphicon-user', onclick: () => history.push(USER_PAGE), key: 0},
             {key: 1},
             {title: 'Log Out', className: 'glyphicon glyphicon-off', onclick: this._doLogout, key: 2},
-        ]
-        return {
+        ];
+        this.state = {
             navlist: [
                 {title: "homepage", hash: ROOT_PAGE, css: "glyphicon glyphicon-home", key: 0},
                 {title: "Storage", hash: STORAGE_PAGE, css: "glyphicon glyphicon-hdd", key: 1},
                 {title: "Password", hash: PASSWORD_PAGE, css: "glyphicon glyphicon-lock", key: 2},
                 //{title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
                 //{title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
-                {title: "Lottery", hash: LOTTERY_PAGE, css: "glyphicon glyphicon-yen", key: 6},
+                //{title: "Lottery", hash: LOTTERY_PAGE, css: "glyphicon glyphicon-yen", key: 6},
                 {title: "Bitfinex", hash: BITFINEX_PAGE, css: "glyphicon glyphicon-bitcoin", key: 7},
             ],
             zipPw: null,
-        }
-    },
-    componentWillMount: function() {
+        };
+    }
+    componentDidMount() {
         api('/api/getuser').then(userInfo => {
             if (isValidString(userInfo.id, 'name') && isValidString(userInfo.main_url, 'url') && isValidString(userInfo.ws_url, 'url') && isValidString(userInfo.level, 'perm')) {
                 this.setState(Object.assign({}, this.state, {
@@ -94,9 +109,9 @@ const App = React.createClass({
                                 }})), `Would you want to input ${name} password ?`)
                             }
                             break
-                            case 'select':
+                            /*case 'select':
                             document.getElementById('root').dispatchEvent(new CustomEvent('lottery', {'detail': wsmsg.data}));
-                            break
+                            break*/
                             default:
                             console.log(wsmsg);
                         }
@@ -111,10 +126,10 @@ const App = React.createClass({
             return api('/api/parent/storage/list');
         }).then(result => this.props.dirsset(result.parentList, (dir, i) => ({title: dir.show, name: dir.name, key: i, onclick: tag => this.props.sendglbcf(() => api('/api/parent/storage/add', {name: dir.name, tag: tag}).then(result => this.props.pushdir(dir.name, result)).catch(err => this.props.addalert(err)), `Would you sure add ${tag} to ${dir.show}?`)}))).catch(err => {
             this.props.addalert(err)
-            this._doLogout()
+            //this._doLogout()
         })
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._ws) {
             this._ws.close()
         }
@@ -157,11 +172,11 @@ const App = React.createClass({
         this.props.resetmedia(3)
         this.props.resetmedia(4)
         this.props.resetmedia([])
-    },
-    _doLogout: function() {
-        doLogout().then(() => browserHistory.push(LOGIN_PAGE)).catch(err => this.props.addalert(err))
-    },
-    render: function() {
+    }
+    _doLogout = () => {
+        doLogout().then(() => history.push(LOGIN_PAGE)).catch(err => this.props.addalert(err))
+    }
+    render() {
         const glbPw = this.props.pwCallback.length > 0 ? <GlobalPassword callback={this.props.pwCallback[0]} delay="user" onclose={this.props.closeglbpw} /> : ''
         const zipPw = this.state.zipPw ? <GlobalPassword callback={this.state.zipPw} onclose={() => this.setState(Object.assign({}, this.state, {zipPw: null}))} /> : ''
         const glbCf = this.props.cfCallback.length > 0 ? <ReGlobalComfirm callback={this.props.cfCallback[0]} text={this.props.cfCallback[1]} /> : ''
@@ -177,7 +192,7 @@ const App = React.createClass({
                 <nav className="navbar navbar-inverse navbar-fixed-top" role="navigation">
                     <div className="navbar-header">
                         <ToggleNav inverse={true} collapse={LEFT} />
-                        <IndexLink className="navbar-brand" to={ROOT_PAGE}>ANoMoPi</IndexLink>
+                        <NavLink exact className="navbar-brand" to={ROOT_PAGE}>ANoMoPi</NavLink>
                         <ToggleNav inverse={false} collapse={RIGHT} />
                     </div>
                     <ul className="nav navbar-right top-nav">
@@ -189,10 +204,20 @@ const App = React.createClass({
                     </ul>
                     <Navlist navlist={this.state.navlist} collapse={LEFT} />
                 </nav>
-                <section id="page-wrapper">{this.props.children}</section>
+                <section id="page-wrapper">
+                    <Switch>
+                        <Route exact path={ROOT_PAGE} component={Homepage} />
+                        <Route path={STORAGE_PAGE} component={Storage} />
+                        <Route path={PASSWORD_PAGE} component={RePassword} />
+                        <Route path={STOCK_PAGE} component={ReStock} />
+                        <Route path={USER_PAGE} component={ReUserlist} />
+                        <Route path={BITFINEX_PAGE} component={ReBitfinex} />
+                        <Redirect to={ROOT_PAGE} />
+                    </Switch>
+                </section>
             </div>
         )
     }
-})
+}
 
 export default App

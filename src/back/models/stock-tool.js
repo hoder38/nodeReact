@@ -1,19 +1,20 @@
-import { ENV_TYPE } from '../../../ver'
-import { CHECK_STOCK,USSE_TICKER } from '../config'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants'
+import { ENV_TYPE } from '../../../ver.js'
+import { CHECK_STOCK,USSE_TICKER } from '../config.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants.js'
 import Htmlparser from 'htmlparser2'
-import { existsSync as FsExistsSync, readFile as FsReadFile, statSync as FsStatSync, unlinkSync as FsUnlinkSync } from 'fs'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
 import Mkdirp from 'mkdirp'
 import Xml2js from 'xml2js'
-import Redis from '../models/redis-tool'
-import Mongo from '../models/mongo-tool'
-import GoogleApi from '../models/api-tool-google'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import Api from './api-tool'
-import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool'
-import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility'
-import { getExtname } from '../util/mime'
-import sendWs from '../util/sendWs'
+import Redis from '../models/redis-tool.js'
+import Mongo from '../models/mongo-tool.js'
+import GoogleApi from '../models/api-tool-google.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import Api from './api-tool.js'
+import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
+import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility.js'
+import { getExtname } from '../util/mime.js'
+import sendWs from '../util/sendWs.js'
 
 const StockTagTool = TagTool(STOCKDB);
 const Xmlparser = new Xml2js.Parser();
@@ -3124,7 +3125,7 @@ export default {
                         sales = items[0].sales;
                     }
                 }
-                const mkfolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+                const mkfolder = folderPath => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
                 return mkfolder(`/mnt/stock/${type}/${index}`).then(() => recur_getTwseXml());
             });
         }
@@ -5003,7 +5004,8 @@ export default {
                     amount: 0,
                     count: 1,
                     setype: 'usse',
-                }).then(item1 => ({
+                }).then(item1 => {
+                    return ({
                     se: [{
                         type: item[0].setype,
                         remain: item[0].amount,
@@ -5040,7 +5042,7 @@ export default {
                         str: '',
                         se: 1,
                     }],
-                })));
+                })}));
             }
             let remain = 0;
             let totalName = '';
@@ -5169,7 +5171,7 @@ export default {
         });
     },
     updateStockTotal: function(user, info, real = false) {
-        //remain 800 重設remain
+        //remaintwse 800 重設remain
         //delete twse2330 刪除股票
         //twse2330 (-)0.5 增減張數
         //twse2330 5000 amount 新增股票(設定最大金額)
@@ -5529,7 +5531,7 @@ export default {
                     }
                 }
                 const recurUpdate = index => (index >= items.length) ? recurRemove(0) : singleUpdate(items[index]).then(() => recurUpdate(index + 1));
-                const recurRemove = index => (index >= removeTotal.length) ? rest() : Mongo('remove', TOTALDB, {_id: removeTotal[index], $isolated: 1}).then(() => recurRemove(index + 1));
+                const recurRemove = index => (index >= removeTotal.length) ? rest() : Mongo('deleteMany', TOTALDB, {_id: removeTotal[index]}).then(() => recurRemove(index + 1));
                 return real ? recurUpdate(0) : rest();
             }
             const rest = () => {
@@ -5762,7 +5764,7 @@ export const getSingleAnnual = (year, folder, index) => {
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes(`read${cYear}`)) {
             const folderPath = `/mnt/stock/twse/${index}`;
             const filePath = `${folderPath}/tmp`;
-            const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+            const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
             return mkfolder().then(() => getTwseAnnual(index, cYear, filePath).then(filename => GoogleApi('upload', {
                 type: 'auto',
                 name: `${cYear}${getExtname(filename).ext}`,
@@ -6086,6 +6088,7 @@ export const getStockListV2 = (type, year, month) => {
         let quarter = 3;
         if (month < 4) {
             quarter = 4;
+            year--;
         } else if (month < 7) {
             quarter = 1;
         } else if (month < 10) {

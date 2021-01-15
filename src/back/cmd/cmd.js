@@ -1,15 +1,18 @@
-import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { BACKUP_PATH } from '../config'
-import { createInterface } from 'readline'
-import { writeFile as FsWriteFile, createReadStream as FsCreateReadStream, existsSync as FsExistsSync } from 'fs'
+import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
+import { BACKUP_PATH } from '../config.js'
+import readline from 'readline'
+const { createInterface } = readline;
+import fsModule from 'fs'
+const { writeFile: FsWriteFile, createReadStream: FsCreateReadStream, existsSync: FsExistsSync } = fsModule;
 import Mkdirp from 'mkdirp'
-import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google'
-import { completeMimeTag } from '../models/tag-tool'
-import External from '../models/external-tool'
-import Mongo, { objectID } from '../models/mongo-tool'
+import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google.js'
+import { completeMimeTag } from '../models/tag-tool.js'
+//import External from '../models/external-tool.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
 import StockTool from '../models/stock-tool.js'
-import { handleError, isValidString, HoError, completeZero } from '../util/utility'
+import { updatePasswordCipher } from '../models/password-tool.js'
+import { handleError, isValidString, HoError, completeZero } from '../util/utility.js'
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
@@ -29,7 +32,7 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
 }
 
 export const dbDump = (collection, backupDate=null) => {
-    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
+    if (collection !== 'accessToken' && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
         return handleError(new HoError('Collection not find'));
     }
     if (!backupDate) {
@@ -37,7 +40,7 @@ export const dbDump = (collection, backupDate=null) => {
         backupDate = `${backupDate.getFullYear()}${completeZero(backupDate.getMonth() + 1, 2)}${completeZero(backupDate.getDate(), 2)}`;
     }
     const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${backupDate}/${collection}`;
-    const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve()));
+    const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
     const recur_dump = (index, offset) => Mongo('find', collection, {}, {
         limit: BACKUP_LIMIT,
         skip: offset,
@@ -45,6 +48,7 @@ export const dbDump = (collection, backupDate=null) => {
         if (items.length < 1) {
             return Promise.resolve();
         }
+        console.log(items.length);
         let write_data = '';
         items.forEach(item => write_data = `${write_data}${JSON.stringify(item)}` + "\r\n");
         return new Promise((resolve, reject) => FsWriteFile(`${folderPath}/${index}`, write_data, 'utf8', err => err ? reject(err) : resolve())).then(() => recur_dump(index + 1, offset + items.length));
@@ -53,13 +57,14 @@ export const dbDump = (collection, backupDate=null) => {
 }
 
 const dbRestore = collection => {
-    if (collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
+    if (collection !== 'accessToken' && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
         return handleError(new HoError('Collection not find'));
     }
     const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${collection}`;
-    const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('count', collection, {_id: store[index]._id}, {limit: 1}).then(count => (count > 0) ? recur_insert(index + 1, store) : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store)));
+    const recur_insert = (index, store) => (index >= store.length) ? Promise.resolve() : Mongo('count', collection, {_id: store[index]._id}).then(count => (count > 0) ? recur_insert(index + 1, store) : Mongo('insert', collection, store[index]).then(() => recur_insert(index + 1, store)));
     const recur_restore = index => {
         const filePath = `${folderPath}/${index}`;
+        console.log(filePath);
         return !FsExistsSync(filePath) ? Promise.resolve() : new Promise((resolve, reject) => {
             let store = [];
             const rl = createInterface({
@@ -144,7 +149,7 @@ const randomSend = (action, joiner=null) => {
             const ran = shuffle(orig);
             //console.log(ran);
             if (testArr(ran)) {
-                const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(new Buffer(sendList[ran[index]].name).toString('base64'), sendList[index].mail, joiner).then(() => recur_send(index + 1));
+                const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(Buffer.from(sendList[ran[index]].name).toString('base64'), sendList[index].mail, joiner).then(() => recur_send(index + 1));
                 return recur_send(0);
             }
             limit--;
@@ -190,9 +195,9 @@ rl.on('line', line => {
         case 'checkdoc':
         console.log('checkdoc');
         return Mongo('find', DOCDB).then(doclist => console.log(doclist)).catch(err => handleError(err, 'CMD checkdoc'));
-        case 'external':
+        /*case 'external':
         console.log('external');
-        return External.getList(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD external'));
+        return External.getList(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD external'));*/
         case 'complete':
         console.log('complete');
         return completeMimeTag(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD complete'));
@@ -206,22 +211,25 @@ rl.on('line', line => {
         console.log('randomsend');
         return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         case 'resetnewmid':
-        return Mongo('update', TOTALDB, {newMid: {$exists: true}}, {$set: {newMid: []}}, {multi: true}).then(count => {
+        return Mongo('updateMany', TOTALDB, {newMid: {$exists: true}}, {$set: {newMid: []}}).then(count => {
             console.log(count);
             return Mongo('find', TOTALDB, {newMid: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
-        })
+        });
+        case 'updatepassword':
+        return updatePasswordCipher().then(() => console.log('done')).catch(err => handleError(err, 'CMD Update password'));
         default:
         console.log('help:');
         console.log('stock index mode');
         console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');
-        console.log('external lovetv|eztv [clear]');
+        //console.log('external lovetv|eztv [clear]');
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');
         console.log('randomsend list|edit|send [name:email|append]');
         console.log('testdata');
         console.log('resetnewmid');
+        console.log('updatepassword');
     }
 });

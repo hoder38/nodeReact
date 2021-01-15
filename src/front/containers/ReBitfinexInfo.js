@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf } from '../actions'
-import BitfinexInfo from '../components/BitfinexInfo'
+import { alertPush, sendGlbCf } from '../actions/index.js'
+import BitfinexInfo from '../components/BitfinexInfo.js'
 
 const mapStateToProps = state => ({
     mainUrl: state.basicDataHandle.url,

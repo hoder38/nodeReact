@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, setFitness, setBasic } from '../actions'
-import FitnessInfo from '../components/FitnessInfo'
+import { alertPush, setFitness, setBasic } from '../actions/index.js'
+import FitnessInfo from '../components/FitnessInfo.js'
 
 const mapStateToProps = state => ({
     bookmark: state.fitnessDataHandle.item.bookmark,

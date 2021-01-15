@@ -1,12 +1,15 @@
-import { ENV_TYPE } from '../../../ver'
-import { NAS_TMP } from '../config'
-import { LOTTERYDB } from '../constants'
-import { handleError, HoError, bufferToString, isValidString, checkAdmin } from '../util/utility'
-import { sendLotteryName } from '../models/api-tool-google'
-import { createReadStream as FsCreateReadStream, writeFile as FsWriteFile, readFile as FsReadFile, appendFile as FsAppendFile, unlink as FsUnlink, existsSync as FsExistsSync } from 'fs'
-import { createInterface } from 'readline'
-import { encode as IconvEncode } from 'iconv-lite'
-import Mongo from '../models/mongo-tool'
+import { ENV_TYPE } from '../../../ver.js'
+import { NAS_TMP } from '../config.js'
+import { LOTTERYDB } from '../constants.js'
+import fsModule from 'fs'
+const { createReadStream: FsCreateReadStream, writeFile: FsWriteFile, readFile: FsReadFile, appendFile: FsAppendFile, unlink: FsUnlink, existsSync: FsExistsSync } = fsModule;
+import readline from 'readline'
+const { createInterface } = readline;
+import iconvLite from 'iconv-lite'
+const { encode: IconvEncode } = iconvLite;
+import Mongo from '../models/mongo-tool.js'
+import { handleError, HoError, bufferToString, isValidString, checkAdmin } from '../util/utility.js'
+import { sendLotteryName } from '../models/api-tool-google.js'
 
 const getRewardItem = (items, anonymous) => items.map(item => ({
     name: item.name,
@@ -143,7 +146,7 @@ export default {
                     console.log(item);
                     return recurReward(index + 1);
                 });
-                return recurUser(0).then(() => recurReward(0)).catch(err => Mongo('remove', LOTTERYDB, {$isolated: 1}).then(() => Promise.reject(err)));
+                return recurUser(0).then(() => recurReward(0)).catch(err => Mongo('deleteMany', LOTTERYDB, {}).then(() => Promise.reject(err)));
             });
         });
     },
@@ -156,6 +159,7 @@ export default {
             //0 name 1 times 26 black times 27 black reward
             createInterface({input: FsCreateReadStream(utfPath)}).on('line', line => {
                 const parse = line.split(',');
+                console.log(parse);
                 if (!parse[0]) {
                     return false;
                 }
@@ -227,6 +231,8 @@ export default {
                     reward.push([parse[0].trim(), parse[1] ? +parse[1] : 1]);
                 }
             }).on('close', () => {
+                console.log(user);
+                console.log(reward);
                 if (user.length < 1 || reward.length < 1) {
                     reject(new HoError('user or prize is empty!!!'));
                 } else {
@@ -350,15 +356,9 @@ export default {
                                 } else {
                                     if (multiple) {
                                         const count = prizedlist[index].count--;
-                                        return (count < 1) ? Mongo('remove', LOTTERYDB, {
-                                            _id: prizedlist[index].id,
-                                            $isolated: 1,
-                                        }).then(item3 => recurUser(index + 1)) : Mongo('update', LOTTERYDB, {_id: prizedlist[index].id}, {$set: {count}}).then(item3 => recurUser(index + 1));
+                                        return (count < 1) ? Mongo('deleteMany', LOTTERYDB, {_id: prizedlist[index].id}).then(item3 => recurUser(index + 1)) : Mongo('update', LOTTERYDB, {_id: prizedlist[index].id}, {$set: {count}}).then(item3 => recurUser(index + 1));
                                     } else {
-                                        return Mongo('remove', LOTTERYDB, {
-                                            _id: prizedlist[index].id,
-                                            $isolated: 1,
-                                        }).then(item3 => recurUser(index + 1));
+                                        return Mongo('deleteMany', LOTTERYDB, {_id: prizedlist[index].id}).then(item3 => recurUser(index + 1));
                                     }
                                 }
                             }
@@ -398,7 +398,7 @@ export default {
                 return handleError(new HoError('You are not the owner'));
             }
             const utfPath = `${NAS_TMP(ENV_TYPE)}/lotteryoutput.csv`;
-            return Mongo('remove', LOTTERYDB, {$isolated: 1}).then(() => ({
+            return Mongo('deleteMany', LOTTERYDB, {}).then(() => ({
                 path: utfPath,
                 name: items[0].name,
             }));

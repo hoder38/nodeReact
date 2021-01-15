@@ -1,9 +1,10 @@
 import Ws from 'ws'
-import { ENV_TYPE } from '../../../ver'
-import { FILE_IP, COM_PORT } from '../config'
-import sendDs, { init as initDs } from '../models/discord-tool'
-import { handleError } from './utility'
-import { connect as NetConnect, createServer as NetCreateServer } from 'net'
+import { ENV_TYPE } from '../../../ver.js'
+import { FILE_IP, COM_PORT } from '../config.js'
+import sendDs, { init as initDs } from '../models/discord-tool.js'
+import { handleError } from './utility.js'
+import netModule from 'net'
+const { connect: NetConnect, createServer: NetCreateServer } = netModule;
 
 let wsServer = null;
 let client = null;

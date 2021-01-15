@@ -1,8 +1,8 @@
 import { connect } from 'react-redux'
-import { stockPush, alertPush, setStock, sendGlbCf } from '../actions'
-import Itemlist from '../components/Itemlist'
-import { arrayMerge } from '../utility'
-import { STOCK } from '../constants'
+import { stockPush, alertPush, setStock, sendGlbCf } from '../actions/index.js'
+import Itemlist from '../components/Itemlist.js'
+import { arrayMerge } from '../utility.js'
+import { STOCK } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: STOCK,

@@ -1,41 +1,44 @@
 import React from 'react'
-import Dropdown from './Dropdown'
-import { api, killEvent } from '../utility'
+import Dropdown from './Dropdown.js'
+import { api, killEvent } from '../utility.js'
 
-const ItemStock = React.createClass({
-    componentWillMount: function() {
+class ItemStock extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    componentDidMount() {
         this._dropList = [
             {title: 'PER', onclick: () => this._per(this.props.item.id), key: 0},
             //{title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
             {title: 'INTERVAL', onclick: () => this._interval(this.props.item.id), key: 2},
             //{title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
         ]
-    },
-    _per: function(id) {
+    }
+    _per = id => {
         api(`/api/stock/getPER/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
         }).catch(err => this.props.addalert(err))
-    },
+    }
     /*_predict: function(id) {
         api(`/api/stock/getPredictPER/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.per);
         }).catch(err => this.props.addalert(err))
     },*/
-    _interval: function(id) {
+    _interval = id => {
         api(`/api/stock/getInterval/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'warning', 'Parse Index', result.interval);
         }).catch(err => this.props.addalert(err))
-    },
+    }
     /*_point: function(id) {
         this.props.globalinput(1, point => api(`/api/stock/getPoint/${id}/${point}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             this.props.globalinput(4, () => {}, 'info', 'Input Price', result.point[0], result.point[1]);
         }), 'info', 'Input Price')
     },*/
-    render: function() {
+    render() {
         const item = this.props.item
         return (
             <tr className={(this.props.latest === item.id) ? 'info' : ''}>
@@ -62,6 +65,6 @@ const ItemStock = React.createClass({
             </tr>
         )
     }
-})
+}
 
 export default ItemStock

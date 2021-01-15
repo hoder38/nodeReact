@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import MediaWidget from '../components/MediaWidget'
-import { setItem, alertPush, itemPush, setBasic, sendGlbCf, feedbackPush } from '../actions'
-import { arrayMerge } from '../utility'
+import MediaWidget from '../components/MediaWidget.js'
+import { setItem, alertPush, itemPush, setBasic, sendGlbCf, feedbackPush } from '../actions/index.js'
+import { arrayMerge } from '../utility.js'
 
 const mapStateToProps = (state, ownProps) => state.itemDataHandle[ownProps.mediaType] ? Object.assign({index: state.itemDataHandle[ownProps.mediaType].index,
     bookmark: state.itemDataHandle[ownProps.mediaType].bookmark,

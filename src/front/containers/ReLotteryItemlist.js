@@ -1,8 +1,8 @@
 import { connect } from 'react-redux'
-import { lotteryPush } from '../actions'
-import Itemlist from '../components/Itemlist'
-import { arrayMerge } from '../utility'
-import { LOTTERY } from '../constants'
+import { lotteryPush, alertPush } from '../actions/index.js'
+import Itemlist from '../components/Itemlist.js'
+import { arrayMerge } from '../utility.js'
+import { LOTTERY } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: LOTTERY,
@@ -15,6 +15,7 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
     set: (item, path, bookmark, latest, sortName, sortType, pageToken) => dispatch(lotteryPush(item, path, bookmark, latest, sortName, sortType, pageToken)),
+    addalert: msg => dispatch(alertPush(msg)),
 })
 
 const ReLotteryItemlist = connect(

@@ -1,11 +1,11 @@
-import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants'
+import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver.js'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
-import { handleError, HoError } from '../util/utility'
-import Mongo from '../models/mongo-tool'
-import { getSuggestionData } from '../models/stock-tool'
-import sendWs from '../util/sendWs'
+import { handleError, HoError } from '../util/utility.js'
+import Mongo from '../models/mongo-tool.js'
+import { getSuggestionData } from '../models/stock-tool.js'
+import sendWs from '../util/sendWs.js'
 import Ws from 'ws'
 import Event from 'events'
 import Xml2js from 'xml2js'
@@ -680,7 +680,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     });
                     if (item.ing === 2) {
                         const sellAll = () => initialBook(true).then(() => {
-                            const delTotal = () => Mongo('remove', TOTALDB, {_id: item._id, $isolated: 1}).then(() => recur_status(index + 1));
+                            const delTotal = () => Mongo('deleteMany', TOTALDB, {_id: item._id}).then(() => recur_status(index + 1));
                             item.count = 0;
                             item.amount = item.orig;
                             for (let i = 0; i < position.length; i++) {
@@ -775,11 +775,20 @@ export const usseTDInit = () => checkOauth().then(() => {
 });
 
 export const getUssePosition = () => {
-    position.push({
-        symbol: 0,
-        amount: 1,
-        price: available.cash,
-    });
+    let is_exist = false;
+    for (let i = 0; i < position.length; i++) {
+        if (position[i].symbol === 0) {
+            is_exist = true;
+            break;
+        }
+    }
+    if (!is_exist) {
+        position.push({
+            symbol: 0,
+            amount: 1,
+            price: available.cash,
+        });
+    }
     return position;
 }
 

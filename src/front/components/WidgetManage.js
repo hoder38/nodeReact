@@ -1,6 +1,6 @@
 import React from 'react'
-import { WIDGET_BUTTON_ZINDEX, UPLOAD, FEEDBACK, MUSIC, VIDEO, IMAGE, PLAYLIST } from '../constants'
-import WidgetButton from './WidgetButton'
+import { WIDGET_BUTTON_ZINDEX, UPLOAD, FEEDBACK, MUSIC, VIDEO, IMAGE, PLAYLIST } from '../constants.js'
+import WidgetButton from './WidgetButton.js'
 
 export default function WidgetManage({ uploadProgress, feedbackNumber, musicNumber, musicMore, videoNumber, videoMore, imageNumber, imageMore, playlistNumber, playlistMore }) {
     return (

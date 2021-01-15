@@ -1,5 +1,5 @@
 import { connect } from 'react-redux'
-import WidgetManage from '../components/WidgetManage'
+import WidgetManage from '../components/WidgetManage.js'
 
 const mapStateToProps = state => ({
     uploadProgress: state.uploadDataHandle,

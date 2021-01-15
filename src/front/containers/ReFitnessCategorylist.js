@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { fbookmarkPush, fbookmarkPop, fdirPush, fdirPop, fitnessPush, alertPush } from '../actions'
-import Categorylist from '../components/Categorylist'
-import { FITNESS } from '../constants'
+import { fbookmarkPush, fbookmarkPop, fdirPush, fdirPop, fitnessPush, alertPush } from '../actions/index.js'
+import Categorylist from '../components/Categorylist.js'
+import { FITNESS } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: FITNESS,

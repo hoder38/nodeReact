@@ -1,6 +1,6 @@
 import fetch from 'isomorphic-fetch'
-import { browserHistory } from 'react-router'
-import { LOGIN_PAGE, STORAGE } from './constants'
+import { history } from './configureStore.js'
+import { LOGIN_PAGE, STORAGE } from './constants.js'
 
 const re_weburl = new RegExp(
     "^(url:)?" +
@@ -129,7 +129,9 @@ function errorHandle(response, relogin) {
                 return response.text().then(err => {throw err})
             case 401:
                 if (relogin) {
-                    browserHistory.push(LOGIN_PAGE)
+                    if (window.location.pathname !== LOGIN_PAGE) {
+                        history.push(LOGIN_PAGE)
+                    }
                     throw Error('')
                 } else {
                     return response.text().then(err => {throw err})

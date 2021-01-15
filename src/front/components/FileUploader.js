@@ -1,8 +1,10 @@
 import React from 'react'
+
 let key = 0
 
-const FileUploader = React.createClass({
-    componentWillMount: function() {
+class FileUploader extends React.Component {
+    constructor(props) {
+        super(props);
         this._files = []
         this._uploading = -1
         this._request = null
@@ -14,8 +16,8 @@ const FileUploader = React.createClass({
         if (this.props.set) {
             this._multi = true
         }
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         if (this.props.drop) {
             this._targetArr = Array.from(document.querySelectorAll('[data-drop]')).filter(node => node.getAttribute('data-drop') === this.props.drop)
         }
@@ -26,8 +28,8 @@ const FileUploader = React.createClass({
             })
         }
         window.addEventListener("beforeunload", this._routerWillLeave)
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this._clearFile()
         window.removeEventListener("beforeunload", this._routerWillLeave)
         if (this._targetArr.length > 0) {
@@ -36,15 +38,15 @@ const FileUploader = React.createClass({
                 target.removeEventListener('drop', this._pushFile)
             })
         }
-    },
-    _routerWillLeave: function(e) {
+    }
+    _routerWillLeave = e => {
         let confirmationMessage = 'You have uploaded files. Are you sure you want to navigate away from this page?'
         if (this._uploading !== -1) {
             e.returnValue = confirmationMessage
             return confirmationMessage
         }
-    },
-    _setState: function() {
+    }
+    _setState = () => {
         if (this._multi) {
             this.props.set(this._files)
             let progress = 0
@@ -54,11 +56,11 @@ const FileUploader = React.createClass({
         } else {
             this.props.setUpload(this._files.length > 0 ? this._files[0].progress : 0)
         }
-    },
-    _preventDefault: function(e) {
+    }
+    _preventDefault = e => {
         e.preventDefault()
-    },
-    _pushFile: function(e) {
+    }
+    _pushFile = e => {
         e.preventDefault()
         const droppedFiles = e.dataTransfer ? e.dataTransfer.files : e.target.files
         if (this._multi) {
@@ -82,8 +84,8 @@ const FileUploader = React.createClass({
         if (this._files.length > 0) {
             this._uploadFile()
         }
-    },
-    _clearFile: function() {
+    }
+    _clearFile = () => {
         if (this._request) {
             this._request.upload.removeEventListener('progress', this._uploadProgress, false)
             this._request.removeEventListener('load', this._uploadFinish, false)
@@ -93,8 +95,8 @@ const FileUploader = React.createClass({
         }
         this._files = []
         this._setState()
-    },
-    _uploadFile: function() {
+    }
+    _uploadFile = () => {
         const uploader = ret => {
             this._files = this._files.map(file => file.params === false ? Object.assign(file, {params: Object.assign({}, this.props.params, ret)}) : file)
             for (let i = 0; i < this._files.length; i++) {
@@ -123,15 +125,15 @@ const FileUploader = React.createClass({
         } else {
             uploader()
         }
-    },
-    _uploadProgress: function(e) {
+    }
+    _uploadProgress = e => {
         if (e.lengthComputable) {
             const progress = Math.round(e.loaded * 100 / e.total)
             this._files[this._uploading].progress = progress
             this._setState()
         }
-    },
-    _uploadFinish: function(e) {
+    }
+    _uploadFinish = e => {
         if (this._files[this._uploading]) {
             this._files[this._uploading].done = true
         }
@@ -148,26 +150,26 @@ const FileUploader = React.createClass({
         } else {
             this._uploadError(result)
         }
-    },
-    _uploadError: function(e) {
+    }
+    _uploadError = e => {
         this.props.callback(null, e)
         if (this._files[this._uploading]) {
             this._files[this._uploading].done = true
         }
         this._uploading = -1
         this._uploadFile()
-    },
-    _uploadAbort: function() {
+    }
+    _uploadAbort = () => {
         console.log('abort');
         if (this._files[this._uploading]) {
             this._files[this._uploading].done = true
         }
         this._uploading = -1
         this._uploadFile()
-    },
-    render: function() {
+    }
+    render() {
         return <input type="file" multiple onChange={this._pushFile} />
     }
-})
+}
 
 export default FileUploader

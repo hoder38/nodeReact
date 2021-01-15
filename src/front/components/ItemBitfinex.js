@@ -1,9 +1,12 @@
 import React from 'react'
-import Dropdown from './Dropdown'
-import { api, killEvent } from '../utility'
+import Dropdown from './Dropdown.js'
+import { api, killEvent } from '../utility.js'
 
-const ItemBitfinex = React.createClass({
-    render: function() {
+class ItemBitfinex extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    render() {
         const item = this.props.item
         let fileType = '';
         switch(item.type) {
@@ -54,6 +57,6 @@ const ItemBitfinex = React.createClass({
             </tr>
         )
     }
-})
+}
 
 export default ItemBitfinex

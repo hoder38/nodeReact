@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { stockPush, alertPush, sbookmarkPush, sendGlbIn, setStock } from '../actions'
-import ItemPath from '../components/ItemPath'
-import { STOCK } from '../constants'
+import { stockPush, alertPush, sbookmarkPush, sendGlbIn, setStock } from '../actions/index.js'
+import ItemPath from '../components/ItemPath.js'
+import { STOCK } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: STOCK,

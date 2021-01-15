@@ -1,41 +1,42 @@
 import React from 'react'
-import { Link, IndexLink } from 'react-router'
-import { ROOT_PAGE } from '../constants'
-import { killEvent } from '../utility'
+import { Link, NavLink } from 'react-router-dom'
+import { ROOT_PAGE } from '../constants.js'
+import { killEvent } from '../utility.js'
 
-const Navlist = React.createClass({
-    getInitialState: function() {
-        return {
+class Navlist extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
             collapse: true,
         }
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         this._targetArr = Array.from(document.querySelectorAll('[data-collapse]')).filter(node => node.getAttribute('data-collapse') === this.props.collapse)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.addEventListener('click', this._toggle)
             })
         }
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)
             })
         }
-    },
-    _toggle: function(e) {
+    }
+    _toggle = e => {
         killEvent(e, this.setState({collapse: !this.state.collapse}))
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         this.props.navlist.forEach(nav => {
             if (nav.hash === ROOT_PAGE) {
                 rows.push(
                     <li key={nav.key}>
-                        <IndexLink to={ROOT_PAGE}>
+                        <NavLink exact to={ROOT_PAGE}>
                             <i className={nav.css}></i>&nbsp;{nav.title}
-                        </IndexLink>
+                        </NavLink>
                     </li>
                 )
             } else {
@@ -54,6 +55,6 @@ const Navlist = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Navlist

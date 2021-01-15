@@ -1,7 +1,7 @@
 import React from 'react'
-import { FILE_ZINDEX } from '../constants'
+import { FILE_ZINDEX } from '../constants.js'
 import Chart from 'chart.js'
-import { killEvent, getRandomColor } from '../utility'
+import { killEvent, getRandomColor } from '../utility.js'
 
 function getRankColor(len, own) {
     let bg = [];
@@ -28,8 +28,11 @@ function getRankColor(len, own) {
     return {bg, br};
 }
 
-const RankStatis = React.createClass({
-    componentDidMount: function() {
+class RankStatis extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    componentDidMount() {
         const color = getRankColor(this.props.item.labels.length, this.props.item.owner);
         this._chart = new Chart(document.getElementById('chart'), {
             type: 'bar',
@@ -46,11 +49,11 @@ const RankStatis = React.createClass({
             },
             options: {scales: {yAxes:[{ticks:{beginAtZero:true}}]}},
         });
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this._chart.destroy();
-    },
-    render: function() {
+    }
+    render() {
         return (
             <div className="modal-content" style={{
                 position: 'fixed',
@@ -70,6 +73,6 @@ const RankStatis = React.createClass({
             </div>
         )
     }
-});
+}
 
 export default RankStatis

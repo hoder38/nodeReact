@@ -1,11 +1,12 @@
 import React from 'react'
-import Tooltip from './Tooltip'
-import pdfjs from 'pdfjs-dist'
-import UserInput from './UserInput'
-import { killEvent, api, randomFloor, arrayObjectIndexOf, isValidString } from '../utility'
+import Tooltip from './Tooltip.js'
+import PDFJS from 'pdfjs-dist'
+import UserInput from './UserInput.js'
+import { killEvent, api, randomFloor, arrayObjectIndexOf, isValidString } from '../utility.js'
 
-const MediaWidget = React.createClass({
-    getInitialState: function() {
+class MediaWidget extends React.Component {
+    constructor(props) {
+        super(props);
         this._audio = null
         this._video = null
         this._media = null
@@ -40,7 +41,7 @@ const MediaWidget = React.createClass({
             default:
             this.props.addalert('unknown type')
         }
-        return Object.assign({
+        this.state = Object.assign({
             option: false,
             mode: 0,
             index: -1,
@@ -52,8 +53,8 @@ const MediaWidget = React.createClass({
             subEn: '',
             cue: '',
         }, this._input.getValue())
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
         const is_firefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
         this._targetArr = Array.from(document.querySelectorAll('[data-widget]')).filter(node => node.getAttribute('data-widget') === this.props.toggle)
@@ -62,7 +63,7 @@ const MediaWidget = React.createClass({
                 target.addEventListener('click', this._toggle)
             })
         }
-        window.addEventListener("beforeunload", this._leaveRecord)
+        //window.addEventListener("beforeunload", this._leaveRecord)
         if (this.props.mediaType === 3 || this.props.mediaType === 9) {
             if (this._video) {
                 if (this.props.mediaType === 3) {
@@ -192,59 +193,59 @@ const MediaWidget = React.createClass({
                 }
             }
         }
-    },
-    componentWillReceiveProps: function(nextProps) {
-        if (nextProps.count !== this.props.count) {
-            if (nextProps.mediaType === 9) {
+    }
+    componentDidUpdate(prevProps, prevState) {
+        if (prevProps.count !== this.props.count) {
+            if (this.props.mediaType === 9) {
                 let index = 0
                 let subIndex = 0;
-                if (nextProps.index) {
-                    let setTime = nextProps.index.toString().match(/^(\d+)(&(\d+))?$/)
+                if (this.props.index) {
+                    let setTime = this.props.index.toString().match(/^(\d+)(&(\d+))?$/)
                     this._startTime = setTime && setTime[1] ? Number(setTime[1]) : 0
                     subIndex = setTime && setTime[1] ? Number(setTime[1]) : 0
                     index = setTime && setTime[3] ? Number(setTime[3]) : 0
                 }
-                this._playlistItem(index, nextProps.list, subIndex);
+                this._playlistItem(index, this.props.list, subIndex);
             } else {
-                api(`/api/storage/media/saveParent/${nextProps.sortName}/${nextProps.sortType}`, {name: this._type}, 'POST').then(result => this._loadMedia(nextProps.index - 1, nextProps.list)).then(result => this.props.toggleShow(true)).catch(err => this.props.addalert(err))
+                api(`/api/storage/media/saveParent/${this.props.sortName}/${this.props.sortType}`, {name: this._type}, 'POST').then(result => this._loadMedia(this.props.index - 1, this.props.list)).then(result => this.props.toggleShow(true)).catch(err => this.props.addalert(err))
             }
         }
-        if (nextProps.show === false && this.props.show === true) {
+        if (this.props.show === false && prevProps.show === true) {
             if (this._video) {
                 this._video.pause()
             }
         }
-    },
-    componentDidUpdate : function(prevProps, prevState) {
         if (this._item.doc === 3 && (this.state.src !== prevState.src || this.props.full !== prevProps.full)) {
-            PDFJS.workerSrc = '//npmcdn.com/pdfjs-dist@1.7.225/build/pdf.worker.js';
+            PDFJS.GlobalWorkerOptions.workerSrc = '//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.5.207/pdf.worker.min.js';
             const pid = (this.props.mediaType === 2) ? 'pdf1' : 'pdf2';
             const full = this.props.full;
             console.log(this.state.src);
-            PDFJS.getDocument({
+            const loadingTask = PDFJS.getDocument({
                 url: this.state.src,
                 withCredentials: true,
-            }).then(pdf => pdf.getPage(1).then(function(page) {
-                const viewport = page.getViewport(full ? 2 : 1);
-                let canvas = document.getElementById(pid);
+            })
+            loadingTask.promise.then(pdf => pdf.getPage(1).then(function(page) {
+                const viewport = page.getViewport({scale: full ? 2 : 1});
+                const canvas = document.getElementById(pid);
+                const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
                 page.render({
-                    canvasContext: canvas.getContext('2d'),
+                    canvasContext: context,
                     viewport,
                 });
             }));
         }
-    },
-    componentWillUnmount: function() {
-        window.removeEventListener("beforeunload", this._leaveRecord)
+    }
+    componentWillUnmount() {
+        //window.removeEventListener("beforeunload", this._leaveRecord)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)
             })
         }
-    },
-    _changeSub: function() {
+    }
+    _changeSub = () => {
         if (this._video && this._video.src && window.location.href !== this._video.src) {
             if (this._video.textTracks[0] && this._video.textTracks[1]) {
                 if (this._video.textTracks[0].mode === 'showing') {
@@ -257,8 +258,8 @@ const MediaWidget = React.createClass({
                 }
             }
         }
-    },
-    _playlistItem: function(index, list, subIndex=0) {
+    }
+    _playlistItem = (index, list, subIndex=0) => {
         this._item = list[index]
         this._total = this._item.present ? this._item.present : 1;
         this._media = this._item.type === 3 ? this._video : this._item.type === 4 ? this._audio : null
@@ -276,8 +277,8 @@ const MediaWidget = React.createClass({
             this.props.toggleShow(true)
             this._recordMedia
         })
-    },
-    _leaveRecord: function() {
+    }
+    /*_leaveRecord = () => {
         if (this._media) {
             if (this._item.id && this._media.duration) {
                 let xmlhttp = new XMLHttpRequest()
@@ -287,8 +288,8 @@ const MediaWidget = React.createClass({
                 xmlhttp.send('')
             }
         }
-    },
-    _recordMedia: function(pause=false, image=false) {
+    }*/
+    _recordMedia = (pause=false, image=false) => {
         if (image) {
             api(`/api/storage/media/record/${this._item.id}/${this.state.subIndex}`).catch(err => this.props.addalert(err))
         } else {
@@ -299,8 +300,8 @@ const MediaWidget = React.createClass({
             const index = this.props.mediaType === 9 ? `&${this.state.index}` : ''
             api(`/api/storage/media/record/${this._playlist ? this._playlist.obj.id : this._item.id}/${time}${index}${(!pause && this._playlist && this._playlist.total === this._playlist.obj.index) ? `/${this._item.id}` : ''}`).catch(err => this.props.addalert(err))
         }
-    },
-    _loadMedia: function(index, list, subIndex=0, direction=0) {
+    }
+    _loadMedia = (index, list, subIndex=0, direction=0) => {
         if (this._item.id) {
             this._recordMedia()
         }
@@ -439,8 +440,8 @@ const MediaWidget = React.createClass({
             }))
             return Promise.reject(err)
         })
-    },
-    _moveMedia: function(number) {
+    }
+    _moveMedia = number => {
         if (this.state.loading) {
             return true
         }
@@ -474,8 +475,8 @@ const MediaWidget = React.createClass({
                 }
             }).then(result => this._loadMedia(result, this.props.list)).catch(err => this.props.addalert(err))
         }
-    },
-    _movePlaylist: function(direction) {
+    }
+    _movePlaylist = direction => {
         if (this.state.loading) {
             return true
         }
@@ -525,8 +526,8 @@ const MediaWidget = React.createClass({
                 this._playlistItem(this.state.index, this.props.list, newIndex);
             }
         }
-    },
-    _nextMedia: function(previous=false) {
+    }
+    _nextMedia = (previous=false) => {
         if (this._media) {
             if (this._preTime < this._media.duration - 3) {
                 this._media.currentTime = this._preTime
@@ -602,17 +603,17 @@ const MediaWidget = React.createClass({
             break
         }
         this._moveMedia(number)
-    },
-    _toggle: function(e) {
+    }
+    _toggle = e => {
         killEvent(e, this.props.toggleShow)
-    },
-    _changeMode: function() {
+    }
+    _changeMode = () => {
         this.setState(Object.assign({}, this.state, {mode: this.state.mode > 3 ? 0 : (this.state.mode + 1)}))
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _handleOpt: function(e) {
+    }
+    _handleOpt = e => {
         switch (e.target.value) {
             case '1':
             if (this.props.mediaType === 9) {
@@ -645,8 +646,8 @@ const MediaWidget = React.createClass({
             this._changeSub();
             break;
         }
-    },
-    _fixCue: function() {
+    }
+    _fixCue = () => {
         if (this._video && this._video.src && window.location.href !== this._video.src) {
             if (this._fix) {
                 const index = this.props.mediaType === 9 ? `/${this.state.index}` : ''
@@ -671,8 +672,8 @@ const MediaWidget = React.createClass({
                 }
             }
         }
-    },
-    _removeCue: function() {
+    }
+    _removeCue = () => {
         if (this._video && this._video.src && window.location.href !== this._video.src) {
             let track = this._video.textTracks[0]
             if (track) {
@@ -693,8 +694,8 @@ const MediaWidget = React.createClass({
                 }
             }
         }
-    },
-    _refreshCue: function() {
+    }
+    _refreshCue = () => {
         if (this._video && this._video.src && window.location.href !== this._video.src) {
             this._removeCue()
             let matchCh = this.state.subCh.match(/(.*)\/(0+)$/)
@@ -704,8 +705,8 @@ const MediaWidget = React.createClass({
                 subEn: matchEn ? `${matchEn[1]}/${matchEn[2]}0` : `${this.state.subEn}/0`,
             }))
         }
-    },
-    _backward: function(big) {
+    }
+    _backward = big => {
         if (big) {
             const one = this._media.duration / 100;
             this._media.currentTime -= this._media.currentTime >= one ? one : 0;
@@ -714,8 +715,8 @@ const MediaWidget = React.createClass({
         } else {
             this._media.currentTime = this._media.currentTime >= 5 ? this._media.currentTime - 5 : 0
         }
-    },
-    _forward: function(big) {
+    }
+    _forward = big => {
         if (big) {
             this._media.currentTime += (this._media.duration / 100);
         } else if (this._fix) {
@@ -723,8 +724,8 @@ const MediaWidget = React.createClass({
         } else {
             this._media.currentTime += 5
         }
-    },
-    _fullscreen: function() {
+    }
+    _fullscreen = () => {
         if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement ) {
             if (this._media.requestFullscreen) {
                 this._media.requestFullscreen();
@@ -746,8 +747,8 @@ const MediaWidget = React.createClass({
                 document.webkitExitFullscreen();
             }
         }
-    },
-    _mediaCheck: function() {
+    }
+    _mediaCheck = () => {
         if (!this._item.id || this._item.complete || (this._playlist && this._playlist.obj.complete)) {
             return true
         }
@@ -771,11 +772,11 @@ const MediaWidget = React.createClass({
                 }
             }
         })
-    },
-    _mediaDownload: function() {
+    }
+    _mediaDownload = () => {
         this.props.sendglbcf(() => window.location.href = this.state.src, `Would you sure to download ${this._item.name} ?`)
-    },
-    _handleExtend: function() {
+    }
+    _handleExtend = () => {
         if (this.props.full) {
             this.setState(Object.assign({}, this.state, {extend: !this.state.extend}), () => {
                 if (!this.state.extend) {
@@ -783,8 +784,8 @@ const MediaWidget = React.createClass({
                 }
             })
         }
-    },
-    render: function() {
+    }
+    render() {
         const show = this.props.show ? (this.props.full && this._item.doc !== 2 && this._item.doc !== 3 && (this.props.mediaType === 2 || (this.props.mediaType === 9 && this._item.type === 2))) ? {visibility: 'hidden'} : {} : {display: 'none'}
         let option = null
         const ulClass = this.props.full ? 'pager pull-left' : 'pager pull-right'
@@ -994,6 +995,6 @@ const MediaWidget = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default MediaWidget

@@ -1,48 +1,51 @@
-import { readFileSync as FsReadFileSync, createReadStream as FsCreateReadStream } from 'fs'
+import fsModule from 'fs'
+const { readFileSync: FsReadFileSync, createReadStream: FsCreateReadStream } = fsModule;
 
 //constant
-import { STATIC_PATH } from '../constants'
+import { STATIC_PATH } from '../constants.js'
 
 //config
-import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config'
+import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config.js'
 
 //external
-import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
+import httpsModule from 'https'
+const { Agent: HttpsAgent, createServer: HttpsCreateServer } = httpsModule;
 import Express from 'express'
 import ExpressSession from 'express-session'
-import { urlencoded as BodyParserUrlencoded, json as BodyParserJson } from 'body-parser'
+import bodyParser from 'body-parser'
+const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
 
 //model
-import Mongo, { objectID } from '../models/mongo-tool'
-import SessionStore from '../models/session-tool'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import SessionStore from '../models/session-tool.js'
 
 //router
-import LoginRouter from './login-router'
-import HomeRouter from './home-router'
-import BasicRouter from './basic-router'
-import UserRouter from './user-router'
-import StorageRouter from './storage-router'
-import PasswordRouter from './password-router'
-import StockRouter from './stock-router'
-//import FitnessRouter from './fitness-router'
-//import RankRouter from './rank-router'
-import BookmarkRouter from './bookmark-router'
-import ParentRouter from './parent-router'
-import LotteryRouter from './lottery-router'
-import OtherRouter from './other-router'
+import LoginRouter from './login-router.js'
+import HomeRouter from './home-router.js'
+import BasicRouter from './basic-router.js'
+import UserRouter from './user-router.js'
+import StorageRouter from './storage-router.js'
+import PasswordRouter from './password-router.js'
+import StockRouter from './stock-router.js'
+//import FitnessRouter from './fitness-router.js'
+//import RankRouter from './rank-router.js'
+import BookmarkRouter from './bookmark-router.js'
+import ParentRouter from './parent-router.js'
+import LotteryRouter from './lottery-router.js'
+import OtherRouter from './other-router.js'
 
 //util
-import { handleError, showLog } from '../util/utility'
-import { init as WsInit } from '../util/sendWs'
+import { handleError, showLog } from '../util/utility.js'
+import { init as WsInit } from '../util/sendWs.js'
 
 //global
 const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: PKEY_PWD,
+    //passphrase: PKEY_PWD,
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",
@@ -66,6 +69,7 @@ const credentials = {
 //credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
+//const server = HttpsCreateServer({}, app)
 WsInit();
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
@@ -99,7 +103,7 @@ app.use('/api/bookmark', BookmarkRouter);
 
 app.use('/api/parent', ParentRouter);
 
-app.use('/api/lottery', LotteryRouter);
+//app.use('/api/lottery', LotteryRouter);
 
 //other
 app.use('/', OtherRouter);
@@ -123,5 +127,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 process.on('uncaughtException', err => handleError(err, 'Threw exception'));
 
 server.listen(PORT(ENV_TYPE), IP(ENV_TYPE));
+//app.listen(PORT(ENV_TYPE), IP(ENV_TYPE));
 console.log('start express server\n');
 console.log(`Server running at https://${EXTENT_IP(ENV_TYPE)}:${EXTENT_PORT(ENV_TYPE)} ${new Date()}`);

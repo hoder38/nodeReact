@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { setRank, sendGlbCf, alertPush } from '../actions'
-import ItemRank from '../components/ItemRank'
+import { setRank, sendGlbCf, alertPush } from '../actions/index.js'
+import ItemRank from '../components/ItemRank.js'
 
 const mapStateToProps = state => ({
     bookmark: state.rankDataHandle.item.bookmark,

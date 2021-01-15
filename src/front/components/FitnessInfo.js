@@ -1,25 +1,26 @@
 import React from 'react'
-import UserInput from './UserInput'
-import Tooltip from './Tooltip'
-import { killEvent, checkInput, api } from '../utility'
-import { FILE_ZINDEX } from '../constants'
+import UserInput from './UserInput.js'
+import Tooltip from './Tooltip.js'
+import { killEvent, checkInput, api } from '../utility.js'
+import { FILE_ZINDEX } from '../constants.js'
 
-const FitnessInfo = React.createClass({
-    getInitialState: function() {
+class FitnessInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['name', 'price', 'desc', 'exchange'], this._handleSubmit, this._handleChange);
-        return Object.assign({edit: this.props.item.newable ? true : false}, this._input.initValue(this.props.item));
-    },
-    componentDidMount: function() {
+        this.state = Object.assign({edit: this.props.item.newable ? true : false}, this._input.initValue(this.props.item));
+    }
+    componentDidMount() {
         if (this.props.item.newable) {
             this._input.initFocus()
         }
-    },
-    componentDidUpdate: function(prevProps, prevState) {
+    }
+    componentDidUpdate(prevProps, prevState) {
         if (this.state.edit && !prevState.edit) {
             this._input.initFocus()
         }
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (this.state.edit) {
             const set_obj = Object.assign({},
                 checkInput('name', this.state, this.props.addalert, this.props.item.name, 'name'),
@@ -46,11 +47,11 @@ const FitnessInfo = React.createClass({
         } else {
             this.props.onclose()
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _exchange: function(id) {
+    }
+    _exchange = id => {
         const set_obj = checkInput('exchange', this.state, this.props.addalert, '', 'int');
         if (set_obj) {
             api(`/api/fitness/exchange/${id}`, set_obj, 'PUT').then(result => {
@@ -58,8 +59,8 @@ const FitnessInfo = React.createClass({
                 this.setState(Object.assign({}, this.state, {exchange: ''}));
             }).catch(err => this.props.addalert(err))
         }
-    },
-    render: function() {
+    }
+    render() {
         const item = this.props.item
         const price = (
             <div className="input-group">
@@ -185,6 +186,6 @@ const FitnessInfo = React.createClass({
             </div>
         )
     }
-});
+}
 
 export default FitnessInfo

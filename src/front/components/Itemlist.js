@@ -1,46 +1,47 @@
 import React from 'react'
-import ReItemFile from '../containers/ReItemFile'
-import ReItemPassword from '../containers/ReItemPassword'
-import ReItemStock from '../containers/ReItemStock'
-import ReItemFitness from '../containers/ReItemFitness'
-import ReItemRank from '../containers/ReItemRank'
-import ReItemLottery from '../containers/ReItemLottery'
-import ItemBitfinex from './ItemBitfinex'
-import Tooltip from './Tooltip'
-import Dropdown from './Dropdown'
-import { isValidString, getItemList, api, killEvent } from '../utility'
-import { STORAGE, PASSWORD, STOCK, FITNESS, RANK, LOTTERY, BITFINEX } from '../constants'
+import ReItemFile from '../containers/ReItemFile.js'
+import ReItemPassword from '../containers/ReItemPassword.js'
+import ReItemStock from '../containers/ReItemStock.js'
+//import ReItemFitness from '../containers/ReItemFitness.js'
+//import ReItemRank from '../containers/ReItemRank.js'
+//import ReItemLottery from '../containers/ReItemLottery.js'
+import ItemBitfinex from './ItemBitfinex.js'
+import Tooltip from './Tooltip.js'
+import Dropdown from './Dropdown.js'
+import { isValidString, getItemList, api, killEvent } from '../utility.js'
+import { STORAGE, PASSWORD, STOCK/*, FITNESS, RANK, LOTTERY*/, BITFINEX } from '../constants.js'
 
-const Itemlist = React.createClass({
-    getInitialState: function() {
+class Itemlist extends React.Component {
+    constructor(props) {
+        super(props);
         this._select = new Map()
         this._tags = new Set()
         this._except = new Set()
         this._first = 0
-        return {
+        this.state = {
             loading: false,
             allTag: false,
             relative: new Set(),
         }
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         if (this.props.list.size === 0 && (this.props.itemType !== BITFINEX || this.props.mainUrl)) {
             let name = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortName`)) ? localStorage.getItem(`${this.props.itemType}SortName`): this.props.sortName
             let type = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortType`)) ? localStorage.getItem(`${this.props.itemType}SortType`): this.props.sortType
             this._getlist(this.props.mainUrl, name, type, false)
         }
-    },
-    componentWillReceiveProps: function(nextProps) {
-        if (this.props.itemType === BITFINEX && (nextProps.mainUrl !== this.props.mainUrl)) {
+    }
+    componentDidUpdate(prevProps) {
+        if (this.props.itemType === BITFINEX && (prevProps.mainUrl !== this.props.mainUrl)) {
             let name = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortName`)) ? localStorage.getItem(`${this.props.itemType}SortName`): this.props.sortName
             let type = (typeof(Storage) !== "undefined" && localStorage.getItem(`${this.props.itemType}SortType`)) ? localStorage.getItem(`${this.props.itemType}SortType`): this.props.sortType
-            this._getlist(nextProps.mainUrl, name, type, false)
+            this._getlist(this.props.mainUrl, name, type, false)
         }
-    },
-    _getlist: function(preurl='', name=this.props.sortName, type=this.props.sortType, push=true) {
+    }
+    _getlist = (preurl='', name=this.props.sortName, type=this.props.sortType, push=true) => {
         this.setState(Object.assign({}, this.state, {loading: true}), () => getItemList(this.props.itemType, name, type, this.props.set, this.props.page, this.props.pageToken, push, null, 0, false, false, false, preurl).then(() => this.setState(Object.assign({}, this.state, {loading: false}))).catch(err => this.props.addalert(err)))
-    },
-    _handleSelect: function() {
+    }
+    _handleSelect = () => {
         let newList = new Set()
         this._select.forEach((item, i) => {
             if (item && item.checked) {
@@ -48,15 +49,15 @@ const Itemlist = React.createClass({
             }
         })
         this.props.setSelect(newList)
-    },
-    _handleTag: function(type, tag) {
+    }
+    _handleTag = (type, tag) => {
         if (this.props.select.size === 0) {
             this.props.addalert('Please selects item!!!')
         } else {
             isValidString(tag, 'name') ? api(`/api/${this.props.itemType}/${type}Tag/${tag}`, {uids: [...this.props.select]}, 'PUT').catch(err => this.props.addalert(err)) : this.props.addalert('Tag is not valid!!!!!!')
         }
-    },
-    _tagRow: function(tag, className) {
+    }
+    _tagRow = (tag, className) => {
         const td3 = this.props.itemType === STOCK ? <td style={{width: '15%', minWidth: '68px'}}></td> : null
         return (
             <tr key={`${tag}${className}`}>
@@ -85,8 +86,8 @@ const Itemlist = React.createClass({
                 </td>
             </tr>
         )
-    },
-    _toggleTags: function() {
+    }
+    _toggleTags = () => {
         this.state.allTag ? this.setState(Object.assign({}, this.state, {
             allTag: false,
             relative: new Set(),
@@ -95,8 +96,8 @@ const Itemlist = React.createClass({
                 api(`/api/${this.props.itemType}/getOptionTag`, {tags: this._tags}).then(result => this.setState(Object.assign({}, this.state, {relative: new Set(result.relative.filter(x => (!this._tags.has(x) && !this._except.has(x))))}))).catch(err => this.props.addalert(err))
             }
         })
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         let tagRows = []
         let tags = new Set()
@@ -113,7 +114,7 @@ const Itemlist = React.createClass({
                 case STOCK:
                 rows.push(<ReItemStock key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} setstock={this.props.setstock} />)
                 break
-                case FITNESS:
+                /*case FITNESS:
                 rows.push(<ReItemFitness key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
                 break
                 case RANK:
@@ -121,7 +122,7 @@ const Itemlist = React.createClass({
                 break
                 case LOTTERY:
                 rows.push(<ReItemLottery key={item.id} item={item} owner={this.props.owner} />)
-                break
+                break*/
                 case BITFINEX:
                 rows.push(<ItemBitfinex key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} check={select} mainUrl={this.props.mainUrl} sendglbcf={this.props.sendglbcf} />)
                 break
@@ -199,6 +200,6 @@ const Itemlist = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default Itemlist

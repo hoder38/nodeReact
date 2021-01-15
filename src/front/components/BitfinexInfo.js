@@ -1,16 +1,17 @@
 import React from 'react'
-import UserInput from './UserInput'
-import Tooltip from './Tooltip'
-import { killEvent, checkInput, api, isValidString } from '../utility'
-import { FILE_ZINDEX } from '../constants'
+import UserInput from './UserInput.js'
+import Tooltip from './Tooltip.js'
+import { killEvent, checkInput, api, isValidString } from '../utility.js'
+import { FILE_ZINDEX } from '../constants.js'
 
-const BitfinexInfo = React.createClass({
-    getInitialState: function() {
+class BitfinexInfo extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['key', 'secret', 'riskLimit', 'waitTime', 'amountLimit', 'miniRate', 'dynamic', 'keepAmount', 'keepAmountRate1', 'keepAmountMoney1', 'dynamicRate1', 'dynamicDay1', 'dynamicRate2', 'dynamicDay2', 'amount', 'enter_mid', 'rate_ratio', 'pair', 'clear'], this._handleSubmit, this._handleChange);
         this._diff = null;
         this._active = null;
         this._advanced = null;
-        return Object.assign({
+        this.state = Object.assign({
             list: [],
             current: -1,
             diff: false,
@@ -19,11 +20,11 @@ const BitfinexInfo = React.createClass({
             trade: false,
             tradable: false,
         }, this._input.initValue());
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         api(`${this.props.mainUrl}/api/bitfinex/bot`).then(result => this._setList(result)).catch(err => this.props.addalert(err));
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         const item = this.state.list[this.state.current];
         const diff = this.state.diff !== item.isDiff ? {diff: this.state.diff} : {};
         const active = this.state.active !== item.isActive ? {active: this.state.active} : {}
@@ -109,16 +110,16 @@ const BitfinexInfo = React.createClass({
                 this.props.addalert(`${item.type.substr(1)} Bot update completed`);
             }).catch(err => this.props.addalert(err)), `Would you sure to update ${item.type.substr(1)} Bot?`);
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue(), {
             diff: this._diff.checked,
             active: this._active.checked,
             advanced: this._advanced.checked,
             trade: this._trade.checked,
         }));
-    },
-    _setList: function(list, type=null) {
+    }
+    _setList = (list, type = null) => {
         if (!list) {
             return false;
         }
@@ -141,12 +142,12 @@ const BitfinexInfo = React.createClass({
             tradable: item.tradable,
             trade: item.isTrade,
         }, this._input.initValue(item)));
-    },
-    _delBot: function() {
+    }
+    _delBot = () => {
         const type = this.state.list[this.state.current].type;
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/bitfinex/bot/del/${type}`).then(result => this._setList(result, type)).catch(err => this.props.addalert(err)), `Would you sure to delete ${this.state.list[this.state.current].type.substr(1)} Bot?`);
-    },
-    render: function() {
+    }
+    render() {
         const advancedDisplay = this.state.advanced ? {} : {display: 'none'};
         const tradableDisplay = this.state.tradable ? {} : {display: 'none'};
         const tradeDisplay = (this.state.tradable && this.state.trade) ? {} : {display: 'none'};
@@ -414,6 +415,6 @@ const BitfinexInfo = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default BitfinexInfo

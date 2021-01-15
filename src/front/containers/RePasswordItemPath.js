@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { passPush, alertPush, pbookmarkPush, sendGlbIn, setPass } from '../actions'
-import ItemPath from '../components/ItemPath'
-import { PASSWORD } from '../constants'
+import { passPush, alertPush, pbookmarkPush, sendGlbIn, setPass } from '../actions/index.js'
+import ItemPath from '../components/ItemPath.js'
+import { PASSWORD } from '../constants.js'
 
 const mapStateToProps = state => ({
     itemType: PASSWORD,

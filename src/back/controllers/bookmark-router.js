@@ -1,12 +1,13 @@
-import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB } from '../constants'
+import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB } from '../constants.js'
 import Express from 'express'
-import { createHash } from 'crypto'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility'
-import { addPost } from '../util/mime'
-import Mongo, { objectID } from '../models/mongo-tool'
-import GoogleApi from '../models/api-tool-google'
-import sendWs from '../util/sendWs'
+import crypto from 'crypto'
+const { createHash } = crypto;
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility.js'
+import { addPost } from '../util/mime.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import GoogleApi from '../models/api-tool-google.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -105,7 +106,7 @@ function newBookmarkItem(name, user, session, bpath, bexactly) {
                 data['adultonly'] = 1;
             }
         });
-        const getChannel = () => channel ? GoogleApi('y channel', {id: channel}).then(metadata => {
+        const getChannel = () => /*channel ? GoogleApi('y channel', {id: channel}).then(metadata => {
             const bookName = `000 Channel ${name}`;
             setTag.add(normalize(bookName)).add('channel').add('youtube').add('頻道');
             data['name'] = bookName;
@@ -120,7 +121,7 @@ function newBookmarkItem(name, user, session, bpath, bexactly) {
                 keywords.forEach(k => setTag.add(normalize(k)));
             }
             return bookName;
-        }) : StorageTagTool.getRelativeTag(bpath, user, [], bexactly).then(btags => {
+        }) :*/ StorageTagTool.getRelativeTag(bpath, user, [], bexactly).then(btags => {
             btags.forEach(b => setTag.add(normalize(b)));
             const bookName = `000 Bookmark ${name}`;
             setTag.add(normalize(bookName));

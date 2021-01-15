@@ -1,39 +1,40 @@
 import React from 'react'
-import FileUploader from './FileUploader'
-import { UPLOAD } from '../constants'
-import { isValidString, api, killEvent } from '../utility'
-import UserInput from './UserInput'
-import Tooltip from './Tooltip'
+import FileUploader from './FileUploader.js'
+import { UPLOAD } from '../constants.js'
+import { isValidString, api, killEvent } from '../utility.js'
+import UserInput from './UserInput.js'
+import Tooltip from './Tooltip.js'
 
-const FileAdd = React.createClass({
-    getInitialState: function() {
+class FileAdd extends React.Component {
+    constructor(props) {
+        super(props);
         this._clearFiles = () => console.log('clear')
-        this._input = new UserInput.Input(['url'], this._handleSubmit, this._handleChange)
-        return Object.assign({
+        this._input = new UserInput.Input(['url'], this._handleSubmit, this._handleChange);
+        this.state = Object.assign({
             files: [],
             type: false,
             show: false,
-        }, this._input.initValue())
-    },
-    componentDidMount: function() {
+        }, this._input.initValue());
+    }
+    componentDidMount() {
         this._targetArr = Array.from(document.querySelectorAll('[data-widget]')).filter(node => node.getAttribute('data-widget') === UPLOAD)
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.addEventListener('click', this._toggle)
             })
         }
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._targetArr.length > 0) {
             this._targetArr.forEach(target => {
                 target.removeEventListener('click', this._toggle)
             })
         }
-    },
-    _toggle: function(e) {
+    }
+    _toggle = e => {
         killEvent(e, () => this.setState(Object.assign({}, this.state, {show: !this.state.show})))
-    },
-    _setFiles: function(files) {
+    }
+    _setFiles = files => {
         if (this.state.files.length === 0 && files.length > 0) {
             this.setState(Object.assign({}, this.state, {
                 files,
@@ -42,18 +43,18 @@ const FileAdd = React.createClass({
         } else {
             this.setState(Object.assign({}, this.state, {files}))
         }
-    },
-    _setClearFiles: function(clear) {
+    }
+    _setClearFiles = clear => {
         this._clearFiles = clear
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         if (this._ref !== null) {
             this.setState(Object.assign({}, this.state, {type: this._ref.checked}, this._input.getValue()))
         } else {
             this.setState(Object.assign({}, this.state, this._input.getValue()))
         }
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (isValidString(this.state.url, 'url')) {
             const url = this.state.url
             this.setState(Object.assign({}, this.state, this._input.initValue()))
@@ -70,8 +71,8 @@ const FileAdd = React.createClass({
         } else {
             this.props.addalert('URL not vaild!!!')
         }
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         this.state.files.forEach(file => {
             rows.push(<div style={{color: '#31708f'}} key={file.key}>{file.name}<span className="badge">{file.progress + '%'}</span></div>)
@@ -133,6 +134,6 @@ const FileAdd = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default FileAdd

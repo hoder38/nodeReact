@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf, setSdirs, sdirPush} from '../actions'
-import Stock from '../components/Stock'
+import { alertPush, sendGlbCf, setSdirs, sdirPush} from '../actions/index.js'
+import Stock from '../components/Stock.js'
 
 const mapDispatchToProps = dispatch => ({
     addalert: msg => dispatch(alertPush(msg)),

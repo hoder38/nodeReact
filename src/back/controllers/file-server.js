@@ -1,42 +1,45 @@
-import { readFileSync as FsReadFileSync } from 'fs'
+import fsModule from 'fs'
+const { readFileSync: FsReadFileSync } = fsModule;
 
 //config
-import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver'
-import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT } from '../config'
+import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
+import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT } from '../config.js'
 
 //external
-import { Agent as HttpsAgent, createServer as HttpsCreateServer } from 'https'
+import httpsModule from 'https'
+const { Agent: HttpsAgent, createServer: HttpsCreateServer } = httpsModule;
 import Express from 'express'
 import ExpressSession from 'express-session'
-import { urlencoded as BodyParserUrlencoded, json as BodyParserJson } from 'body-parser'
+import bodyParser from 'body-parser'
+const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
 import ConnectMultiparty from 'connect-multiparty'
 
 //model
-import SessionStore from '../models/session-tool'
+import SessionStore from '../models/session-tool.js'
 
 //router
-import LoginRouter from './login-router'
-import BasicRouter from './file-basic-router'
-import OtherRouter from './file-other-router'
-import FileRouter from './file-router'
-import ExternalRouter from './external-router'
-import PlaylistRouter from './playlist-router'
-import BitfinexRouter from './bitfinex-router'
+import LoginRouter from './login-router.js'
+import BasicRouter from './file-basic-router.js'
+import OtherRouter from './file-other-router.js'
+import FileRouter from './file-router.js'
+import ExternalRouter from './external-router.js'
+import PlaylistRouter from './playlist-router.js'
+import BitfinexRouter from './bitfinex-router.js'
 
 //util
-import { handleError, HoError, showLog } from '../util/utility'
-import { mainInit } from '../util/sendWs'
+import { handleError, HoError, showLog } from '../util/utility.js'
+import { mainInit } from '../util/sendWs.js'
 
 //background
-import { autoUpload, checkMedia, updateExternal, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, checkSetOffer, usseInit, checkUsseInit } from '../cmd/background'
+import { autoUpload, checkMedia/*, updateExternal*/, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, checkSetOffer, usseInit, checkUsseInit } from '../cmd/background.js'
 
 //global
 const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: PKEY_PWD,
+    //passphrase: PKEY_PWD,
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",
@@ -60,10 +63,12 @@ const credentials = {
 //credentials.agent = new HttpsAgent(credentials)
 const app = Express()
 const server = HttpsCreateServer(credentials, app)
+//const server = HttpsCreateServer({}, app)
 mainInit(server);
+//mainInit(app);
 autoUpload();
 checkMedia();
-updateExternal();
+//updateExternal();
 autoDownload();
 updateStock();
 filterStock();
@@ -118,9 +123,11 @@ app.use(function(err, req, res, next) {
     handleError(err, 'Send');
     err.name === 'HoError' ? res.status(err.code).send(err.message.toString()) : res.status(500).send('server error occur');
 });
+//為了連接非認證的tls
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 process.on('uncaughtException', err => handleError(err, 'Threw exception'));
 
 server.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
+//app.listen(FILE_PORT(ENV_TYPE), FILE_IP(ENV_TYPE));
 console.log('start express server\n');
 console.log(`Server running at https://${EXTENT_FILE_IP(ENV_TYPE)}:${EXTENT_FILE_PORT(ENV_TYPE)} ${new Date()}`);

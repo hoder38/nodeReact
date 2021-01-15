@@ -1,7 +1,7 @@
 import React from 'react'
-import Dropdown from './Dropdown'
-import ReFitnessInfo from '../containers/ReFitnessInfo'
-import { isValidString, api, killEvent } from '../utility'
+import Dropdown from './Dropdown.js'
+import ReFitnessInfo from '../containers/ReFitnessInfo.js'
+import { isValidString, api, killEvent } from '../utility.js'
 
 const ItemFitness = React.createClass({
     getInitialState: function() {

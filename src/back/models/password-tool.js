@@ -1,9 +1,10 @@
-import { PASSWORD_PRIVATE_KEY, PASSWORD_SALT } from '../../../ver'
-import { ALGORITHM, PASSWORDDB } from '../constants'
-import TagTool, { isDefaultTag, normalize } from '../models/tag-tool'
-import Mongo, { objectID } from '../models/mongo-tool'
-import { isValidString, handleError, HoError, userPWCheck } from '../util/utility'
-import { createCipher, createDecipher } from 'crypto'
+import { PASSWORD_PRIVATE_KEY, PASSWORD_SALT } from '../../../ver.js'
+import { ALGORITHM, PASSWORDDB } from '../constants.js'
+import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import { isValidString, handleError, HoError, userPWCheck } from '../util/utility.js'
+import crypto from 'crypto'
+const { createCipheriv, createDecipheriv, randomBytes, createDecipher } = crypto;
 import PasswordGenerator from 'password-generator'
 
 const PasswordTagTool = TagTool(PASSWORDDB);
@@ -222,10 +223,9 @@ export default {
                     return handleError(new HoError('permission denied'))
                 }
             }
-            return Mongo('remove', PASSWORDDB, {
+            return Mongo('deleteMany', PASSWORDDB, {
                 _id: pws[0]._id,
                 owner: user._id,
-                $isolated: 1,
             });
         });
     },
@@ -237,10 +237,13 @@ export default {
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
-        }, Object.assign({
-            _id: 0,
-            important: 1,
-        }, (type === 'pre') ? {prePassword: 1} : {password: 1}), {limit: 1}).then(items => {
+        }, {
+            projection: Object.assign({
+                _id: 0,
+                important: 1,
+            }, (type === 'pre') ? {prePassword: 1} : {password: 1}),
+            limit: 1,
+        }).then(items => {
             if (items.length < 1) {
                 return handleError(new HoError('can not find password object!!!'));
             }
@@ -266,15 +269,56 @@ export default {
 }
 
 function encrypt(text) {
-    const cipher = createCipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-    let crypted = cipher.update(`${text}${PASSWORD_SALT}`, 'utf8', 'hex');
-    crypted += cipher.final('hex');
-    return crypted;
+    const iv = randomBytes(16);
+    const cipher = createCipheriv(ALGORITHM, Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex'), iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
 function decrypt(text) {
-    const decipher = createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-    let dec = decipher.update(text, 'hex', 'utf8');
-    dec += decipher.final('utf8');
-    return dec.substr(0, dec.length - 4);
+    const textParts = text.split(':');
+    const iv = Buffer.from(textParts.shift(), 'hex');
+    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    const decipher = createDecipheriv(ALGORITHM, Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex'), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
 }
+
+export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(items => {
+    const recur_cipher = index => {
+        if (index >= items.length) {
+            return Promise.resolve();
+        } else {
+            let newPass = null;
+            let newPrePass = null;
+            if (items[index].password.split(':').length === 1) {
+                const decipher = createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
+                let dec = decipher.update(items[index].password, 'hex', 'utf8');
+                dec += decipher.final('utf8');
+                newPass = dec.substr(0, dec.length - 4);
+            }
+            if (items[index].prePassword.split(':').length === 1) {
+                const decipher = createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
+                let dec = decipher.update(items[index].prePassword, 'hex', 'utf8');
+                dec += decipher.final('utf8');
+                newPrePass = dec.substr(0, dec.length - 4);
+            }
+            if (newPass || newPrePass) {
+                newPass = encrypt(newPass);
+                newPrePass = encrypt(newPrePass);
+                return Mongo('update', PASSWORDDB, {_id: items[index]._id}, {$set: {
+                    password: newPass,
+                    prePassword: newPrePass,
+                }}).then(item => {
+                    console.log(item);
+                    return recur_cipher(index + 1);
+                })
+            } else {
+                return recur_cipher(index + 1);
+            }
+        }
+    }
+    return recur_cipher(0)
+});

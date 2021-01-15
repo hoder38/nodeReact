@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush } from '../actions'
-import RankInfo from '../components/RankInfo'
+import { alertPush } from '../actions/index.js'
+import RankInfo from '../components/RankInfo.js'
 
 const mapStateToProps = state => ({
     level: state.basicDataHandle.level,

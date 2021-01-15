@@ -1,23 +1,24 @@
-import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB, KUBO_TYPE } from '../constants'
-import OpenCC from 'opencc'
+import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB, KUBO_TYPE } from '../constants.js'
+import OpenCC from 'node-opencc'
 import Htmlparser from 'htmlparser2'
-import { dirname as PathDirname, extname as PathExtname, join as PathJoin } from 'path'
-import { getInfo as YouGetInfo} from 'youtube-dl'
+import pathModule from 'path'
+const { dirname: PathDirname, extname: PathExtname, join: PathJoin } = pathModule;
+import youtubeDl from 'youtube-dl'
+const { getInfo: YouGetInfo} = youtubeDl;
 import Mkdirp from 'mkdirp'
-import { existsSync as FsExistsSync } from 'fs'
-import Redis from '../models/redis-tool'
-import GoogleApi from '../models/api-tool-google'
-import { normalize, isDefaultTag } from '../models/tag-tool'
-import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility'
-import { addPost } from '../util/mime'
-import Api from './api-tool'
-import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo'
-import sendWs from '../util/sendWs'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync } = fsModule;
+import Redis from '../models/redis-tool.js'
+import GoogleApi from '../models/api-tool-google.js'
+import { normalize, isDefaultTag } from '../models/tag-tool.js'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility.js'
+import { addPost } from '../util/mime.js'
+import Api from './api-tool.js'
+//import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo.js'
+import sendWs from '../util/sendWs.js'
 
-const opencc = new OpenCC('s2t.json');
-
-const dramaList = [
+/*const dramaList = [
     'https://tw02.lovetvshow.info/',
     'https://cn.lovetvshow.info/2012/05/drama-list.html',
     'https://kr19.vslovetv.com/',
@@ -134,15 +135,12 @@ const recur_loveList = (dramaIndex, next) => Api('url', dramaList[dramaIndex]).t
     }
     console.log(list.length);
     return next(0, dramaIndex, list);
-});
+});*/
 
 export default {
     //type要補到deltag裡
-    getList: function(type, is_clear=false) {
-        const clearExtenal = () => is_clear ? Mongo('remove', STORAGEDB, {
-            owner: type,
-            $isolated: 1,
-        }).then(item => {
+    /*getList: function(type, is_clear=false) {
+        const clearExtenal = () => is_clear ? Mongo('deleteMany', STORAGEDB, {owner: type}).then(item => {
             console.log('perm external file');
             console.log(item);
         }) : Promise.resolve();
@@ -157,7 +155,7 @@ export default {
                 return Mongo('count', STORAGEDB, {
                     owner: type,
                     name,
-                }, {limit: 1}).then(count => {
+                }).then(count => {
                     if (count > 0) {
                         return nextLove(index + 1, dramaIndex, list);
                     }
@@ -243,7 +241,7 @@ export default {
                 return Mongo('count', STORAGEDB, {
                     owner: type,
                     name,
-                }, {limit: 1}).then(count => {
+                }).then(count => {
                     if (count > 0) {
                         return nextEztv(index + 1, list);
                     }
@@ -344,7 +342,7 @@ export default {
             default:
             return handleError(new HoError('unknown external type'));
         }
-    },
+    },*/
     getSingleList: function(type, url, post=null) {
         if (!url) {
             return Promise.resolve([]);
@@ -386,11 +384,13 @@ export default {
                     const img = findTag(a, 'img')[0];
                     return {
                         id: a.attribs.href.match(/av\d+/)[0],
-                        name: opencc.convertSync(img.attribs.alt),
+                        //name: OpenCC.simplifiedToTraditional(img.attribs.alt),
+                        name: img.attribs.alt,
                         thumb: img.attribs['data-img'],
                         date: new Date('1970-01-01').getTime()/1000,
                         tags: ['movie', '電影'],
-                        count: opencc.convertSync(findTag(findTag(findTag(findTag(v.children[1], 'div', 'l-r')[0], 'div', 'v-info')[0], 'span', 'v-info-i gk')[0], 'span')[0].attribs.number),
+                        //count: OpenCC.simplifiedToTraditional(findTag(findTag(findTag(findTag(v.children[1], 'div', 'l-r')[0], 'div', 'v-info')[0], 'span', 'v-info-i gk')[0], 'span')[0].attribs.number),
+                        count: findTag(findTag(findTag(findTag(v.children[1], 'div', 'l-r')[0], 'div', 'v-info')[0], 'span', 'v-info-i gk')[0], 'span')[0].attribs.number,
                     }
                 }));
             } else if (url.match(/(https|http):\/\/www\.bilibili\.com\//)) {
@@ -404,7 +404,8 @@ export default {
                     }
                     return raw_data['result']['list'].map(l => ({
                         id: l['season_id'],
-                        name: opencc.convertSync(l['title']),
+                        //name: OpenCC.simplifiedToTraditional(l['title']),
+                        name: l['title'],
                         thumb: l['cover'],
                         date: l['pub_time'],
                         count: 0,
@@ -427,11 +428,13 @@ export default {
                             const a = findTag(v, 'a')[0];
                             return {
                                 id: a.attribs.href.match(/av\d+/)[0],
-                                name: opencc.convertSync(a.attribs.title),
+                                //name: OpenCC.simplifiedToTraditional(a.attribs.title),
+                                name: a.attribs.title,
                                 thumb: `http:${findTag(findTag(a, 'div', 'img')[0], 'img')[0].attribs['data-src']}`,
                                 date: new Date('1970-01-01').getTime() / 1000,
                                 tags: ['movie', '電影'],
-                                count: opencc.convertSync(findTag(findTag(findTag(findTag(v, 'div', 'info')[0], 'div', 'tags')[0], 'span', 'so-icon watch-num')[0])[0]),
+                                //count: OpenCC.simplifiedToTraditional(findTag(findTag(findTag(findTag(v, 'div', 'info')[0], 'div', 'tags')[0], 'span', 'so-icon watch-num')[0])[0]),
+                                count: findTag(findTag(findTag(findTag(v, 'div', 'info')[0], 'div', 'tags')[0], 'span', 'so-icon watch-num')[0])[0],
                             };
                         });
                         if (list.length < 1) {
@@ -439,7 +442,8 @@ export default {
                                 const a = findTag(v, 'div', 'left-img')[0].children[1];
                                 return {
                                     id: a.attribs.href.match(/\/anime\/(\d+)/)[1],
-                                    name: opencc.convertSync(a.attribs.title),
+                                    //name: OpenCC.simplifiedToTraditional(a.attribs.title),
+                                    name: a.attribs.title,
                                     thumb: `http:${findTag(a, 'img')[0].attribs['data-src']}`,
                                     date: new Date('1970-01-01').getTime() / 1000,
                                     tags: ['animation', '動畫'],
@@ -500,7 +504,8 @@ export default {
                             }
                         });
                         return {
-                            name: opencc.convertSync(img.attribs.alt),
+                            //name: OpenCC.simplifiedToTraditional(img.attribs.alt),
+                            name: img.attribs.alt,
                             id: a.attribs.href.match(/\d+/)[0],
                             thumb: img.attribs['data-original'],
                             tags,
@@ -609,7 +614,8 @@ export default {
                         }
                         return {
                             id: a.attribs.href.match(/\d+/)[0],
-                            name: opencc.convertSync(name[1]),
+                            //name: OpenCC.simplifiedToTraditional(name[1]),
+                            name: name[1],
                             thumb: findTag(a, 'img')[0].attribs.src,
                             date,
                             tags,
@@ -706,16 +712,26 @@ export default {
                         const a = findTag(findTag(findTag(findTag(l, 'div', 'mh-item')[0], 'div', 'mh-tip-wrap')[0], 'div', 'mh-item-tip')[0], 'a')[0];
                         list.push({
                             id: a.attribs.href.match(/\/([^\/]+)/)[1],
-                            name: opencc.convertSync(a.attribs.title),
+                            //name: OpenCC.simplifiedToTraditional(a.attribs.title),
+                            name: a.attribs.title,
                             thumb: findTag(findTag(l, 'div', 'mh-item')[0], 'p', 'mh-cover')[0].attribs.style.match(/url\(([^\)]+)/)[1],
                             tags: ['漫畫', 'comic'],
                         });
                     });
                 } else {
                     data.forEach(l => {
+                        let name = '';
+                        findTag(findTag(l, 'p')[0], 'span')[0].children.forEach(s => {
+                            if (s.name === 'span') {
+                                name = `${name}${findTag(s)[0]}`;
+                            } else if (s.type === 'text') {
+                                name = `${name}${s.data}`;
+                            }
+                        })
                         list.push({
                             id: l.attribs.href.match(/\/([^\/]+)/)[1],
-                            name: opencc.convertSync(findTag(findTag(findTag(l, 'p')[0], 'span')[0])[0]),
+                            //name: OpenCC.simplifiedToTraditional(findTag(findTag(findTag(l, 'p')[0], 'span')[0])[0]),
+                            name,
                             thumb: 'dm5.png',
                             tags: ['漫畫', 'comic'],
                         });
@@ -1279,7 +1295,7 @@ export default {
         }
     },
     save2Drive: function(type, obj, parent) {
-        const mkFolder = folderPath => !FsExistsSync(folderPath) ? new Promise((resolve, reject) => Mkdirp(folderPath, err => err ? reject(err) : resolve())) : Promise.resolve();
+        const mkFolder = folderPath => !FsExistsSync(folderPath) ? Mkdirp(folderPath) : Promise.resolve();
         const filePath = getFileLocation(type, objectID());
         console.log(filePath);
         let driveName = '';
@@ -2061,7 +2077,7 @@ export default {
                     }
                     saveList(lovetvGetlist, raw_list, is_end, etime);
                     return [Object.assign({
-                        id: `ope_${new Buffer(!choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).toString('base64')}`,
+                        id: `ope_${Buffer.from(!choose.url.match(/^(http|https):\/\//) ? `${prefix}${choose.url}` : choose.url).toString('base64')}`,
                         title: choose.name,
                         index: index,
                         showId: index,
@@ -2184,13 +2200,14 @@ export default {
                             }
                         }
                     });
+                    console.log(list);
                     return list;
                 }
-                if (url.match(/^https:\/\/eztv\.ag\/search\//)) {
+                if (url.match(/^https:\/\/eztv\.re\/search\//)) {
                     console.log('start more');
-                    return Api('url', url, {referer: 'https://eztv.ag/'}).then(raw_data => [getEzList(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border')), false]);
+                    return Api('url', url, {referer: 'https://eztv.re/'}).then(raw_data => [getEzList(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border')), false]);
                 } else {
-                    return Api('url', url, {referer: 'https://eztv.ag/'}).then(raw_data => {
+                    return Api('url', url, {referer: 'https://eztv.re/'}).then(raw_data => {
                         const center = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table', 'forum_header_border_normal')[0], 'tr')[1], 'td')[0], 'center')[0];
                         let tr = findTag(findTag(center, 'table', 'forum_header_noborder')[0], 'tr', 'forum_header_border');
                         const trLength = tr.length;
@@ -2206,11 +2223,11 @@ export default {
                             return [getEzList(tr), is_end];
                         } else {
                             console.log('too much');
-                            const show_name = url.match(/^https:\/\/[^\/]+\/shows\/\d+\/([^\/]+)/);
-                            if (!show_name) {
+                            const name = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'head')[0], 'title')[0])[0].match(/^(.*) Torrent Download/)[1];
+                            if (!name) {
                                 return handleError(new HoError('unknown name!!!'));
                             }
-                            return Api('url', `https://eztv.ag/search/${show_name[1]}`, {referer: 'https://eztv.ag/'}).then(raw_data => {
+                            return Api('url', `https://eztv.re/search/${name}`, {referer: 'https://eztv.re/'}).then(raw_data => {
                                 const tr1 = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border');
                                 const trLength1 = tr1.length;
                                 console.log(trLength1);
@@ -2360,6 +2377,7 @@ export default {
                 return item ? sendList(JSON.parse(item.raw_list), item.is_end === 'false' ? false : item.is_end, item.etime) : bilibiliGetlist().then(([raw_list, is_end]) => sendList(raw_list, is_end, -1));
             });
             case 'kubo':
+            console.log('here');
             const kuboGetlist = () => Api('url', url).then(raw_data => {
                 let list = [];
                 let is_end = false;
@@ -2386,8 +2404,9 @@ export default {
                     for (let l of findTag(ul, 'li')) {
                         const a = findTag(l, 'a')[0];
                         list.push({
-                            name: opencc.convertSync(findTag(a)[0]),
-                            id: `kur_${new Buffer(a.attribs.href).toString('base64')}}`,
+                            //name: OpenCC.simplifiedToTraditional(findTag(a)[0]),
+                            name: findTag(a)[0],
+                            id: `kur_${Buffer.from(a.attribs.href).toString('base64')}`,
                         });
                         /*const a = findTag(l, 'a')[0];
                         let urlMatch = addPre(a.attribs.href, 'http://www.99kubo.tv').match(/youtube\.php\?(.*)$/);
@@ -2419,7 +2438,7 @@ export default {
                         if (f.playname === 'bj58') {
                             list = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                                id: `kur_${Buffer.from(p[2]).toString('base64')}`,
                             }));
                         } else if (f.playname === 'bj') {
                             list1 = f.playurls.map(p => ({
@@ -2429,17 +2448,17 @@ export default {
                         } else if (f.playname === 'bj2') {
                             list2 = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                                id: `kur_${Buffer.from(p[2]).toString('base64')}`,
                             }));
                         } else if (f.playname.match(/^bj/)) {
                             lists = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                                id: `kur_${Buffer.from(p[2]).toString('base64')}`,
                             }));
                         } else {
                             listO = f.playurls.map(p => ({
                                 name: p[0],
-                                id: `kur_${new Buffer(p[2]).toString('base64')}`,
+                                id: `kur_${Buffer(p[2]).toString('base64')}`,
                             }));
                         }
                     });
@@ -2479,7 +2498,7 @@ export default {
                     const a = findTag(l, 'a')[0];
                     list.push({
                         name: findTag(a)[0],
-                        id: `kur_${new Buffer(a.attribs.href).toString('base64')}}`,
+                        id: `kur_${Buffer.from(a.attribs.href).toString('base64')}}`,
                     });
                 }));
                 return [list, is_end];
@@ -2535,7 +2554,8 @@ export default {
                             title = findTag(findTag(findTag(a, 'div', 'info')[0], 'p', 'title ')[0])[0];
                         }
                         list.push({
-                            title: opencc.convertSync(title),
+                            //title: OpenCC.simplifiedToTraditional(title),
+                            title: title,
                             url: addPre(a.attribs.href, 'http://www.dm5.com'),
                         });
                     });
@@ -2752,12 +2772,12 @@ export default {
                 });
                 let newTag = new Set();
                 tags.forEach(t => {
-                    t = opencc.convertSync(t);
+                    t = OpenCC.simplifiedToTraditional(t);
                     const index = DM5_ORI_LIST.indexOf(t);
                     newTag.add((index !== -1) ? DM5_CH_LIST[index] : t);
                 });
                 return [
-                    opencc.convertSync(img.attribs.alt),
+                    OpenCC.simplifiedToTraditional(img.attribs.alt),
                     newTag,
                     new Set(),
                     'kubo',
@@ -2780,15 +2800,15 @@ export default {
                     return handleError(new HoError('dm5 misses info'));
                 }
                 let setTag = new Set(['dm5', '漫畫', 'comic', '圖片集', 'image book', '圖片', 'image']);
-                findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(a)[0])));
+                findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'subtitle')[0], 'a').forEach(a => setTag.add(OpenCC.simplifiedToTraditional(findTag(a)[0])));
                 const block = findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'tip')[0], 'span', 'block')[1];
                 if (block) {
-                    findTag(block, 'a').forEach(a => setTag.add(opencc.convertSync(findTag(findTag(a, 'span')[0])[0])));
+                    findTag(block, 'a').forEach(a => setTag.add(OpenCC.simplifiedToTraditional(findTag(findTag(a, 'span')[0])[0])));
                 }
                 let newTag = new Set();
                 setTag.forEach(i => newTag.add(DM5_ORI_LIST.includes(i) ? DM5_CH_LIST[DM5_ORI_LIST.indexOf(i)] : i));
                 return [
-                    opencc.convertSync(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'title')[0])[0]),
+                    OpenCC.simplifiedToTraditional(findTag(findTag(findTag(info, 'div', 'info')[0], 'p', 'title')[0])[0]),
                     newTag,
                     new Set(),
                     'dm5',
@@ -2796,7 +2816,7 @@ export default {
                     url,
                 ];
             });
-            case 'bilibili':
+            /*case 'bilibili':
             url = id.match(/^av/) ? `http://www.bilibili.com/video/${id}/` : `http://bangumi.bilibili.com/anime/${id}/`;
             return Api('url', url, {
                 referer: 'http://www.bilibili.com/',
@@ -2815,8 +2835,8 @@ export default {
                     thumb = img.attribs.src;
                     const infoR = findTag(info, 'div', 'bangumi-info-r')[0];
                     setTag.add(findTag(findTag(findTag(findTag(infoR, 'div', 'info-row info-update')[0], 'em')[0], 'span')[0])[0].match(/^\d+/)[0]);
-                    findTag(findTag(findTag(infoR, 'div', 'info-row info-cv')[0], 'em')[0], 'span').forEach(s => setTag.add(opencc.convertSync(findTag(s)[0])));
-                    findTag(findTag(infoR, 'div', 'b-head')[0], 'a').forEach(a => setTag.add(opencc.convertSync(findTag(findTag(a, 'span')[0])[0])));
+                    findTag(findTag(findTag(infoR, 'div', 'info-row info-cv')[0], 'em')[0], 'span').forEach(s => setTag.add(OpenCC.simplifiedToTraditional(findTag(s)[0])));
+                    findTag(findTag(infoR, 'div', 'b-head')[0], 'a').forEach(a => setTag.add(OpenCC.simplifiedToTraditional(findTag(findTag(a, 'span')[0])[0])));
                 } else {
                     const main = findTag(findTag(body, 'div', 'b-page-body')[0], 'div', 'main-inner');
                     const info = findTag(findTag(main[0], 'div', 'viewbox')[0], 'div', 'info')[0];
@@ -2827,7 +2847,7 @@ export default {
                             setTag.add('電影').add('movie');
                         }
                     });
-                    findTag(findTag(findTag(findTag(findTag(main[1], 'div', 'v_large')[0], 'div', 'v_info')[0], 'div', 's_tag')[0], 'ul')[0], 'li').forEach(l => setTag.add(opencc.convertSync(findTag(findTag(l, 'a')[0])[0])));
+                    findTag(findTag(findTag(findTag(findTag(main[1], 'div', 'v_large')[0], 'div', 'v_info')[0], 'div', 's_tag')[0], 'ul')[0], 'li').forEach(l => setTag.add(OpenCC.simplifiedToTraditional(findTag(findTag(l, 'a')[0])[0])));
                     name = findTag(findTag(findTag(info, 'div', 'v-title')[0], 'h1')[0])[0];
                     thumb = findTag(body, 'img')[0].attribs.src;
                 }
@@ -2841,6 +2861,51 @@ export default {
                     thumb,
                     url,
                 ];
+            });*/
+            case 'eztv':
+            url = `https://eztv.re/shows/${id}/`;
+            return Api('url', url, {referer: 'https://eztv.re/'}).then(raw_data => {
+                const tables = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'div')[6], 'table');
+                const name = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'head')[0], 'title')[0])[0].match(/^(.*) Torrent Download/)[1];
+                const info = tables[1] ? findTag(findTag(tables[1], 'tr')[1], 'td')[0] : findTag(findTag(findTag(findTag(findTag(findTag(tables[0], 'tr')[1], 'td')[0], 'center')[0], 'table', 'section_thread_post show_info_description')[0], 'tr')[1], 'td')[0];
+                let setTag = new Set(['tv show', '電視劇', '歐美', '西洋', '影片', 'video']);
+                findTag(info).forEach(n => {
+                    let infoMatch = false;
+                    if (infoMatch = n.match(/\d+$/)) {
+                        setTag.add(infoMatch[0]);
+                    } else if (infoMatch = n.match(/^Genre:(.*)$/i)) {
+                        const genre = infoMatch[1].match(/([a-zA-Z\-]+)/g);
+                        if (genre) {
+                            genre.map(g => setTag.add(normalize(g)));
+                        }
+                    } else if (infoMatch = n.match(/^Network:(.*)$/i)) {
+                        const network = infoMatch[1].match(/[a-zA-Z\-]+/);
+                        if (network) {
+                            setTag.add(normalize(network[0]));
+                        }
+                    }
+                });
+                findTag(info, 'a').forEach(a => {
+                    const imdb = a.attribs.href.match(/(https|http):\/\/www\.imdb\.com\/title\/(tt\d+)\//);
+                    if (imdb) {
+                        setTag.add(normalize(imdb[2]));
+                    }
+                });
+                let newTag = new Set();
+                setTag.forEach(s => {
+                    const is_d = isDefaultTag(s);
+                    if (!is_d) {
+                        newTag.add(s);
+                    }
+                });
+                return [
+                    name,
+                    newTag,
+                    new Set(),
+                    'eztv',
+                    'eztv-logo-small.png',
+                    url,
+                ];
             });
             default:
             return handleError(new HoError('unknown external type'));
@@ -2848,26 +2913,26 @@ export default {
     },
 }
 
-export const subHdUrl = str => Api('url', `http://subhd.com/search/${encodeURIComponent(str)}`).then(raw_data => {
-    const list = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container list')[0], 'div', 'row')[0], 'div', 'col-md-9')[0];
+/*export const subHdUrl = str => Api('url', `https://subhd.com/search/${encodeURIComponent(str)}`).then(raw_data => {
+    const list = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container pt-4')[0], 'div', 'row justify-content-center')[0], 'div', 'col-sm-11')[0];
     if (findTag(list)[0] && findTag(list)[0].match(/暂时没有/)) {
         return null;
     }
-    const big_item = findTag(list, 'div', 'box')[0];
+    const big_item = findTag(findTag(findTag(list, 'div', 'row pt-2')[0], 'div', 'col-md-9')[0], 'div', 'mb-4 bg-white rounded shadow-sm')[0];
     if (!big_item) {
         console.log(raw_data);
         return handleError(new HoError('sub data error!!!'));
     }
-    const sub_id = findTag(findTag(findTag(findTag(findTag(findTag(big_item, 'div', 'pull-left lb_r')[0], 'table')[0], 'tr')[0], 'td')[0], 'h4')[0], 'a')[0].attribs.href;
+    const sub_id = findTag(findTag(findTag(findTag(findTag(findTag(findTag(big_item, 'div', 'row no-gutters')[0], 'div', 'col-sm-10 p-3 position-relative')[0], 'table')[0], 'tr')[0], 'td')[0], 'div')[0], 'a')[0].attribs.href;
     return Api('url', 'http://subhd.com/ajax/down_ajax', {
         post: {sub_id: sub_id.match(/\d+$/)[0]},
         is_json: true,
-        referer: `http://subhd.com${sub_id}`,
+        referer: `https://subhd.com${sub_id}`,
     }).then(data => {
         console.log(data);
         return data.success ? data.url : handleError(new HoError('too many times!!!'));
     });
-});
+});*/
 
 export const bilibiliVideoUrl = url => {
     console.log(url);
@@ -2964,7 +3029,7 @@ export const kuboVideoUrl = (id, url, subIndex=1) => {
     } else if (id === 'kyu') {
         return Api('url', `http://www.58b.tv/jx/show.php?playlist=1&fmt=1&rand=${new Date().getTime()}`, {
             referer: 'http://www.58b.tv/',
-            post: {url: new Buffer(url).toString('base64')},
+            post: {url: Buffer.from(url).toString('base64')},
         }).then(raw_data => {
             const json_data = getJson(raw_data);
             if (json_data === false) {

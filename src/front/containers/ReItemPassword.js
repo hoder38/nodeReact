@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPush, sendGlbCf, sendGlbPw, sendGlbIn, setPass } from '../actions'
-import ItemPassword from '../components/ItemPassword'
+import { alertPush, sendGlbCf, sendGlbPw, sendGlbIn, setPass } from '../actions/index.js'
+import ItemPassword from '../components/ItemPassword.js'
 
 const mapStateToProps = state => ({
     bookmark: state.passDataHandle.item.bookmark,

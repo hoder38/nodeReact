@@ -1,44 +1,45 @@
 import React from 'react'
-import { FILE_ZINDEX, MEDIA_ZINDEX } from '../constants'
-import { killEvent, api, isValidString } from '../utility'
-import Tooltip from './Tooltip'
-import UserInput from './UserInput'
-import Dropdown from './Dropdown'
+import { FILE_ZINDEX, MEDIA_ZINDEX } from '../constants.js'
+import { killEvent, api, isValidString } from '../utility.js'
+import Tooltip from './Tooltip.js'
+import UserInput from './UserInput.js'
+import Dropdown from './Dropdown.js'
 
 let key = 0
 
-const StockTotal = React.createClass({
-    getInitialState: function() {
+class StockTotal extends React.Component {
+    constructor(props) {
+        super(props);
         this._input = new UserInput.Input(['stock'], this._handleSubmit, this._handleChange)
         this._info = [];
-        return Object.assign({
+        this.state = Object.assign({
             sending: false,
             totals: null,
         }, this._input.initValue())
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         api('/api/stock/getTotal').then(result => this.setState(Object.assign({}, this.state, {total: result}))).catch(err => {
             this.props.addalert(err)
         });
         window.addEventListener("beforeunload", this._routerWillLeave)
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         if (this._info.length > 0) {
             this.props.sendglbcf(() => api('/api/stock/updateTotal/1', {info: this._info}, 'PUT').catch(err => this.props.addalert(err)), `Would you want to update Stock Total permanently?`)
         }
         window.removeEventListener("beforeunload", this._routerWillLeave)
-    },
-    _routerWillLeave: function(e) {
+    }
+    _routerWillLeave = e => {
         let confirmationMessage = 'You have unupdated changes. Are you sure you want to navigate away from this page?'
         if (this._info.length > 0) {
             e.returnValue = confirmationMessage
             return confirmationMessage
         }
-    },
-    _handleChange: function() {
+    }
+    _handleChange = () => {
         this.setState(Object.assign({}, this.state, this._input.getValue()))
-    },
-    _handleSubmit: function() {
+    }
+    _handleSubmit = () => {
         if (!this.state.sending) {
             this._input.allBlur()
             if (!isValidString(this.state.stock, 'name')) {
@@ -48,8 +49,8 @@ const StockTotal = React.createClass({
                 this._update();
             }
         }
-    },
-    _update: function(real = false) {
+    }
+    _update = (real = false) => {
         if (real) {
             this.props.sendglbcf(() => this.setState(Object.assign({}, this.state, {sending: true}), () => {
                 api('/api/stock/updateTotal/1', {info: this._info}, 'PUT').then(result => {
@@ -76,8 +77,8 @@ const StockTotal = React.createClass({
                 })
             })
         }
-    },
-    render: function() {
+    }
+    render() {
         if(!this.state.total || !this.props.open) {
             return null;
         }
@@ -141,6 +142,6 @@ const StockTotal = React.createClass({
             </section>
         )
     }
-})
+}
 
 export default StockTotal

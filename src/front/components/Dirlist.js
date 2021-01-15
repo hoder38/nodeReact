@@ -1,44 +1,45 @@
 import React from 'react'
-import { api, killEvent } from '../utility'
+import { api, killEvent } from '../utility.js'
 
-const Dirlist = React.createClass({
-    getInitialState: function() {
-        return {
+class Dirlist extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
             collapse: this.props.collapse,
             edit: false,
             loading: false,
-        }
-    },
-    componentWillMount: function() {
+        };
+    }
+    componentDidMount() {
         if (!this.props.collapse && this.props.dir.list.size === 0) {
             this._getlist(this.props.dir.sortName, this.props.dir.sortType, this.props.dir.page)
         }
-    },
-    _changeSort: function(name) {
+    }
+    _changeSort = name => {
         if (name === this.props.dir.sortName) {
             (this.props.dir.sortType === 'asc') ? this._getlist(name, 'desc', 0) : this._getlist(name, 'asc', 0)
         } else {
             this._getlist(name, 'asc', 0)
         }
-    },
-    _getlist: function(name, type, page, push=false) {
+    }
+    _getlist = (name, type, page, push = false) => {
         this.setState(Object.assign({}, this.state, {loading: true}), () => api(`${this.props.listUrl}${name}/${type}/${page}`).then(result => {
             let list = result.bookmarkList ? result.bookmarkList : result.taglist
             push ? this.props.set(list) : this.props.set(list, name, type)
             this.setState(Object.assign({}, this.state, {loading: false}))
         }).catch(err => this.props.addalert(err)))
-    },
-    _delItem: function(id, name) {
+    }
+    _delItem = (id, name) => {
         this.props.sendglbcf(() => api(`${this.props.delUrl}${id}`, null, 'DELETE').then(result => this.props.del(result.id)).catch(err => this.props.addalert(err)), `Would you sure to delete ${name} from ${this.props.name}?`)
-    },
-    _openList: function() {
+    }
+    _openList = () => {
         if (this.props.dir.list.size === 0) {
             this.setState(Object.assign({}, this.state, {collapse: !this.state.collapse}), () => this._getlist(this.props.dir.sortName, this.props.dir.sortType, this.props.dir.page))
         } else {
             this.setState(Object.assign({}, this.state, {collapse: !this.state.collapse}))
         }
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         this.props.dir.list.forEach(item => this.state.edit ? rows.push(
             <li key={item.id}>
@@ -98,6 +99,6 @@ const Dirlist = React.createClass({
             </li>
         )
     }
-})
+}
 
 export default Dirlist

@@ -1,15 +1,16 @@
 import React from 'react'
-import { TOP_SECTION_ZINDEX, RIGHT_SECTION_ZINDEX } from '../constants'
-import ReItemInput from '../containers/ReItemInput'
-import { api } from '../utility'
+import { TOP_SECTION_ZINDEX, RIGHT_SECTION_ZINDEX } from '../constants.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import { api } from '../utility.js'
 
-const Homepage = React.createClass({
-    getInitialState: function() {
-        return {
+class Homepage extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
             intro: [],
         }
-    },
-    componentWillMount: function() {
+    }
+    componentDidMount() {
         let intro_msg = []
         api('/api/homepage').then(intro => {
             intro.msg.forEach((msg, i) => intro_msg.push(<span key={i}>{msg}<br /></span>))
@@ -17,8 +18,8 @@ const Homepage = React.createClass({
                 intro: intro_msg,
             })
         }).catch(err => console.log(err))
-    },
-    render: function() {
+    }
+    render() {
         return (
             <div>
                 <section className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', position: 'fixed', zIndex: RIGHT_SECTION_ZINDEX, height: '90%'}}></section>
@@ -29,6 +30,6 @@ const Homepage = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Homepage

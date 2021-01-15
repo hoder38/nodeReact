@@ -1,7 +1,9 @@
-import { GOOGLE_SCOPE } from '../constants'
-import { GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver'
-import { auth } from 'googleapis'
-import { createInterface } from 'readline'
+import { GOOGLE_SCOPE } from '../constants.js'
+import { GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver.js'
+import googleapis from 'googleapis'
+const { auth } = googleapis;
+import readline from 'readline'
+const { createInterface } = readline;
 
 const rl = createInterface({
     input: process.stdin,

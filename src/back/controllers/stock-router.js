@@ -1,9 +1,9 @@
-import { STOCKDB } from '../constants'
+import { STOCKDB } from '../constants.js'
 import Express from 'express'
-import TagTool from '../models/tag-tool'
+import TagTool from '../models/tag-tool.js'
 import StockTool from '../models/stock-tool.js'
-import { checkLogin, handleError, getStockItem, isValidString, HoError } from '../util/utility'
-import sendWs from '../util/sendWs'
+import { checkLogin, handleError, getStockItem, isValidString, HoError } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();
 const StockTagTool = TagTool(STOCKDB);

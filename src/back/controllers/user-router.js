@@ -1,9 +1,10 @@
-import { USERDB, UNACTIVE_DAY, UNACTIVE_HIT, VERIFYDB } from '../constants'
+import { USERDB, UNACTIVE_DAY, UNACTIVE_HIT, VERIFYDB } from '../constants.js'
 import Express from 'express'
-import { createHash } from 'crypto'
-import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck, completeZero } from '../util/utility'
-import Mongo from '../models/mongo-tool'
-import { isDefaultTag, normalize } from '../models/tag-tool'
+import crypto from 'crypto'
+const { createHash } = crypto;
+import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck, completeZero } from '../util/utility.js'
+import Mongo from '../models/mongo-tool.js'
+import { isDefaultTag, normalize } from '../models/tag-tool.js'
 
 const router = Express.Router()
 
@@ -168,9 +169,12 @@ router.route('/act/:uid?').get(function(req, res, next) {
             return handleError(new HoError('name is not valid'), next);
         }
         Mongo('find', USERDB, {username: name}, {
-            username: 1,
-            _id: 0,
-        }, {limit: 1}).then(users => {
+            projection: {
+                username: 1,
+                _id: 0,
+            },
+            limit: 1,
+        }).then(users => {
             if (users.length > 0) {
                 console.log(users);
                 return handleError(new HoError('already has one!!!'))
@@ -210,9 +214,12 @@ router.route('/act/:uid?').get(function(req, res, next) {
         return handleError(new HoError('name is not valid'), next);
     }
     Mongo('find', USERDB, {username: name}, {
-        username: 1,
-        _id: 0,
-    }, {limit: 1}).then(users => {
+        projection: {
+            username: 1,
+            _id: 0,
+        },
+        limit: 1,
+    }).then(users => {
         if (users.length > 0) {
             console.log(users);
             return handleError(new HoError('already has one!!!'));
@@ -284,19 +291,13 @@ router.put('/del/:uid', function(req, res, next) {
         if (checkAdmin(1, users[0])) {
             return handleError(new HoError('owner cannot be deleted!!!'));
         }
-        return Mongo('remove', USERDB, {
-            _id: id,
-            $isolated: 1,
-        });
+        return Mongo('deleteMany', USERDB, {_id: id});
     }).then(user => res.json({apiOK: true})).catch(err => handleError(err, next));
 });
 
 router.get('/verify', function(req, res, next) {
     console.log('verify code');
-    Mongo('remove', VERIFYDB, {
-        utime: {$lt: Math.round(new Date().getTime() / 1000) - 185},
-        $isolated: 1,
-    }).then(item => Mongo('find', VERIFYDB, {uid: req.user._id}, {limit: 1}).then(item => (item.length > 0) ? res.json({verify: item[0].verify}) : Mongo('insert', VERIFYDB, {
+    Mongo('deleteMany', VERIFYDB, {utime: {$lt: Math.round(new Date().getTime() / 1000) - 185}}).then(item => Mongo('find', VERIFYDB, {uid: req.user._id}, {limit: 1}).then(item => (item.length > 0) ? res.json({verify: item[0].verify}) : Mongo('insert', VERIFYDB, {
         verify: completeZero(Math.floor(Math.random() * 10000), 4),
         uid: req.user._id,
         utime: Math.round(new Date().getTime() / 1000),

@@ -1,42 +1,45 @@
 import React from 'react'
-import Dropdown from './Dropdown'
-import { api, isValidString, killEvent, bookmarkItemList } from '../utility'
-import { STORAGE } from '../constants'
+import Dropdown from './Dropdown.js'
+import { api, isValidString, killEvent, bookmarkItemList } from '../utility.js'
+import { STORAGE } from '../constants.js'
 
-const ItemFile = React.createClass({
-    _download: function(id, name) {
+class ItemFile extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    _download = (id, name) => {
         this.props.sendglbcf(() => {
             this.props.setLatest(id, this.props.bookmark)
             window.location.href = `${this.props.mainUrl}/download/${id}`
         }, `Would you sure to download ${name}?`)
-    },
-    _save2drive: function(id, name) {
+    }
+    _save2drive = (id, name) => {
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/external/2drive/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark)
             this.props.addalert('start saving to drive')
         }).catch(err => this.props.addalert(err)) , `Would you sure to download ${name} to drive?`)
-    },
-    _send2kindle: function(id, name) {
+    }
+    _send2kindle = (id, name) => {
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/external/2kindle/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark)
             this.props.addalert('start sending to kindle')
         }).catch(err => this.props.addalert(err)) , `Would you sure to send ${name} to kindle? TXT need be encoded by ANSI or UTF-8`)
-    },
-    _edit: function(id, name) {
+    }
+    _edit = (id, name) => {
         this.props.globalinput(1, new_name => isValidString(new_name, 'name') ? api(`${this.props.mainUrl}/api/file/edit/${id}`, {name: new_name}, 'PUT').then(result => {
             if (result.name) {
                 this.props.setLatest(id, this.props.bookmark);
                 this.props.pushfeedback(result)
             }
         }) : this.props.addalert('name not vaild!!!'), 'info', 'New Name...', name)
-    },
-    _delete: function(id, name, recycle) {
+    }
+    _delete = (id, name, recycle) => {
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/file/del/${id}/${recycle}`, null, 'DELETE').catch(err => this.props.addalert(err)), `Would you sure to delete ${name}?`)
-    },
-    _recover: function(id, name) {
+    }
+    _recover = (id, name) => {
         this.props.sendglbcf(() => api(`/api/storage/recover/${id}`, null, 'PUT').catch(err => this.props.addalert(err)), `Would you sure to recover ${name}?`)
-    },
-    _subscript: function(id, cid, name, isMusic=false) {
+    }
+    _subscript = (id, cid, name, isMusic = false) => {
         this.props.sendglbcf(() => {
             isValidString(name, 'name') ? api(`/api/bookmark/${STORAGE}/subscript/${id}`, {
                 name: name,
@@ -56,18 +59,18 @@ const ItemFile = React.createClass({
                 }
             }).catch(err => this.props.addalert(err)) : this.props.addalert('Bookmark name is not valid!!!')
         }, `Would you sure to subscript ${name}?`)
-    },
-    _save2local: function(id, name, isMusic=false) {
+    }
+    _save2local = (id, name, isMusic = false) => {
         this.props.sendglbcf(() => {
             let extId = id.substr(4)
             let url = ''
             switch (id.substr(0, 4)) {
-                case 'you_':
+                /*case 'you_':
                 url = `https://www.youtube.com/watch?v=${extId}`
                 break
                 case 'ypl_':
                 url = `https://www.youtube.com/watch?list=${extId}`
-                break
+                break*/
                 case 'yif_':
                 url = `https://yts.ag/movie/${extId}`
                 break
@@ -94,25 +97,25 @@ const ItemFile = React.createClass({
                 }
             }).catch(err => this.props.addalert(err)) : this.props.addalert('invalid url!!!')
         }, `確定要儲存 ${name} 到網站?`)
-    },
-    _handleMedia: function(id, name, isDel=false) {
+    }
+    _handleMedia = (id, name, isDel = false) => {
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/file/media/${isDel ? 'del' : 'act'}/${id}`).catch(err => this.props.addalert(err)), `Would you sure to ${isDel ? 'clear' : 'handle'} ${name}?`)
-    },
-    _downloadAll: function(id, name) {
+    }
+    _downloadAll = (id, name) => {
         this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/torrent/all/download/${id}`).then(result => {
             this.props.setLatest(id, this.props.bookmark);
             return result.complete ? this.props.addalert('download complete!!!') : this.props.addalert('starting download');
         }).catch(err => this.props.addalert(err)), `Would you sure to save all of ${name}?`)
-    },
-    _join: function() {
+    }
+    _join = () => {
         this.props.sendglbcf(() => {
             (this.props.select.size > 1) ? api(`${this.props.mainUrl}/api/torrent/join`, {uids: [...this.props.select]}, 'PUT').then(result => {
                 this.props.setLatest(result.id, this.props.bookmark);
                 this.props.addalert(`join to ${result.name} completed`);
             }).catch(err => this.props.addalert(err)) : this.props.addalert('Please selects multiple items!!!')
         }, 'Would you sure to join the split zips?')
-    },
-    _searchSub: function(id) {
+    }
+    _searchSub = id => {
         this.props.globalinput(2, (subName, exact, subEpisode) => {
             if (subName) {
                 return isValidString(subName, 'name') ? api(`${this.props.mainUrl}/api/external/subtitle/search/${id}`, (subEpisode && isValidString(subEpisode, 'name')) ? {name: subName, episode: subEpisode} : {name: subName}).then(result => this.props.addalert('subtitle get')) : Promise.reject('search name is not vaild!!!')
@@ -120,18 +123,18 @@ const ItemFile = React.createClass({
                 return api(`${this.props.mainUrl}/api/external/getSubtitle/${id}`).then(result => this.props.addalert('subtitle get'))
             }
         }, 'warning', 'Search Name or IMDBID: tt1638355', null, 'Episode: S01E01')
-    },
-    _uploadSub: function(id) {
+    }
+    _uploadSub = id => {
         this.props.globalinput(2, () => Promise.resolve(this.props.addalert('subtitle upload success')), 'warning', `${this.props.mainUrl}/upload/subtitle/${id}`)
-    },
-    _showUrl: function(id, url) {
+    }
+    _showUrl = (id, url) => {
         window.open(decodeURIComponent(url))
         api(`/api/storage/media/setTime/${id}/url`).then(result => this.props.setLatest(id, this.props.bookmark)).catch(err => this.props.addalert(err))
-    },
-    _bookmark: function(id) {
+    }
+    _bookmark = id => {
         bookmarkItemList(STORAGE, 'set', this.props.sortName, this.props.sortType, this.props.set, id).catch(err => this.props.addalert(err))
-    },
-    render: function() {
+    }
+    render() {
         const item = this.props.item
         let dropList = []
         if (!item.thumb && item.status !== 7 && item.status !== 8) {
@@ -319,6 +322,6 @@ const ItemFile = React.createClass({
             </tr>
         )
     }
-})
+}
 
 export default ItemFile

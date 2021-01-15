@@ -1,7 +1,7 @@
 import { connect } from 'react-redux'
-import { itemPush, alertPush, setItem, sendGlbIn } from '../actions'
-import { STORAGE } from '../constants'
-import ItemHead from '../components/ItemHead'
+import { itemPush, alertPush, setItem, sendGlbIn } from '../actions/index.js'
+import { STORAGE } from '../constants.js'
+import ItemHead from '../components/ItemHead.js'
 
 const mapStateToProps = state => ({
     itemType: STORAGE,

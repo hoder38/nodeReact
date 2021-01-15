@@ -1,7 +1,7 @@
-var webpack = require('webpack');
-var ExtractTextPlugin = require("extract-text-webpack-plugin");
+import webpack from 'webpack'
+import ExtractTextPlugin from 'extract-text-webpack-plugin'
 
-module.exports = {
+export default {
     entry: './src/front/index.js',
     output: {
         path: './public',

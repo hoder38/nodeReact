@@ -1,10 +1,11 @@
-import { USERDB, VERIFYDB } from '../constants'
+import { USERDB, VERIFYDB } from '../constants.js'
 import Express from 'express'
 import Passport from 'passport'
-import { Strategy } from 'passport-local'
+import passportLocal from 'passport-local'
+const { Strategy } = passportLocal;
 import { createHash } from 'crypto'
-import Mongo, { objectID } from '../models/mongo-tool'
-import { handleError, HoError, isValidString } from '../util/utility'
+import Mongo, { objectID } from '../models/mongo-tool.js'
+import { handleError, HoError, isValidString } from '../util/utility.js'
 
 const router = Express.Router()
 
@@ -31,10 +32,7 @@ Passport.use(new Strategy(function(username, password, done){
             return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
         }
         if (validVerify) {
-            return Mongo('remove', VERIFYDB, {
-                utime: {$lt: Math.round(new Date().getTime() / 1000) - 185},
-                $isolated: 1,
-            }).then(item => Mongo('find', VERIFYDB, {uid: users[0]._id}, {limit: 1}).then(info => {
+            return Mongo('deleteMany', VERIFYDB, {utime: {$lt: Math.round(new Date().getTime() / 1000) - 185}}).then(item => Mongo('find', VERIFYDB, {uid: users[0]._id}, {limit: 1}).then(info => {
                 if (info.length < 1 || validVerify !== info[0].verify) {
                     return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
                 }

@@ -1,13 +1,14 @@
-import { STORAGEDB, NOISE_TIME } from '../constants'
+import { STORAGEDB, NOISE_TIME } from '../constants.js'
 import Express from 'express'
-import { existsSync as FsExistsSync, unlink as FsUnlink } from 'fs'
-import MediaHandleTool, { errorMedia, completeMedia } from '../models/mediaHandle-tool'
-import { googleBackup } from '../models/api-tool-google'
-import Mongo from '../models/mongo-tool'
-import TagTool from '../models/tag-tool'
-import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString } from '../util/utility'
-import sendWs from '../util/sendWs'
-import { supplyTag, isVideo } from '../util/mime'
+import fsModule from 'fs'
+const { existsSync: FsExistsSync, unlink: FsUnlink } = fsModule;
+import MediaHandleTool, { errorMedia, completeMedia } from '../models/mediaHandle-tool.js'
+import { googleBackup } from '../models/api-tool-google.js'
+import Mongo from '../models/mongo-tool.js'
+import TagTool from '../models/tag-tool.js'
+import { checkLogin, handleError, HoError, getFileLocation, checkAdmin, deleteFolderRecursive, isValidString } from '../util/utility.js'
+import sendWs from '../util/sendWs.js'
+import { supplyTag, isVideo } from '../util/mime.js'
 
 const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
@@ -41,10 +42,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
         if (items.length === 0) {
             return handleError(new HoError('file can not be fund!!!'));
         }
-        const rest = () => Mongo('remove', STORAGEDB, {
-            _id: items[0]._id,
-            $isolated: 1,
-        }).then(item2 => {
+        const rest = () => Mongo('deleteMany', STORAGEDB, {_id: items[0]._id}).then(item2 => {
             console.log('perm delete file');
             sendWs({
                 type: 'file',
@@ -340,7 +338,7 @@ router.get('/feedback', function (req, res, next) {
                 return recur_feedback(0);
             }
         });
-    });
+    }).catch(err => handleError(err, next));
 });
 
 export default router

@@ -1,10 +1,11 @@
-import { STORAGEDB } from '../constants'
-import { ENV_TYPE } from '../../../ver'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT } from '../config'
+import { STORAGEDB } from '../constants.js'
+import { ENV_TYPE } from '../../../ver.js'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT } from '../config.js'
 import Express from 'express'
-import { request as HttpsRequest } from 'https'
-import Mongo from '../models/mongo-tool'
-import { handleError, HoError, checkLogin } from '../util/utility'
+import httpsModule from 'https'
+const { request: HttpsRequest } = httpsModule;
+import Mongo from '../models/mongo-tool.js'
+import { handleError, HoError, checkLogin } from '../util/utility.js'
 
 const router = Express.Router();
 

@@ -1,6 +1,6 @@
 import { connect } from 'react-redux'
-import { alertPop } from '../actions'
-import Alertlist from '../components/Alertlist'
+import { alertPop } from '../actions/index.js'
+import Alertlist from '../components/Alertlist.js'
 
 const mapStateToProps = state => ({alertlist: state.alertHandle})
 

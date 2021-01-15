@@ -1,17 +1,18 @@
 import React from 'react'
 import Chart from 'chart.js'
-import Tooltip from './Tooltip'
-import Dropdown from './Dropdown'
-import { api, killEvent, resetItemList, getRandomColor } from '../utility'
+import Tooltip from './Tooltip.js'
+import Dropdown from './Dropdown.js'
+import { api, killEvent, resetItemList, getRandomColor } from '../utility.js'
 
-const FitnessStatis = React.createClass({
-    getInitialState: function() {
+class FitnessStatis extends React.Component {
+    constructor(props) {
+        super(props);
         this._chart = [null, null, null, null, null];
-        return {
+        this.state = {
             start: '',
         }
-    },
-    componentDidMount: function() {
+    }
+    componentDidMount() {
         api('/api/fitness/getStat').then(result => {
             result.chart.forEach((v, i) => {
                 if (v) {
@@ -48,15 +49,15 @@ const FitnessStatis = React.createClass({
             });
             this.setState(Object.assign({}, this.state, {start: result.start}));
         }).catch(err => this.props.addalert(err));
-    },
-    componentWillUnmount: function() {
+    }
+    componentWillUnmount() {
         this._chart.forEach(i => {
             if (i) {
                 i.destroy();
             }
         });
-    },
-    _changeChart: function(index, id=null) {
+    }
+    _changeChart = (index, id = null) => {
         const str = id ? `${index}/${id}` : index;
         api(`/api/fitness/getStat/${str}`).then(result => {
             if (result['apiOK']) {
@@ -85,15 +86,15 @@ const FitnessStatis = React.createClass({
                 });
             }
         }).catch(err => this.props.addalert(err));
-    },
-    _reset: function() {
+    }
+    _reset = () => {
         this.props.sendglbcf(() => api('/api/fitness/reset').then(result => {
             resetItemList(this.props.itemType, this.props.sortName, this.props.sortType, this.props.set).catch(err => this.props.addalert(err))
             this.props.basicset(0);
             this.props.onclose();
         }).catch(err => this.props.addalert(err)), `Would you sure to reset fitness date?`);
-    },
-    render: function() {
+    }
+    render() {
         return (
             <section style={{paddingTop: '50px', overflowX: 'hidden'}} id="stock-info">
                 <section className="panel panel-default" style={{marginBottom: '0px'}}>
@@ -203,6 +204,6 @@ const FitnessStatis = React.createClass({
             </section>
         )
     }
-});
+}
 
 export default FitnessStatis

@@ -1,16 +1,19 @@
 import React from 'react'
-import { api } from '../utility'
-import ReItemInput from '../containers/ReItemInput'
-import { TOP_SECTION_ZINDEX, RIGHT_SECTION_ZINDEX } from '../constants'
-import ReUserInfo from '../containers/ReUserInfo'
+import { api } from '../utility.js'
+import ReItemInput from '../containers/ReItemInput.js'
+import { TOP_SECTION_ZINDEX, RIGHT_SECTION_ZINDEX } from '../constants.js'
+import ReUserInfo from '../containers/ReUserInfo.js'
 
-const Userlist = React.createClass({
-    componentWillMount: function() {
+class Userlist extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    componentDidMount() {
         if (this.props.user_info.size === 0) {
             api('/api/user/act').then(result => this.props.userset(result.user_info)).catch(err => this.props.addalert(err))
         }
-    },
-    render: function() {
+    }
+    render() {
         let rows = []
         this.props.user_info.forEach(user => rows.push(<ReUserInfo key={user.id} user={user} />))
         return (
@@ -32,6 +35,6 @@ const Userlist = React.createClass({
             </div>
         )
     }
-})
+}
 
 export default Userlist
