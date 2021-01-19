@@ -5,12 +5,11 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\"",
-    "build": "webpack -p --config config/webpack.release.config.js; git commit -a",
+    "build": "webpack -p --config config/webpack.release.config.cjs; git commit -a",
     "dev-back": "sudo service nginx-dev restart; sudo service nodejs-file.sh stop; sudo service nodejs.sh stop; sudo service nodejs-file.sh start; sleep 10; sudo service nodejs.sh start",
     "dev-front": "webpack --watch --config config/webpack.dev.config.cjs",
     "dev-stop": "sudo service nginx-dev stop;sudo service nodejs-file.sh stop;sudo service nodejs.sh stop",
-    "release": "git pull; sudo service release-nodejs.sh stop; sudo service release-nodejs.sh start",
-    "release-file": "git pull; sudo service nginx-release restart; sudo service release-nodejs-file.sh stop; sudo service release-nodejs-file.sh start",
+    "release": "git pull; sudo service nginx-release restart; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop; sudo service release-nodejs-file.sh start; sleep 10; sudo service release-nodejs.sh start",
     "release-stop": "sudo service nginx-release stop; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop"
   },
   "type": "module",

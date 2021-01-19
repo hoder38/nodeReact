@@ -1,3 +1,5 @@
+#!/bin/sh
+
 ### BEGIN INIT INFO
 # Provides: scriptname
 # Required-Start: $remote_fs $syslog
@@ -8,29 +10,27 @@
 # Description: Enable service provided by daemon.
 ### END INIT INFO
 
-#!/bin/bash
-
-NODE=/opt/node/bin/node-release
-# SERVER_JS_FILE=/home/pi/release/nodejsAngular/src/web/controllers/server.js
-SERVER_JS_FILE=/home/pi/release/nodeReact/build/back/controllers/server.js
+NODE=/usr/bin/node-release
+NAME=release-nodejs
+DESC=release-nodejs
+SERVER_JS_FILE=/home/pipipi/release/nodeReact/src/back/controllers/server.js
 USER=root
-# OUT=/home/pi/release/nodejsAngular/log/nodejs.log
-OUT=/home/pi/release/nodeReact/log/nodejs.log
+OUT=/home/pipipi/release/nodeReact/log/nodejs.log
 
 case "$1" in
 
 start)
-        echo "starting node: $NODE $SERVER_JS_FILE"
-        sudo -u $USER $NODE --max-old-space-size=1024 $SERVER_JS_FILE >> $OUT 2>>$OUT &
-        ;;
+    echo "starting node: $NODE $SERVER_JS_FILE"
+    sudo -u $USER $NODE --max-old-space-size=1024 $SERVER_JS_FILE >> $OUT 2>>$OUT &
+    echo "starting node: 123"
+    ;;
 
 stop)
-	killall $NODE
-        ;;
+    killall $NODE -u $USER
+    ;;
 
 *)
-        echo "usage: $0 (start|stop)"
+    echo "usage: $0 (start|stop)"
 esac
 
 exit 0
-

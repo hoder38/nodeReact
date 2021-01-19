@@ -3,12 +3,12 @@ var MiniCssExtractPlugin = require("mini-css-extract-plugin");
 var PathJoin = require('path').join;
 
 module.exports = {
-    mode: 'development',
+    mode: 'production',
     entry: './src/front/index.js',
     output: {
-        path: PathJoin(__dirname, '../public'),
+        path: PathJoin(__dirname, '../public'),,
         publicPath: PathJoin(__dirname, '../public'),
-        filename: '[name].js',
+        filename: 'release.js',
     },
     optimization: {
         splitChunks: {
@@ -93,5 +93,24 @@ module.exports = {
             },
         ]
     },
-    plugins: [new MiniCssExtractPlugin({filename: 'app.css'})],
+    plugins: [
+        new webpack.optimize.UglifyJsPlugin({
+            compress: {
+                warnings: false,
+            },
+            output: {
+                comments: false,
+            },
+        }),
+        new webpack.DefinePlugin({
+            PRODUCTION: JSON.stringify(true),
+            VERSION: JSON.stringify('5fa3b9'),
+            BROWSER_SUPPORTS_HTML5: true,
+            TWO: '1+1',
+            'typeof window': JSON.stringify('object'),
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
+        }),
+        new MiniCssExtractPlugin({filename: 'release.css'}),
+    ],
 };
+
