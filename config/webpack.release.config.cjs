@@ -6,7 +6,7 @@ module.exports = {
     mode: 'production',
     entry: './src/front/index.js',
     output: {
-        path: PathJoin(__dirname, '../public'),,
+        path: PathJoin(__dirname, '../public'),
         publicPath: PathJoin(__dirname, '../public'),
         filename: 'release.js',
     },
@@ -94,14 +94,14 @@ module.exports = {
         ]
     },
     plugins: [
-        new webpack.optimize.UglifyJsPlugin({
+        /*new webpack.optimize.UglifyJsPlugin({
             compress: {
                 warnings: false,
             },
             output: {
                 comments: false,
             },
-        }),
+        }),*/
         new webpack.DefinePlugin({
             PRODUCTION: JSON.stringify(true),
             VERSION: JSON.stringify('5fa3b9'),

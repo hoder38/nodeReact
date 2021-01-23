@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\"",
-    "build": "webpack -p --config config/webpack.release.config.cjs; git commit -a",
+    "build": "webpack --config config/webpack.release.config.cjs; git commit -a",
     "dev-back": "sudo service nginx-dev restart; sudo service nodejs-file.sh stop; sudo service nodejs.sh stop; sudo service nodejs-file.sh start; sleep 10; sudo service nodejs.sh start",
     "dev-front": "webpack --watch --config config/webpack.dev.config.cjs",
     "dev-stop": "sudo service nginx-dev stop;sudo service nodejs-file.sh stop;sudo service nodejs.sh stop",
