@@ -190,3 +190,20 @@ utils.exec(['ffmpeg','-i',`"${fileInput}"`,'2>&1'], settings, function (error, s
 
 ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 記得設定crontab 去更新ssl
 (crontab 設定) sudo certbot renew --pre-hook "service nginx-dev stop" --post-hook "service nginx-dev restart; service nginx-dev restart" 記得改為線上，restart 2次才會正常
+
+cmd:
+sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/cmd.js
+sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/cmd.js
+記得等db connect
+
+google auth:
+記得到 https://console.developers.google.com/apis/dashboard?project=sanguine-mark-826&authuser=0&hl=zh-tw&duration=PT1H 開啟api
+sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/googledrive.js
+sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/googledrive.js
+改權限記得刪權限後再要一次refresh token, https://myaccount.google.com/u/0/permissions
+記得update db token
+
+td ameritrade auth:
+每90天要更新一次token(前7天會提醒) 更新完要重開node
+sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/tdameritrade.js
+sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/tdameritrade.js

@@ -1510,7 +1510,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 });
                             }
                             let delOrderNumber = 0;
-                            real_id.forEach(r => delOrderNumber = delOrderNumber - r.amount * r.price);
+                            real_id.forEach(r => delOrderNumber = delOrderNumber - r.amount * r.price / SUPPORT_LEVERAGE[r.symbol]);
                             if ((availableMargin + delOrderNumber) < 0) {
                                 return real_delete(0);
                             } else {

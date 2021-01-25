@@ -33,13 +33,12 @@ import { mainInit } from '../util/sendWs.js'
 
 //background
 import { autoUpload, checkMedia/*, updateExternal*/, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, checkSetOffer, usseInit, checkUsseInit } from '../cmd/background.js'
-
 //global
 const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: PKEY_PWD,
+    passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

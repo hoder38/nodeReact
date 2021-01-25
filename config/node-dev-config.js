@@ -1,6 +1,6 @@
 export default {
-    EXTENT_IP: 'dev.anomopi.com',
-    EXTENT_FILE_IP: 'dev.anomopi.com',
+    EXTENT_IP: 'www.anomopi.com',
+    EXTENT_FILE_IP: 'www.anomopi.com',
     APP_HTML: 'app.html',
     IP: '127.0.0.1',
     FILE_IP: '127.0.0.1',

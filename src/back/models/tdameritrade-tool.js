@@ -61,7 +61,7 @@ export const getToken = code => {
             token['refresh_token_expiry_date'] = Math.floor(Date.now() / 1000) + token['refresh_token_expires_in'];
         } else {
             if (tokens && tokens.refresh_token_expiry_date < (Date.now() / 1000 + 604800)) {
-                sendWs(`TD AMERITRADE: Please refresh token in 7days`, 0, 0, true);
+                sendWs(`TD AMERITRADE: Please refresh token in 7 days`, 0, 0, true);
             }
         }
         console.log(token);

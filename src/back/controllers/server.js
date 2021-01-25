@@ -45,7 +45,7 @@ const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: PKEY_PWD,
+    passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

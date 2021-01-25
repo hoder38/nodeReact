@@ -254,38 +254,38 @@ stock
         {
                 "v" : 1,
                 "key" : {
-                        "profitIndex" : 1
+                        "per" : 1
                 },
                 "ns" : "releasedb.stock",
-                "name" : "profitIndex_1"
+                "name" : "per_1"
         },
         {
                 "v" : 1,
                 "key" : {
                         "tags" : 1,
-                        "profitIndex" : 1
+                        "per" : 1
                 },
                 "ns" : "releasedb.stock",
-                "name" : "tags_1_profitIndex_1"
+                "name" : "tags_1_per_1"
         },
         {
                 "v" : 1,
                 "key" : {
                         "important" : 1,
-                        "profitIndex" : 1
+                        "per" : 1
                 },
                 "ns" : "releasedb.stock",
-                "name" : "important_1_profitIndex_1"
+                "name" : "important_1_per_1"
         },
         {
                 "v" : 1,
                 "key" : {
                         "tags" : 1,
                         "important" : 1,
-                        "profitIndex" : 1
+                        "per" : 1
                 },
                 "ns" : "releasedb.stock",
-                "name" : "tags_1_important_1_profitIndex_1"
+                "name" : "tags_1_important_1_per_1"
         }
 ]
 stockUser

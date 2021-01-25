@@ -32,7 +32,7 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
 }
 
 export const dbDump = (collection, backupDate=null) => {
-    if (collection !== 'accessToken' && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
+    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
         return handleError(new HoError('Collection not find'));
     }
     if (!backupDate) {
@@ -57,7 +57,7 @@ export const dbDump = (collection, backupDate=null) => {
 }
 
 const dbRestore = collection => {
-    if (collection !== 'accessToken' && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User`) {
+    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
         return handleError(new HoError('Collection not find'));
     }
     const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${collection}`;

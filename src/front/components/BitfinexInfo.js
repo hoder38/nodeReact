@@ -182,7 +182,7 @@ class BitfinexInfo extends React.Component {
                     <form onSubmit={e => killEvent(e, this._handleSubmit)}>
                         <div className="panel-body">
                             <div>設定網址：
-                                <span><a href="https://www.bitfinex.com/api#createkey" className="item-point" target="_blank">https://www.bitfinex.com/api#createkey</a></span> & <a className="item-point" href="/public/bitfinex_api_setting.png" target="_blank">權限設定</a>
+                                <span><a href="https://www.bitfinex.com/api#createkey" className="item-point" target="_blank">https://www.bitfinex.com/api#createkey</a></span> & <a className="item-point" href="/public/bitfinex_api_setting.png" target="_blank">權限設定</a> & <a className="item-point" href="/public/bitfinex_trade_api_setting.png" target="_blank">交易權限設定</a>
                             </div>
                             <div>
                                 <button className="btn btn-success" type="submit">
