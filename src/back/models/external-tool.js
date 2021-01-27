@@ -1280,7 +1280,6 @@ export default {
                     };
                     const output = () => dUrl ? Api('url', dUrl).then(raw_data => {
                         const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
-                        console.log(matchT);
                         if (matchT && matchT[0] === docDate) {
                             list.push({
                                 url: dUrl,
