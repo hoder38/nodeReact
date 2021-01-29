@@ -860,6 +860,12 @@ export const TBTC_SYM = 'tBTCUSD'
 export const TETH_SYM = 'tETHUSD';
 export const TUSDT_SYM = 'tUSTUSD';
 export const TOMG_SYM = 'tOMGUSD';
+export const FLTC_SYM = 'fLTC'
+export const FUNI_SYM = 'fUNI'
+export const FDOT_SYM = 'fDOT'
+export const TLTC_SYM = 'tLTCUSD'
+export const TUNI_SYM = 'tUNIUSD';
+export const TDOT_SYM = 'tDOTUSD';
 export const BITFINEX_EXP = 100000000;
 export const BITFINEX_MIN = 100;
 export const DISTRIBUTION = [3, 10, 20, 33, 50, 67, 80, 90, 97];
@@ -884,15 +890,19 @@ export const TRADE_TIME = 21600;
 export const RANGE_INTERVAL = 7776000;
 export const API_WAIT = 5;
 //export const MINIMAL_DS_RATE = 0.05;
-export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM];
-export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM];
+export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM, FLTC_SYM, FUNI_SYM, FDOT_SYM];
+export const SUPPORT_PRICE = [TBTC_SYM, TETH_SYM, TUSDT_SYM, TOMG_SYM, TLTC_SYM, TUNI_SYM, TDOT_SYM];
 export const SUPPORT_PAIR = {
-    fUSD: [TBTC_SYM, TETH_SYM, TOMG_SYM],
+    fUSD: [TBTC_SYM, TETH_SYM, TOMG_SYM, TLTC_SYM, TUNI_SYM, TDOT_SYM],
 }
 export const SUPPORT_LEVERAGE = {
     tETHUSD: 5,
     tBTCUSD: 5,
     tOMGUSD: 3.3,
+    tLTCUSD: 5,
+    tUNIUSD: 3.3,
+    tDOTUSD: 3.3,
+    'tSUSHI:USD': 3.3,
 }
 export const MAX_RATE = 7000000;
 export const BITNIFEX_PARENT = [
@@ -919,6 +929,18 @@ export const BITNIFEX_PARENT = [
     {
         name: 'omg',
         show: 'OMG',
+    },
+    {
+        name: 'ltc',
+        show: 'LTC',
+    },
+    {
+        name: 'uni',
+        show: 'UNI',
+    },
+    {
+        name: 'dot',
+        show: 'DOT',
     },
     {
         name: 'wallet',

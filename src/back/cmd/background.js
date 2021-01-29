@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER } from '../config.js'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, SUPPORT_PAIR } from '../constants.js'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR } from '../constants.js'
 import Mongo from '../models/mongo-tool.js'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
@@ -229,7 +229,7 @@ export const checkStock = () => {
 
 export const rateCalculator = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
-        const calR = () => calRate([FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FOMG_SYM]).catch(err => bgError(err, 'Loop rate calculator')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => calR());
+        const calR = () => calRate(SUPPORT_COIN).catch(err => bgError(err, 'Loop rate calculator')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => calR());
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => calR());
     }
 }
