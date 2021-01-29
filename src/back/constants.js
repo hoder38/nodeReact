@@ -902,7 +902,6 @@ export const SUPPORT_LEVERAGE = {
     tLTCUSD: 5,
     tUNIUSD: 3.3,
     tDOTUSD: 3.3,
-    'tSUSHI:USD': 3.3,
 }
 export const MAX_RATE = 7000000;
 export const BITNIFEX_PARENT = [
