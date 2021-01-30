@@ -34,12 +34,12 @@ router.route('/bot').get(function(req, res, next) {
 }).put(function(req, res, next) {
     console.log('update bot');
     console.log(req.body);
-    BitfinexTool.updateBot(req.user._id, req.body).then(list => res.json(list)).catch(err => handleError(err, next));
+    BitfinexTool.updateBot(req.user._id, req.body, req.user.username).then(list => res.json(list)).catch(err => handleError(err, next));
 });
 
 router.get('/bot/del/:type', function(req, res, next) {
     console.log('del bot');
-    BitfinexTool.deleteBot(req.user._id, req.params.type).then(list => res.json(list)).catch(err => handleError(err, next));
+    BitfinexTool.deleteBot(req.user._id, req.params.type, req.user.username).then(list => res.json(list)).catch(err => handleError(err, next));
 });
 
 router.get('/bot/close/:credit', function(req, res, next) {

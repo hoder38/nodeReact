@@ -839,7 +839,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
                             console.log(`delete ${os.id}`);
-                            console.log(order[id][symbol][j]);
                             if (order[id][symbol][j].code) {
                                 is_code = true;
                             }
@@ -861,12 +860,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     }
                 }
                 if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
-                    console.log('is executed');
                     for (let i = 0; i < curArr.length; i++) {
                         if (curArr[i].type === symbol && curArr[i].pair) {
                             for (let j = 0; j < curArr[i].pair.length; j++) {
-                                console.log(curArr[i].pair[j].type);
-                                console.log(os.symbol);
                                 if (curArr[i].pair[j].type === os.symbol) {
                                     console.log(`${os.symbol} order executed`);
                                     const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
@@ -2105,7 +2101,7 @@ export default {
             return returnSupport(items[0].bitfinex);
         });
     },
-    updateBot: function(id, set) {
+    updateBot: function(id, set, userID) {
         let isSupport = false;
         for (let i of SUPPORT_COIN) {
             if (set.type === i) {
@@ -2359,6 +2355,9 @@ export default {
                         }
                         const recur_update = index => {
                             if (index >= item.length) {
+                                userWs[userID].close();
+                                userWs[userID] = null;
+                                userOk[userID] = false;
                                 return returnSupport(bitfinex);
                             } else {
                                 if (item[index]._id) {
@@ -2411,13 +2410,16 @@ export default {
                         }
                         return recur_update(0);
                     } else {
+                        userWs[userID].close();
+                        userWs[userID] = null;
+                        userOk[userID] = false;
                         return returnSupport(bitfinex);
                     }
                 });
             });
         });
     },
-    deleteBot: function(id, type) {
+    deleteBot: function(id, type, userID) {
         return Mongo('find', USERDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
                 return handleError(new HoError('User does not exist!!!'));
@@ -2427,6 +2429,9 @@ export default {
                 //console.log(bitfinex);
                 return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
                     console.log(user);
+                    userWs[userID].close();
+                    userWs[userID] = null;
+                    userOk[userID] = false;
                     return returnSupport(bitfinex);
                 });
             } else {
