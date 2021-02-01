@@ -1080,6 +1080,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
             } else {
                 ext = 'srt';
             }
+            subPath = subPath.replace('_complete', '');
             if (lang === 'en') {
                 subPath = `${subPath}.en`;
             }
