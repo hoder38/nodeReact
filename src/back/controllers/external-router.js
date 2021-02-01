@@ -921,10 +921,15 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
         const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();
         const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
-        const OpenSubtitles = new OpenSubtitle({
-            useragent: 'hoder agent v0.1',
-            ssl: true,
-        });
+        let OpenSubtitles = null;
+        try {
+            OpenSubtitles = new OpenSubtitle({
+                useragent: 'hoder agent v0.1',
+                ssl: true,
+            });
+        } catch (err) {
+            return handleError(err, next);
+        }
         console.log(Object.assign({
             filesize: size,
             path: filePath,
@@ -1060,8 +1065,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 });
             });
             return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleError(err)) : (season === 1) ? getSub(name) : handleError(err)) : getSub(name));*/
-            return restSub().catch(err => handleError(err, next));
-        });
+            return restSub();
+        }).catch(err => handleError(err, next));
         function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
             if (!choose_subtitle) {
                 return handleError(new HoError('donot have sub!!!'));

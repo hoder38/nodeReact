@@ -833,15 +833,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if (SUPPORT_COIN.indexOf(symbol) !== -1) {
                 console.log(`${symbol} ${id} order close`);
                 console.log(os);
-                let is_code = false;
                 let is_exist = false;
                 if (order[id][symbol]) {
                     for (let j = 0; j < order[id][symbol].length; j++) {
                         if (order[id][symbol][j].id === os.id) {
                             console.log(`delete ${os.id}`);
-                            if (order[id][symbol][j].code) {
-                                is_code = true;
-                            }
                             is_exist = true;
                             order[id][symbol].splice(j, 1);
                             break;
@@ -859,7 +855,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         });
                     }
                 }
-                if (is_code && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+                if (!os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
                     for (let i = 0; i < curArr.length; i++) {
                         if (curArr[i].type === symbol && curArr[i].pair) {
                             for (let j = 0; j < curArr[i].pair.length; j++) {
@@ -980,7 +976,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             type: v.type,
                             price: v.price,
                             flags: v.flags,
-                            code: !v.type.includes('EXCHANGE') ? true : false,
                         });
                     }
                 });
@@ -1478,7 +1473,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         availableMargin = needTrans;
                     } else {
                         if (order[id][current.type]) {
-                            const real_id = order[id][current.type].filter(v => v.amount > 0 && v.code);
+                            const real_id = order[id][current.type].filter(v => v.amount > 0 && !v.type.includes('EXCHANGE'));
                             const real_delete = index => {
                                 let is_error = false;
                                 if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
@@ -1599,7 +1594,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         console.log(item);
                         const cancelOrder = rest => {
                             if (order[id][current.type]) {
-                                const real_id = order[id][current.type].filter(v => (v.symbol === item.index && v.code));
+                                const real_id = order[id][current.type].filter(v => (v.symbol === item.index && !v.type.includes('EXCHANGE')));
                                 const real_delete = index => {
                                     if (index >= real_id.length) {
                                         return rest ? rest() : Promise.resolve();
@@ -1792,7 +1787,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         let isExist = false;
                                         for (let i = 0; i < order[id][current.type].length; i++) {
                                             if (or[0].id === order[id][current.type][i].id) {
-                                                order[id][current.type][i].code = true;
                                                 isExist = true;
                                                 break;
                                             }
@@ -1815,7 +1809,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                     symbol: or[0].symbol,
                                                     price: or[0].price,
                                                     flags: or[0].flags,
-                                                    code: true,
                                                 });
                                             }
                                         }
@@ -1924,7 +1917,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             let isExist = false;
                                             for (let i = 0; i < order[id][current.type].length; i++) {
                                                 if (or1[0].id === order[id][current.type][i].id) {
-                                                    order[id][current.type][i].code = true;
                                                     isExist = true;
                                                     break;
                                                 }
@@ -1950,7 +1942,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                         symbol: or1[0].symbol,
                                                         price: or1[0].price,
                                                         flags: or1[0].flags,
-                                                        code: true,
                                                     });
                                                 }
                                             }
@@ -1985,7 +1976,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     let isExist = false;
                                     for (let i = 0; i < order[id][current.type].length; i++) {
                                         if (or[0].id === order[id][current.type][i].id) {
-                                            order[id][current.type][i].code = true;
                                             isExist = true;
                                             break;
                                         }
@@ -2011,7 +2001,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 symbol: or[0].symbol,
                                                 price: or[0].price,
                                                 flags: or[0].flags,
-                                                code: true,
                                             });
                                         }
                                     }
@@ -2635,9 +2624,8 @@ export default {
                 }
                 if (order[id] && order[id][v]) {
                     order[id][v].forEach(o => {
-                        const code = !o.code ? ' 手動' : '';
                         itemList.push({
-                            name: `交易掛單 ${o.symbol.substr(1)} ${Math.floor(o.amount * 10000) / 10000}枚 ${o.type}${code}`,
+                            name: `交易掛單 ${o.symbol.substr(1)} ${Math.floor(o.amount * 10000) / 10000}枚 ${o.type}${o.type.includes('EXCHANGE') ? ' 手動' : ''}`,
                             id: o.id,
                             tags: [v.substr(1).toLowerCase(), 'order', '交易掛單'],
                             rate: `$${o.price}`,
