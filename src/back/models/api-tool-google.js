@@ -674,7 +674,7 @@ function downloadMedia(data) {
             console.log(data['key']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), Math.pow(2, index) * 10 * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), Math.pow(2, index) * 40 * 1000));
     });
     return proc();
 }
