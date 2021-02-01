@@ -130,6 +130,7 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
         const sendSub = (filePath, fileIndex=false) => {
             filePath = fileIndex === false ? filePath : `${filePath}/${fileIndex}`;
             const subPath = req.params.lang === 'en' ? `${filePath}.en` : filePath;
+            console.log(subPath);
             res.writeHead(200, {
                 'X-Forwarded-Path': FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`,
                 'X-Forwarded-Type': 'text/vtt',
