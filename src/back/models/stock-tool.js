@@ -6418,12 +6418,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     sCount = sTimes * sCount * priceTimes;
     const pRemain = pAmount / pOrig;
     const finalSell = () => {
-        if (sCount === 0 && (pRemain < 1 / 10 || (!sType && pAmount < price))) {
-            console.log('keep sell');
+        if (sCount === 0 && (pRemain < (1 / 10) || (!sType && pAmount < price))) {
             sCount = sTimes * priceTimes;
         }
-        if (sCount > sTimes * priceTimes && pRemain > 3 / 4) {
-            console.log('small sell');
+        if (sCount > (sTimes * priceTimes) && pRemain > (3 / 4)) {
             sCount = sTimes * priceTimes;
         }
         /*if (pAmount && sCount) {
@@ -6438,12 +6436,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }*/
     }
     const finalBuy = () => {
-        if (bCount === 0 && pRemain > 9 / 10) {
-            console.log('keep buy');
+        if (bCount === 0 && pRemain > (9 / 10)) {
             bCount = bTimes * priceTimes;
         }
-        if (bCount > bTimes * priceTimes && (pRemain < 1 / 4  || (!sType && pAmount < price))) {
-            console.log('small buy');
+        if (bCount > (bTimes * priceTimes) && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
             bCount = bTimes * priceTimes;
         }
         if (pAmount === 0) {
@@ -7502,7 +7498,12 @@ export const getSuggestionData = (type = 'twse') => suggestionData[type];
 }
 
 const submitTwseOrder = submitList => {
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} submit`, (err, output) => err ? reject(err) : resolve(output)))
+    submitList
+    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} submit ${TRADE_FEE} 1536=buy23=36sell66=46`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+        console.log(output);
+    });
 }
 
-new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => getTwsePosition());*/
+new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => getTwsePosition());
+
+new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => submitTwseOrder({'1536': {buy: 23, bCount: 36, sell: 66, sCount: 46}}));*/
