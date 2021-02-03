@@ -1,9 +1,12 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK,USSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, __dirname } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
+import pathModule from 'path'
+const { join: PathJoin } = pathModule;
+import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
 import Xml2js from 'xml2js'
 import Redis from '../models/redis-tool.js'
@@ -6416,9 +6419,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const pRemain = pAmount / pOrig;
     const finalSell = () => {
         if (sCount === 0 && (pRemain < 1 / 10 || (!sType && pAmount < price))) {
+            console.log('keep sell');
             sCount = sTimes * priceTimes;
         }
         if (sCount > sTimes * priceTimes && pRemain > 3 / 4) {
+            console.log('small sell');
             sCount = sTimes * priceTimes;
         }
         /*if (pAmount && sCount) {
@@ -6434,9 +6439,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     const finalBuy = () => {
         if (bCount === 0 && pRemain > 9 / 10) {
+            console.log('keep buy');
             bCount = bTimes * priceTimes;
         }
         if (bCount > bTimes * priceTimes && (pRemain < 1 / 4  || (!sType && pAmount < price))) {
+            console.log('small buy');
             bCount = bTimes * priceTimes;
         }
         if (pAmount === 0) {
@@ -7457,3 +7464,45 @@ const getUsStock = (index, stat=['price']) => {
 }
 
 export const getSuggestionData = (type = 'twse') => suggestionData[type];
+
+/*const getTwsePosition = () => {
+    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
+        console.log(output);
+        const result = output.split('\n');
+        console.log(result);
+        let start_result = 0;
+        let cash = 0;
+        let position = [];
+        let order = [];
+        let fill_order = [];
+        for (let i = 0; i < result.length; i++) {
+            if (!start_result) {
+                if (result[i] === 'start result') {
+                    start_result = 1;
+                }
+            } else if (start_result === 1) {
+                cash = Number(result[i]);
+                start_result = 2;
+            } else if (start_result === 2) {
+                position = JSON.parse(result[i]);
+                start_result = 3;
+            } else if (start_result === 3) {
+                order = JSON.parse(result[i]);
+                start_result = 4;
+            } else if (start_result === 4) {
+                fill_order = JSON.parse(result[i]);
+                break;
+            }
+        }
+        console.log(cash);
+        console.log(position);
+        console.log(order);
+        console.log(fill_order);
+    });
+}
+
+const submitTwseOrder = submitList => {
+    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} submit`, (err, output) => err ? reject(err) : resolve(output)))
+}
+
+new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => getTwsePosition());*/

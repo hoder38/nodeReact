@@ -511,24 +511,36 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     duration: o.duration,
                                 });
                                 return order_recur(index + 1);
-                            } else if (o.orderActivityCollection && processedOrder.indexOf(o.orderId) === -1 && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                            } else if (o.orderActivityCollection && processedOrder.indexOf(o.orderId) === -1 && (o.orderActivityCollection[0].executionType === 'FILL'/* || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL'*/)) {
                                 console.log(o);
                                 console.log(o.orderActivityCollection[0].executionLegs[0]);
                                 processedOrder.push(o.orderId);
                                 const symbol = o.orderLegCollection[0].instrument.symbol;
                                 let profit = 0;
+                                const type = o.orderLegCollection[0].instruction;
+                                let time = 0;
+                                //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
+                                //const price = o.orderActivityCollection[0].executionLegs[0].price;
+                                let this_profit = 0;
+                                let price = 0;
+                                o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
+                                    time = Math.round(new Date(oace.time).getTime() / 1000);
+                                    this_profit = this_profit + oace.quantity * oace.price;
+                                    price = oace.price;
+                                }));
+                                console.log(symbol);
+                                console.log(type);
+                                console.log(time);
+                                console.log(price);
+                                console.log(this_profit);
+                                if (this_profit <= 0) {
+                                    return order_recur(index + 1);
+                                }
                                 return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
                                     if (items.length < 1) {
                                         console.log(`miss ${symbol}`);
                                         return order_recur(index + 1);
                                     }
-                                    const type = o.orderLegCollection[0].instruction;
-                                    const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
-                                    const price = o.orderActivityCollection[0].executionLegs[0].price;
-                                    console.log(symbol);
-                                    console.log(type);
-                                    console.log(time);
-                                    console.log(price);
                                     const item = items[0];
                                     if (type === 'BUY') {
                                         if (item.previous.buy[0] && item.previous.buy[0].time === time && item.previous.buy[0].price === price) {
@@ -595,7 +607,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                 }
                                                 console.log(pp);
                                                 console.log(cp);
-                                                profit = price * o.orderActivityCollection[0].executionLegs[0].quantity * (1 - USSE_FEE) - pp + cp;
+                                                profit = this_profit * (1 - USSE_FEE) - pp + cp;
                                                 console.log(profit);
                                             }
                                         }
