@@ -2354,7 +2354,6 @@ export default {
                                         if (item[index].index === data['pair'][i].type) {
                                             if (item[index].ing === 2) {
                                                 item[index].ing = (position[userID] && position[userID][item[index].index]) ? 1 : 0;
-                                                }
                                             }
                                             return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
                                                 times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
