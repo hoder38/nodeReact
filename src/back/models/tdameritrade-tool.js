@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver.js'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MATKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility.js'
@@ -636,12 +636,12 @@ export const usseTDInit = () => checkOauth().then(() => {
         } else {
             //避開交易時間
             const hour = new Date().getHours();
-            if (USSE_MATKET_TIME[0] > USSE_MATKET_TIME[1]) {
-                if (hour > USSE_MATKET_TIME[0] || hour < USSE_MATKET_TIME[1]) {
+            if (USSE_MARKET_TIME[0] > USSE_MARKET_TIME[1]) {
+                if (hour > USSE_MARKET_TIME[0] || hour < USSE_MARKET_TIME[1]) {
                     updateTime['trade']--;
                     return Promise.resolve();
                 }
-            } else if (hour > USSE_MATKET_TIME[0] && hour < USSE_MATKET_TIME[1]) {
+            } else if (hour > USSE_MARKET_TIME[0] && hour < USSE_MARKET_TIME[1]) {
                 updateTime['trade']--;
                 return Promise.resolve();
             }

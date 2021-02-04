@@ -54,8 +54,8 @@ export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800;
 export const USSE_ENTER_MID = 5;
-export const USSE_MATKET_TIME = [16, 9];
-export const TWSE_MATKET_TIME = [9, 21];
+export const USSE_MARKET_TIME = [16, 9];
+export const TWSE_MARKET_TIME = [9, 21];
 
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

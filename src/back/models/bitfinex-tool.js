@@ -2352,11 +2352,15 @@ export default {
                                 if (item[index]._id) {
                                     for (let i = 0; i < data['pair'].length; i++) {
                                         if (item[index].index === data['pair'][i].type) {
+                                            if (item[index].ing === 2) {
+                                                item[index].ing = (position[userID] && position[userID][item[index].index]) ? 1 : 0;
+                                                }
+                                            }
                                             return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
                                                 times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
                                                 //amount: item[index].amount + data['pair'][i].amount - item[index].orig,
                                                 orig: data['pair'][i].amount,
-                                                ing: (item[index].ing === 2) ? 0 : item[index].ing,
+                                                ing: item[index].ing,
                                             }}).then(item => {
                                                 console.log(item);
                                                 return recur_update(index + 1);
