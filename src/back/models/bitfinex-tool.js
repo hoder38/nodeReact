@@ -2171,7 +2171,7 @@ export default {
             if (keepAmountRate1 === false) {
                 return handleError(new HoError('Keep Amount 1 is not valid'));
             }
-            if (keepAmountRate1 > 0 && set.keepAmountMoney1) {
+            if (keepAmountRate1 >= 0 && set.keepAmountMoney1) {
                 const keepAmountMoney1 = isValidString(set.keepAmountMoney1, 'zeroint');
                 if (keepAmountMoney1 === false) {
                     return handleError(new HoError('Keep Amount 1 is not valid'));
@@ -2185,9 +2185,11 @@ export default {
             if (dynamicRate1 === false) {
                 return handleError(new HoError('Dynamic Rate 1 is not valid'));
             }
-            if (dynamicRate1 > 0 && set.dynamicDay1) {
+            if (dynamicRate1 >= 0 && set.dynamicDay1) {
                 const dynamicDay1 = isValidString(set.dynamicDay1, 'zeroint');
-                if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 120) {
+                if (dynamicDay1 === 0 && dynamicRate1 === 0) {
+
+                } else if (dynamicDay1 === false || dynamicDay1 < 2 || dynamicDay1 > 120) {
                     return handleError(new HoError('Dynamic Rate 1 is not valid'));
                 }
                 data['dynamicRate1'] = dynamicRate1;
@@ -2199,9 +2201,11 @@ export default {
             if (dynamicRate2 === false) {
                 return handleError(new HoError('Dynamic Rate 2 is not valid'));
             }
-            if (dynamicRate2 > 0 && set.dynamicDay2) {
+            if (dynamicRate2 >= 0 && set.dynamicDay2) {
                 const dynamicDay2 = isValidString(set.dynamicDay2, 'zeroint');
-                if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 120) {
+                if (dynamicDay2 === 0 && dynamicRate2 === 0) {
+
+                } else if (dynamicDay2 === false || dynamicDay2 < 2 || dynamicDay2 > 120) {
                     return handleError(new HoError('Dynamic Rate 2 is not valid'));
                 }
                 data['dynamicRate2'] = dynamicRate2;
