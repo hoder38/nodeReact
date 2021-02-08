@@ -2344,9 +2344,11 @@ export default {
                         }
                         const recur_update = index => {
                             if (index >= item.length) {
-                                userWs[userID].close();
-                                userWs[userID] = null;
-                                userOk[userID] = false;
+                                if (userWs[userID]) {
+                                    userWs[userID].close();
+                                    userWs[userID] = null;
+                                    userOk[userID] = false;
+                                }
                                 return returnSupport(bitfinex);
                             } else {
                                 if (item[index]._id) {
@@ -2402,9 +2404,11 @@ export default {
                         }
                         return recur_update(0);
                     } else {
-                        userWs[userID].close();
-                        userWs[userID] = null;
-                        userOk[userID] = false;
+                        if (userWs[userID]) {
+                            userWs[userID].close();
+                            userWs[userID] = null;
+                            userOk[userID] = false;
+                        }
                         return returnSupport(bitfinex);
                     }
                 });
@@ -2421,9 +2425,11 @@ export default {
                 //console.log(bitfinex);
                 return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
                     console.log(user);
-                    userWs[userID].close();
-                    userWs[userID] = null;
-                    userOk[userID] = false;
+                    if (userWs[userID]) {
+                        userWs[userID].close();
+                        userWs[userID] = null;
+                        userOk[userID] = false;
+                    }
                     return returnSupport(bitfinex);
                 });
             } else {

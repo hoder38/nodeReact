@@ -313,7 +313,7 @@ class BitfinexInfo extends React.Component {
                                                 <UserInput
                                                     val={this.state.keepAmountRate1}
                                                     getinput={this._input.getInput('keepAmountRate1')}
-                                                    placeholder="Rate" />
+                                                    placeholder="<Rate" />
                                                 <UserInput
                                                     val={this.state.keepAmountMoney1}
                                                     getinput={this._input.getInput('keepAmountMoney1')}
@@ -328,7 +328,7 @@ class BitfinexInfo extends React.Component {
                                                 <UserInput
                                                     val={this.state.dynamicRate1}
                                                     getinput={this._input.getInput('dynamicRate1')}
-                                                    placeholder="Rate" />
+                                                    placeholder=">Rate" />
                                                 <UserInput
                                                     val={this.state.dynamicDay1}
                                                     getinput={this._input.getInput('dynamicDay1')}
@@ -343,7 +343,7 @@ class BitfinexInfo extends React.Component {
                                                 <UserInput
                                                     val={this.state.dynamicRate2}
                                                     getinput={this._input.getInput('dynamicRate2')}
-                                                    placeholder="Rate" />
+                                                    placeholder=">Rate" />
                                                 <UserInput
                                                     val={this.state.dynamicDay2}
                                                     getinput={this._input.getInput('dynamicDay2')}
