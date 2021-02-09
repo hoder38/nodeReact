@@ -40,4 +40,5 @@ export default {
     BITFINEX_LOAN: true,
     BITFINEX_FILTER: true,
     USSE_TICKER: true,
+    TWSE_TICKER: true,
 }

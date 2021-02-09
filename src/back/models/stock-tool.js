@@ -1,12 +1,9 @@
 import { ENV_TYPE } from '../../../ver.js'
-import { CHECK_STOCK,USSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, __dirname } from '../constants.js'
+import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
-import pathModule from 'path'
-const { join: PathJoin } = pathModule;
-import Child_process from 'child_process'
 import Mkdirp from 'mkdirp'
 import Xml2js from 'xml2js'
 import Redis from '../models/redis-tool.js'
@@ -15,6 +12,7 @@ import GoogleApi from '../models/api-tool-google.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Api from './api-tool.js'
 import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
+import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
 import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
@@ -5236,12 +5234,23 @@ export default {
                                 return getStockPrice(setype, items[i].index).then(price => {
                                     switch(setype) {
                                         case 'twse':
-                                        remain += (price * items[i].count * (1 - TRADE_FEE));
-                                        updateTotal[totalId] = {amount: remain};
-                                        if (items[i]._id) {
-                                            removeTotal.push(items[i]._id);
+                                        if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+                                            items[i].ing = 2;
+                                            if (items[i]._id) {
+                                                if (updateTotal[items[i]._id]) {
+                                                    updateTotal[items[i]._id].ing = items[i].ing;
+                                                } else {
+                                                    updateTotal[items[i]._id] = {ing: items[i].ing};
+                                                }
+                                            }
+                                        } else {
+                                            remain += (price * items[i].count * (1 - TRADE_FEE));
+                                            updateTotal[totalId] = {amount: remain};
+                                            if (items[i]._id) {
+                                                removeTotal.push(items[i]._id);
+                                            }
+                                            items.splice(i, 1);
                                         }
-                                        items.splice(i, 1);
                                         break;
                                         case 'usse':
                                         if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
@@ -5824,6 +5833,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     const usseOrder = getUsseOrder();
     console.log(ussePosition);
     console.log(usseOrder);
+    const twsePosition = getTwsePosition();
+    const twseOrder = getTwseOrder();
+    console.log(twsePosition);
+    console.log(twseOrder);
     const recur_price = index => {
         if (index >= items.length) {
             if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
@@ -5853,6 +5866,25 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         if (usseOrder[i].symbol === item.index) {
                             const time = new Date(usseOrder[i].time * 1000);
                             item.order.push(`${usseOrder[i].amount} ${usseOrder[i].type === 'MARKET' ? 'MARKET' : usseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
+                        }
+                    }
+                } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
+                    item.count = 0;
+                    item.amount = item.orig;
+                    for (let i = 0; i < twsePosition.length; i++) {
+                        if (twsePosition[i].symbol === item.index) {
+                            item.count = twsePosition[i].amount;
+                            item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price;
+                            break;
+                        }
+                    }
+                    item.order = [];
+                    for (let i = 0; i < twseOrder.length; i++) {
+                        //console.log(twseOrder[i].symbol);
+                        //console.log(item.index);
+                        if (twseOrder[i].symbol === item.index) {
+                            const time = new Date(twseOrder[i].time * 1000);
+                            item.order.push(`${twseOrder[i].amount} ${twseOrder[i].type !== 'LMT' ? 'MARKET' : twseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
                         }
                     }
                 }
@@ -5986,6 +6018,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 }
                 console.log(suggestion.str);
                 if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
+                //} else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                 } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                     sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                 }
@@ -6073,6 +6106,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
             return Mongo('update', TOTALDB, {index: 0, setype: 'usse'}, {$set : {
                 amount: ussePosition[ussePosition.length -1].price,
+            }});
+        } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+            return Mongo('update', TOTALDB, {index: 0, setype: 'twse'}, {$set : {
+                amount: twsePosition[twsePosition.length -1].price,
             }});
         } else {
             return Promise.resolve();
@@ -6422,7 +6459,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     sCount = sTimes * sCount * priceTimes;
     const pRemain = pAmount / pOrig;
     const finalSell = () => {
-        if (sCount === 0 && (pRemain < (1 / 10) || (!sType && pAmount < price))) {
+        if (sCount === 0 && (pRemain < (1 / 8) || (!sType && pAmount < price))) {
             sCount = sTimes * priceTimes;
         }
         if (sCount > (sTimes * priceTimes) && pRemain > (3 / 4)) {
@@ -6440,7 +6477,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }*/
     }
     const finalBuy = () => {
-        if (bCount === 0 && pRemain > (9 / 10)) {
+        if (bCount === 0 && pRemain > (7 / 8)) {
             bCount = bTimes * priceTimes;
         }
         if (bCount > (bTimes * priceTimes) && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
@@ -7464,50 +7501,3 @@ const getUsStock = (index, stat=['price']) => {
 }
 
 export const getSuggestionData = (type = 'twse') => suggestionData[type];
-
-/*const getTwsePosition = () => {
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        console.log(output);
-        const result = output.split('\n');
-        console.log(result);
-        let start_result = 0;
-        let cash = 0;
-        let position = [];
-        let order = [];
-        let fill_order = [];
-        for (let i = 0; i < result.length; i++) {
-            if (!start_result) {
-                if (result[i] === 'start result') {
-                    start_result = 1;
-                }
-            } else if (start_result === 1) {
-                cash = Number(result[i]);
-                start_result = 2;
-            } else if (start_result === 2) {
-                position = JSON.parse(result[i]);
-                start_result = 3;
-            } else if (start_result === 3) {
-                order = JSON.parse(result[i]);
-                start_result = 4;
-            } else if (start_result === 4) {
-                fill_order = JSON.parse(result[i]);
-                break;
-            }
-        }
-        console.log(cash);
-        console.log(position);
-        console.log(order);
-        console.log(fill_order);
-    });
-}
-
-const submitTwseOrder = submitList => {
-    submitList
-    return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} submit ${TRADE_FEE} 1536=buy23=36sell66=46`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        console.log(output);
-    });
-}
-
-new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => getTwsePosition());
-
-new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => submitTwseOrder({'1536': {buy: 23, bCount: 36, sell: 66, sCount: 46}}));*/

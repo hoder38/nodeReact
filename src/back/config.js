@@ -43,3 +43,4 @@ export const BITFINEX_LOAN = env => env === RELEASE ? ReleaseConfig.BITFINEX_LOA
 export const BITFINEX_FILTER = env => env === RELEASE ? ReleaseConfig.BITFINEX_FILTER : DevConfig.BITFINEX_FILTER
 export const BITFINEX_ORDER = env => env === RELEASE ? ReleaseConfig.BITFINEX_ORDER : DevConfig.BITFINEX_ORDER
 export const USSE_TICKER = env => env === RELEASE ? ReleaseConfig.USSE_TICKER : DevConfig.USSE_TICKER
+export const TWSE_TICKER = env => env === RELEASE ? ReleaseConfig.TWSE_TICKER : DevConfig.TWSE_TICKER

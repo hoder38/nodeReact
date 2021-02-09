@@ -267,7 +267,7 @@ const cancelTDOrder = id => {
     }
     return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
-            updateTime['trade']--;
+            updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));
@@ -298,7 +298,7 @@ const submitTDOrder = (id, price, count) => {
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
-            updateTime['trade']--;
+            updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     }));
@@ -472,7 +472,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
-                    updateTime['trade']--;
+                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return handleError(new HoError(result['error']));
                 }
                 //init book
@@ -638,11 +638,11 @@ export const usseTDInit = () => checkOauth().then(() => {
             const hour = new Date().getHours();
             if (USSE_MARKET_TIME[0] > USSE_MARKET_TIME[1]) {
                 if (hour > USSE_MARKET_TIME[0] || hour < USSE_MARKET_TIME[1]) {
-                    updateTime['trade']--;
+                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return Promise.resolve();
                 }
             } else if (hour > USSE_MARKET_TIME[0] && hour < USSE_MARKET_TIME[1]) {
-                updateTime['trade']--;
+                updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }
         }
@@ -670,7 +670,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 console.log(order);
                                 sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${real_id[index].id} TDcancelOrder Error`);
-                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
+                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000)).then(() => real_delete(index + 1)));
                         }
                         return real_delete(0);
                     });
@@ -703,7 +703,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             }
                             if (item.count > 0) {
-                                return submitTDOrder(item.index, 'MARKET', -item.count).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => delTotal());
+                                return submitTDOrder(item.index, 'MARKET', -item.count).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => delTotal());
                             } else {
                                 return delTotal();
                             }
@@ -757,7 +757,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         } else {
                                             throw err;
                                         }
-                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => recur_NewOrder(index + 1));
+                                    }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => recur_NewOrder(index + 1));
                             } else {
                                 return recur_NewOrder(index + 1);
                             }
@@ -775,7 +775,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             } else {
                                 throw err;
                             }
-                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => submitBuy());
+                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => submitBuy());
                     } else {
                         return submitBuy();
                     }

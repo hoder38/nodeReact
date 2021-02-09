@@ -1037,7 +1037,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
         const needDelete = [];
         console.log(currentRate[current.type].rate);
         const MR = (current.miniRate > 0) ? current.miniRate / 100 * BITFINEX_EXP : 0;
+        const MR2 = (current.keepAmountRate1 > 0) ? current.keepAmountRate1 / 100 * BITFINEX_EXP : 0;
+        let KAM = (current.keepAmountMoney1 > 0) ? current.keepAmountMoney1 : 0;
         console.log(MR);
+        console.log(MR2);
+        console.log(KAM);
         const DR = [];
         const pushDR = (rate, day) => {
             if (rate > 0 && day >= 2 && day <= 120) {
@@ -1146,11 +1150,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
                 }
             }*/
-            if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < (current.keepAmountRate1 / 100 * BITFINEX_EXP)) {
+            /*if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < (current.keepAmountRate1 / 100 * BITFINEX_EXP)) {
                 return kp - current.keepAmountMoney1;
-            } else {
-                return current.keepAmount ? kp - current.keepAmount : kp;
-            }
+            } else {*/
+            return current.keepAmount ? kp - current.keepAmount : kp;
+            //}
         });
         return calKeepCash().then(keep_available => {
             console.log(keep_available);
@@ -1204,11 +1208,20 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (current.isDiff && risk < 1) {
                         risk = orig_risk;
                     }
-                    needNew.push({
-                        risk,
-                        amount: v.newAmount ? v.newAmount : v.amount,
-                        rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
-                    })
+                    if (KAM > 0) {
+                        KAM = KAM - (v.newAmount ? v.newAmount : v.amount);
+                        needNew.push({
+                            risk,
+                            amount: v.newAmount ? v.newAmount : v.amount,
+                            rate: (MR2 > 0 && finalRate[current.type][10 - risk] < MR2) ? MR2 : finalRate[current.type][10 - risk],
+                        })
+                    } else {
+                        needNew.push({
+                            risk,
+                            amount: v.newAmount ? v.newAmount : v.amount,
+                            rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                        })
+                    }
                 });
                 //console.log('needdelete');
                 //console.log(needDelete);
@@ -1243,11 +1256,25 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (keep_available <= current.amountLimit * 1.2) {
                         amount = Math.floor(keep_available * 10000) / 10000;
                     }
-                    needNew.push({
-                        risk,
-                        amount,
-                        rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
-                    });
+                    if (KAM > 0) {
+                        if (amount > KAM) {
+                            amount = KAM;
+                            KAM = 0;
+                        } else {
+                            KAM = KAM - amount;
+                        }
+                        needNew.push({
+                            risk,
+                            amount,
+                            rate: (MR2 > 0 && finalRate[current.type][10 - risk] < MR2) ? MR2 : finalRate[current.type][10 - risk],
+                        })
+                    } else {
+                        needNew.push({
+                            risk,
+                            amount,
+                            rate: (MR > 0 && finalRate[current.type][10 - risk] < MR) ? MR : finalRate[current.type][10 - risk],
+                        });
+                    }
                     keep_available = keep_available - amount;
                     //risk = risk < 1 ? 0 : risk-1;
                     risk--;

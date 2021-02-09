@@ -50,10 +50,12 @@ export const PRICE_INTERVAL = 600;
 export const RATE_INTERVAL = 90;
 export const ORDER_INTERVAL = 3600;
 export const USSE_ORDER_INTERVAL = 86400;
+export const TWSE_ORDER_INTERVAL = 86400;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800;
 export const USSE_ENTER_MID = 5;
+export const TWSE_ENTER_MID = 5;
 export const USSE_MARKET_TIME = [16, 9];
 export const TWSE_MARKET_TIME = [9, 21];
 

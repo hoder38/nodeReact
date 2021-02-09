@@ -313,7 +313,7 @@ class BitfinexInfo extends React.Component {
                                                 <UserInput
                                                     val={this.state.keepAmountRate1}
                                                     getinput={this._input.getInput('keepAmountRate1')}
-                                                    placeholder="<Rate" />
+                                                    placeholder=">Rate" />
                                                 <UserInput
                                                     val={this.state.keepAmountMoney1}
                                                     getinput={this._input.getInput('keepAmountMoney1')}

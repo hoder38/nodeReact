@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver.js'
-import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER } from '../config.js'
+import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER } from '../config.js'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR } from '../constants.js'
 import Mongo from '../models/mongo-tool.js'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
@@ -10,6 +10,7 @@ import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool.j
 import PlaylistApi from '../models/api-tool-playlist.js'
 import GoogleApi, { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google.js'
 import { usseTDInit, resetTD } from '../models/tdameritrade-tool.js'
+import { twseShioajiInit, resetShioaji } from '../models/shioaji-tool.js'
 import { dbDump } from './cmd.js'
 import { handleError, completeZero } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
@@ -19,6 +20,7 @@ let stock_batch_list_2 = [];
 
 let lastSetOffer = 0;
 let lastInitUsse = 0;
+let lastInitTwse = 0;
 
 function bgError(err, type) {
     sendWs(`${type}: ${err.message||err.msg}`, 0, 0, true);
@@ -313,5 +315,40 @@ export const checkUsseInit = () => {
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 180000)).then(() => cso());
+    }
+}
+
+export const twseInit = () => {
+    if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+        console.log('initTwse');
+        console.log(new Date());
+        const setO = () => {
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastInitTwse) > PRICE_INTERVAL * 0.9) {
+                lastInitTwse = now;
+                return twseShioajiInit().catch(err => {
+                    resetShioaji();
+                    return bgError(err, 'Loop twse init');
+                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO());
+            }
+        }
+        if (lastInitTwse) {
+            return setO();
+        } else {
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
+        }
+    }
+}
+
+export const checkTwseInit = () => {
+    if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+        const cso = () => {
+            if (Math.round(new Date().getTime() / 1000) - lastInitTwse > 7200) {
+                sendWs('restart twse init', 0, 0, true);
+                twseInit();
+            }
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 240000)).then(() => cso());
     }
 }
