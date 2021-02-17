@@ -6106,7 +6106,15 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
             return Mongo('update', TOTALDB, {index: 0, setype: 'usse'}, {$set : {
                 amount: ussePosition[ussePosition.length -1].price,
-            }});
+            }}).then(() => {
+                if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
+                    return Mongo('update', TOTALDB, {index: 0, setype: 'twse'}, {$set : {
+                        amount: twsePosition[twsePosition.length -1].price,
+                    }});
+                } else {
+                    return Promise.resolve();
+                }
+            });
         } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
             return Mongo('update', TOTALDB, {index: 0, setype: 'twse'}, {$set : {
                 amount: twsePosition[twsePosition.length -1].price,
