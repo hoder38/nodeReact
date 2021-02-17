@@ -475,6 +475,10 @@ export const usseTDInit = () => checkOauth().then(() => {
                     updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return handleError(new HoError(result['error']));
                 }
+                if (!result['securitiesAccount']) {
+                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                    return handleError(new HoError('miss securitiesAccount'));
+                }
                 //init book
                 if (result['securitiesAccount']['projectedBalances']) {
                     available = {
