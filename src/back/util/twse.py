@@ -159,6 +159,7 @@ elif sys.argv[3] == 'submit':
                         )
                     api.place_order(contract, order)
     api.update_status()
+    time.sleep(10)
 elif sys.argv[3] == 'sellall':
     if simulation == False:
         fd = open(sys.argv[5],'r')
@@ -192,4 +193,6 @@ elif sys.argv[3] == 'sellall':
             account=api.stock_account
         )
         api.place_order(contract, order)
+    time.sleep(10)
+api.logout()
 print(sys.argv)
