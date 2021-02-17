@@ -3,6 +3,7 @@
 
 import shioaji as sj
 import datetime
+import time
 import sys
 import re
 
@@ -22,11 +23,22 @@ else:
 
 api = sj.Shioaji(simulation=simulation)
 
-api.login(
-    person_id=sys.argv[1],
-    passwd=pw,
-    #contracts_cb=lambda security_type: print(f"{repr(security_type)} fetch done.")
-)
+loginCount = 0
+
+while True:
+    try:
+        api.login(
+            person_id=sys.argv[1],
+            passwd=pw,
+            #contracts_cb=lambda security_type: print(f"{repr(security_type)} fetch done.")
+        )
+        break
+    except:
+        loginCount = loginCount + 1
+        if loginCount < 5:
+            time.sleep(30)
+        else:
+            raise NameError(sys.exc_info()[0])
 
 acc_balance = api.account_balance()[0]
 acc_settle = api.list_settlements(api.stock_account)[0]

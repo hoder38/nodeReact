@@ -812,11 +812,10 @@ export const getUsseOrder = () => order;
 
 export const resetTD = (update=false) => {
     console.log('TD reset');
-    //if (update) {
-    //const trade_count = updateTime['trade'];
+    const trade_count = updateTime['trade'];
     updateTime = {};
     updateTime['book'] = 0;
-    updateTime['trade'] = 0;
+    updateTime['trade'] = trade_count;
     if (!update) {
         usseLogout();
     }

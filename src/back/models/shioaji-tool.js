@@ -330,9 +330,8 @@ export const getTwseOrder = () => order;
 
 export const resetShioaji = () => {
     console.log('Shioaji reset');
-    //if (update) {
-    //const trade_count = updateTime['trade'];
+    const trade_count = updateTime['trade'];
     updateTime = {};
     updateTime['book'] = 0;
-    updateTime['trade'] = 0;
+    updateTime['trade'] = trade_count;
 }
