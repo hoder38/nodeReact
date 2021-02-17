@@ -34,7 +34,7 @@ export const autoUpload = () => {
             console.log(new Date());
             return Mongo('find', USERDB, {auto: {$exists: true}}).then(userlist => userDrive(userlist, 0)).catch(err => bgError(err, 'Loop drive')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DRIVE_INTERVAL * 1000))).then(() => loopDrive());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopDrive());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopDrive());
     }
 }
 
@@ -59,7 +59,7 @@ export const autoDownload = () => {
                 }
             }).catch(err => bgError(err, 'Loop doc')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopDoc());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => loopDoc());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 390000)).then(() => loopDoc());
     }
 }
 
@@ -70,7 +70,7 @@ export const checkMedia = () => {
             console.log(new Date());
             return PlaylistApi('playlist kick').then(() => MediaHandleTool.checkMedia()).catch(err => bgError(err, 'Loop checkMedia')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAl * 1000))).then(() => loopHandleMedia());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 180000)).then(() => loopHandleMedia());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => loopHandleMedia());
     }
 }
 
@@ -179,7 +179,7 @@ export const updateStock = () => {
             }) : Promise.resolve();
             return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopUpdateStock());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => loopUpdateStock());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 450000)).then(() => loopUpdateStock());
     }
 }
 
@@ -193,7 +193,7 @@ export const filterStock = () => {
             const sdf = () => (sd.getDay() === 2 && sd.getHours() === 1) ? StockTool.stockFilterWarp() : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopStockFilter());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 480000)).then(() => loopStockFilter());
     }
 }
 
@@ -215,7 +215,7 @@ export const dbBackup = () => {
             const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => allBackup());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => allBackup());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 510000)).then(() => allBackup());
     }
 }
 
@@ -225,7 +225,7 @@ export const checkStock = () => {
             const newStr = (new Date().getHours() >= 20) ? true : false;
             return stockStatus(newStr).catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 120000)).then(() => checkS());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 330000)).then(() => checkS());
     }
 }
 
@@ -279,7 +279,7 @@ export const checkSetOffer = () => {
 export const filterBitfinex = () => {
     if (BITFINEX_FILTER(ENV_TYPE)) {
         const cW = () => calWeb(SUPPORT_PAIR[FUSD_SYM]).catch(err => bgError(err, 'Loop bitfinex filter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000))).then(() => cW());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 80000)).then(() => cW());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 150000)).then(() => cW());
     }
 }
 
@@ -300,7 +300,7 @@ export const usseInit = () => {
         if (lastInitUsse) {
             return setO();
         } else {
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 150000)).then(() => setO());
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
         }
     }
 }
@@ -314,7 +314,7 @@ export const checkUsseInit = () => {
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 180000)).then(() => cso());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 240000)).then(() => cso());
     }
 }
 
@@ -335,7 +335,7 @@ export const twseInit = () => {
         if (lastInitTwse) {
             return setO();
         } else {
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 270000)).then(() => setO());
         }
     }
 }
@@ -349,6 +349,6 @@ export const checkTwseInit = () => {
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 240000)).then(() => cso());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => cso());
     }
 }
