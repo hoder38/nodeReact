@@ -182,14 +182,14 @@ export const twseShioajiInit = () => {
                         if (twseSuggestion[item.index]) {
                             let is_insert = false;
                             for (let i = 0; i < newOrder.length; i++) {
-                                if (item.orig > newOrder[i].item.orig) {
-                                    newOrder.splice(i, 0, {index: item.index, suggestion: twseSuggestion[item.index]});
+                                if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
+                                    newOrder.splice(i, 0, {item, suggestion: twseSuggestion[item.index]});
                                     is_insert = true;
                                     break;
                                 }
                             }
                             if (!is_insert) {
-                                newOrder.push({index: item.index, suggestion: twseSuggestion[item.index]});
+                                newOrder.push({item, suggestion: twseSuggestion[item.index]});
                             }
                         }
                         return recur_status(index + 1);
@@ -284,7 +284,7 @@ const submitShioajiOrder = (submitList, simulation = true) => {
     const ca = simulation ? '2222' : SHIOAJI_CA;
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
     submitList.forEach(s => {
-        list = `${list} ${s.index}=`;
+        list = `${list} ${s.item.index}=`;
         if (s.suggestion.bCount) {
             list = `${list}buy${s.suggestion.bCount}=${s.suggestion.buy}`;
         }

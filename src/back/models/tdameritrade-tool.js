@@ -682,7 +682,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         if (usseSuggestion[item.index]) {
                             let is_insert = false;
                             for (let i = 0; i < newOrder.length; i++) {
-                                if (item.orig > newOrder[i].item.orig) {
+                                if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
                                     newOrder.splice(i, 0, {item, suggestion: usseSuggestion[item.index]});
                                     is_insert = true;
                                     break;

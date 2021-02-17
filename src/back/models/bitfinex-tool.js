@@ -1778,7 +1778,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }).then(() => {
                                 let is_insert = false;
                                 for (let i = 0; i < newOrder.length; i++) {
-                                    if (item.orig > newOrder[i].item.orig) {
+                                    if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
                                         newOrder.splice(i, 0, {item, suggestion});
                                         is_insert = true;
                                         break;
