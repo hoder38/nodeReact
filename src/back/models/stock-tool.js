@@ -5230,7 +5230,7 @@ export default {
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
-                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
+                            if (index === items[i].index && setype === items[i].setype) {
                                 return getStockPrice(setype, items[i].index).then(price => {
                                     switch(setype) {
                                         case 'twse':
@@ -5284,7 +5284,7 @@ export default {
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
-                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
+                            if (index === items[i].index && setype === items[i].setype) {
                                 items[i].clear = true;
                                 if (items[i]._id) {
                                     if (updateTotal[items[i]._id]) {
@@ -5301,7 +5301,7 @@ export default {
                         const setype = cmd[1].substring(0, 4);
                         const index = cmd[1].substring(4);
                         for (let i in items) {
-                            if (index === items[i].index && (setype === items[i].setype || (setype === 'twse' && !items[i].setype))) {
+                            if (index === items[i].index && setype === items[i].setype) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
@@ -5504,7 +5504,7 @@ export default {
                                     }));
                                 });
                             /*} else if (cmd[4] && +cmd[2] > 0) {
-                                return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('tese', basic.stock_index).then(price => {
+                                return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('twse', basic.stock_index).then(price => {
                                     console.log(basic);
                                     const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
                                     items.push({
@@ -5844,7 +5844,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             }
             return Promise.resolve();
         } else {
-            return (items[index].index === 0 || !items[index].index) ? recur_price(index + 1) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index).then(price => {
+            return (items[index].index === 0 || !items[index].index) ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(price => {
                 if (price === 0) {
                     return 0;
                 }
@@ -5868,7 +5868,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             item.order.push(`${usseOrder[i].amount} ${usseOrder[i].type === 'MARKET' ? 'MARKET' : usseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
                         }
                     }
-                } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && (item.setype === 'twse' || !items.setype)) {
+                } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                     item.count = 0;
                     item.amount = item.orig;
                     for (let i = 0; i < twsePosition.length; i++) {
@@ -6018,7 +6018,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 }
                 console.log(suggestion.str);
                 if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
-                //} else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && (item.setype === 'twse' || !items.setype)) {
+                //} else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                 } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                     sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                 }
@@ -6126,7 +6126,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
 });
 
 export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype ? items[index].setype : 'twse', items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
+    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
     return recur_price(0, '');
 });
 
