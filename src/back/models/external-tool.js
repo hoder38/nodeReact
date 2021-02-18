@@ -864,7 +864,12 @@ export default {
                     if (type) {
                         type = findTag(type, 'div', 'container')[0];
                     } else {
-                        type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container fixedheader')[0];
+                        type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid fixedheader bodyMarNoMsg')[0];
+                        if (type) {
+                            type = findTag(type, 'div', 'container')[0];
+                        } else {
+                            type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container fixedheader')[0];
+                        }
                     }
                     if (findTag(findTag(findTag(findTag(type, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                         list.push({

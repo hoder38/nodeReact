@@ -1319,6 +1319,12 @@ export const setWsOffer = (id, curArr=[], uid) => {
             newOffer(current.riskLimit);
             mergeOffer();
             const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
+                for (let i = 0; i < offer[id][current.type].length; i++) {
+                    if (needDelete[index].id === offer[id][current.type][i].id) {
+                        offer[id][current.type].splice(i, 1);
+                        break;
+                    }
+                }
                 sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
                 handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => cancelOffer(index + 1)));
@@ -1449,6 +1455,12 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 } else {
                                     return userRest.cancelFundingOffer(real_id[index].id).catch(err => {
                                         is_error = true;
+                                        for (let i = 0; i < offer[id][current.type].length; i++) {
+                                            if (real_id[index].id === offer[id][current.type][i].id) {
+                                                offer[id][current.type].splice(i, 1);
+                                                break;
+                                            }
+                                        }
                                         sendWs(`${id} ${real_id[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
                                         handleError(err, `${id} ${real_id[index].id} cancelFundingOffer Error`);
                                     }).then(() => {
