@@ -23,27 +23,31 @@ else:
 
 api = sj.Shioaji(simulation=simulation)
 
-loginCount = 0
+def retryApi(fun, wait = 10, count = 5):
+    apiCount = 0
+    while True:
+        try:
+            return fun()
+        except:
+            apiCount = apiCount + 1
+            if apiCount < count:
+                time.sleep(wait)
+            else:
+                raise
 
-while True:
-    try:
-        api.login(
-            person_id=sys.argv[1],
-            passwd=pw,
-            #contracts_cb=lambda security_type: print(f"{repr(security_type)} fetch done.")
-        )
-        break
-    except:
-        loginCount = loginCount + 1
-        if loginCount < 5:
-            time.sleep(30)
-        else:
-            raise NameError(sys.exc_info()[0])
-
-acc_balance = api.account_balance()[0]
-acc_settle = api.list_settlements(api.stock_account)[0]
-acc_position = api.list_positions(api.stock_account)
-api.update_status()
+retryApi(lambda: api.login(person_id=sys.argv[1],passwd=pw), 30)
+acc_balance = retryApi(lambda: api.account_balance(timeout=10000))
+if len(acc_balance) > 0:
+    acc_balance = acc_balance[0]
+else:
+    raise ValueError('Miss balance')
+acc_settle = retryApi(lambda: api.list_settlements(api.stock_account, timeout=10000))
+if len(acc_settle) > 0:
+    acc_settle = acc_settle[0]
+else:
+    raise ValueError('Miss settle')
+acc_position = retryApi(lambda: api.list_positions(api.stock_account, timeout=10000))
+retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
@@ -94,8 +98,8 @@ elif sys.argv[3] == 'submit':
         )
     for o in acc_order:
         if o.order.price_type == 'LMT' and (o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted'):
-            api.cancel_order(o)
-    api.update_status()
+            api.cancel_order(o, timeout=10000)
+    retryApi(lambda: api.update_status(timeout=10000))
     fee = float(sys.argv[6])
     for a in sys.argv:
         p = re.compile(r'^(.+)\=(buy|sell)(\d+)\=(\d+\.?\d*)((buy|sell)(\d+)\=(\d+\.?\d*))?$')
@@ -137,7 +141,7 @@ elif sys.argv[3] == 'submit':
                         order_type="ROD",
                         account=api.stock_account
                         )
-                    api.place_order(contract, order)
+                    api.place_order(contract, order, timeout=10000)
             if sell > 0:
                 q = 0
                 for p in acc_position:
@@ -157,9 +161,7 @@ elif sys.argv[3] == 'submit':
                         order_type="ROD",
                         account=api.stock_account
                         )
-                    api.place_order(contract, order)
-    api.update_status()
-    time.sleep(10)
+                    api.place_order(contract, order, timeout=10000)
 elif sys.argv[3] == 'sellall':
     if simulation == False:
         fd = open(sys.argv[5],'r')
@@ -175,8 +177,8 @@ elif sys.argv[3] == 'sellall':
     print(index)
     for o in acc_order:
         if o.contract.code == index and o.order.price_type == 'LMT' and (o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted'):
-            api.cancel_order(o)
-    api.update_status()
+            api.cancel_order(o, timeout=10000)
+    retryApi(lambda: api.update_status(timeout=10000))
     q = 0
     for p in acc_position:
         if p.code == index:
@@ -192,7 +194,6 @@ elif sys.argv[3] == 'sellall':
             order_type="ROD",
             account=api.stock_account
         )
-        api.place_order(contract, order)
-    time.sleep(10)
+        api.place_order(contract, order, timeout=10000)
 api.logout()
 print(sys.argv)
