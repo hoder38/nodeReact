@@ -44,17 +44,20 @@ else:
 acc_settle = retryApi(lambda: api.list_settlements(api.stock_account, timeout=10000))
 if len(acc_settle) > 0:
     acc_settle = acc_settle[0]
-else:
+elif len(sys.argv) != 3:
     raise ValueError('Miss settle')
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, timeout=10000))
 retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
-if int(now.hour) < 12:
-    current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000
+if len(acc_settle) > 0:
+    if int(now.hour) < 12:
+        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000
+    else:
+        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 1000
 else:
-    current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 1000
+    current_cash = 'same'
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:

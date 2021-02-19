@@ -255,7 +255,9 @@ const getShioajiData = (simulation = true) => {
                     start_result = 1;
                 }
             } else if (start_result === 1) {
-                available = Number(result[i]);
+                if (result[i] !== 'same') {
+                    available = Number(result[i]);
+                }
                 start_result = 2;
             } else if (start_result === 2) {
                 ret.position = [...position];
