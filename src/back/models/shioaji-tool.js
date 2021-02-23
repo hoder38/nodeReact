@@ -20,7 +20,9 @@ export const twseShioajiInit = () => {
             updateTime['book'] = now;
             console.log(updateTime['book']);
             return getShioajiData(false).catch(err => {
-                updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                if (force === true) {
+                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                }
                 console.log(err);
                 return handleError(new HoError('Shioaji python error!!!'));
             }).then(ret => {

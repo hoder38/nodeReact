@@ -443,7 +443,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             updateTime[id]['credit'] = 0;
             updateTime[id]['position'] = 0;
             updateTime[id]['order'] = 0;
-            updateTime[id]['trade'] = Math.round(new Date().getTime() / 1000) - ORDER_INTERVAL + 180;
+            updateTime[id]['trade'] = Math.round(new Date().getTime() / 1000) - ORDER_INTERVAL + RATE_INTERVAL * 2;
         }
         if (!available[id]) {
             available[id] = {}
@@ -2052,6 +2052,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     }
                 }
                 return recur_status(0).then(() => recur_NewOrder(0));
+            }).catch(err => {
+                updateTime[id]['trade'] = updateTime[id]['trade'] - 2 * RATE_INTERVAL;
+                return Promise.reject(err);
             });
         });
     }

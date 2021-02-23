@@ -270,7 +270,10 @@ const cancelTDOrder = id => {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
-    }));
+    })).catch(err => {
+        updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+        return Promise.reject(err);
+    });
 }
 
 const submitTDOrder = (id, price, count) => {
@@ -301,7 +304,10 @@ const submitTDOrder = (id, price, count) => {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
         }
-    }));
+    })).catch(err => {
+        updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+        return Promise.reject(err);
+    });
 }
 
 export const usseTDInit = () => checkOauth().then(() => {
@@ -472,11 +478,15 @@ export const usseTDInit = () => checkOauth().then(() => {
             return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
-                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                    if (force === true) {
+                        updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                    }
                     return handleError(new HoError(result['error']));
                 }
                 if (!result['securitiesAccount']) {
-                    updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                    if (force === true) {
+                        updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                    }
                     return handleError(new HoError('miss securitiesAccount'));
                 }
                 //init book
@@ -759,7 +769,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             sendWs(`${item.index} TD Buy Order Error: ${err.message||err.msg}`, 0, 0, true);
                                             handleError(err, `${item.index} TD Buy Order Error`);
                                         } else {
-                                            throw err;
+                                            return Promise.reject(err);
+                                            //throw err;
                                         }
                                     }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => recur_NewOrder(index + 1));
                             } else {
@@ -777,7 +788,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 sendWs(`${item.index} TD Sell Order Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${item.index} TD Sell Order Error`);
                             } else {
-                                throw err;
+                                return Promise.reject(err);
+                                //throw err;
                             }
                         }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => submitBuy());
                     } else {
