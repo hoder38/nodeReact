@@ -900,7 +900,7 @@ export const SUPPORT_PAIR = {
 }
 export const SUPPORT_LEVERAGE = {
     tETHUSD: 5,
-    tBTCUSD: 5,
+    tBTCUSD: 10,
     tOMGUSD: 3.3,
     tLTCUSD: 5,
     tUNIUSD: 3.3,
