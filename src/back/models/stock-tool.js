@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
@@ -6206,7 +6206,7 @@ export const getStockListV2 = (type, year, month) => {
                 return stock_list;
             } else {
                 return Api('url', `https://www.slickcharts.com/${list[index]}`).then(raw_data => {
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid mt-4 maxWidth')[0], 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                         const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
                         const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                         let is_exit = false;
@@ -7445,27 +7445,28 @@ const getUsStock = (index, stat=['price']) => {
             ret['price'] = Number(price.replace(',', ''));
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
-            const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[2];
-            const table1 = findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'div')[0], 'table')[0];
-            findTag(findTag(findTag(findTag(findTag(findTag(table1, 'thead')[0], 'tr')[0], 'th')[1], 'span')[0], 'span')[0]).forEach(d => {
-                const m = d.match(/^As of Date\: (\d+)\/\d+\/(\d+)$/);
+            const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[1];
+            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr')[1], 'td')[1]).forEach(d => {
+                const m = d.match(/^([a-zA-Z][a-zA-Z][a-zA-Z]) \d+, (\d+)$/);
                 if (m) {
                     ret['latestYear'] = Number(m[2]);
-                    const q = Number(m[1]);
-                    if (q < 4) {
-                        ret['latestQuarter'] = 1;
-                    } else if (q < 7) {
-                        ret['latestQuarter'] = 2;
-                    } else if (q < 10) {
-                        ret['latestQuarter'] = 3;
-                    } else {
-                        ret['latestQuarter'] = 0;
-                        ret['latestYear']++;
+                    const q = MONTH_SHORTS.indexOf(m[1]);
+                    if (q !== -1) {
+                        if (q < 3) {
+                            ret['latestQuarter'] = 1;
+                        } else if (q < 6) {
+                            ret['latestQuarter'] = 2;
+                        } else if (q < 9) {
+                            ret['latestQuarter'] = 3;
+                        } else {
+                            ret['latestQuarter'] = 0;
+                            ret['latestYear']++;
+                        }
                     }
                 }
             });
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
-                const trs = findTag(findTag(table1, 'tbody')[0], 'tr');
+                const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (stat.indexOf('per') !== -1) {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
                         ret['per'] = 0;

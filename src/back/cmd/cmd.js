@@ -179,7 +179,7 @@ rl.on('line', line => {
     switch (cmd[0]) {
         case 'stock':
         console.log('stock');
-        return StockTool.getSingleStockV2('twse', {index: cmd[1]||2330, tag: []}, cmd[2]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
+        return StockTool.getSingleStockV2(cmd[1]||'twse', {index: cmd[2]||2330, tag: []}, cmd[3]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
         case 'testdata':
         console.log('testdata');
         return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
@@ -219,7 +219,7 @@ rl.on('line', line => {
         return updatePasswordCipher().then(() => console.log('done')).catch(err => handleError(err, 'CMD Update password'));
         default:
         console.log('help:');
-        console.log('stock index mode');
+        console.log('stock type index mode');
         console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');

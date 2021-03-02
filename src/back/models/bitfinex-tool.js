@@ -1319,9 +1319,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
             newOffer(current.riskLimit);
             mergeOffer();
             const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
-                for (let i = 0; i < offer[id][current.type].length; i++) {
-                    if (needDelete[index].id === offer[id][current.type][i].id) {
-                        offer[id][current.type].splice(i, 1);
+                for (let j = 0; j < offer[id][current.type].length; j++) {
+                    if (needDelete[index].id === offer[id][current.type][j].id) {
+                        console.log(needDelete[index].id);
+                        offer[id][current.type].splice(j, 1);
                         break;
                     }
                 }
@@ -1455,9 +1456,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 } else {
                                     return userRest.cancelFundingOffer(real_id[index].id).catch(err => {
                                         is_error = true;
-                                        for (let i = 0; i < offer[id][current.type].length; i++) {
-                                            if (real_id[index].id === offer[id][current.type][i].id) {
-                                                offer[id][current.type].splice(i, 1);
+                                        for (let j = 0; j < offer[id][current.type].length; i++) {
+                                            if (real_id[index].id === offer[id][current.type][j].id) {
+                                                console.log(real_id[index].id);
+                                                offer[id][current.type].splice(j, 1);
                                                 break;
                                             }
                                         }
