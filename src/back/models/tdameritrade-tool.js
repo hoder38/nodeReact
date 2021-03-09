@@ -645,7 +645,7 @@ export const usseTDInit = () => checkOauth().then(() => {
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
         console.log(`td ${updateTime['trade']}`);
-        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1800 / PRICE_INTERVAL)) {
+        if (updateTime['trade'] % Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) !== 3) {
             return Promise.resolve();
         } else {
             //避開交易時間

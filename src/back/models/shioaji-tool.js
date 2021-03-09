@@ -148,7 +148,7 @@ export const twseShioajiInit = () => {
     return initialBook().then(() => {
         updateTime['trade']++;
         console.log(`shioaji ${updateTime['trade']}`);
-        if (updateTime['trade'] % Math.ceil(TWSE_ORDER_INTERVAL / PRICE_INTERVAL) !== Math.floor(1800 / PRICE_INTERVAL)) {
+        if (updateTime['trade'] % Math.ceil(TWSE_ORDER_INTERVAL / PRICE_INTERVAL) !== 3) {
             return Promise.resolve();
         } else {
             console.log('twse time');
