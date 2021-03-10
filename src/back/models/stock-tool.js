@@ -6018,7 +6018,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 }
                 console.log(suggestion.str);
                 if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
-                //} else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
+                } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                 } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                     sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                 }

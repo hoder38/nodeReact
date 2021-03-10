@@ -21,6 +21,9 @@ let stock_batch_list_2 = [];
 let lastSetOffer = 0;
 let lastInitUsse = 0;
 let lastInitTwse = 0;
+let currentSetOffer = 0;
+let currentInitUsse = 0;
+let currentInitTwse = 0;
 
 function bgError(err, type) {
     sendWs(`${type}: ${err.message||err.msg}`, 0, 0, true);
@@ -236,14 +239,14 @@ export const rateCalculator = () => {
     }
 }
 
-export const setUserOffer = () => {
+export const setUserOffer = (startTime = 0) => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         console.log('setUserOffer');
         console.log(new Date());
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(() => checkUser(index + 1, userlist));
         const setO = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if ((now - lastSetOffer) > RATE_INTERVAL * 0.9) {
+            if (startTime === currentSetOffer) {
                 lastSetOffer = now;
                 return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
                     if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
@@ -252,10 +255,13 @@ export const setUserOffer = () => {
                         resetBFX(true);
                         return bgError(err, 'Loop set offer')
                     }
-                })).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO());
+                })).then(() => {
+                    console.log(`setUserOffer end ${lastSetOffer} ${Math.round(new Date().getTime() / 1000)}`);
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO();
+                });
             }
         }
-        if (lastSetOffer) {
+        if (currentSetOffer) {
             return setO();
         } else {
             return new Promise((resolve, reject) => setTimeout(() => resolve(), 90000)).then(() => setO());
@@ -266,9 +272,11 @@ export const setUserOffer = () => {
 export const checkSetOffer = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const cso = () => {
-            if (Math.round(new Date().getTime() / 1000) - lastSetOffer > 1800) {
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastSetOffer) > (RATE_INTERVAL * 20)) {
                 sendWs('restart set offer', 0, 0, true);
-                setUserOffer();
+                currentSetOffer = now;
+                setUserOffer(now);
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => cso());
         }
@@ -283,21 +291,23 @@ export const filterBitfinex = () => {
     }
 }
 
-export const usseInit = () => {
+export const usseInit = (startTime = 0) => {
     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         console.log('initUsse');
         console.log(new Date());
         const setO = () => {
-            const now = Math.round(new Date().getTime() / 1000);
-            if ((now - lastInitUsse) > PRICE_INTERVAL * 0.9) {
-                lastInitUsse = now;
+            if (startTime === currentInitUsse) {
+                lastInitUsse = Math.round(new Date().getTime() / 1000);
                 return usseTDInit().catch(err => {
                     resetTD();
                     return bgError(err, 'Loop usse init');
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO());
+                }).then(() => {
+                    console.log(`usseInit end ${lastInitUsse} ${Math.round(new Date().getTime() / 1000)}`);
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO()
+                });
             }
         }
-        if (lastInitUsse) {
+        if (currentInitUsse) {
             return setO();
         } else {
             return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
@@ -308,9 +318,11 @@ export const usseInit = () => {
 export const checkUsseInit = () => {
     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         const cso = () => {
-            if (Math.round(new Date().getTime() / 1000) - lastInitUsse > 7200) {
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastInitUsse) > (PRICE_INTERVAL * 12)) {
                 sendWs('restart usse init', 0, 0, true);
-                usseInit();
+                currentInitUsse = now;
+                usseInit(now);
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }
@@ -318,21 +330,23 @@ export const checkUsseInit = () => {
     }
 }
 
-export const twseInit = () => {
+export const twseInit = (startTime = 0) => {
     if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         console.log('initTwse');
         console.log(new Date());
         const setO = () => {
-            const now = Math.round(new Date().getTime() / 1000);
-            if ((now - lastInitTwse) > PRICE_INTERVAL * 0.9) {
-                lastInitTwse = now;
+            if (startTime === currentInitTwse) {
+                lastInitTwse = Math.round(new Date().getTime() / 1000);
                 return twseShioajiInit().catch(err => {
                     resetShioaji();
                     return bgError(err, 'Loop twse init');
-                }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO());
+                }).then(() => {
+                    console.log(`twseInit end ${lastInitTwse} ${Math.round(new Date().getTime() / 1000)}`);
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO()
+                });
             }
         }
-        if (lastInitTwse) {
+        if (currentInitTwse) {
             return setO();
         } else {
             return new Promise((resolve, reject) => setTimeout(() => resolve(), 270000)).then(() => setO());
@@ -343,9 +357,11 @@ export const twseInit = () => {
 export const checkTwseInit = () => {
     if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         const cso = () => {
-            if (Math.round(new Date().getTime() / 1000) - lastInitTwse > 7200) {
+            const now = Math.round(new Date().getTime() / 1000);
+            if ((now - lastInitTwse) > (PRICE_INTERVAL * 12)) {
                 sendWs('restart twse init', 0, 0, true);
-                twseInit();
+                currentInitTwse = now;
+                twseInit(now);
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }

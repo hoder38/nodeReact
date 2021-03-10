@@ -1675,6 +1675,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
                             let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            priceData[item.index].str2 = suggestion.str;
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -2666,6 +2667,7 @@ export default {
                     utime: priceData[i].time,
                     type: 1,
                     str: priceData[i].str,
+                    str2: priceData[i].str2,
                 })
             }
         }

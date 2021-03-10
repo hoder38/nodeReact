@@ -25,7 +25,10 @@ class ItemBitfinex extends React.Component {
         }
         fileType = item.taken ? `${fileType} recycled` : item.boost ? `${fileType} external` : fileType;
         const dropList = item.str ? (
-            <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={[{title: item.str, onclick: () => {}, key: 0}]}>
+            <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={[
+                {title: item.str, onclick: () => {}, key: 0},
+                {title: item.str2, onclick: () => {}, key: 1},
+            ]}>
                 <button type="button" className="btn btn-default">
                     <span className="caret"></span>
                 </button>
