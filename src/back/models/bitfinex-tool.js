@@ -56,7 +56,7 @@ export const calRate = curArr => {
                             lastPrice: ticker.lastPrice,
                             time: Math.round(new Date().getTime() / 1000),
                             str: item ? item.str : '',
-                            str2: priceData[SUPPORT_PRICE[index]] && priceData[SUPPORT_PRICE[index]].str2 ? priceData[SUPPORT_PRICE[index]].str2 : '';
+                            str2: priceData[SUPPORT_PRICE[index]] && priceData[SUPPORT_PRICE[index]].str2 ? priceData[SUPPORT_PRICE[index]].str2 : '',
                         }
                         return recurPrice(index + 1);
                     });
