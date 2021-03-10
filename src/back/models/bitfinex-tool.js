@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, COIN_MAX, COIN_MAX_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, FLTC_SYM, FUNI_SYM, FDOT_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, /*COIN_MAX, COIN_MAX_MAX, */RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FOMG_SYM, FLTC_SYM, FUNI_SYM, FDOT_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import bfxApiNodeModels from 'bfx-api-node-models'
 const { FundingOffer, Order } = bfxApiNodeModels;
@@ -43,9 +43,9 @@ let position = {};
 export const calRate = curArr => {
     const recurPrice = index => {
         if (index >= SUPPORT_PRICE.length) {
-            if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
+            /*if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
                 sendWs(`Bitfinex Daily Change: ${priceData[TBTC_SYM].dailyChange} ${priceData[TETH_SYM].dailyChange}` , 0, 0, true);
-            }
+            }*/
             return Promise.resolve();
         } else {
             return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
