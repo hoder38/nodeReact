@@ -257,8 +257,8 @@ export const setUserOffer = (startTime = 0) => {
                     }
                 })).then(() => {
                     console.log(`setUserOffer end ${lastSetOffer} ${Math.round(new Date().getTime() / 1000)}`);
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))).then(() => setO();
-                });
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000))
+                }).then(() => setO());
             }
         }
         if (currentSetOffer) {
@@ -303,8 +303,8 @@ export const usseInit = (startTime = 0) => {
                     return bgError(err, 'Loop usse init');
                 }).then(() => {
                     console.log(`usseInit end ${lastInitUsse} ${Math.round(new Date().getTime() / 1000)}`);
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO()
-                });
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))
+                }).then(() => setO());
             }
         }
         if (currentInitUsse) {
@@ -342,8 +342,8 @@ export const twseInit = (startTime = 0) => {
                     return bgError(err, 'Loop twse init');
                 }).then(() => {
                     console.log(`twseInit end ${lastInitTwse} ${Math.round(new Date().getTime() / 1000)}`);
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => setO()
-                });
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))
+                }).then(() => setO());
             }
         }
         if (currentInitTwse) {
