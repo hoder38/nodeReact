@@ -56,6 +56,7 @@ export const calRate = curArr => {
                             lastPrice: ticker.lastPrice,
                             time: Math.round(new Date().getTime() / 1000),
                             str: item ? item.str : '',
+                            str2: priceData[SUPPORT_PRICE[index]] && priceData[SUPPORT_PRICE[index]].str2 ? priceData[SUPPORT_PRICE[index]].str2 : '';
                         }
                         return recurPrice(index + 1);
                     });
@@ -1675,7 +1676,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
                             let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
-                            priceData[item.index].str2 = suggestion.str;
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -1689,7 +1689,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
-                            console.log(suggestion);
+                            //console.log(suggestion);
                             let count = 0;
                             let amount = clearP ? 0 : item.amount;
                             if (suggestion.type === 7) {
@@ -1769,6 +1769,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                             }
                             console.log(suggestion);
+                            priceData[item.index].str2 = suggestion.str;
                             /*let item_count = 0;
                             if (position[id][current.type]) {
                                 position[id][current.type].forEach(v => {
