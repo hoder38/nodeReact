@@ -224,6 +224,7 @@ export const dbBackup = () => {
 
 export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
+        console.log('checkStock');
         const checkS = () => {
             const newStr = (new Date().getHours() >= 20) ? true : false;
             return stockStatus(newStr).catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());

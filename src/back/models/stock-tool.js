@@ -176,6 +176,9 @@ const getStockPrice = (type='twse', index, price_only = true) => {
             return up[index].p;
         } else {*/
             return getUsStock(index).then(ret => {
+                if (!ret.price) {
+                    return 0;
+                }
                 console.log(ret.price);
                 return ret.price;
             });
@@ -7435,6 +7438,7 @@ const twseTicker = (price, large = true) => {
 const getUsStock = (index, stat=['price']) => {
     const ret = {};
     if (!Array.isArray(stat) || stat.length < 1) {
+        console.log(`getUsStock stat error ${stat}`);
         return Promise.resolve(ret);
     }
     let count = 0;
