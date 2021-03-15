@@ -6328,8 +6328,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             let previousP = priceArray.length - 1;
             let pP = 8;
             let pPrice = previous.price * (2 - (1 + fee) * (1 + fee));
-            let min_nowSP = -1;
-            let min_sP = -1;
+            let use_bP = false;
             //let pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
@@ -6358,14 +6357,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (previous.type === 'sell') {
                 if ((now - previous.time) >= ttime) {
                     is_sell = true;
-                    min_nowSP = (nowBP - 2) < 0 ? 0 : (nowBP - 2);
-                    min_sP = bP;
-                    if (priceArray[nowBP - 1] < 0) {
-                        min_sP--;
-                    }
-                    if (priceArray[nowBP - 2] < 0) {
-                        min_sP--;
-                    }
+                    use_bP = true;
                 } else {
                     is_sell = false;
                 }
@@ -6385,12 +6377,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pAmount !== 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
-                if (min_nowSP !== -1) {
-                    if (nowSP < min_nowSP) {
-                        nowSP = min_nowSP;
+                if (use_bP) {
+                    if (nowBP > nowSP) {
+                        nowSP = nowBP;
                     }
-                    if (sP < min_sP) {
-                        sP = min_sP;
+                    if (bP > sP) {
+                        sP = bP;
                     }
                 }
             }
@@ -6399,8 +6391,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             let previousP = 0;
             let pP = 0;
             let pPrice = previous.price * (1 + fee) * (1 + fee);
-            let min_nowBP = -1;
-            let min_bP = -1;
+            let use_sP = false;
             //let pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; previousP < priceArray.length; previousP++) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
@@ -6429,14 +6420,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
-                    min_nowBP = (nowSP + 2) > (priceArray.length - 1) ? (priceArray.length - 1) : (nowSP + 2);
-                    min_bP = sP;
-                    if (priceArray[nowSP + 1] < 0) {
-                        min_bP++;
-                    }
-                    if (priceArray[nowSP + 2] < 0) {
-                        min_bP++;
-                    }
+                    use_sP = true;
                 } else {
                     is_buy = false;
                 }
@@ -6456,12 +6440,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
-                if (min_nowBP !== -1) {
-                    if (nowBP > min_nowBP) {
-                        nowBP = min_nowBP;
+                if (use_sP) {
+                    if (nowSP < nowBP) {
+                        nowBP = nowSP;
                     }
-                    if (bP > min_bP) {
-                        bP = min_bP;
+                    if (sP < bP) {
+                        bP = sP;
                     }
                 }
             }
