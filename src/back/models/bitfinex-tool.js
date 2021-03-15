@@ -202,8 +202,7 @@ export const calWeb = curArr => {
         console.log(web);
         const month = [];
         const ret_str1 = [];
-        let ret_str = '';
-        let best_rate = 0;
+        const rate_arr = [];
         let lastest_type = 0;
         let lastest_rate = 0;
         const resultShow = type => {
@@ -260,9 +259,16 @@ export const calWeb = curArr => {
                     real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                     times = Math.round(times / count * 100) / 100;
                     str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${Math.round(min_vol * 100) / 100}`;
-                    if (!best_rate || rate > best_rate) {
-                        best_rate = rate;
-                        ret_str = str;
+                    let is_exist = false;
+                    for (let k = 0; k < rate_arr.length; k++) {
+                        if (rate >= rate_arr[k].r) {
+                            rate_arr.splice(k, 0, {r: rate, i: ret_str1.length});
+                            is_exist = true;
+                            break;
+                        }
+                    }
+                    if (!is_exist) {
+                        rate_arr.push({r: rate, i: ret_str1.length});
                     }
                     return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, result, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
                         const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
@@ -293,13 +299,10 @@ export const calWeb = curArr => {
                 v.forEach(k => console.log(k.str));
             });
             ret_str1.forEach(v => console.log(v));
-            if (!ret_str) {
-                ret_str = 'no less than mid point';
-            }
             console.log(lastest_type);
             console.log('done');
             Redis('hmset', `bitfinex: ${curArr[index]}`, {
-                str: ret_str,
+                str: (rate_arr.length < 1) ?  'no less than mid point' : ret_str1[rate_arr[Math.ceil(rate_arr.length / 2) - 1].i],
             }).catch(err => handleError(err, 'Redis'));
             const updateWeb = () => Mongo('find', TOTALDB, {index: curArr[index]}).then(item => {
                 console.log(item);

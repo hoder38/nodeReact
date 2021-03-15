@@ -3582,8 +3582,7 @@ export default {
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const year = [];
                                 const ret_str1 = [];
-                                let ret_str = '';
-                                let best_rate = 0;
+                                const rate_arr = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
                                 const resultShow = type => {
@@ -3643,9 +3642,16 @@ export default {
                                             real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                                             times = Math.round(times / count * 100) / 100;
                                             str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
-                                            if (!best_rate || rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = str;
+                                            let is_exist = false;
+                                            for (let k = 0; k < rate_arr.length; k++) {
+                                                if (rate >= rate_arr[k].r) {
+                                                    rate_arr.splice(k, 0, {r: rate, i: ret_str1.length});
+                                                    is_exist = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_exist) {
+                                                rate_arr.push({r: rate, i: ret_str1.length});
                                             }
                                             return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true)).then(temp => {
                                                 if (temp === 'data miss') {
@@ -3685,13 +3691,10 @@ export default {
                                         v.forEach(k => console.log(k.str));
                                     });
                                     ret_str1.forEach(v => console.log(v));
-                                    if (!ret_str) {
-                                        ret_str = 'no less than mid point';
-                                    }
                                     console.log(lastest_type);
                                     //amount real strategy times stoploss (no less than mid point)
                                     console.log('done');
-                                    return [interval_data, ret_str, lastest_type];
+                                    return [interval_data, (rate_arr.length < 1) ?  'no less than mid point' : ret_str1[rate_arr[Math.ceil(rate_arr.length / 2) - 1].i], lastest_type];
                                 });
                             });
                             return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
@@ -3921,8 +3924,7 @@ export default {
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const year = [];
                                 const ret_str1 = [];
-                                let ret_str = '';
-                                let best_rate = 0;
+                                const rate_arr = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
                                 const resultShow = type => {
@@ -3982,9 +3984,16 @@ export default {
                                             real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
                                             times = Math.round(times / count * 100) / 100;
                                             str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${min_vol}`;
-                                            if (!best_rate || rate > best_rate) {
-                                                best_rate = rate;
-                                                ret_str = str;
+                                            let is_exist = false;
+                                            for (let k = 0; k < rate_arr.length; k++) {
+                                                if (rate >= rate_arr[k].r) {
+                                                    rate_arr.splice(k, 0, {r: rate, i: ret_str1.length});
+                                                    is_exist = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_exist) {
+                                                rate_arr.push({r: rate, i: ret_str1.length});
                                             }
                                             return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE)).then(temp => {
                                                 if (temp === 'data miss') {
@@ -4024,13 +4033,10 @@ export default {
                                         v.forEach(k => console.log(k.str));
                                     });
                                     ret_str1.forEach(v => console.log(v));
-                                    if (!ret_str) {
-                                        ret_str = 'no less than mid point';
-                                    }
                                     console.log(lastest_type);
                                     //amount real strategy times stoploss (no less than mid point)
                                     console.log('done');
-                                    return [interval_data, ret_str, lastest_type];
+                                    return [interval_data, (rate_arr.length < 1) ?  'no less than mid point' : ret_str1[rate_arr[Math.ceil(rate_arr.length / 2) - 1].i], lastest_type];
                                 });
                             });
                             return Mongo('find', TOTALDB, {index: items[0].index}).then(item => {
@@ -6322,6 +6328,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             let previousP = priceArray.length - 1;
             let pP = 8;
             let pPrice = previous.price * (2 - (1 + fee) * (1 + fee));
+            let min_nowSP = -1;
+            let min_sP = -1;
             //let pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
@@ -6350,6 +6358,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (previous.type === 'sell') {
                 if ((now - previous.time) >= ttime) {
                     is_sell = true;
+                    min_nowSP = (nowBP - 2) < 0 ? 0 : (nowBP - 2);
+                    min_sP = bP;
+                    if (priceArray[nowBP - 1] < 0) {
+                        min_sP--;
+                    }
+                    if (priceArray[nowBP - 2] < 0) {
+                        min_sP--;
+                    }
                 } else {
                     is_sell = false;
                 }
@@ -6369,12 +6385,22 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pAmount !== 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
+                if (min_nowSP !== -1) {
+                    if (nowSP < min_nowSP) {
+                        nowSP = min_nowSP;
+                    }
+                    if (sP < min_sP) {
+                        sP = min_sP;
+                    }
+                }
             }
         }
         if (previous.price < price) {
             let previousP = 0;
             let pP = 0;
             let pPrice = previous.price * (1 + fee) * (1 + fee);
+            let min_nowBP = -1;
+            let min_bP = -1;
             //let pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; previousP < priceArray.length; previousP++) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
@@ -6403,6 +6429,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
+                    min_nowBP = (nowSP + 2) > (priceArray.length - 1) ? (priceArray.length - 1) : (nowSP + 2);
+                    min_bP = sP;
+                    if (priceArray[nowSP + 1] < 0) {
+                        min_bP++;
+                    }
+                    if (priceArray[nowSP + 2] < 0) {
+                        min_bP++;
+                    }
                 } else {
                     is_buy = false;
                 }
@@ -6422,6 +6456,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
+                if (min_nowBP !== -1) {
+                    if (nowBP > min_nowBP) {
+                        nowBP = min_nowBP;
+                    }
+                    if (bP > min_bP) {
+                        bP = min_bP;
+                    }
+                }
             }
         }
         //if (pType === 0 && previous.buy && previous.sell) {
