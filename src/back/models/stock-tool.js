@@ -6351,6 +6351,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
+                    if ((now - previous.time) >= (ttime + 6 + (nowBP - previousP) * tinterval)) {
+                        use_bP = true;
+                    }
                 } else {
                     is_buy = false;
                 }
@@ -6414,6 +6417,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
+                    if ((now - previous.time) >= (ttime + 6 + (previousP - nowSP) * tinterval)) {
+                        use_sP = true;
+                    }
                 } else {
                     is_sell = false;
                 }
