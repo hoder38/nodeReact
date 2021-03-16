@@ -6752,8 +6752,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         type,
         bCount,
         sCount,
-        pSell: pseudo_Sell ? priceArray[nowSP] : 0,
-        pBuy: pseudo_Buy ? priceArray[nowBP] : 0,
+        pSell: pseudo_Sell ? Math.abs(priceArray[nowSP]) : 0,
+        pBuy: pseudo_Buy ? Math.abs(priceArray[nowBP]) : 0,
     };
 }
 
