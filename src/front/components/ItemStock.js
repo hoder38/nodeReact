@@ -5,6 +5,7 @@ import { api, killEvent } from '../utility.js'
 class ItemStock extends React.Component {
     constructor(props) {
         super(props);
+        this._dropList = [];
     }
     componentDidMount() {
         this._dropList = [
