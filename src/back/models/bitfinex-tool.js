@@ -1693,6 +1693,47 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             //console.log(suggestion);
+                            if (suggestion.pBuy) {
+                                const now = Math.round(new Date().getTime() / 1000);
+                                let is_insert = false;
+                                for (let k = 0; k < item.previous.buy.length; k++) {
+                                    if (suggestion.pBuy < item.previous.buy[k].price) {
+                                        item.previous.buy.splice(k, 0, {price: suggestion.pBuy, time: now});
+                                        is_insert = true;
+                                        break;
+                                    }
+                                }
+                                if (!is_insert) {
+                                    item.previous.buy.push({price: suggestion.pBuy, time: now});
+                                }
+                                item.previous = {
+                                    price: suggestion.pBuy,
+                                    time: now,
+                                    type: 'buy',
+                                    buy: item.previous.buy.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
+                                    sell: item.previous.sell,
+                                }
+                            } else if (suggestion.pSell) {
+                                const now = Math.round(new Date().getTime() / 1000);
+                                let is_insert = false;
+                                for (let k = 0; k < item.previous.sell.length; k++) {
+                                    if (suggestion.pSell > item.previous.sell[k].price) {
+                                        item.previous.sell.splice(k, 0, {price: suggestion.pSell, time: now});
+                                        is_insert = true;
+                                        break;
+                                    }
+                                }
+                                if (!is_insert) {
+                                    item.previous.sell.push({price: suggestion.pSell, time: now});
+                                }
+                                item.previous = {
+                                    price: suggestion.pSell,
+                                    time: now,
+                                    type: 'sell',
+                                    sell: item.previous.sell.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
+                                    buy: item.previous.buy,
+                                }
+                            }
                             let count = 0;
                             let amount = clearP ? 0 : item.amount;
                             if (suggestion.type === 7) {
