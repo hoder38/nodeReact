@@ -1710,7 +1710,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     price: suggestion.pBuy,
                                     time: now,
                                     type: 'buy',
-                                    buy: item.previous.buy.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
+                                    buy: item.previous.buy.filter(v => (now - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                                     sell: item.previous.sell,
                                 }
                             } else if (suggestion.pSell) {
@@ -1730,7 +1730,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     price: suggestion.pSell,
                                     time: now,
                                     type: 'sell',
-                                    sell: item.previous.sell.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
+                                    sell: item.previous.sell.filter(v => (now - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                                     buy: item.previous.buy,
                                 }
                             }

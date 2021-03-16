@@ -6969,7 +6969,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                         price: tradePrice,
                         time,
                         type: 'buy',
-                        buy: priviousTrade.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        buy: priviousTrade.buy.filter(v => (time - v.time < rinterval) ? true : false),
                         sell: priviousTrade.sell,
                     }
                 } else if (tradeType === 'sell') {
@@ -6986,7 +6986,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     }
                     /*if (count === 0) {
                         priviousTrade = {
-                            sell: priviousTrade.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                            sell: priviousTrade.sell.filter(v => (time - v.time < rinterval) ? true : false),
                             buy: priviousTrade.buy,
                         }
                     } else {*/
@@ -6994,7 +6994,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                             price: tradePrice,
                             time,
                             type: 'sell',
-                            sell: priviousTrade.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                            sell: priviousTrade.sell.filter(v => (time - v.time < rinterval) ? true : false),
                             buy: priviousTrade.buy,
                         }
                     //}
