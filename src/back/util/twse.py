@@ -91,7 +91,7 @@ if len(sys.argv) == 3:
     print(order)
     print(fill_order)
 elif sys.argv[3] == 'submit':
-    if current_cash == 'same'
+    if current_cash == 'same':
         raise ValueError('Current cash error')
     if simulation == False:
         fd = open(sys.argv[5],'r')
