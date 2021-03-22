@@ -53,7 +53,7 @@ retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
-if len(acc_settle) > 0:
+if len(acc_settle) > 0 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
         current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000
     else:
@@ -91,6 +91,8 @@ if len(sys.argv) == 3:
     print(order)
     print(fill_order)
 elif sys.argv[3] == 'submit':
+    if current_cash == 'same'
+        raise ValueError('Current cash error')
     if simulation == False:
         fd = open(sys.argv[5],'r')
         capw = fd.read()
