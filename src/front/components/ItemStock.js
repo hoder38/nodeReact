@@ -5,15 +5,6 @@ import { api, killEvent } from '../utility.js'
 class ItemStock extends React.Component {
     constructor(props) {
         super(props);
-        this._dropList = [];
-    }
-    componentDidMount() {
-        this._dropList = [
-            {title: 'PER', onclick: () => this._per(this.props.item.id), key: 0},
-            //{title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
-            {title: 'INTERVAL', onclick: () => this._interval(this.props.item.id), key: 2},
-            //{title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
-        ]
     }
     _per = id => {
         api(`/api/stock/getPER/${id}`).then(result => {
@@ -41,6 +32,12 @@ class ItemStock extends React.Component {
     },*/
     render() {
         const item = this.props.item
+        const dropList = [
+            {title: 'PER', onclick: () => this._per(this.props.item.id), key: 0},
+            //{title: 'PREDICT', onclick: () => this._predict(this.props.item.id), key: 1},
+            {title: 'INTERVAL', onclick: () => this._interval(this.props.item.id), key: 2},
+            //{title: 'POINT', onclick: () => this._point(this.props.item.id), key: 3},
+        ]
         return (
             <tr className={(this.props.latest === item.id) ? 'info' : ''}>
                 <td className="text-center" style={{width: '56px'}}>
@@ -57,7 +54,7 @@ class ItemStock extends React.Component {
                 <td style={{width: '15%', minWidth: '68px'}}>{item.safety}</td>
                 <td style={{width: '15%', minWidth: '68px'}}>{item.management}</td>
                 <td style={{width: '50px'}}>
-                    <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={this._dropList}>
+                    <Dropdown headelement="span" style={{left: 'auto', right: '0px', top: '0px'}} droplist={dropList}>
                         <button type="button" className="btn btn-default">
                             <span className="caret"></span>
                         </button>

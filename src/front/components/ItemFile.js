@@ -136,7 +136,7 @@ class ItemFile extends React.Component {
     }
     render() {
         const item = this.props.item
-        let dropList = []
+        const dropList = []
         if (!item.thumb && item.status !== 7 && item.status !== 8) {
             dropList.push({title: 'download', onclick: () => this._download(item.id, item.name), key: 0})
             dropList.push({title: 'download to drive', onclick: () => this._save2drive(item.id, item.name), key: 1})
