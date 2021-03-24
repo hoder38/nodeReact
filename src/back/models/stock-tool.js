@@ -4549,9 +4549,8 @@ export default {
             if (result.items.length < 1) {
                 return filterList;
             }
-            let first_stage = [];
+            const first_stage = [];
             result.items.forEach(i => {
-                console.log(i);
                 switch (i.type) {
                     case 'usse':
                     const eok = option['usse'].per ? ((option['usse'].per[1] === '>' && i.per > option['usse'].per[2]) || (option['usse'].per[1] === '<' && i.per && i.per < option['usse'].per[2])) ? true : false : true;
@@ -4584,9 +4583,8 @@ export default {
                     return filterList;
                 } else {
                     filterList.push(first_stage[index]);
-                    return recur_per(index);
+                    return recur_per(index + 1);
                 }
-                return recur_per(index + 1);
             }
             return recur_per(0);
         });
