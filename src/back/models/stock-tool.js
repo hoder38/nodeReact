@@ -4541,6 +4541,9 @@ export default {
             return delFilter(0);
         });
         const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
+            console.log('3123r')
+            console.log(result.items.length);
+            console.log(result);
             console.log(queried);
             if (result.items.length < STOCK_FILTER_LIMIT) {
                 last = true;
@@ -4551,6 +4554,7 @@ export default {
             }
             let first_stage = [];
             result.items.forEach(i => {
+                console.log(i);
                 switch (i.type) {
                     case 'usse':
                     const eok = option['usse'].per ? ((option['usse'].per[1] === '>' && i.per > option['usse'].per[2]) || (option['usse'].per[1] === '<' && i.per && i.per < option['usse'].per[2])) ? true : false : true;
@@ -4598,8 +4602,6 @@ export default {
             return recur_per(0);
         });
         return clearName().then(() => recur_query()).then(filterList => {
-            console.log('3123r')
-            console.log(filterList.length);
             let filterList1 = [];
             const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
                 console.log(filterList[iIndex].name);
