@@ -4523,7 +4523,7 @@ export default {
         let last = false;
         let queried = 0;
         let filterList = [];
-        const clearName = () => StockTagTool.tagQuery(queried, option.name, false, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
+        const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
             const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
                 sendWs({
                     type: 'stock',
@@ -4598,6 +4598,8 @@ export default {
             return recur_per(0);
         });
         return clearName().then(() => recur_query()).then(filterList => {
+            console.log('3123r')
+            console.log(filterList.length);
             let filterList1 = [];
             const stage3 = iIndex => (iIndex < filterList.length) ? this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
                 console.log(filterList[iIndex].name);
