@@ -4541,9 +4541,6 @@ export default {
             return delFilter(0);
         });
         const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
-            console.log('3123r')
-            console.log(result.items.length);
-            console.log(result);
             console.log(queried);
             if (result.items.length < STOCK_FILTER_LIMIT) {
                 last = true;
@@ -4576,28 +4573,20 @@ export default {
                     break;
                 }
             });
-            if (first_stage.length < 1) {
+            /*if (first_stage.length < 1) {
                 return filterList;
-            }
+            }*/
             const recur_per = index => {
-                const nextFilter = () => {
-                    index++;
-                    if (index < first_stage.length) {
-                        return recur_per(index);
-                    }
+                if (index >= first_stage.length) {
                     if (!last) {
                         return recur_query();
                     }
                     return filterList;
-                }
-                const addFilter = () => {
+                } else {
                     filterList.push(first_stage[index]);
-                    /*if (filterList.length >= STOCK_FILTER_LIMIT) {
-                        return filterList;
-                    }*/
-                    return nextFilter();
-                };
-                return addFilter();
+                    return recur_per(index);
+                }
+                return recur_per(index + 1);
             }
             return recur_per(0);
         });
