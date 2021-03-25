@@ -6648,6 +6648,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             finalBuy();
             str += `Buy ${buy} ( ${bCount} ) `;
         }
+    } else {
+        bCount = 0;
     }
     if (is_sell) {
         /*if (sP < 4) {
@@ -6734,6 +6736,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             finalSell();
             str += `Sell ${sell} ( ${sCount} ) `;
         }
+    } else {
+        sCount = 0;
     }
     return {
         price,
