@@ -134,8 +134,6 @@ export const twseShioajiInit = () => {
                             item.profit = item.profit ? item.profit + profit : profit;
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => fill_order_recur(index + 1));
                         });
-                    } else {
-                        return fill_order_recur(index + 1);
                     }
                 }
                 return fill_order_recur(0);
