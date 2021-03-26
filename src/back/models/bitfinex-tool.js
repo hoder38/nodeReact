@@ -1650,11 +1650,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     if (real_id[index].status.includes('PARTIALLY FILLED')) {
                                         if ((real_id[index].time + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                             console.log(`${real_id[index].symbol} order partially filled`);
-                                            return processOrderRest(real_id[index].amount, real_id[index].price, item);
-                                            }).catch(err => {
-                                                sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                                handleError(err, `${id} Total Updata Error`);
-                                            }).then(() => real_delete(index + 1));
+                                            return processOrderRest(real_id[index].amount, real_id[index].price, item).then(() => real_delete(index + 1));
                                         } else {
                                             return real_delete(index + 1);
                                         }
