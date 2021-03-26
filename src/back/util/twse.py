@@ -68,21 +68,22 @@ if len(sys.argv) == 3:
     order = []
     fill_order = []
     for o in acc_order:
-        if o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted':
+        if o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted' or o.status.status == 'Filling':
             print(o)
             if o.order.action == 'Buy':
                 order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
             else :
                 order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(-o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
-        elif o.status.status == 'Filled':
+        if o.status.status == 'Filled' or o.status.status == 'Filling':
             price = 0
             time = 0
             profit = 0
             for d in o.status.deals:
                 price = d.price
                 time = d.ts
-                profit = profit + d.price * d.quantity
-            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":' + str(profit) + ',\"price\":' + str(price) + ',\"type\":\"' + o.order.action + '\",\"time\":' + str(time) + '}')
+                if o.status.status == 'Filled':
+                    profit = profit + d.price * d.quantity
+            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":' + str(profit) + ',\"price\":' + str(price) + ',\"type\":\"' + o.order.action + '\",\"time\":' + str(time) + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
     print("start result")

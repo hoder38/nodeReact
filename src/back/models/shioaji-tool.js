@@ -11,7 +11,6 @@ let updateTime = {book: 0, trade: 0};
 let available = 0;
 let order = [];
 let position = [];
-let processedOrder = [];
 
 export const twseShioajiInit = () => {
     const initialBook = (force = false) => {
@@ -35,20 +34,19 @@ export const twseShioajiInit = () => {
                         return Promise.resolve();
                     } else {
                         const o = ret.fill_order[index];
-                        if (processedOrder.indexOf(o.id) === -1) {
-                            console.log(o);
-                            processedOrder.push(o.id);
-                            if (o.profit <= 0) {
+                        console.log(o);
+                        /*if (o.profit <= 0) {
+                            return fill_order_recur(index + 1);
+                        }*/
+                        let profit = 0;
+                        return Mongo('find', TOTALDB, {setype: 'twse', index: o.symbol}).then(items => {
+                            if (items.length < 1) {
+                                console.log(`miss ${o.symbol}`);
                                 return fill_order_recur(index + 1);
                             }
-                            let profit = 0;
-                            return Mongo('find', TOTALDB, {setype: 'twse', index: o.symbol}).then(items => {
-                                if (items.length < 1) {
-                                    console.log(`miss ${o.symbol}`);
-                                    return fill_order_recur(index + 1);
-                                }
-                                const item = items[0];
-                                if (o.type === 'Buy') {
+                            const item = items[0];
+                            if (o.type === 'Buy') {
+                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                     if (item.previous.buy[0] && item.previous.buy[0].time === o.time && item.previous.buy[0].price === o.price) {
                                         return fill_order_recur(index + 1);
                                     }
@@ -76,7 +74,9 @@ export const twseShioajiInit = () => {
                                         buy: item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                         sell: item.previous.sell,
                                     }
-                                } else {
+                                }
+                            } else {
+                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                     if (item.previous.sell[0] && item.previous.sell[0].time === o.time && item.previous.sell[0].price === o.price) {
                                         return fill_order_recur(index + 1);
                                     }
@@ -104,38 +104,38 @@ export const twseShioajiInit = () => {
                                         sell: item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                         buy: item.previous.buy,
                                     }
-                                    //calculate profit
-                                    console.log(ret.position);
-                                    console.log(position);
-                                    if (ret.position.length > 0) {
-                                        let pp = 0;
-                                        let cp = 0;
-                                        for (let i = 0; i < ret.position.length; i++) {
-                                            if (ret.position[i].symbol === item.index) {
-                                                pp = ret.position[i].amount * ret.position[i].price;
+                                }
+                                //calculate profit
+                                console.log(ret.position);
+                                console.log(position);
+                                if (o.profit > 0 && ret.position.length > 0) {
+                                    let pp = 0;
+                                    let cp = 0;
+                                    for (let i = 0; i < ret.position.length; i++) {
+                                        if (ret.position[i].symbol === item.index) {
+                                            pp = ret.position[i].amount * ret.position[i].price;
+                                            break;
+                                        }
+                                    }
+                                    if (pp !== 0) {
+                                        for (let i = 0; i < position.length; i++) {
+                                            if (position[i].symbol === item.index) {
+                                                cp = position[i].amount * position[i].price;
                                                 break;
                                             }
                                         }
-                                        if (pp !== 0) {
-                                            for (let i = 0; i < position.length; i++) {
-                                                if (position[i].symbol === item.index) {
-                                                    cp = position[i].amount * position[i].price;
-                                                    break;
-                                                }
-                                            }
-                                            console.log(pp);
-                                            console.log(cp);
-                                            profit = o.profit * (1 - TRADE_FEE) - pp + cp;
-                                            console.log(profit);
-                                        }
+                                        console.log(pp);
+                                        console.log(cp);
+                                        profit = o.profit * (1 - TRADE_FEE) - pp + cp;
+                                        console.log(profit);
                                     }
                                 }
-                                item.profit = item.profit ? item.profit + profit : profit;
-                                return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => fill_order_recur(index + 1));
-                            });
-                        } else {
-                            return fill_order_recur(index + 1);
-                        }
+                            }
+                            item.profit = item.profit ? item.profit + profit : profit;
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => fill_order_recur(index + 1));
+                        });
+                    } else {
+                        return fill_order_recur(index + 1);
                     }
                 }
                 return fill_order_recur(0);

@@ -22,7 +22,6 @@ let updateTime = {book: 0, trade: 0};
 let available = {tradable: 0, cash: 0};
 let order = [];
 let position = [];
-let processedOrder = [];
 
 export const generateAuthUrl = () => `${TD_AUTH_URL}response_type=code&redirect_uri=${GOOGLE_REDIRECT}&client_id=${TDAMERITRADE_KEY}%40AMER.OAUTHAP`;
 
@@ -523,12 +522,91 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     symbol: o.orderLegCollection[0].instrument.symbol,
                                     price: o.price,
                                     duration: o.duration,
+                                    partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
                                 });
-                                return order_recur(index + 1);
-                            } else if (o.orderActivityCollection && processedOrder.indexOf(o.orderId) === -1 && (o.orderActivityCollection[0].executionType === 'FILL'/* || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL'*/)) {
+                                if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                                    console.log(o);
+                                    console.log(o.orderActivityCollection[0].executionLegs[0]);
+                                    const symbol = o.orderLegCollection[0].instrument.symbol;
+                                    let profit = 0;
+                                    const type = o.orderLegCollection[0].instruction;
+                                    let time = 0;
+                                    //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
+                                    //const price = o.orderActivityCollection[0].executionLegs[0].price;
+                                    let this_profit = 0;
+                                    let price = 0;
+                                    o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
+                                        time = Math.round(new Date(oace.time).getTime() / 1000);
+                                        this_profit = this_profit + oace.quantity * oace.price;
+                                        price = oace.price;
+                                    }));
+                                    console.log(symbol);
+                                    console.log(type);
+                                    console.log(time);
+                                    console.log(price);
+                                    console.log(this_profit);
+                                    if (this_profit <= 0) {
+                                        return order_recur(index + 1);
+                                    }
+                                    return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
+                                        if (items.length < 1) {
+                                            console.log(`miss ${symbol}`);
+                                            return order_recur(index + 1);
+                                        }
+                                        const item = items[0];
+                                        if (type === 'BUY') {
+                                            if (item.previous.buy[0] && item.previous.buy[0].time === time && item.previous.buy[0].price === price) {
+                                                return order_recur(index + 1);
+                                            }
+                                            let is_insert = false;
+                                            for (let k = 0; k < item.previous.buy.length; k++) {
+                                                if (price < item.previous.buy[k].price) {
+                                                    item.previous.buy.splice(k, 0, {price, time});
+                                                    is_insert = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_insert) {
+                                                item.previous.buy.push({price, time});
+                                            }
+                                            item.previous = {
+                                                price,
+                                                time,
+                                                type: 'buy',
+                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                sell: item.previous.sell,
+                                            }
+                                        } else {
+                                            if (item.previous.sell[0] && item.previous.sell[0].time === time && item.previous.sell[0].price === price) {
+                                                return order_recur(index + 1);
+                                            }
+                                            let is_insert = false;
+                                            for (let k = 0; k < item.previous.sell.length; k++) {
+                                                if (price > item.previous.sell[k].price) {
+                                                    item.previous.sell.splice(k, 0, {price, time});
+                                                    is_insert = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!is_insert) {
+                                                item.previous.sell.push({price, time});
+                                            }
+                                            item.previous = {
+                                                price,
+                                                time,
+                                                type: 'sell',
+                                                sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                buy: item.previous.buy,
+                                            }
+                                        }
+                                        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous}}).then(() => order_recur(index + 1));
+                                    });
+                                } else {
+                                    return order_recur(index + 1);
+                                }
+                            } else if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) < Math.round(new Date().getTime() / 1000) && o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
                                 console.log(o);
                                 console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                processedOrder.push(o.orderId);
                                 const symbol = o.orderLegCollection[0].instrument.symbol;
                                 let profit = 0;
                                 const type = o.orderLegCollection[0].instruction;
@@ -680,7 +758,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             if (index >= real_id.length) {
                                 return rest ? rest() : Promise.resolve();
                             }
-                            return cancelTDOrder(real_id[index].id).catch(err => {
+                            return real_id[index].partial ? real_delete(index + 1) : cancelTDOrder(real_id[index].id).catch(err => {
                                 console.log(order);
                                 sendWs(`${real_id[index].id} TD cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
                                 handleError(err, `${real_id[index].id} TDcancelOrder Error`);
