@@ -436,7 +436,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             //amount: item.amount - price * amount,
             //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
             previous: item.previous,
-        }});
+        }}).then(() => item.previous);
     }
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
@@ -1650,7 +1650,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     if (real_id[index].status.includes('PARTIALLY FILLED')) {
                                         if ((real_id[index].time + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                             console.log(`${real_id[index].symbol} order partially filled`);
-                                            return processOrderRest(real_id[index].amount, real_id[index].price, item).then(() => real_delete(index + 1));
+                                            return processOrderRest(real_id[index].amount, real_id[index].price, item).then(previous => item.previous = previous).then(() => real_delete(index + 1));
                                         } else {
                                             return real_delete(index + 1);
                                         }
@@ -1846,8 +1846,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 previous: item.previous,
                             }}).then(result => {
                                 console.log(result);
-                                return cancelOrder();
-                            }).then(() => {
                                 let is_insert = false;
                                 for (let i = 0; i < newOrder.length; i++) {
                                     if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
@@ -1920,7 +1918,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             return cancelOrder(sellAll);
                         } else if (item.ing === 1) {
                             if (+priceData[item.index].lastPrice) {
-                                return startStatus();
+                                return cancelOrder().then(() => startStatus());
                             } else {
                                 return recur_status(index + 1);
                             }
@@ -1929,7 +1927,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
                                 return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
                                     if (+priceData[item.index].lastPrice) {
-                                        return startStatus();
+                                        return cancelOrder().then(() => startStatus());
                                     } else {
                                         return recur_status(index + 1);
                                     }
