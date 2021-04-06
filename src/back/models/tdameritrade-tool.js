@@ -524,7 +524,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     duration: o.duration,
                                     partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
                                 });
-                                if (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
+                                if (o.orderActivityCollection && o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
                                     console.log(o);
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
                                     const symbol = o.orderLegCollection[0].instrument.symbol;
@@ -568,7 +568,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             if (!is_insert) {
                                                 item.previous.buy.push({price, time});
                                             }
-                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                                 item.previous = {
                                                     price,
                                                     time,
@@ -593,7 +593,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             if (!is_insert) {
                                                 item.previous.sell.push({price, time});
                                             }
-                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                                 item.previous = {
                                                     price,
                                                     time,
@@ -610,7 +610,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 } else {
                                     return order_recur(index + 1);
                                 }
-                            } else if (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
+                            } else if (o.orderActivityCollection && o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
                                 console.log(o);
                                 console.log(o.orderActivityCollection[0].executionLegs[0]);
                                 const symbol = o.orderLegCollection[0].instrument.symbol;
@@ -654,7 +654,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         if (!is_insert) {
                                             item.previous.buy.push({price, time});
                                         }
-                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                             item.previous = {
                                                 price,
                                                 time,
@@ -679,7 +679,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         if (!is_insert) {
                                             item.previous.sell.push({price, time});
                                         }
-                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                             item.previous = {
                                                 price,
                                                 time,
