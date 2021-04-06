@@ -524,7 +524,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     duration: o.duration,
                                     partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
                                 });
-                                if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                                if (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
                                     console.log(o);
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
                                     const symbol = o.orderLegCollection[0].instrument.symbol;
@@ -555,12 +555,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         }
                                         const item = items[0];
                                         if (type === 'BUY') {
-                                            if (item.previous.buy[0] && item.previous.buy[0].time === time && item.previous.buy[0].price === price) {
-                                                return order_recur(index + 1);
-                                            }
                                             let is_insert = false;
                                             for (let k = 0; k < item.previous.buy.length; k++) {
-                                                if (price < item.previous.buy[k].price) {
+                                                if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                                                    return order_recur(index + 1);
+                                                } else if (price < item.previous.buy[k].price) {
                                                     item.previous.buy.splice(k, 0, {price, time});
                                                     is_insert = true;
                                                     break;
@@ -569,20 +568,23 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             if (!is_insert) {
                                                 item.previous.buy.push({price, time});
                                             }
-                                            item.previous = {
-                                                price,
-                                                time,
-                                                type: 'buy',
-                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                sell: item.previous.sell,
+                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'buy',
+                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    sell: item.previous.sell,
+                                                }
+                                            } else {
+                                                item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                             }
                                         } else {
-                                            if (item.previous.sell[0] && item.previous.sell[0].time === time && item.previous.sell[0].price === price) {
-                                                return order_recur(index + 1);
-                                            }
                                             let is_insert = false;
                                             for (let k = 0; k < item.previous.sell.length; k++) {
-                                                if (price > item.previous.sell[k].price) {
+                                                if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                                                    return order_recur(index + 1);
+                                                } else if (price > item.previous.sell[k].price) {
                                                     item.previous.sell.splice(k, 0, {price, time});
                                                     is_insert = true;
                                                     break;
@@ -591,12 +593,16 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             if (!is_insert) {
                                                 item.previous.sell.push({price, time});
                                             }
-                                            item.previous = {
-                                                price,
-                                                time,
-                                                type: 'sell',
-                                                sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                buy: item.previous.buy,
+                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'sell',
+                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    buy: item.previous.buy,
+                                                }
+                                            } else {
+                                                item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                             }
                                         }
                                         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous}}).then(() => order_recur(index + 1));
@@ -604,7 +610,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 } else {
                                     return order_recur(index + 1);
                                 }
-                            } else if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) < Math.round(new Date().getTime() / 1000) && o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                            } else if (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL') {
                                 console.log(o);
                                 console.log(o.orderActivityCollection[0].executionLegs[0]);
                                 const symbol = o.orderLegCollection[0].instrument.symbol;
@@ -635,12 +641,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     }
                                     const item = items[0];
                                     if (type === 'BUY') {
-                                        if (item.previous.buy[0] && item.previous.buy[0].time === time && item.previous.buy[0].price === price) {
-                                            return order_recur(index + 1);
-                                        }
                                         let is_insert = false;
                                         for (let k = 0; k < item.previous.buy.length; k++) {
-                                            if (price < item.previous.buy[k].price) {
+                                            if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                                                return order_recur(index + 1);
+                                            } else if (price < item.previous.buy[k].price) {
                                                 item.previous.buy.splice(k, 0, {price, time});
                                                 is_insert = true;
                                                 break;
@@ -649,20 +654,23 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         if (!is_insert) {
                                             item.previous.buy.push({price, time});
                                         }
-                                        item.previous = {
-                                            price,
-                                            time,
-                                            type: 'buy',
-                                            buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                            sell: item.previous.sell,
+                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                            item.previous = {
+                                                price,
+                                                time,
+                                                type: 'buy',
+                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                sell: item.previous.sell,
+                                            }
+                                        } else {
+                                            item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                         }
                                     } else {
-                                        if (item.previous.sell[0] && item.previous.sell[0].time === time && item.previous.sell[0].price === price) {
-                                            return order_recur(index + 1);
-                                        }
                                         let is_insert = false;
                                         for (let k = 0; k < item.previous.sell.length; k++) {
-                                            if (price > item.previous.sell[k].price) {
+                                            if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                                                return order_recur(index + 1);
+                                            } else if (price > item.previous.sell[k].price) {
                                                 item.previous.sell.splice(k, 0, {price, time});
                                                 is_insert = true;
                                                 break;
@@ -671,12 +679,16 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         if (!is_insert) {
                                             item.previous.sell.push({price, time});
                                         }
-                                        item.previous = {
-                                            price,
-                                            time,
-                                            type: 'sell',
-                                            sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                            buy: item.previous.buy,
+                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && o.orderActivityCollection) {
+                                            item.previous = {
+                                                price,
+                                                time,
+                                                type: 'sell',
+                                                sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                buy: item.previous.buy,
+                                            }
+                                        } else {
+                                            item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                         }
                                         //calculate profit
                                         console.log(lastP);

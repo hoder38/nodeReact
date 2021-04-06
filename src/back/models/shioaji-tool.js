@@ -46,27 +46,26 @@ export const twseShioajiInit = () => {
                             }
                             const item = items[0];
                             if (o.type === 'Buy') {
-                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                    if (item.previous.buy[0] && item.previous.buy[0].time === o.time && item.previous.buy[0].price === o.price) {
+                                let is_insert = false;
+                                for (let k = 0; k < item.previous.buy.length; k++) {
+                                    if (item.previous.buy[k].time === o.time && item.previous.buy[k].price === o.price) {
                                         return fill_order_recur(index + 1);
-                                    }
-                                    let is_insert = false;
-                                    for (let k = 0; k < item.previous.buy.length; k++) {
-                                        if (o.price < item.previous.buy[k].price) {
-                                            item.previous.buy.splice(k, 0, {
-                                                price: o.price,
-                                                time: o.time,
-                                            });
-                                            is_insert = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!is_insert) {
-                                        item.previous.buy.push({
+                                    } else if (o.price < item.previous.buy[k].price) {
+                                        item.previous.buy.splice(k, 0, {
                                             price: o.price,
                                             time: o.time,
                                         });
+                                        is_insert = true;
+                                        break;
                                     }
+                                }
+                                if (!is_insert) {
+                                    item.previous.buy.push({
+                                        price: o.price,
+                                        time: o.time,
+                                    });
+                                }
+                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                     item.previous = {
                                         price: o.price,
                                         time: o.time,
@@ -74,29 +73,30 @@ export const twseShioajiInit = () => {
                                         buy: item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                         sell: item.previous.sell,
                                     }
+                                } else {
+                                    item.previous.buy = item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                             } else {
-                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                    if (item.previous.sell[0] && item.previous.sell[0].time === o.time && item.previous.sell[0].price === o.price) {
+                                let is_insert = false;
+                                for (let k = 0; k < item.previous.sell.length; k++) {
+                                    if (item.previous.sell[k].time === o.time && item.previous.sell[k].price === o.price) {
                                         return fill_order_recur(index + 1);
-                                    }
-                                    let is_insert = false;
-                                    for (let k = 0; k < item.previous.sell.length; k++) {
-                                        if (o.price > item.previous.sell[k].price) {
-                                            item.previous.sell.splice(k, 0, {
-                                                price: o.price,
-                                                time: o.time,
-                                            });
-                                            is_insert = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!is_insert) {
-                                        item.previous.sell.push({
+                                    } else if (o.price > item.previous.sell[k].price) {
+                                        item.previous.sell.splice(k, 0, {
                                             price: o.price,
                                             time: o.time,
                                         });
+                                        is_insert = true;
+                                        break;
                                     }
+                                }
+                                if (!is_insert) {
+                                    item.previous.sell.push({
+                                        price: o.price,
+                                        time: o.time,
+                                    });
+                                }
+                                if ((o.starttime + TWSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
                                     item.previous = {
                                         price: o.price,
                                         time: o.time,
@@ -104,6 +104,8 @@ export const twseShioajiInit = () => {
                                         sell: item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                         buy: item.previous.buy,
                                     }
+                                } else {
+                                    item.previous.sell = item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                                 //calculate profit
                                 console.log(ret.position);
