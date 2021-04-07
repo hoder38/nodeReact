@@ -545,7 +545,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     console.log(time);
                                     console.log(price);
                                     console.log(this_profit);
-                                    if (this_profit <= 0) {
+                                    if (price <= 0) {
                                         return order_recur(index + 1);
                                     }
                                     return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
@@ -631,7 +631,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 console.log(time);
                                 console.log(price);
                                 console.log(this_profit);
-                                if (this_profit <= 0) {
+                                if (price <= 0) {
                                     return order_recur(index + 1);
                                 }
                                 return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {

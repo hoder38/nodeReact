@@ -35,9 +35,9 @@ export const twseShioajiInit = () => {
                     } else {
                         const o = ret.fill_order[index];
                         console.log(o);
-                        /*if (o.profit <= 0) {
+                        if (o.price <= 0) {
                             return fill_order_recur(index + 1);
-                        }*/
+                        }
                         let profit = 0;
                         return Mongo('find', TOTALDB, {setype: 'twse', index: o.symbol}).then(items => {
                             if (items.length < 1) {
@@ -110,7 +110,7 @@ export const twseShioajiInit = () => {
                                 //calculate profit
                                 console.log(ret.position);
                                 console.log(position);
-                                if (o.profit > 0 && ret.position.length > 0) {
+                                if (ret.position.length > 0) {
                                     let pp = 0;
                                     let cp = 0;
                                     for (let i = 0; i < ret.position.length; i++) {
