@@ -161,6 +161,39 @@ const randomSend = (action, joiner=null) => {
     }
 }
 
+const resetTotal = (type, se) => {
+    let find = null;
+    switch(se) {
+        case 'bfx':
+        find = {sType: 1};
+        break;
+        case 'twse':
+        find = {sType: {$exists: false}, setype: 'twse'};
+        break;
+        case 'usse':
+        find = {sType: {$exists: false}, setype: 'usse'};
+        break;
+        default:
+        return handleError(new HoError('Reset se unknown!!!'));
+    }
+    switch(type) {
+        case 'newmid':
+        return Mongo('updateMany', TOTALDB, Object.assign(find, {newMid: {$exists: true}}), {$set: {newMid: []}}).then(count => {
+            console.log(count);
+            return Mongo('find', TOTALDB, Object.assign(find, {newMid: {$exists: true}})).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+        });
+        break;
+        case 'profit':
+        return Mongo('updateMany', TOTALDB, Object.assign(find, {profit: {$exists: true}}), {$set: {profit: 0}}).then(count => {
+            console.log(count);
+            return Mongo('find', TOTALDB, Object.assign(find, {profit: {$exists: true}})).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+        });
+        break;
+        default:
+        return handleError(new HoError('Reset type unknown!!!'));
+    }
+}
+
 const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -210,11 +243,8 @@ rl.on('line', line => {
         case 'randomsend':
         console.log('randomsend');
         return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
-        case 'resetnewmid':
-        return Mongo('updateMany', TOTALDB, {newMid: {$exists: true}}, {$set: {newMid: []}}).then(count => {
-            console.log(count);
-            return Mongo('find', TOTALDB, {newMid: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
-        });
+        case 'resettotal':
+        return resetTotal(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Reset total'));
         case 'updatepassword':
         return updatePasswordCipher().then(() => console.log('done')).catch(err => handleError(err, 'CMD Update password'));
         default:
@@ -229,7 +259,7 @@ rl.on('line', line => {
         console.log('dbrestore collection');
         console.log('randomsend list|edit|send [name:email|append]');
         console.log('testdata');
-        console.log('resetnewmid');
+        console.log('resettotal newmid|profit bfx|twse|usse');
         console.log('updatepassword');
     }
 });
