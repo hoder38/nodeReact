@@ -4098,7 +4098,8 @@ export default {
                                 }
                             }
                         }
-                        return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
+                        let financeCount = 0;
+                        const getFinance = () => Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
                             if (raw_data.split("\n").length > 1) {
                                 raw_arr = [];
                                 interval_data = null;
@@ -4106,6 +4107,8 @@ export default {
                                 max = 0;
                                 min = 0;
                                 end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
+                            } else if (raw_data !== 'Date,Stock Splits') {
+                                return handleError(new HoError('yahoo finance missing'));
                             }
                             return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
                                 raw_data = raw_data.split("\n").reverse();
@@ -4178,7 +4181,11 @@ export default {
                                 }
                                 return rest_interval();
                             });
+                        }).catch(err => {
+                            console.log(financeCount);
+                            return (++financeCount > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(getFinance()), 60000));
                         });
+                        return getFinance();
                     }
                     const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
