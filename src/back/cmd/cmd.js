@@ -22,7 +22,7 @@ function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
     drive_batch = isNaN(drive_batch) ? DRIVE_LIMIT : Number(drive_batch);
     console.log(drive_batch);
     console.log('cmdUpdateDrive');
-    console.log(new Date());
+    console.log(new Date().toLocaleString());
     const username = isValidString(singleUser, 'name');
     if (!username) {
         return handleError(new HoError('user name not valid!!!'));

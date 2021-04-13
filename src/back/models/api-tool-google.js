@@ -900,7 +900,7 @@ export function googleDownloadSubtitle(url, filePath) {
 
 export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
     console.log('userDrive');
-    console.log(new Date());
+    console.log(new Date().toLocaleString());
     console.log(userlist[index].username);
     let folderlist = [{
         id: userlist[index].auto,
@@ -986,7 +986,7 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
 
 export function autoDoc(userlist, index, type, date=null) {
     console.log('autoDoc');
-    console.log(new Date());
+    console.log(new Date().toLocaleString());
     console.log(userlist[index].username);
     date = date ? date : new Date();
     if (!DOC_TYPE.hasOwnProperty(type)) {

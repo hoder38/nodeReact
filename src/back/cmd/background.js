@@ -34,7 +34,7 @@ export const autoUpload = () => {
     if (AUTO_UPLOAD(ENV_TYPE)) {
         const loopDrive = () => {
             console.log('loopDrive');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             return Mongo('find', USERDB, {auto: {$exists: true}}).then(userlist => userDrive(userlist, 0)).catch(err => bgError(err, 'Loop drive')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DRIVE_INTERVAL * 1000))).then(() => loopDrive());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopDrive());
@@ -45,7 +45,7 @@ export const autoDownload = () => {
     if (AUTO_DOWNLOAD(ENV_TYPE)) {
         const loopDoc = () => {
             console.log('loopDoc');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             return Mongo('find', USERDB, {
                 auto: {$exists: true},
                 perm: 1,
@@ -70,7 +70,7 @@ export const checkMedia = () => {
     if (CHECK_MEDIA(ENV_TYPE)) {
         const loopHandleMedia = () => {
             console.log('loopCheckMedia');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             return PlaylistApi('playlist kick').then(() => MediaHandleTool.checkMedia()).catch(err => bgError(err, 'Loop checkMedia')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAl * 1000))).then(() => loopHandleMedia());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => loopHandleMedia());
@@ -81,7 +81,7 @@ export const checkMedia = () => {
     if (UPDATE_EXTERNAL(ENV_TYPE)) {
         const loopUpdateExternal = () => {
             console.log('loopUpdateExternal');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             console.log('complete tag');
             //return completeMimeTag(1).then(() => External.getList('lovetv')).then(() => External.getList('eztv')).catch(err => bgError(err, 'Loop updateExternal')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), EXTERNAL_INTERVAL * 1000))).then(() => loopUpdateExternal());
             return completeMimeTag(1).then(() => External.getList('eztv')).catch(err => bgError(err, 'Loop updateExternal')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), EXTERNAL_INTERVAL * 1000))).then(() => loopUpdateExternal());
@@ -92,7 +92,7 @@ export const checkMedia = () => {
 
 /*const updateStockAnnual = (year, folderList, updateList, index, uIndex) => {
     console.log('updateAnnual');
-    console.log(new Date());
+    console.log(new Date().toLocaleString());
     console.log(year);
     console.log(folderList[index]);
     console.log(updateList[uIndex]);
@@ -111,7 +111,7 @@ export const checkMedia = () => {
 
 const updateStockList = (list, type) => {
     console.log('updateStockList');
-    console.log(new Date());
+    console.log(new Date().toLocaleString());
     console.log(list[0]);
     return StockTool.getSingleStockV2(type, list[0], 1).then(() => {
         list.splice(0, 1);
@@ -125,7 +125,7 @@ export const updateStock = () => {
     if (UPDATE_STOCK(ENV_TYPE)) {
         const loopUpdateStock = () => {
             console.log('loopUpdateStock');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             /*let use_stock_list = stock_batch_list;
             if (stock_batch_list.length > 0) {
                 console.log('stock_batch_list remain');
@@ -191,7 +191,7 @@ export const filterStock = () => {
     if (STOCK_FILTER(ENV_TYPE)) {
         const loopStockFilter = () => {
             console.log('loopStockFilter');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             const sd = new Date();
             const sdf = () => (sd.getDay() === 3 && sd.getHours() === 1) ? StockTool.stockFilterWarp() : Promise.resolve();
             return sdf().catch(err => bgError(err, 'Loop stockFilter')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopStockFilter());
@@ -205,7 +205,7 @@ export const dbBackup = () => {
     if (DB_BACKUP(ENV_TYPE)) {
         const allBackup = () => {
             console.log('allBackup');
-            console.log(new Date());
+            console.log(new Date().toLocaleString());
             const sd = new Date();
             const backupDate = `${sd.getFullYear()}${completeZero(sd.getMonth() + 1, 2)}${completeZero(sd.getDate(), 2)}`;
             const singleBackup = index => {
@@ -243,7 +243,7 @@ export const rateCalculator = () => {
 export const setUserOffer = (startTime = 0) => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         console.log('setUserOffer');
-        console.log(new Date());
+        console.log(new Date().toLocaleString());
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(() => checkUser(index + 1, userlist));
         const setO = () => {
             const now = Math.round(new Date().getTime() / 1000);
@@ -295,7 +295,7 @@ export const filterBitfinex = () => {
 export const usseInit = (startTime = 0) => {
     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         console.log('initUsse');
-        console.log(new Date());
+        console.log(new Date().toLocaleString());
         const setO = () => {
             if (startTime === currentInitUsse) {
                 lastInitUsse = Math.round(new Date().getTime() / 1000);
@@ -334,7 +334,7 @@ export const checkUsseInit = () => {
 export const twseInit = (startTime = 0) => {
     if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         console.log('initTwse');
-        console.log(new Date());
+        console.log(new Date().toLocaleString());
         const setO = () => {
             if (startTime === currentInitTwse) {
                 lastInitTwse = Math.round(new Date().getTime() / 1000);

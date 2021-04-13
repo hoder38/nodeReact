@@ -534,7 +534,7 @@ export default {
     },
     singleDrive: function(metadatalist, index, user, folderId, uploaded, handling, dirpath) {
         console.log('singleDrive');
-        console.log(new Date());
+        console.log(new Date().toLocaleString());
         const metadata = metadatalist[index];
         console.log(metadata);
         const oOID = objectID();
