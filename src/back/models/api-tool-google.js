@@ -643,7 +643,7 @@ function downloadMedia(data) {
         let media_id = null;
         let currentHeight = 0;
         for (let i in info) {
-            if (info[i].height >= (data['hd'] * 0.9)) {
+            if (info[i].height >= (data['hd'] * 0.95)) {
                 if (info[i].height > currentHeight) {
                     media_id = info[i].id;
                     currentHeight = +info[i].height;
