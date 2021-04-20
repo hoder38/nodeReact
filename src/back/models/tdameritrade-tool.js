@@ -741,11 +741,11 @@ export const usseTDInit = () => checkOauth().then(() => {
             //避開交易時間
             const hour = new Date().getHours();
             if (USSE_MARKET_TIME[0] > USSE_MARKET_TIME[1]) {
-                if (hour > USSE_MARKET_TIME[0] || hour < USSE_MARKET_TIME[1]) {
+                if (hour >= USSE_MARKET_TIME[0] || hour < USSE_MARKET_TIME[1]) {
                     updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return Promise.resolve();
                 }
-            } else if (hour > USSE_MARKET_TIME[0] && hour < USSE_MARKET_TIME[1]) {
+            } else if (hour >= USSE_MARKET_TIME[0] && hour < USSE_MARKET_TIME[1]) {
                 updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }

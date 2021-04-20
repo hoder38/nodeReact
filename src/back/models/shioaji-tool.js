@@ -155,11 +155,11 @@ export const twseShioajiInit = () => {
             //避開交易時間
             const hour = new Date().getHours();
             if (TWSE_MARKET_TIME[0] > TWSE_MARKET_TIME[1]) {
-                if (hour > TWSE_MARKET_TIME[0] || hour < TWSE_MARKET_TIME[1]) {
+                if (hour >= TWSE_MARKET_TIME[0] || hour < TWSE_MARKET_TIME[1]) {
                     updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return Promise.resolve();
                 }
-            } else if (hour > TWSE_MARKET_TIME[0] && hour < TWSE_MARKET_TIME[1]) {
+            } else if (hour >= TWSE_MARKET_TIME[0] && hour < TWSE_MARKET_TIME[1]) {
                 updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }
