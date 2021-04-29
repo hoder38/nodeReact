@@ -1532,7 +1532,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return Promise.resolve(availableMargin);
                                 }
                                 if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                    if ((real_id[index].time + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
+                                    if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
                                         console.log(`${real_id[index].symbol} order partially filled`);
                                         return processOrderRest(real_id[index].amount, real_id[index].price, item).then(previous => item.previous = previous).then(() => real_delete(index + 1));
                                     } else {
@@ -1659,7 +1659,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         return rest ? rest() : Promise.resolve();
                                     }
                                     if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                        if ((real_id[index].time + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
+                                        if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
                                             console.log(`${real_id[index].symbol} order partially filled`);
                                             return processOrderRest(real_id[index].amount, real_id[index].price, item).then(previous => item.previous = previous).then(() => real_delete(index + 1));
                                         } else {
