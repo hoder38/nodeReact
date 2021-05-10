@@ -7595,7 +7595,7 @@ const getUsStock = (index, stat=['price']) => {
                 } else {
                     let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
                     stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(',', ''));
-                    ret['pdr'] = Math.round(100 / stockYield * 100) / 100;
+                    ret['pdr'] = (stockYield === 0) ? 0 : Math.round(100 / stockYield * 100) / 100;
                 }
             }
         }
