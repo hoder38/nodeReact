@@ -1641,11 +1641,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
                         item.count = 0;
                         item.amount = item.orig;
+                        item.pricecost = 0;
                         if (position[id][current.type]) {
                             position[id][current.type].forEach(v => {
                                 if (v.symbol === item.index) {
                                     item.count += v.amount;
                                     item.amount = item.amount - v.amount * v.price;
+                                    item.pricecost = v.price;
                                 }
                             });
                         }
@@ -1701,7 +1703,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                             }
-                            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             while(suggestion.resetWeb) {
                                 if (item.newMid.length === 0) {
                                     item.tmpPT = {
@@ -1713,7 +1715,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 item.previous.time = 0;
                                 item.newMid.push(suggestion.newMid);
                                 newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             //console.log(suggestion);
                             if (suggestion.pBuy) {
