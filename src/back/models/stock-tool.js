@@ -7555,8 +7555,15 @@ const getUsStock = (index, stat=['price']) => {
     const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
         const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
         if (stat.indexOf('price') !== -1) {
-            const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
-            ret['price'] = Number(price.replace(',', ''));
+            let price = null;
+            const ds = findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div');
+            for (let i = 0; i < ds.length; i++) {
+                if (findTag(ds[i], 'div')[0].attribs.id.includes('QuoteHeader')) {
+                    price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+                    break;
+                }
+            }
+            ret['price'] = price ? Number(price.replace(',', '')) : 0;
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
             const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[1];
