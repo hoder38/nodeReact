@@ -6524,7 +6524,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             bCount = 0;
             buy = 0;
         }
-        if ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price))) {
+        if ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price)) {
             bCount = 0;
             buy = 0;
         }
