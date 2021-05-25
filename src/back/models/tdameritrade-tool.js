@@ -659,7 +659,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 //const price = o.orderActivityCollection[0].executionLegs[0].price;
                                 let this_profit = 0;
                                 let price =  o.fake ? o.price : 0;
-                                if (!.o.fake) {
+                                if (!o.fake) {
                                     o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
                                         time = Math.round(new Date(oace.time).getTime() / 1000);
                                         this_profit = this_profit + oace.quantity * oace.price;
