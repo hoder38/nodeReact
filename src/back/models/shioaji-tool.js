@@ -11,6 +11,7 @@ let updateTime = {book: 0, trade: 0};
 let available = 0;
 let order = [];
 let position = [];
+let fakeOrder = [];
 
 export const twseShioajiInit = () => {
     const initialBook = (force = false) => {
@@ -29,6 +30,32 @@ export const twseShioajiInit = () => {
                 //console.log(available);
                 //console.log(order);
                 //console.log(position);
+                const twseSuggestion = getSuggestionData('twse');
+                fakeOrder.forEach(o => {
+                    if (!o.done && o.type === 'buy' && twseSuggestion[o.symbol].price <= o.price) {
+                        o.done = true;
+                        console.log('fake order close');
+                        ret.fill_order.push({
+                            price: o.price,
+                            time: o.time,
+                            symbol: o.symbol,
+                            starttime: o.time,
+                            type: 'Buy',
+                            fake: true,
+                        });
+                    } else if (!o.done && o.type === 'sell' && twseSuggestion[o.symbol].price >= o.price) {
+                        o.done = true;
+                        console.log('fake order close');
+                        ret.fill_order.push({
+                            price: o.price,
+                            time: o.time,
+                            symbol: o.symbol,
+                            starttime: o.time,
+                            type: 'Sell',
+                            fake: true,
+                        });
+                    }
+                });
                 const fill_order_recur = index => {
                     if (index >= ret.fill_order.length) {
                         return Promise.resolve();
@@ -110,7 +137,7 @@ export const twseShioajiInit = () => {
                                 //calculate profit
                                 console.log(ret.position);
                                 console.log(position);
-                                if (ret.position.length > 0) {
+                                if (!o.fake && ret.position.length > 0) {
                                     let pp = 0;
                                     let cp = 0;
                                     for (let i = 0; i < ret.position.length; i++) {
@@ -282,6 +309,7 @@ const getShioajiData = (simulation = true) => {
 }
 
 const submitShioajiOrder = (submitList, simulation = true) => {
+    fakeOrder = [];
     let list = '';
     const id = simulation ? 'PAPIUSER02' : SHIOAJI_ID;
     const pw = simulation ? '2222' : SHIOAJI_PW;
@@ -291,9 +319,23 @@ const submitShioajiOrder = (submitList, simulation = true) => {
         list = `${list} ${s.item.index}=`;
         if (s.suggestion.bCount) {
             list = `${list}buy${s.suggestion.bCount}=${s.suggestion.buy}`;
+        } else if (s.suggestion.buy) {
+            fakeOrder.push({
+                type: 'buy',
+                time: Math.round(new Date().getTime() / 1000),
+                price: s.suggestion.buy,
+                symbol: s.item.index,
+            });
         }
         if (s.suggestion.sCount) {
             list = `${list}sell${s.suggestion.sCount}=${s.suggestion.sell}`;
+        } else if (s.suggestion.sell) {
+            fakeOrder.push({
+                type: 'sell',
+                time: Math.round(new Date().getTime() / 1000),
+                price: s.suggestion.sell,
+                symbol: s.item.index,
+            });
         }
     });
     console.log(list);

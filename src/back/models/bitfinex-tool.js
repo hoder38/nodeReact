@@ -30,6 +30,7 @@ let offer = {};
 let order = {};
 const deleteOffer = [];
 const deleteOrder = [];
+const fakeOrder = {};
 
 let credit = {};
 const closeCredit = {};
@@ -460,6 +461,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
         if (!order[id]) {
             order[id] = {};
+        }
+        if (!fakeOrder[id]) {
+            fakeOrder[id] = {};
         }
         if (!credit[id]) {
             credit[id] = {};
@@ -1392,8 +1396,48 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     });
                 }
             }
+            const checkFakeOrder = index => {
+                if (current.isTrade && fakeOrder[id][current.type]) {
+                    if (index >= fakeOrder[id][current.type].length) {
+                        return Promise.resolve();
+                    } else {
+                        const o = fakeOrder[id][current.type][index];
+                        if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice <= o.price) {
+                            return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
+                                console.log('fake order close');
+                                console.log(items);
+                                if (items.length < 1) {
+                                    console.log(`miss ${o.symbol}`);
+                                    return checkFakeOrder(index + 1);
+                                }
+                                return processOrderRest(1, o.price, items[0]).then(() => {
+                                    o.done = true;
+                                    return checkFakeOrder(index + 1);
+                                });
+                            });
+                        } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice >= o.price) {
+                            return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
+                                console.log('fake order close');
+                                console.log(items);
+                                if (items.length < 1) {
+                                    console.log(`miss ${o.symbol}`);
+                                    return checkFakeOrder(index + 1);
+                                }
+                                return processOrderRest(-1, o.price, items[0]).then(() => {
+                                    o.done = true;
+                                    return checkFakeOrder(index + 1);
+                                });
+                            });
+                        } else {
+                            return checkFakeOrder(index + 1);
+                        }
+                    }
+                } else {
+                    return Promise.resolve();
+                }
+            }
             //return Promise.resolve();
-            return cancelOffer(0).then(() => submitOffer(0));
+            return cancelOffer(0).then(() => submitOffer(0).then(() => checkFakeOrder(0)));
         });
     }
 
@@ -1625,6 +1669,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             console.log(`real singleTrade ${updateTime[id]['trade']}`);
             return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
+                fakeOrder[id][current.type] = [];
                 const recur_status = index => {
                     if (index >= items.length) {
                         sendWs({
@@ -1718,47 +1763,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
                             }
                             //console.log(suggestion);
-                            if (suggestion.pBuy) {
-                                const now = Math.round(new Date().getTime() / 1000);
-                                let is_insert = false;
-                                for (let k = 0; k < item.previous.buy.length; k++) {
-                                    if (suggestion.pBuy < item.previous.buy[k].price) {
-                                        item.previous.buy.splice(k, 0, {price: suggestion.pBuy, time: now});
-                                        is_insert = true;
-                                        break;
-                                    }
-                                }
-                                if (!is_insert) {
-                                    item.previous.buy.push({price: suggestion.pBuy, time: now});
-                                }
-                                item.previous = {
-                                    price: suggestion.pBuy,
-                                    time: now,
-                                    type: 'buy',
-                                    buy: item.previous.buy.filter(v => (now - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                                    sell: item.previous.sell,
-                                }
-                            } else if (suggestion.pSell) {
-                                const now = Math.round(new Date().getTime() / 1000);
-                                let is_insert = false;
-                                for (let k = 0; k < item.previous.sell.length; k++) {
-                                    if (suggestion.pSell > item.previous.sell[k].price) {
-                                        item.previous.sell.splice(k, 0, {price: suggestion.pSell, time: now});
-                                        is_insert = true;
-                                        break;
-                                    }
-                                }
-                                if (!is_insert) {
-                                    item.previous.sell.push({price: suggestion.pSell, time: now});
-                                }
-                                item.previous = {
-                                    price: suggestion.pSell,
-                                    time: now,
-                                    type: 'sell',
-                                    sell: item.previous.sell.filter(v => (now - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                                    buy: item.previous.buy,
-                                }
-                            }
                             let count = 0;
                             let amount = clearP ? 0 : item.amount;
                             if (suggestion.type === 7) {
@@ -2058,6 +2062,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         return recur_NewOrder(index + 1);
                                     });
+                                } else if (suggestion.buy) {
+                                    fakeOrder[id][current.type].push({
+                                        type: 'buy',
+                                        time: Math.round(new Date().getTime() / 1000),
+                                        price: suggestion.buy,
+                                        symbol: item.index,
+                                    });
                                 } else {
                                     return recur_NewOrder(index + 1);
                                 }
@@ -2116,6 +2127,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     }
                                 }
                                 return submitBuy();
+                            });
+                        } else if (suggestion.sell) {
+                            fakeOrder[id][current.type].push({
+                                type: 'sell',
+                                time: Math.round(new Date().getTime() / 1000),
+                                price: suggestion.sell,
+                                symbol: item.index,
                             });
                         } else {
                             return submitBuy();

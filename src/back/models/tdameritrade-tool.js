@@ -22,6 +22,7 @@ let updateTime = {book: 0, trade: 0};
 let available = {tradable: 0, cash: 0};
 let order = [];
 let position = [];
+let fakeOrder = [];
 
 export const generateAuthUrl = () => `${TD_AUTH_URL}response_type=code&redirect_uri=${GOOGLE_REDIRECT}&client_id=${TDAMERITRADE_KEY}%40AMER.OAUTHAP`;
 
@@ -506,7 +507,42 @@ export const usseTDInit = () => checkOauth().then(() => {
                     position = [];
                 }
                 order = [];
+                const usseSuggestion = getSuggestionData('usse');
+                fakeOrder.forEach(o => {
+                    if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol].price <= o.price) {
+                        o.done = true;
+                        console.log('fake order close');
+                        if (!result['securitiesAccount']['orderStrategies']) {
+                            result['securitiesAccount']['orderStrategies'] = [];
+                        }
+                        result['securitiesAccount']['orderStrategies'].push({
+                            cancelable: false,
+                            fake: true,
+                            price: o.price,
+                            time: o.time,
+                            enteredTime: o.time,
+                            symbol: o.symbol,
+                            type: 'BUY',
+                        });
+                    } else if (!o.done && o.type === 'sell' && usseSuggestion[o.symbol].price >= o.price) {
+                        o.done = true;
+                        console.log('fake order close');
+                        if (!result['securitiesAccount']['orderStrategies']) {
+                            result['securitiesAccount']['orderStrategies'] = [];
+                        }
+                        result['securitiesAccount']['orderStrategies'].push({
+                            cancelable: false,
+                            fake: true,
+                            price: o.price,
+                            time: o.time,
+                            enteredTime: o.time,
+                            symbol: o.symbol,
+                            type: 'SELL',
+                        });
+                    }
+                });
                 if (result['securitiesAccount']['orderStrategies']) {
+
                     const order_recur = index => {
                         if (index >= result['securitiesAccount']['orderStrategies'].length) {
                             return Promise.resolve();
@@ -610,22 +646,26 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 } else {
                                     return order_recur(index + 1);
                                 }
-                            } else if (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
+                            } else if (o.fake || (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL'))) {
                                 console.log(o);
-                                console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                const symbol = o.orderLegCollection[0].instrument.symbol;
+                                if (!o.fake) {
+                                    console.log(o.orderActivityCollection[0].executionLegs[0]);
+                                }
+                                const symbol = o.fake ? o.symbol : o.orderLegCollection[0].instrument.symbol;
                                 let profit = 0;
-                                const type = o.orderLegCollection[0].instruction;
-                                let time = 0;
+                                const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
+                                let time = o.fake ? o.time : 0;
                                 //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
                                 //const price = o.orderActivityCollection[0].executionLegs[0].price;
                                 let this_profit = 0;
-                                let price = 0;
-                                o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
-                                    time = Math.round(new Date(oace.time).getTime() / 1000);
-                                    this_profit = this_profit + oace.quantity * oace.price;
-                                    price = oace.price;
-                                }));
+                                let price =  o.fake ? o.price : 0;
+                                if (!.o.fake) {
+                                    o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
+                                        time = Math.round(new Date(oace.time).getTime() / 1000);
+                                        this_profit = this_profit + oace.quantity * oace.price;
+                                        price = oace.price;
+                                    }));
+                                }
                                 console.log(symbol);
                                 console.log(type);
                                 console.log(time);
@@ -693,7 +733,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         //calculate profit
                                         console.log(lastP);
                                         console.log(position);
-                                        if (lastP.length > 0) {
+                                        if (!o.fake && lastP.length > 0) {
                                             let pp = 0;
                                             let cp = 0;
                                             for (let i = 0; i < lastP.length; i++) {
@@ -751,6 +791,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             }
         }
         return Mongo('find', TOTALDB, {setype: 'usse', sType: {$exists: false}}).then(items => {
+            fakeOrder = [];
             const newOrder = [];
             const usseSuggestion = getSuggestionData('usse');
             console.log(usseSuggestion);
@@ -863,6 +904,13 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             //throw err;
                                         }
                                     }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => recur_NewOrder(index + 1));
+                            } else if (suggestion.buy) {
+                                fakeOrder.push({
+                                    type: 'buy',
+                                    time: Math.round(new Date().getTime() / 1000),
+                                    price: suggestion.buy,
+                                    symbol: item.index,
+                                });
                             } else {
                                 return recur_NewOrder(index + 1);
                             }
@@ -882,6 +930,13 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 //throw err;
                             }
                         }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 2000))).then(() => submitBuy());
+                    } else if (suggestion.sell) {
+                        fakeOrder.push({
+                            type: 'sell',
+                            time: Math.round(new Date().getTime() / 1000),
+                            price: suggestion.sell,
+                            symbol: item.index,
+                        });
                     } else {
                         return submitBuy();
                     }

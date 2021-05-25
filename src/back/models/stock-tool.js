@@ -5930,47 +5930,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.wType, 0, fee);
                 }
-                if (suggestion.pBuy) {
-                    const now = Math.round(new Date().getTime() / 1000);
-                    let is_insert = false;
-                    for (let k = 0; k < item.previous.buy.length; k++) {
-                        if (suggestion.pBuy < item.previous.buy[k].price) {
-                            item.previous.buy.splice(k, 0, {price: suggestion.pBuy, time: now});
-                            is_insert = true;
-                            break;
-                        }
-                    }
-                    if (!is_insert) {
-                        item.previous.buy.push({price: suggestion.pBuy, time: now});
-                    }
-                    item.previous = {
-                        price: suggestion.pBuy,
-                        time: now,
-                        type: 'buy',
-                        buy: item.previous.buy.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
-                        sell: item.previous.sell,
-                    }
-                } else if (suggestion.pSell) {
-                    const now = Math.round(new Date().getTime() / 1000);
-                    let is_insert = false;
-                    for (let k = 0; k < item.previous.sell.length; k++) {
-                        if (suggestion.pSell > item.previous.sell[k].price) {
-                            item.previous.sell.splice(k, 0, {price: suggestion.pSell, time: now});
-                            is_insert = true;
-                            break;
-                        }
-                    }
-                    if (!is_insert) {
-                        item.previous.sell.push({price: suggestion.pSell, time: now});
-                    }
-                    item.previous = {
-                        price: suggestion.pSell,
-                        time: now,
-                        type: 'sell',
-                        sell: item.previous.sell.filter(v => (now - v.time < RANGE_INTERVAL) ? true : false),
-                        buy: item.previous.buy,
-                    }
-                }
                 let count = 0;
                 //let amount = item.amount;
                 let amount = item.clear ? 0 : item.amount;
@@ -6309,8 +6268,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     //let sAdd = sType === 0 ? 0 : 1;
     let bAdd = 0;
     let sAdd = 0;
-    let pseudo_Buy = false;
-    let pseudo_Sell = false;
     //let tmpB = 0;
     for (; nowBP >= 0; nowBP--) {
         if (Math.abs(priceArray[nowBP]) * (sType === 0 ? 1.001 : 1.0001) >= price) {
@@ -6399,16 +6356,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
-                    if ((now - previous.time) >= (ttime + (nowBP - previousP + 12) * tinterval)) {
-                        pseudo_Buy = true;
-                    }
                 } else {
                     is_buy = false;
                 }
             } else if (previous.type === 'sell') {
                 if ((now - previous.time) >= ttime) {
                     is_sell = true;
-                    pseudo_Buy = true;
                 } else {
                     is_sell = false;
                 }
@@ -6428,19 +6381,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pAmount !== 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
-                if (pseudo_Buy) {
-                    if (nowSP < nowBP) {
-                        nowSP = nowBP;
-                        pseudo_Buy = true;
-                    } else {
-                        pseudo_Buy = false;
-                    }
-                    if (sP < bP) {
-                        sP = bP;
-                    }
-                }
-            } else {
-                pseudo_Buy = false;
             }
         }
         if (previous.price < price) {
@@ -6469,16 +6409,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
-                    if ((now - previous.time) >= (ttime + 12 + (previousP - nowSP) * tinterval)) {
-                        pseudo_Sell = true;
-                    }
                 } else {
                     is_sell = false;
                 }
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
-                    pseudo_Sell = true;
                 } else {
                     is_buy = false;
                 }
@@ -6498,19 +6434,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (pCount !== 0 || bP < 5) {
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
-                if (pseudo_Sell) {
-                    if (nowBP > nowSP) {
-                        nowBP = nowSP;
-                        pseudo_Sell = true;
-                    } else {
-                        pseudo_Sell = false;
-                    }
-                    if (bP > sP) {
-                        bP = sP;
-                    }
-                }
-            } else {
-                pseudo_Sell = false;
             }
         }
         //if (pType === 0 && previous.buy && previous.sell) {
@@ -6562,12 +6485,17 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (sCount === 0 && (pRemain < (1 / 8) || (!sType && pAmount < price))) {
             sCount = sTimes * priceTimes;
         }
-        if (sCount > (sTimes * priceTimes) && pRemain > (3 / 4)) {
+        if (sCount > 0 && pRemain > (7 / 8)) {
             if (!pPricecost || sell >= pPricecost) {
-                sCount = sTimes * priceTimes;
+                //sCount = sTimes * priceTimes;
             } else {
                 sCount = 0;
+                sell = 0;
             }
+        }
+        if (pCount === 0) {
+            sCount = 0;
+            sell = 0;
         }
         /*if (pAmount && sCount) {
             const remain = pCount - sCount;
@@ -6584,15 +6512,21 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (bCount === 0 && pRemain > (7 / 8)) {
             bCount = bTimes * priceTimes;
         }
-        if (bCount > (bTimes * priceTimes) && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
+        if (bCount > 0 && (pRemain < (1 / 8) || (!sType && pAmount < price))) {
             if (!pPricecost || pPricecost < (buy * 0.75) || buy <= pPricecost) {
-                bCount = bTimes * priceTimes;
+                //bCount = bTimes * priceTimes;
             } else {
                 bCount = 0;
+                buy = 0;
             }
         }
         if (pAmount === 0) {
             bCount = 0;
+            buy = 0;
+        }
+        if ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price))) {
+            bCount = 0;
+            buy = 0;
         }
         /*if (pAmount && bCount) {
             const nowC = Math.floor(pAmount / buy)
@@ -6774,8 +6708,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         type,
         bCount,
         sCount,
-        pSell: pseudo_Sell ? Math.abs(priceArray[nowSP]) : 0,
-        pBuy: pseudo_Buy ? Math.abs(priceArray[nowBP]) : 0,
     };
 }
 
@@ -7022,11 +6954,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     //}
                 }
             }
-            if (suggest.pBuy) {
-                newPrevious('buy', suggest.pBuy, now - (i * tinterval));
-            } else if (suggest.pSell) {
-                newPrevious('sell', suggest.pSell, now - (i * tinterval));
-            }
             /*if (suggest.type === 1) {
                 amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
                 if (count > 0) {
@@ -7055,6 +6982,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             } else*/ if (suggest.type === 7) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
                     const origCount = count;
+                    if (suggest.bCount === 0 && suggest.buy) {
+                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                    }
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
                             break;
@@ -7079,6 +7009,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
             } else if (suggest.type === 3) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                    if (suggest.bCount === 0 && suggest.buy) {
+                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                    }
                     const origCount = count;
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
@@ -7105,6 +7038,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             } else if (suggest.type === 6) {
                 if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
                     const origCount = count;
+                    if (suggest.bCount === 0 && suggest.buy) {
+                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                    }
                     for (let j = 0; j < suggest.bCount; j++) {
                         if ((amount - suggest.buy) <= 0) {
                             break;
@@ -7129,6 +7065,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
             } else if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
                 const origCount = count;
+                if (suggest.bCount === 0 && suggest.buy) {
+                    newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                }
                 for (let j = 0; j < suggest.bCount; j++) {
                     if ((amount - suggest.buy) <= 0) {
                         break;
