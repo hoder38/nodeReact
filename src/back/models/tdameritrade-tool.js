@@ -508,6 +508,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
                 order = [];
                 const usseSuggestion = getSuggestionData('usse');
+                console.log('fakeOrder');
+                console.log(fakeOrder);
                 fakeOrder.forEach(o => {
                     if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;

@@ -1396,6 +1396,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     });
                 }
             }
+            console.log('fakeOrder');
+            console.log(fakeOrder);
             const checkFakeOrder = index => {
                 if (current.isTrade && fakeOrder[id][current.type]) {
                     if (index >= fakeOrder[id][current.type].length) {

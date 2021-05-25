@@ -31,6 +31,8 @@ export const twseShioajiInit = () => {
                 //console.log(order);
                 //console.log(position);
                 const twseSuggestion = getSuggestionData('twse');
+                console.log('fakeOrder');
+                console.log(fakeOrder);
                 fakeOrder.forEach(o => {
                     if (!o.done && o.type === 'buy' && twseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
