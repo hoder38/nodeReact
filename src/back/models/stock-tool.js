@@ -6399,7 +6399,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
-                    if ((now - previous.time) >= (ttime + 12 + (nowBP - previousP) * tinterval)) {
+                    if ((now - previous.time) >= (ttime + (nowBP - previousP + 12) * tinterval)) {
                         pseudo_Buy = true;
                     }
                 } else {
