@@ -913,6 +913,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     price: suggestion.buy,
                                     symbol: item.index,
                                 });
+                                return recur_NewOrder(index + 1);
                             } else {
                                 return recur_NewOrder(index + 1);
                             }
@@ -939,6 +940,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             price: suggestion.sell,
                             symbol: item.index,
                         });
+                        return submitBuy();
                     } else {
                         return submitBuy();
                     }
