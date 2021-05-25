@@ -1905,7 +1905,14 @@ const getBasicStockData = (type, index) => {
         const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-            const mn = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
+            const ds = findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div');
+            let mn = null;
+            for (let i = 0; i < ds.length; i++) {
+                if (findTag(ds[i], 'div')[0].attribs.id.includes('QuoteHeader')) {
+                    mn = findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
+                    break;
+                }
+            }
             const name = findTag(findTag(findTag(mn, 'div')[0], 'h1')[0])[0];
             result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
             result.stock_name = [result.stock_full];
