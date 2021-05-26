@@ -31,10 +31,10 @@ export const twseShioajiInit = () => {
                 //console.log(order);
                 //console.log(position);
                 const twseSuggestion = getSuggestionData('twse');
-                console.log('fakeOrder');
+                console.log('fakeOrder shioaji');
                 console.log(fakeOrder);
                 fakeOrder.forEach(o => {
-                    if (!o.done && o.type === 'buy' && twseSuggestion[o.symbol].price <= o.price) {
+                    if (!o.done && o.type === 'buy' && twseSuggestion[o.symbol].price && twseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
                         console.log('fake order close');
                         ret.fill_order.push({
@@ -45,7 +45,7 @@ export const twseShioajiInit = () => {
                             type: 'Buy',
                             fake: true,
                         });
-                    } else if (!o.done && o.type === 'sell' && twseSuggestion[o.symbol].price >= o.price) {
+                    } else if (!o.done && o.type === 'sell' && twseSuggestion[o.symbol].price && twseSuggestion[o.symbol].price >= o.price) {
                         o.done = true;
                         console.log('fake order close');
                         ret.fill_order.push({

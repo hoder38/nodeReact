@@ -1404,7 +1404,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return Promise.resolve();
                     } else {
                         const o = fakeOrder[id][current.type][index];
-                        if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice <= o.price) {
+                        if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice <= o.price) {
                             return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
                                 console.log('fake order close');
                                 console.log(items);
@@ -1417,7 +1417,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return checkFakeOrder(index + 1);
                                 });
                             });
-                        } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice >= o.price) {
+                        } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice >= o.price) {
                             return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
                                 console.log('fake order close');
                                 console.log(items);
