@@ -6224,7 +6224,8 @@ export const getStockListV2 = (type, year, month) => {
                     if (!con) {
                         con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid maxWidth')[0];
                     }
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(con, 'div', 'row')[2], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    let row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
+                    findTag(findTag(findTag(findTag(findTag(findTag(row, 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                         const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
                         const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                         let is_exit = false;
