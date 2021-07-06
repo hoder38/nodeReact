@@ -738,8 +738,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         if (!o.fake && lastP.length > 0) {
                                             let pp = 0;
                                             let cp = 0;
+                                            let pa = 0;
+                                            let peq = false;
                                             for (let i = 0; i < lastP.length; i++) {
                                                 if (lastP[i].symbol === item.index) {
+                                                    pa = lastP[i].amount;
                                                     pp = lastP[i].amount * lastP[i].price;
                                                     break;
                                                 }
@@ -747,13 +750,18 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             if (pp !== 0) {
                                                 for (let i = 0; i < position.length; i++) {
                                                     if (position[i].symbol === item.index) {
+                                                        if (pa === position[i].amount) {
+                                                            peq = true;
+                                                        }
                                                         cp = position[i].amount * position[i].price;
                                                         break;
                                                     }
                                                 }
                                                 console.log(pp);
                                                 console.log(cp);
-                                                profit = this_profit * (1 - USSE_FEE) - pp + cp;
+                                                if (!peq) {
+                                                    profit = this_profit * (1 - USSE_FEE) - pp + cp;
+                                                }
                                                 console.log(profit);
                                             }
                                         }

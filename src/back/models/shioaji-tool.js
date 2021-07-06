@@ -142,8 +142,11 @@ export const twseShioajiInit = () => {
                                 if (!o.fake && ret.position.length > 0) {
                                     let pp = 0;
                                     let cp = 0;
+                                    let pa = 0;
+                                    let peq = false;
                                     for (let i = 0; i < ret.position.length; i++) {
                                         if (ret.position[i].symbol === item.index) {
+                                            pa = ret.position[i].amount;
                                             pp = ret.position[i].amount * ret.position[i].price;
                                             break;
                                         }
@@ -151,13 +154,18 @@ export const twseShioajiInit = () => {
                                     if (pp !== 0) {
                                         for (let i = 0; i < position.length; i++) {
                                             if (position[i].symbol === item.index) {
+                                                if (pa === position[i].amount) {
+                                                    peq = true;
+                                                }
                                                 cp = position[i].amount * position[i].price;
                                                 break;
                                             }
                                         }
                                         console.log(pp);
                                         console.log(cp);
-                                        profit = o.profit * (1 - TRADE_FEE) - pp + cp;
+                                        if (!peq) {
+                                            profit = o.profit * (1 - TRADE_FEE) - pp + cp;
+                                        }
                                         console.log(profit);
                                     }
                                 }
