@@ -1769,79 +1769,83 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 //console.log(suggestion);
                                 let count = 0;
                                 let amount = clearP ? 0 : item.amount;
-                                if (suggestion.type === 7) {
-                                    if (amount > item.orig * 7 / 8) {
-                                        let tmpAmount = amount - item.orig * 3 / 4;
-                                        while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                            amount -= (suggestion.buy * item.times);
-                                            tmpAmount = amount - item.orig * 3 / 4;
-                                            count++;
+                                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+                                    if (suggestion.type === 7) {
+                                        if (amount > item.orig * 7 / 8) {
+                                            let tmpAmount = amount - item.orig * 3 / 4;
+                                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                                amount -= (suggestion.buy * item.times);
+                                                tmpAmount = amount - item.orig * 3 / 4;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.bCount) {
+                                                suggestion.bCount = count * item.times;
+                                            }
                                         }
-                                        if (count * item.times > suggestion.bCount) {
-                                            suggestion.bCount = count * item.times;
+                                    } else if (suggestion.type === 3) {
+                                        if (amount > item.orig * 5 / 8) {
+                                            let tmpAmount = amount - item.orig / 2;
+                                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                                amount -= (suggestion.buy * item.times);
+                                                tmpAmount = amount - item.orig / 2;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.bCount) {
+                                                suggestion.bCount = count * item.times;
+                                            }
                                         }
-                                    }
-                                } else if (suggestion.type === 3) {
-                                    if (amount > item.orig * 5 / 8) {
-                                        let tmpAmount = amount - item.orig / 2;
-                                        while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                            amount -= (suggestion.buy * item.times);
-                                            tmpAmount = amount - item.orig / 2;
-                                            count++;
-                                        }
-                                        if (count * item.times > suggestion.bCount) {
-                                            suggestion.bCount = count * item.times;
-                                        }
-                                    }
-                                } else if (suggestion.type === 6) {
-                                    if (amount > item.orig * 3 / 8) {
-                                        let tmpAmount = amount - item.orig / 4;
-                                        while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                            amount -= (suggestion.buy * item.times);
-                                            tmpAmount = amount - item.orig / 4;
-                                            count++;
-                                        }
-                                        if (count * item.times > suggestion.bCount) {
-                                            suggestion.bCount = count * item.times;
+                                    } else if (suggestion.type === 6) {
+                                        if (amount > item.orig * 3 / 8) {
+                                            let tmpAmount = amount - item.orig / 4;
+                                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                                amount -= (suggestion.buy * item.times);
+                                                tmpAmount = amount - item.orig / 4;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.bCount) {
+                                                suggestion.bCount = count * item.times;
+                                            }
                                         }
                                     }
                                 }
                                 count = 0;
                                 amount = item.amount;
-                                if (suggestion.type === 9) {
-                                    if (amount < item.orig / 8) {
-                                        let tmpAmount = item.orig / 4 - amount;
-                                        while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                            amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                            tmpAmount = item.orig / 4 - amount;
-                                            count++;
+                                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+                                    if (suggestion.type === 9) {
+                                        if (amount < item.orig / 8) {
+                                            let tmpAmount = item.orig / 4 - amount;
+                                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                                tmpAmount = item.orig / 4 - amount;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.sCount) {
+                                                suggestion.sCount = count * item.times;
+                                            }
                                         }
-                                        if (count * item.times > suggestion.sCount) {
-                                            suggestion.sCount = count * item.times;
+                                    } else if (suggestion.type === 5) {
+                                        if (amount < item.orig * 3 / 8) {
+                                            let tmpAmount = item.orig / 2 - amount;
+                                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                                tmpAmount = item.orig / 2 - amount;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.sCount) {
+                                                suggestion.sCount = count * item.times;
+                                            }
                                         }
-                                    }
-                                } else if (suggestion.type === 5) {
-                                    if (amount < item.orig * 3 / 8) {
-                                        let tmpAmount = item.orig / 2 - amount;
-                                        while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                            amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                            tmpAmount = item.orig / 2 - amount;
-                                            count++;
-                                        }
-                                        if (count * item.times > suggestion.sCount) {
-                                            suggestion.sCount = count * item.times;
-                                        }
-                                    }
-                                } else if (suggestion.type === 8) {
-                                    if (amount < item.orig * 5 / 8) {
-                                        let tmpAmount = item.orig * 3 / 4 - amount;
-                                        while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                            amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                            tmpAmount = item.orig * 3 / 4 - amount;
-                                            count++;
-                                        }
-                                        if (count * item.times > suggestion.sCount) {
-                                            suggestion.sCount = count * item.times;
+                                    } else if (suggestion.type === 8) {
+                                        if (amount < item.orig * 5 / 8) {
+                                            let tmpAmount = item.orig * 3 / 4 - amount;
+                                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                                tmpAmount = item.orig * 3 / 4 - amount;
+                                                count++;
+                                            }
+                                            if (count * item.times > suggestion.sCount) {
+                                                suggestion.sCount = count * item.times;
+                                            }
                                         }
                                     }
                                 }

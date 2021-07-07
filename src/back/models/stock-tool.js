@@ -5936,98 +5936,102 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 let count = 0;
                 //let amount = item.amount;
                 let amount = item.clear ? 0 : item.amount;
-                if (suggestion.type === 7) {
-                    if (amount > item.orig * 7 / 8) {
-                        let tmpAmount = amount - item.orig * 3 / 4;
-                        while ((tmpAmount - suggestion.buy) > 0) {
-                            amount -= suggestion.buy;
-                            tmpAmount = amount - item.orig * 3 / 4;
-                            count++;
+                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+                    if (suggestion.type === 7) {
+                        if (amount > item.orig * 7 / 8) {
+                            let tmpAmount = amount - item.orig * 3 / 4;
+                            while ((tmpAmount - suggestion.buy) > 0) {
+                                amount -= suggestion.buy;
+                                tmpAmount = amount - item.orig * 3 / 4;
+                                count++;
+                            }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
+                            }
+                            suggestion.str += `[new buy ${count}] `;
+                        } else {
+                            suggestion.str += '[new buy no need] ';
                         }
-                        if (count > suggestion.bCount) {
-                            suggestion.bCount = count;
+                    } else if (suggestion.type === 3) {
+                        if (amount > item.orig * 5 / 8) {
+                            let tmpAmount = amount - item.orig / 2;
+                            while ((tmpAmount - suggestion.buy) > 0) {
+                                amount -= suggestion.buy;
+                                tmpAmount = amount - item.orig / 2;
+                                count++;
+                            }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
+                            }
+                            suggestion.str += `[new buy ${count}] `;
+                        } else {
+                            suggestion.str += '[new buy no need] ';
                         }
-                        suggestion.str += `[new buy ${count}] `;
-                    } else {
-                        suggestion.str += '[new buy no need] ';
-                    }
-                } else if (suggestion.type === 3) {
-                    if (amount > item.orig * 5 / 8) {
-                        let tmpAmount = amount - item.orig / 2;
-                        while ((tmpAmount - suggestion.buy) > 0) {
-                            amount -= suggestion.buy;
-                            tmpAmount = amount - item.orig / 2;
-                            count++;
+                    } else if (suggestion.type === 6) {
+                        if (amount > item.orig * 3 / 8) {
+                            let tmpAmount = amount - item.orig / 4;
+                            while ((tmpAmount - suggestion.buy) > 0) {
+                                amount -= suggestion.buy;
+                                tmpAmount = amount - item.orig / 4;
+                                count++;
+                            }
+                            if (count > suggestion.bCount) {
+                                suggestion.bCount = count;
+                            }
+                            suggestion.str += `[new buy ${count}] `;
+                        } else {
+                            suggestion.str += '[new buy no need] ';
                         }
-                        if (count > suggestion.bCount) {
-                            suggestion.bCount = count;
-                        }
-                        suggestion.str += `[new buy ${count}] `;
-                    } else {
-                        suggestion.str += '[new buy no need] ';
-                    }
-                } else if (suggestion.type === 6) {
-                    if (amount > item.orig * 3 / 8) {
-                        let tmpAmount = amount - item.orig / 4;
-                        while ((tmpAmount - suggestion.buy) > 0) {
-                            amount -= suggestion.buy;
-                            tmpAmount = amount - item.orig / 4;
-                            count++;
-                        }
-                        if (count > suggestion.bCount) {
-                            suggestion.bCount = count;
-                        }
-                        suggestion.str += `[new buy ${count}] `;
-                    } else {
-                        suggestion.str += '[new buy no need] ';
                     }
                 }
                 count = 0;
                 amount = item.amount;
-                if (suggestion.type === 9) {
-                    if (amount < item.orig / 8) {
-                        let tmpAmount = item.orig / 4 - amount;
-                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                            amount += (suggestion.sell * (1 - fee));
-                            tmpAmount = item.orig / 4 - amount;
-                            count++;
+                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+                    if (suggestion.type === 9) {
+                        if (amount < item.orig / 8) {
+                            let tmpAmount = item.orig / 4 - amount;
+                            while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                amount += (suggestion.sell * (1 - fee));
+                                tmpAmount = item.orig / 4 - amount;
+                                count++;
+                            }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
+                            }
+                            suggestion.str += `[new sell ${count}] `;
+                        } else {
+                            suggestion.str += '[new sell no need] ';
                         }
-                        if (count > suggestion.sCount) {
-                            suggestion.sCount = count;
+                    } else if (suggestion.type === 5) {
+                        if (amount < item.orig * 3 / 8) {
+                            let tmpAmount = item.orig / 2 - amount;
+                            while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                amount += (suggestion.sell * (1 - fee));
+                                tmpAmount = item.orig / 2 - amount;
+                                count++;
+                            }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
+                            }
+                            suggestion.str += `[new sell ${count}] `;
+                        } else {
+                            suggestion.str += '[new sell no need] ';
                         }
-                        suggestion.str += `[new sell ${count}] `;
-                    } else {
-                        suggestion.str += '[new sell no need] ';
-                    }
-                } else if (suggestion.type === 5) {
-                    if (amount < item.orig * 3 / 8) {
-                        let tmpAmount = item.orig / 2 - amount;
-                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                            amount += (suggestion.sell * (1 - fee));
-                            tmpAmount = item.orig / 2 - amount;
-                            count++;
+                    } else if (suggestion.type === 8) {
+                        if (amount < item.orig * 5 / 8) {
+                            let tmpAmount = item.orig * 3 / 4 - amount;
+                            while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                amount += (suggestion.sell * (1 - fee));
+                                tmpAmount = item.orig * 3 / 4 - amount;
+                                count++;
+                            }
+                            if (count > suggestion.sCount) {
+                                suggestion.sCount = count;
+                            }
+                            suggestion.str += `[new sell ${count}] `;
+                        } else {
+                            suggestion.str += '[new sell no need] ';
                         }
-                        if (count > suggestion.sCount) {
-                            suggestion.sCount = count;
-                        }
-                        suggestion.str += `[new sell ${count}] `;
-                    } else {
-                        suggestion.str += '[new sell no need] ';
-                    }
-                } else if (suggestion.type === 8) {
-                    if (amount < item.orig * 5 / 8) {
-                        let tmpAmount = item.orig * 3 / 4 - amount;
-                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                            amount += (suggestion.sell * (1 - fee));
-                            tmpAmount = item.orig * 3 / 4 - amount;
-                            count++;
-                        }
-                        if (count > suggestion.sCount) {
-                            suggestion.sCount = count;
-                        }
-                        suggestion.str += `[new sell ${count}] `;
-                    } else {
-                        suggestion.str += '[new sell no need] ';
                     }
                 }
                 console.log(suggestion.str);
@@ -6954,33 +6958,117 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     //}
                 }
             }
-            /*if (suggest.type === 1) {
-                amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
-                if (count > 0) {
-                    stopLoss++;
-                }
-                count = 0;
-                priviousTrade = {
-                    price: his_arr[i - 1].l,
-                    time: now - (i * 86400) + 3600,
-                    type: 'sell',
-                }
-            }*/
-            /*if (suggest.type === 2) {
-                if (suggest.buy && (his_arr[i - 1].h <= suggest.buy)) {
-                    while ((amount - suggest.buy) > 0) {
-                        amount -= suggest.buy;
-                        count++;
-                        priviousTrade = {
-                            price: suggest.buy,
-                            time: now - (i * 86400) + 3600,
-                            type: 'buy',
-                        }
-                        buyTrade++;
+            if (newMid.length <= 0 || newMid[newMid.length - 1] <= web.mid) {
+                /*if (suggest.type === 1) {
+                    amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
+                    if (count > 0) {
+                        stopLoss++;
                     }
-                }
-            } else*/ if (suggest.type === 7) {
-                if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                    count = 0;
+                    priviousTrade = {
+                        price: his_arr[i - 1].l,
+                        time: now - (i * 86400) + 3600,
+                        type: 'sell',
+                    }
+                }*/
+                /*if (suggest.type === 2) {
+                    if (suggest.buy && (his_arr[i - 1].h <= suggest.buy)) {
+                        while ((amount - suggest.buy) > 0) {
+                            amount -= suggest.buy;
+                            count++;
+                            priviousTrade = {
+                                price: suggest.buy,
+                                time: now - (i * 86400) + 3600,
+                                type: 'buy',
+                            }
+                            buyTrade++;
+                        }
+                    }
+                } else*/ if (suggest.type === 7) {
+                    if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                        const origCount = count;
+                        if (suggest.bCount === 0 && suggest.buy) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                        for (let j = 0; j < suggest.bCount; j++) {
+                            if ((amount - suggest.buy) <= 0) {
+                                break;
+                            } else {
+                                amount -= suggest.buy;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (amount > maxAmount * 7 / 8) {
+                            let tmpAmount = amount - maxAmount * 3 / 4;
+                            while ((tmpAmount - suggest.buy) > 0) {
+                                amount -= suggest.buy;
+                                tmpAmount = amount - maxAmount * 3 / 4;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (count > origCount) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                    }
+                } else if (suggest.type === 3) {
+                    if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                        if (suggest.bCount === 0 && suggest.buy) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                        const origCount = count;
+                        for (let j = 0; j < suggest.bCount; j++) {
+                            if ((amount - suggest.buy) <= 0) {
+                                break;
+                            } else {
+                                amount -= suggest.buy;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (amount > maxAmount * 5 / 8) {
+                            let tmpAmount = amount - maxAmount / 2;
+                            while ((tmpAmount - suggest.buy) > 0) {
+                                amount -= suggest.buy;
+                                tmpAmount = amount - maxAmount / 2;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (count > origCount) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                    }
+                } else if (suggest.type === 6) {
+                    if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
+                        const origCount = count;
+                        if (suggest.bCount === 0 && suggest.buy) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                        for (let j = 0; j < suggest.bCount; j++) {
+                            if ((amount - suggest.buy) <= 0) {
+                                break;
+                            } else {
+                                amount -= suggest.buy;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (amount > maxAmount * 3 / 8) {
+                            let tmpAmount = amount - maxAmount / 4;
+                            while ((tmpAmount - suggest.buy) > 0) {
+                                amount -= suggest.buy;
+                                tmpAmount = amount - maxAmount / 4;
+                                count++;
+                                buyTrade++;
+                            }
+                        }
+                        if (count > origCount) {
+                            newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
+                        }
+                    }
+                } else if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
                     const origCount = count;
                     if (suggest.bCount === 0 && suggest.buy) {
                         newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
@@ -6990,71 +7078,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                             break;
                         } else {
                             amount -= suggest.buy;
-                            count++;
-                            buyTrade++;
-                        }
-                    }
-                    if (amount > maxAmount * 7 / 8) {
-                        let tmpAmount = amount - maxAmount * 3 / 4;
-                        while ((tmpAmount - suggest.buy) > 0) {
-                            amount -= suggest.buy;
-                            tmpAmount = amount - maxAmount * 3 / 4;
-                            count++;
-                            buyTrade++;
-                        }
-                    }
-                    if (count > origCount) {
-                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                    }
-                }
-            } else if (suggest.type === 3) {
-                if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                    if (suggest.bCount === 0 && suggest.buy) {
-                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                    }
-                    const origCount = count;
-                    for (let j = 0; j < suggest.bCount; j++) {
-                        if ((amount - suggest.buy) <= 0) {
-                            break;
-                        } else {
-                            amount -= suggest.buy;
-                            count++;
-                            buyTrade++;
-                        }
-                    }
-                    if (amount > maxAmount * 5 / 8) {
-                        let tmpAmount = amount - maxAmount / 2;
-                        while ((tmpAmount - suggest.buy) > 0) {
-                            amount -= suggest.buy;
-                            tmpAmount = amount - maxAmount / 2;
-                            count++;
-                            buyTrade++;
-                        }
-                    }
-                    if (count > origCount) {
-                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                    }
-                }
-            } else if (suggest.type === 6) {
-                if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                    const origCount = count;
-                    if (suggest.bCount === 0 && suggest.buy) {
-                        newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                    }
-                    for (let j = 0; j < suggest.bCount; j++) {
-                        if ((amount - suggest.buy) <= 0) {
-                            break;
-                        } else {
-                            amount -= suggest.buy;
-                            count++;
-                            buyTrade++;
-                        }
-                    }
-                    if (amount > maxAmount * 3 / 8) {
-                        let tmpAmount = amount - maxAmount / 4;
-                        while ((tmpAmount - suggest.buy) > 0) {
-                            amount -= suggest.buy;
-                            tmpAmount = amount - maxAmount / 4;
                             count++;
                             buyTrade++;
                         }
@@ -7082,87 +7105,100 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
             }
 
-            /*if (suggest.type === 4) {
-                if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                    amount += (suggest.sell * count * (1 - TRADE_FEE));
-                    sellTrade = sellTrade + count;
-                    count = 0;
-                    priviousTrade = {
-                        price: suggest.sell,
-                        time: now - (i * 86400) + 3600,
-                        type: 'sell',
-                    }
-                }
-            } else */if (suggest.type === 9) {
-                if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                    for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - fee));
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+            if (newMid.length <= 0 || newMid[newMid.length - 1] >= web.mid) {
+                /*if (suggest.type === 4) {
+                    if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                        amount += (suggest.sell * count * (1 - TRADE_FEE));
+                        sellTrade = sellTrade + count;
+                        count = 0;
+                        priviousTrade = {
+                            price: suggest.sell,
+                            time: now - (i * 86400) + 3600,
+                            type: 'sell',
                         }
                     }
-                    if (amount < maxAmount / 8) {
-                        let tmpAmount = maxAmount / 4 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                } else */if (suggest.type === 9) {
+                    if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                        for (let j = 0; j < suggest.sCount; j++) {
                             amount += (suggest.sell * (1 - fee));
-                            tmpAmount = maxAmount / 4 - amount;
                             sellTrade++;
                             count--;
                             if (count <= 0) {
                                 break;
                             }
                         }
-                    }
-                    newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                    //console.log(priviousTrade.win);
-                }
-            } else if (suggest.type === 5) {
-                if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                    for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - fee));
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+                        if (amount < maxAmount / 8) {
+                            let tmpAmount = maxAmount / 4 - amount;
+                            while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                                amount += (suggest.sell * (1 - fee));
+                                tmpAmount = maxAmount / 4 - amount;
+                                sellTrade++;
+                                count--;
+                                if (count <= 0) {
+                                    break;
+                                }
+                            }
                         }
+                        newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
+                        //console.log(priviousTrade.win);
                     }
-                    if (amount < maxAmount * 3 / 8) {
-                        let tmpAmount = maxAmount / 2 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                } else if (suggest.type === 5) {
+                    if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                        for (let j = 0; j < suggest.sCount; j++) {
                             amount += (suggest.sell * (1 - fee));
-                            tmpAmount = maxAmount / 2 - amount;
                             sellTrade++;
                             count--;
                             if (count <= 0) {
                                 break;
                             }
                         }
-                    }
-                    newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                    //console.log(priviousTrade.win);
-                }
-            } else if (suggest.type === 8) {
-                if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                    for (let j = 0; j < suggest.sCount; j++) {
-                        amount += (suggest.sell * (1 - fee));
-                        sellTrade++;
-                        count--;
-                        if (count <= 0) {
-                            break;
+                        if (amount < maxAmount * 3 / 8) {
+                            let tmpAmount = maxAmount / 2 - amount;
+                            while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                                amount += (suggest.sell * (1 - fee));
+                                tmpAmount = maxAmount / 2 - amount;
+                                sellTrade++;
+                                count--;
+                                if (count <= 0) {
+                                    break;
+                                }
+                            }
                         }
+                        newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
+                        //console.log(priviousTrade.win);
                     }
-                    if (amount < maxAmount * 5 / 8) {
-                        let tmpAmount = maxAmount * 3 / 4 - amount;
-                        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                } else if (suggest.type === 8) {
+                    if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                        for (let j = 0; j < suggest.sCount; j++) {
                             amount += (suggest.sell * (1 - fee));
-                            tmpAmount = maxAmount * 3 / 4 - amount;
                             sellTrade++;
                             count--;
                             if (count <= 0) {
                                 break;
                             }
+                        }
+                        if (amount < maxAmount * 5 / 8) {
+                            let tmpAmount = maxAmount * 3 / 4 - amount;
+                            while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+                                amount += (suggest.sell * (1 - fee));
+                                tmpAmount = maxAmount * 3 / 4 - amount;
+                                sellTrade++;
+                                count--;
+                                if (count <= 0) {
+                                    break;
+                                }
+                            }
+                        }
+                        newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
+                        //console.log(priviousTrade.win);
+                    }
+                } else if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                    for (let j = 0; j < suggest.sCount; j++) {
+                        amount += (suggest.sell * (1 - fee));
+                        count--;
+                        sellTrade++;
+                        if (count <= 0) {
+                            break;
                         }
                     }
                     newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
