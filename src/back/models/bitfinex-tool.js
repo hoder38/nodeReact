@@ -1738,6 +1738,20 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return handleError(new HoError(`miss ${item.index}`));
                                 }
                                 item = nitem[0];
+                                item.count = 0;
+                                item.amount = item.orig;
+                                item.pricecost = 0;
+                                item.pl = 0;
+                                if (position[id][current.type]) {
+                                    position[id][current.type].forEach(v => {
+                                        if (v.symbol === item.index) {
+                                            item.count += v.amount;
+                                            item.amount = item.amount - v.amount * v.price;
+                                            item.pricecost = v.price;
+                                            item.pl = v.pl;
+                                        }
+                                    });
+                                }
                                 let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                                 while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && +priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= checkMid && +priceData[item.index].lastPrice > checkMid))) {
