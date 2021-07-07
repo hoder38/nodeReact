@@ -1676,7 +1676,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         });
                         return Promise.resolve();
                     } else {
-                        const item = items[index];
+                        let item = items[index];
                         margin[id][current.type][item.index] = item.profit;
                         console.log('margin');
                         console.log(margin[id]);
