@@ -6503,7 +6503,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
         if (pCount === 0) {
             sCount = 0;
-            sell = 0;
+            //sell = 0;
         }
         /*if (pAmount && sCount) {
             const remain = pCount - sCount;
