@@ -207,3 +207,7 @@ td ameritrade auth:
 每90天要更新一次token(前7天會提醒) 更新完要重開node
 sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/tdameritrade.js
 sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/tdameritrade.js
+
+http://slashview.com/archive2021/20210602.html
+hodervpn dandan123
+f436434g$F$dft346$@t
