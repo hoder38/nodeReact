@@ -768,15 +768,15 @@ export default {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+                const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'econ-content-container')[0], 'table', 'indicator-table')[0], 'tbody')[0], 'tr').forEach(r => {
-                    if (findTag(findTag(findTag(findTag(findTag(r, 'td', 'indicator_dates')[0], 'div')[0], 'p')[0], 'span')[0])[0] === docDate) {
-                        const div = findTag(findTag(r, 'td', 'indicator_data')[0], 'div')[0];
+                findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'section', 'container')[0], 'section')[0], 'article').forEach(r => {
+                    const mv = findTag(findTag(findTag(r, 'div', 'header')[0], 'h3')[0])[0].match(/([a-zA-Z]+ \d\d?)[a-zA-Z]+, (\d\d\d\d)/);
+                    if (mv && mv[1] === docDate && mv[2] === `${date.getFullYear()}`) {
                         list.push({
-                            url: addPre(findTag(findTag(div, 'p', 'supplemental_links')[0], 'a')[0].attribs.href, 'http://www.census.gov'),
-                            name: toValidName(findTag(findTag(findTag(div, 'h3')[0], 'a')[0])[0]),
+                            url: addPre(findTag(findTag(findTag(findTag(findTag(r, 'div', 'button')[0], 'div', 'dropdown')[0], 'div')[0], 'div', 'pdf')[0], 'a')[0].attribs.href, 'http://www.census.gov'),
+                            name: toValidName(findTag(findTag(findTag(findTag(r, 'div', 'header')[0], 'h2')[0], 'a')[0])[0]),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
                     }
