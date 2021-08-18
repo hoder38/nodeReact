@@ -55,9 +55,9 @@ now = datetime.datetime.now()
 
 if len(acc_settle) > 0 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
-        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000 - 100
+        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000
     else:
-        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 1000 - 100
+        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 1000
 else:
     current_cash = 'same'
 if len(sys.argv) == 3:
@@ -135,6 +135,7 @@ elif sys.argv[3] == 'submit':
                     sell = int(match.group(7))
                     sell_price = float(match.group(8))
             if buy > 0:
+                current_cash = current_cash - 100
                 if current_cash < buy_price * buy * (1 + fee):
                     buy = int(current_cash / (buy_price * (1 + fee)))
                 current_cash = current_cash - buy_price * buy * (1 + fee)

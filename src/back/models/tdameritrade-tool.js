@@ -492,8 +492,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                 //init book
                 if (result['securitiesAccount']['projectedBalances']) {
                     available = {
-                        tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'] - 300,
-                        cash: result['securitiesAccount']['currentBalances'].totalCash - 300,
+                        tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'],
+                        cash: result['securitiesAccount']['currentBalances'].totalCash,
                     }
                 }
                 const lastP = [...position];
@@ -896,7 +896,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     const submitBuy = () => {
                         return initialBook(true).then(() => {
                             console.log(available);
-                            const order_avail = (available.tradable > 1) ? available.tradable - 1 : 0;
+                            const order_avail = (available.tradable > 300) ? available.tradable - 300 : 0;
                             if (order_avail < suggestion.bCount * suggestion.buy) {
                                 suggestion.bCount = Math.floor(order_avail / suggestion.buy);
                             }
