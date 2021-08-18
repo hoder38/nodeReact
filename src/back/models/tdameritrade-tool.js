@@ -492,8 +492,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                 //init book
                 if (result['securitiesAccount']['projectedBalances']) {
                     available = {
-                        tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'],
-                        cash: result['securitiesAccount']['currentBalances'].totalCash,
+                        tradable: result['securitiesAccount']['projectedBalances']['cashAvailableForWithdrawal'] - 300,
+                        cash: result['securitiesAccount']['currentBalances'].totalCash - 300,
                     }
                 }
                 const lastP = [...position];
