@@ -33,7 +33,7 @@ export default {
     STOCK_FILTER: false,
     DB_BACKUP: false,
     CHECK_STOCK: false,
-    BITFINEX_FILTER: true,
+    BITFINEX_FILTER: false,
     API_LIMIT: 10,
     TORRENT_LIMIT: 5,
     MEGA_LIMIT: 1,
@@ -41,7 +41,7 @@ export default {
     //STOCK_DATE: [6, 21, 24, 25],
     //STOCK_MODE: 1,
     //3: xml重抓 2: xml重parse 1: parse tag
-    BITFINEX_LOAN: true,
+    BITFINEX_LOAN: false,
     USSE_TICKER: false,
     TWSE_TICKER: false,
 }
