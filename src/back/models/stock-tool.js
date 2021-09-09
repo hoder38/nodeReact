@@ -5898,7 +5898,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         //console.log(item.index);
                         if (twseOrder[i].symbol === item.index) {
                             const time = new Date(twseOrder[i].time * 1000);
-                            item.order.push(`${twseOrder[i].amount} ${twseOrder[i].type !== 'LMT' ? 'MARKET' : twseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
+                            item.order.push(`${twseOrder[i].amount} ${twseOrder[i].type.match(/^LMT/) ? 'MARKET' : twseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
                         }
                     }
                 }
