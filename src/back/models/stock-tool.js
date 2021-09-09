@@ -5933,8 +5933,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, 0, 0, item.wType, 0, fee);
                 }
-                suggestion.buy = suggestion.buy + item.bquantity + item.boddquantity;
-                suggestion.sell = suggestion.sell + item.squantity + item.soddquantity;
+                suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
+                suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
                 let count = 0;
                 //let amount = item.amount;
                 let amount = item.clear ? 0 : item.amount;
