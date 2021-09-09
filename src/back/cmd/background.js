@@ -350,8 +350,7 @@ export const twseInit = (startTime = 0) => {
         if (currentInitTwse) {
             return setO();
         } else {
-            //return new Promise((resolve, reject) => setTimeout(() => resolve(), 270000)).then(() => setO());
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => setO());
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 270000)).then(() => setO());
         }
     }
 }
@@ -367,7 +366,6 @@ export const checkTwseInit = () => {
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => cso());
         }
-        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => cso());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => cso());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 300000)).then(() => cso());
     }
 }
