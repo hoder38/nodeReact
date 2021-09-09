@@ -164,14 +164,32 @@ export const twseShioajiInit = () => {
                                         console.log(pp);
                                         console.log(cp);
                                         if (!peq) {
-                                            profit = o.profit * (1 - TRADE_FEE) - pp + cp;
+                                            const this_profit = o.profit.split('p').filter(i => i);
+                                            const this_time = o.ptime.split('t').filter(i => i);
+                                            is_insert = 0;
+                                            for (let i = this_profit.length - 1; i >= 0; i--) {
+                                                const p = Number(this_profit[i]);
+                                                const t = Number(this_ptime[i]);
+                                                for (let k = 0; k < item.previous.sell.length; k++) {
+                                                    if (item.previous.sell[k].time === t) {
+                                                        is_insert++;
+                                                        break;
+                                                    }
+                                                }
+                                                if (is_insert < 2) {
+                                                    profit = profit + p * (1 - TRADE_FEE)
+                                                } else {
+                                                    break;
+                                                }
+                                            }
+                                            profit = profit - pp + cp;
                                         }
                                         console.log(profit);
                                     }
                                 }
                             }
                             item.profit = item.profit ? item.profit + profit : profit;
-                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => fill_order_recur(index + 1));
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous, profit: item.profit}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
                         });
                     }
                 }

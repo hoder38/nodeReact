@@ -55,15 +55,15 @@ now = datetime.datetime.now()
 
 if len(acc_settle) > 0 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
-        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 1000
+        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 100
     else:
-        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 1000
+        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 100
 else:
     current_cash = 'same'
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:
-        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity) + ',\"price\":' + str(p.price) + '}')
+        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity*10) + ',\"price\":' + str(p.price) + '}')
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
@@ -71,19 +71,32 @@ if len(sys.argv) == 3:
         if o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted' or o.status.status == 'Filling':
             print(o)
             if o.order.action == 'Buy':
-                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + o.order.order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
             else :
-                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(-o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(-o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + o.order.price_type + o.order.order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
         if o.status.status == 'Filled' or o.status.status == 'Filling':
             price = 0
             time = 0
-            profit = 0
+            ptime = ''
+            profit = ''
+            quantity = 0
+            quantitystr = ''
             for d in o.status.deals:
                 price = d.price
                 time = d.ts
-                if o.status.status == 'Filled':
-                    profit = profit + d.price * d.quantity
-            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":' + str(profit) + ',\"price\":' + str(price) + ',\"type\":\"' + o.order.action + '\",\"time\":' + str(time) + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+                ptime = ptime + str(d.ts) + 't'
+                quantity = quantity + d.quantity
+                if o.order.order_lot == 'IntradayOdd':
+                    profit = profit + str(d.price * d.quantity / 100) + 'p'
+                else :
+                    profit = profit + str(d.price * d.quantity * 10) + 'p'
+            if o.order.order_lot == 'IntradayOdd':
+                quantity = (o.order.quantity - quantity) / 100
+                quantitystr = '\"oddquantity\":' + str(quantity)
+            else :
+                quantity = (o.order.quantity - quantity) * 10
+                quantitystr = '\"quantity\":' + str(quantity)
+            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + o.order.action + '\",\"time\":' + str(time) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
     print("start result")
@@ -105,7 +118,7 @@ elif sys.argv[3] == 'submit':
             person_id = sys.argv[1],
         )
     for o in acc_order:
-        if o.order.price_type == 'LMT' and (o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted'):
+        if o.order.price_type == 'LMT' and (o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted' or o.status.status == 'Filling'):
             api.cancel_order(o, timeout=10000)
     retryApi(lambda: api.update_status(timeout=10000))
     fee = float(sys.argv[6])
@@ -135,7 +148,7 @@ elif sys.argv[3] == 'submit':
                     sell = int(match.group(7))
                     sell_price = float(match.group(8))
             if buy > 0:
-                current_cash = current_cash - 100
+                current_cash = current_cash - 1000
                 if current_cash < buy_price * buy * (1 + fee):
                     buy = int(current_cash / (buy_price * (1 + fee)))
                 current_cash = current_cash - buy_price * buy * (1 + fee)
@@ -144,13 +157,23 @@ elif sys.argv[3] == 'submit':
                 print(current_cash)
                 if buy > 0:
                     order = api.Order(price=buy_price,
-                        quantity=buy,
+                        quantity=buy//10,
                         action="Buy",
                         price_type="LMT",
                         order_type="ROD",
                         account=api.stock_account
                         )
                     api.place_order(contract, order, timeout=10000)
+                    if buy%10 > 0:
+                        order = api.Order(price=buy_price,
+                            quantity=buy%10*100,
+                            action="Buy",
+                            price_type="LMT",
+                            order_type="ROD",
+                            order_lot="IntradayOdd",
+                            account=api.stock_account
+                            )
+                        api.place_order(contract, order, timeout=10000)
             if sell > 0:
                 q = 0
                 for p in acc_position:
@@ -164,13 +187,24 @@ elif sys.argv[3] == 'submit':
                 print(q)
                 if sell > 0:
                     order = api.Order(price=sell_price,
-                        quantity=sell,
+                        quantity=sell//10,
                         action="Sell",
                         price_type="LMT",
                         order_type="ROD",
                         account=api.stock_account
                         )
                     api.place_order(contract, order, timeout=10000)
+                    if sell%10 > 0:
+                        order = api.Order(price=sell_price,
+                            quantity=sell%10*100,
+                            action="Sell",
+                            price_type="LMT",
+                            order_type="ROD",
+                            order_lot="IntradayOdd",
+                            account=api.stock_account
+                            )
+                        api.place_order(contract, order, timeout=10000)
+
 elif sys.argv[3] == 'sellall':
     if simulation == False:
         fd = open(sys.argv[5],'r')

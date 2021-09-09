@@ -5114,7 +5114,7 @@ export default {
                             //cost: v.cost,
                             price: v.price,
                             mid: v.mid,
-                            count: v.count,
+                            count: (v.setype === 'usse') ? v.count : v.count / 10,
                             remain: Math.round(v.amount * 100) / 100,
                             profit: p,
                             //top: v.top,
@@ -5601,7 +5601,7 @@ export default {
                                 //cost: v.cost,
                                 price: v.price,
                                 mid: v.mid,
-                                count: v.count,
+                                count: (v.setype === 'usse') ? v.count : v.count / 10,
                                 remain: Math.round(v.amount * 100) / 100,
                                 profit: p,
                                 //top: v.top,
@@ -5933,6 +5933,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, 0, 0, item.wType, 0, fee);
                 }
+                suggestion.buy = suggestion.buy + item.bquantity + item.boddquantity;
+                suggestion.sell = suggestion.sell + item.squantity + item.soddquantity;
                 let count = 0;
                 //let amount = item.amount;
                 let amount = item.clear ? 0 : item.amount;

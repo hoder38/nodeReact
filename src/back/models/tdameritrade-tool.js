@@ -571,12 +571,16 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     let time = 0;
                                     //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
                                     //const price = o.orderActivityCollection[0].executionLegs[0].price;
-                                    let this_profit = 0;
+                                    let this_profit = [];
                                     let price = 0;
                                     o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
                                         time = Math.round(new Date(oace.time).getTime() / 1000);
-                                        this_profit = this_profit + oace.quantity * oace.price;
                                         price = oace.price;
+                                        this_profit.push({
+                                            time,
+                                            price,
+                                            profit: oace.quantity * oace.price,
+                                        });
                                     }));
                                     console.log(symbol);
                                     console.log(type);
@@ -642,8 +646,56 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             } else {
                                                 item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                             }
+                                            //calculate profit
+                                            console.log(lastP);
+                                            console.log(position);
+                                            if (lastP.length > 0) {
+                                                let pp = 0;
+                                                let cp = 0;
+                                                let pa = 0;
+                                                let peq = false;
+                                                for (let i = 0; i < lastP.length; i++) {
+                                                    if (lastP[i].symbol === item.index) {
+                                                        pa = lastP[i].amount;
+                                                        pp = lastP[i].amount * lastP[i].price;
+                                                        break;
+                                                    }
+                                                }
+                                                if (pp !== 0) {
+                                                    for (let i = 0; i < position.length; i++) {
+                                                        if (position[i].symbol === item.index) {
+                                                            if (pa === position[i].amount) {
+                                                                peq = true;
+                                                            }
+                                                            cp = position[i].amount * position[i].price;
+                                                            break;
+                                                        }
+                                                    }
+                                                    console.log(pp);
+                                                    console.log(cp);
+                                                    if (!peq) {
+                                                        is_insert = 0;
+                                                        for (let i = this_profit.length - 1; i >= 0; i--) {
+                                                            for (let k = 0; k < item.previous.sell.length; k++) {
+                                                                if (item.previous.sell[k].price === this_profit[i].price && item.previous.sell[k].time === this_profit[i].time) {
+                                                                    is_insert++;
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (is_insert < 2) {
+                                                                profit = profit + this_profit[i].profit * (1 - USSE_FEE)
+                                                            } else {
+                                                                break;
+                                                            }
+                                                        }
+                                                        profit = profit - pp + cp;
+                                                    }
+                                                    console.log(profit);
+                                                }
+                                            }
                                         }
-                                        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous}}).then(() => order_recur(index + 1));
+                                        item.profit = item.profit ? item.profit + profit : profit;
+                                        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(index + 1));
                                     });
                                 } else {
                                     return order_recur(index + 1);
@@ -659,13 +711,17 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 let time = o.fake ? o.time : 0;
                                 //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
                                 //const price = o.orderActivityCollection[0].executionLegs[0].price;
-                                let this_profit = 0;
+                                let this_profit = [];
                                 let price =  o.fake ? o.price : 0;
                                 if (!o.fake) {
                                     o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
                                         time = Math.round(new Date(oace.time).getTime() / 1000);
-                                        this_profit = this_profit + oace.quantity * oace.price;
                                         price = oace.price;
+                                        this_profit.push({
+                                            time,
+                                            price,
+                                            profit: oace.quantity * oace.price,
+                                        });
                                     }));
                                 }
                                 console.log(symbol);
@@ -760,7 +816,21 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                 console.log(pp);
                                                 console.log(cp);
                                                 if (!peq) {
-                                                    profit = this_profit * (1 - USSE_FEE) - pp + cp;
+                                                    is_insert = 0;
+                                                    for (let i = this_profit.length - 1; i >= 0; i--) {
+                                                        for (let k = 0; k < item.previous.sell.length; k++) {
+                                                            if (item.previous.sell[k].price === this_profit[i].price && item.previous.sell[k].time === this_profit[i].time) {
+                                                                is_insert++;
+                                                                break;
+                                                            }
+                                                        }
+                                                        if (is_insert < 2) {
+                                                            profit = profit + this_profit[i].profit * (1 - USSE_FEE)
+                                                        } else {
+                                                            break;
+                                                        }
+                                                    }
+                                                    profit = profit - pp + cp;
                                                 }
                                                 console.log(profit);
                                             }
