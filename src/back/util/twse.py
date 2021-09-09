@@ -91,7 +91,7 @@ if len(sys.argv) == 3:
                 else :
                     profit = profit + str(d.price * d.quantity * 10) + 'p'
             if o.order.order_lot == 'IntradayOdd':
-                quantity = (o.order.quantity - quantity) / 100
+                quantity = (o.order.quantity - quantity) // 100
                 quantitystr = '\"oddquantity\":' + str(quantity)
             else :
                 quantity = (o.order.quantity - quantity) * 10
