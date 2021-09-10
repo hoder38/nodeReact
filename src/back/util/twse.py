@@ -162,6 +162,7 @@ elif sys.argv[3] == 'submit':
                             action="Buy",
                             price_type="LMT",
                             order_type="ROD",
+                            order_lot="Common",
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
@@ -193,6 +194,7 @@ elif sys.argv[3] == 'submit':
                             action="Sell",
                             price_type="LMT",
                             order_type="ROD",
+                            order_lot="Common",
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
