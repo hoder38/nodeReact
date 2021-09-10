@@ -122,6 +122,7 @@ elif sys.argv[3] == 'submit':
             api.cancel_order(o, timeout=10000)
     retryApi(lambda: api.update_status(timeout=10000))
     fee = float(sys.argv[6])
+    current_cash = current_cash - 1000
     for a in sys.argv:
         p = re.compile(r'^(.+)\=(buy|sell)(\d+)\=(\d+\.?\d*)((buy|sell)(\d+)\=(\d+\.?\d*))?$')
         match = re.match(p, a)
@@ -148,7 +149,6 @@ elif sys.argv[3] == 'submit':
                     sell = int(match.group(7))
                     sell_price = float(match.group(8))
             if buy > 0:
-                current_cash = current_cash - 1000
                 if current_cash < buy_price * buy * (1 + fee):
                     buy = int(current_cash / (buy_price * (1 + fee)))
                 current_cash = current_cash - buy_price * buy * (1 + fee)

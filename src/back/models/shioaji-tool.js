@@ -345,7 +345,7 @@ const submitShioajiOrder = (submitList, simulation = true) => {
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
     submitList.forEach(s => {
         list = `${list} ${s.item.index}=`;
-        if (s.suggestion.bCount) {
+        if (s.suggestion.bCount && s.suggestion.buy) {
             list = `${list}buy${s.suggestion.bCount}=${s.suggestion.buy}`;
         } else if (s.suggestion.buy) {
             fakeOrder.push({
@@ -355,7 +355,7 @@ const submitShioajiOrder = (submitList, simulation = true) => {
                 symbol: s.item.index,
             });
         }
-        if (s.suggestion.sCount) {
+        if (s.suggestion.sCount && s.suggestion.sell) {
             list = `${list}sell${s.suggestion.sCount}=${s.suggestion.sell}`;
         } else if (s.suggestion.sell) {
             fakeOrder.push({
