@@ -1881,7 +1881,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     suggestion.sCount = item.count;
                                 }
                                 if (item.amount < suggestion.bCount * suggestion.buy) {
-                                    suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                    suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                                 }
                                 return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                                     newMid: item.newMid,
