@@ -180,7 +180,7 @@ elif sys.argv[3] == 'submit':
                 q = 0
                 for p in acc_position:
                     if p.code == match.group(1):
-                        q = int(p.quantity)
+                        q = int(p.quantity * 10)
                         break
                 if q < sell:
                     sell = q
