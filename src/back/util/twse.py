@@ -156,7 +156,7 @@ elif sys.argv[3] == 'submit':
                 print(buy_price)
                 print(current_cash)
                 if buy > 0:
-                    if buy//10 > 0
+                    if (buy//10) > 0
                         order = api.Order(price=buy_price,
                             quantity=buy//10,
                             action="Buy",
@@ -165,7 +165,7 @@ elif sys.argv[3] == 'submit':
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
-                    if buy%10 > 0:
+                    if (buy%10) > 0:
                         order = api.Order(price=buy_price,
                             quantity=buy%10*100,
                             action="Buy",
@@ -187,7 +187,7 @@ elif sys.argv[3] == 'submit':
                 print(sell_price)
                 print(q)
                 if sell > 0:
-                    if sell//10 > 0:
+                    if (sell//10) > 0:
                         order = api.Order(price=sell_price,
                             quantity=sell//10,
                             action="Sell",
@@ -196,7 +196,7 @@ elif sys.argv[3] == 'submit':
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
-                    if sell%10 > 0:
+                    if (sell%10) > 0:
                         order = api.Order(price=sell_price,
                             quantity=sell%10*100,
                             action="Sell",
