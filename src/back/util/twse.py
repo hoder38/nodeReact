@@ -148,7 +148,7 @@ elif sys.argv[3] == 'submit':
                 else:
                     sell = int(match.group(7))
                     sell_price = float(match.group(8))
-            if buy > 0:
+            if buy > 0 and buy_price != 0:
                 if current_cash < buy_price * buy * (1 + fee):
                     buy = int(current_cash / (buy_price * (1 + fee)))
                 current_cash = current_cash - buy_price * buy * (1 + fee)
@@ -156,14 +156,15 @@ elif sys.argv[3] == 'submit':
                 print(buy_price)
                 print(current_cash)
                 if buy > 0:
-                    order = api.Order(price=buy_price,
-                        quantity=buy//10,
-                        action="Buy",
-                        price_type="LMT",
-                        order_type="ROD",
-                        account=api.stock_account
-                        )
-                    api.place_order(contract, order, timeout=10000)
+                    if buy//10 > 0
+                        order = api.Order(price=buy_price,
+                            quantity=buy//10,
+                            action="Buy",
+                            price_type="LMT",
+                            order_type="ROD",
+                            account=api.stock_account
+                            )
+                        api.place_order(contract, order, timeout=10000)
                     if buy%10 > 0:
                         order = api.Order(price=buy_price,
                             quantity=buy%10*100,
@@ -174,7 +175,7 @@ elif sys.argv[3] == 'submit':
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
-            if sell > 0:
+            if sell > 0 and sell_price != 0:
                 q = 0
                 for p in acc_position:
                     if p.code == match.group(1):
@@ -186,14 +187,15 @@ elif sys.argv[3] == 'submit':
                 print(sell_price)
                 print(q)
                 if sell > 0:
-                    order = api.Order(price=sell_price,
-                        quantity=sell//10,
-                        action="Sell",
-                        price_type="LMT",
-                        order_type="ROD",
-                        account=api.stock_account
-                        )
-                    api.place_order(contract, order, timeout=10000)
+                    if sell//10 > 0:
+                        order = api.Order(price=sell_price,
+                            quantity=sell//10,
+                            action="Sell",
+                            price_type="LMT",
+                            order_type="ROD",
+                            account=api.stock_account
+                            )
+                        api.place_order(contract, order, timeout=10000)
                     if sell%10 > 0:
                         order = api.Order(price=sell_price,
                             quantity=sell%10*100,
