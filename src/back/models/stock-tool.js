@@ -6965,7 +6965,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
             }
             if (newMid.length <= 0 || newMid[newMid.length - 1] <= web.mid) {
-                if (suggestion.buy > 0) {
+                if (suggest.buy > 0) {
                     /*if (suggest.type === 1) {
                         amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
                         if (count > 0) {
@@ -7114,7 +7114,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             }
 
             if (newMid.length <= 0 || newMid[newMid.length - 1] >= web.mid) {
-                if (suggestion.sell > 0) {
+                if (suggest.sell > 0) {
                     /*if (suggest.type === 4) {
                         if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
                             amount += (suggest.sell * count * (1 - TRADE_FEE));
