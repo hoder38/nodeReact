@@ -48,7 +48,7 @@ if len(acc_settle) > 0:
     acc_settle = acc_settle[0]
 elif len(sys.argv) != 3:
     raise ValueError('Miss settle')
-acc_position = retryApi(lambda: api.list_positions(api.stock_account, timeout=10000))
+acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
 retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
@@ -63,7 +63,7 @@ else:
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:
-        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity*10) + ',\"price\":' + str(p.price) + '}')
+        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity/100) + ',\"price\":' + str(p.price) + '}')
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
@@ -180,7 +180,7 @@ elif sys.argv[3] == 'submit':
                 q = 0
                 for p in acc_position:
                     if p.code == match.group(1):
-                        q = int(p.quantity * 10)
+                        q = int(p.quantity // 100)
                         break
                 if q < sell:
                     sell = q
@@ -229,7 +229,7 @@ elif sys.argv[3] == 'sellall':
     q = 0
     for p in acc_position:
         if p.code == index:
-            q = int(p.quantity)
+            q = int(p.quantity // 1000)
             break
     print(q)
     if q > 0:
