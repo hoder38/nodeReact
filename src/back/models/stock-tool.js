@@ -135,11 +135,19 @@ const getStockPrice = (type='twse', index, price_only = true) => {
         case 'twse':
         let count = 0;
         const real = () => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
-            const table1 = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0], 'table')[1];
-            if (!table1) {
-                return handleError(new HoError(`stock ${index} price get table1 fail`));
+            const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
+            if (!center) {
+                return handleError(new HoError(`stock ${index} price get fail`));
             }
-            const table = findTag(findTag(findTag(table1, 'tr')[0], 'td')[0], 'table')[0];
+            const table1 = findTag(center, 'table')[1];
+            if (!table1) {
+                return handleError(new HoError(`stock ${index} price get fail`));
+            }
+            const tr = findTag(table1, 'tr')[0];
+            if (!tr) {
+                return handleError(new HoError(`stock ${index} price get fail`));
+            }
+            const table = findTag(findTag(tr, 'td')[0], 'table')[0];
             if (!table) {
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
