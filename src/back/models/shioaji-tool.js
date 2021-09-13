@@ -169,7 +169,7 @@ export const twseShioajiInit = () => {
                                             is_insert = 0;
                                             for (let i = this_profit.length - 1; i >= 0; i--) {
                                                 const p = Number(this_profit[i]);
-                                                const t = Number(this_ptime[i]);
+                                                const t = Number(this_time[i]);
                                                 for (let k = 0; k < item.previous.sell.length; k++) {
                                                     if (item.previous.sell[k].time === t) {
                                                         is_insert++;
