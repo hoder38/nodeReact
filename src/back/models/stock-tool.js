@@ -142,10 +142,10 @@ const getStockPrice = (type='twse', index, price_only = true) => {
                 if (price === '-') {
                     price = 0;
                 }
-                price = +price;
+                price = Number(price.replace(',', ''));
                 if (!price_only) {
                     const up = findTag(findTag(div, 'span')[1])[0];
-                    price = `${price} ${up}`;
+                    price = `${price} ${Number(up.replace(',', ''))}`;
                 }
                 console.log(price);
                 return price;
