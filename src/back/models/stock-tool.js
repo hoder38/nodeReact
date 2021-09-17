@@ -139,10 +139,7 @@ const getStockPrice = (type='twse', index, price_only = true) => {
             if (!center) {
                 const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[4], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
                 let price = findTag(findTag(div, 'span')[0])[0];
-                if (price === '-') {
-                    price = 0;
-                }
-                price = Number(price.replace(',', ''));
+                price = price === '-' ? 0 : Number(price.replace(',', ''));
                 if (!price_only) {
                     const up = findTag(findTag(div, 'span')[1])[0];
                     price = `${price} ${Number(up.replace(',', ''))}`;
