@@ -1591,8 +1591,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             }
                                         }
                                         sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
-                                        return resetBFX();
-                                        //handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
+                                        resetBFX(true);
+                                        handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
                                     }).then(() => {
                                         if (!is_error) {
                                             availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
@@ -1723,8 +1723,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 }
                                             }
                                             sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
-                                            return resetBFX();
-                                            //handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
+                                            resetBFX(true);
+                                            handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
                                         }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
                                     }
                                 }
