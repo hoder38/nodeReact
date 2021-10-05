@@ -250,7 +250,8 @@ export const setUserOffer = (startTime = 0) => {
             if (startTime === currentSetOffer) {
                 lastSetOffer = now;
                 return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => checkUser(0, userlist).catch(err => {
-                    if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up')) {
+                    if ((err.message || err.msg).includes('Maximum call stack size exceeded') || (err.message || err.msg).includes('socket hang up') || (err.message || err.msg).includes('Order not found')) {
+                        sendWs(`Loop set offer BFX reset ${err.message||err.msg}`, 0, 0, true);
                         return resetBFX();
                     } else {
                         resetBFX(true);

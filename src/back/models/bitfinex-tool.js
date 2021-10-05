@@ -1570,36 +1570,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             const real_id = order[id][current.type].filter(v => v.amount > 0 && !v.type.includes('EXCHANGE'));
                             console.log(real_id);
                             const real_delete = index => {
-                                let is_error = false;
                                 if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
                                     if (availableMargin > 0) {
                                         availableMargin = 0;
                                     }
                                     return Promise.resolve(availableMargin);
                                 }
-                                console.log(`first ${index} ${real_id[index].id}`);
                                 if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
                                     return real_delete(index + 1);
                                 } else {
-                                    return userRest.cancelOrder(real_id[index].id).catch(err => {
-                                        is_error = true;
-                                        console.log(order[id][current.type]);
-                                        for (let j = 0; j < order[id][current.type].length; j++) {
-                                            if (order[id][current.type][j].id === real_id[index].id) {
-                                                console.log(`delete ${real_id[index].id}`);
-                                                order[id][current.type].splice(j, 1);
-                                                break;
-                                            }
-                                        }
-                                        sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
-                                        resetBFX(true);
-                                        handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
-                                    }).then(() => {
-                                        if (!is_error) {
-                                            availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                            if (availableMargin <= needTrans && current.clear !== true) {
-                                                availableMargin = needTrans;
-                                            }
+                                    return userRest.cancelOrder(real_id[index].id).then(() => {
+                                        availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                        if (availableMargin <= needTrans && current.clear !== true) {
+                                            availableMargin = needTrans;
                                         }
                                         return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1))
                                     });
@@ -1706,7 +1689,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     if (index >= real_id.length) {
                                         return rest ? rest() : Promise.resolve();
                                     }
-                                    console.log(`${index} ${real_id[index].id}`);
                                     if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
                                         if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
                                             console.log(`${real_id[index].symbol} order partially filled`);
@@ -1715,19 +1697,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             return real_delete(index + 1);
                                         }
                                     } else {
-                                        return userRest.cancelOrder(real_id[index].id).catch(err => {
-                                            console.log(order[id][current.type]);
-                                            for (let j = 0; j < order[id][current.type].length; j++) {
-                                                if (order[id][current.type][j].id === real_id[index].id) {
-                                                    console.log(`delete ${real_id[index].id}`);
-                                                    order[id][current.type].splice(j, 1);
-                                                    break;
-                                                }
-                                            }
-                                            sendWs(`${id} ${real_id[index].id} cancelOrder Error: ${err.message||err.msg}`, 0, 0, true);
-                                            resetBFX(true);
-                                            handleError(err, `${id} ${real_id[index].id} cancelOrder Error`);
-                                        }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
+                                        return userRest.cancelOrder(real_id[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
                                     }
                                 }
                                 return real_delete(0);
