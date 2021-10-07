@@ -2211,6 +2211,7 @@ export const resetBFX = (update=false) => {
             updateTime[i]['trade'] = trade_count;
         }
     } else {
+        updateTime = {};
         return closeWs(0);
     }
 }
