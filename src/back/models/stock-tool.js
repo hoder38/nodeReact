@@ -6518,6 +6518,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const finalSell = () => {
         if (sCount < (2 * priceTimes) && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
             sCount = 2 * priceTimes;
+        } else if (pCount <= (2 * priceTimes) && sCount >= priceTimes) {
+            sCount = priceTimes;
         }
         if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
             if (sell >= pPricecost) {
