@@ -1362,7 +1362,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const fo = new FundingOffer({
                             symbol: current.type,
                             amount: finalNew[index].amount,
-                            rate: ((finalNew[index].rate > currentRate[current.type].frr) ? finalNew[index].rate : currentRate[current.type].frr) / BITFINEX_EXP,
+                            rate: ((finalNew[index].rate > currentRate[current.type].frr * 0.8) ? finalNew[index].rate * 0.8 : currentRate[current.type].frr) / BITFINEX_EXP,
                             period: (DRT === false) ? 2 : DRT.day,
                             type: 'LIMIT',
                         }, userRest);
