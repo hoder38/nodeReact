@@ -71,6 +71,7 @@ export const calRate = curArr => {
         currentRate[curType] = {
             rate: curTicker.lastPrice * BITFINEX_EXP,
             time: Math.round(new Date().getTime() / 1000),
+            frr: curTicker.frr * BITFINEX_EXP,
         };
         const hl = [];
         const weight = [];
@@ -1047,6 +1048,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         const finalNew = [];
         const needDelete = [];
         console.log(currentRate[current.type].rate);
+        console.log(currentRate[current.type].frr);
         const MR = (current.miniRate > 0) ? current.miniRate / 100 * BITFINEX_EXP : 0;
         const MR2 = (current.keepAmountRate1 > 0) ? current.keepAmountRate1 / 100 * BITFINEX_EXP : 0;
         let KAM = (current.keepAmountMoney1 > 0) ? current.keepAmountMoney1 : 0;
@@ -1360,7 +1362,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const fo = new FundingOffer({
                             symbol: current.type,
                             amount: finalNew[index].amount,
-                            rate: finalNew[index].rate / BITFINEX_EXP,
+                            rate: ((finalNew[index].rate > currentRate[current.type].frr) ? finalNew[index].rate : currentRate[current.type].frr) / BITFINEX_EXP,
                             period: (DRT === false) ? 2 : DRT.day,
                             type: 'LIMIT',
                         }, userRest);
@@ -2724,8 +2726,9 @@ export default {
                 }
                 if (currentRate[v]) {
                     const rate = Math.round(currentRate[v].rate / 10) / 100000;
+                    const frr = Math.round(currentRate[v].frr / 10) / 100000;
                     tempList.push({
-                        name: `${v.substr(1)} Rate`,
+                        name: `${v.substr(1)} Rate FRR: ${frr}%`,
                         id: i,
                         tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: `${rate}%`,
