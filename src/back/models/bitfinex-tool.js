@@ -2728,7 +2728,7 @@ export default {
                     const rate = Math.round(currentRate[v].rate / 10) / 100000;
                     const frr = Math.round(currentRate[v].frr / 10) / 100000;
                     tempList.push({
-                        name: `${v.substr(1)} Rate FRR: ${frr}%`,
+                        name: `${v.substr(1)} Rate ${frr}%`,
                         id: i,
                         tags: [v.substr(1).toLowerCase(), 'rate', '利率'],
                         rate: `${rate}%`,
