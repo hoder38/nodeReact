@@ -2548,12 +2548,22 @@ const getParameterV2 = (data, type, text = null) => {
 
 export default {
     getSingleStockV2: function(type, obj, stage=0) {
+        const date = new Date();
         const index = obj.index;
+        let updateyear = date.getFullYear();
+        let updatequarter = 3;
+        const month = date.getMonth() + 1;
+        if (month < 4) {
+            updatequarter = 4;
+            updatequarter--;
+        } else if (month < 7) {
+            updatequarter = 1;
+        } else if (month < 10) {
+            updatequarter = 2;
+        }
         switch(type) {
             case 'twse':
-            const date = new Date();
             let year = date.getFullYear();
-            let month = date.getMonth() + 1;
             let reportType = 'C';
             let quarter = 3;
             if (month < 4) {
@@ -2628,7 +2638,14 @@ export default {
                             stock_default,
                         }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
                         return retObj().then(id => {
-                            return {
+                            return StockTagTool.addTag(id, `${updateyear}q${updatequarter}`, {_id:'000000000000000000000000'}).then(add_result => {
+                                sendWs({
+                                    type: 'stock',
+                                    data: add_result.id,
+                                }, 0, 1);
+                            }).catch(err => {
+                                handleError(err, 'Stock filter');
+                            }).then(() => ({
                                 per,
                                 pdr,
                                 pbr,
@@ -2636,7 +2653,7 @@ export default {
                                 latestYear,
                                 stockName: `${type} ${index} ${name}`,
                                 id,
-                            }
+                            }));
                         });
                     });
                 }
@@ -2870,15 +2887,24 @@ export default {
                             important: 0,
                             stock_default,
                         }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
-                        return retObj().then(id => ({
-                            per: ret.per,
-                            pdr: ret.pdr,
-                            pbr: ret.pbr,
-                            latestQuarter: ret.latestQuarter,
-                            latestYear: ret.latestYear,
-                            stockName: `${type} ${index} ${name}`,
-                            id,
-                        }));
+                        return retObj().then(id => {
+                            return StockTagTool.addTag(id, `${updateyear}q${updatequarter}`, {_id:'000000000000000000000000'}).then(add_result => {
+                                sendWs({
+                                    type: 'stock',
+                                    data: add_result.id,
+                                }, 0, 1);
+                            }).catch(err => {
+                                handleError(err, 'Stock filter');
+                            }).then(() => ({
+                                per: ret.per,
+                                pdr: ret.pdr,
+                                pbr: ret.pbr,
+                                latestQuarter: ret.latestQuarter,
+                                latestYear: ret.latestYear,
+                                stockName: `${type} ${index} ${name}`,
+                                id,
+                            }));
+                        });
                     }));
                 });
             }
@@ -4550,10 +4576,23 @@ export default {
         });
     },
     stockFilterV3: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
+        const date = new Date();
+        let updateyear = date.getFullYear();
+        let updatequarter = 3;
+        const month = date.getMonth() + 1;
+        if (month < 4) {
+            updatequarter = 4;
+            updatequarter--;
+        } else if (month < 7) {
+            updatequarter = 1;
+        } else if (month < 10) {
+            updatequarter = 2;
+        }
         const web = option ? true : false;
         if (!option) {
             option = STOCK_FILTER;
         }
+        console.log(`filter update: ${updateyear}q${updatequarter}`);
         let last = false;
         let queried = 0;
         let filterList = [];
@@ -4574,7 +4613,7 @@ export default {
             }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
             return delFilter(0);
         });
-        const recur_query = () => StockTagTool.tagQuery(queried, '', false, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
+        const recur_query = () => StockTagTool.tagQuery(queried, `${updateyear}q${updatequarter}`, true, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
             console.log(queried);
             if (result.items.length < STOCK_FILTER_LIMIT) {
                 last = true;

@@ -207,13 +207,16 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         name,
         sortName: req.params.sortName,
         sortType: req.params.sortType,
-        per,
-        pdr,
-        pbr,
-        pre,
-        interval,
-        vol,
-        close,
+        twse: {
+            close,
+            per,
+            pdr,
+            pbr,
+            pre,
+            interval,
+            vol,
+        },
+        usse: {},
     }, req.user, req.session).then(number => {
         sendWs({
             type: req.user.username,
