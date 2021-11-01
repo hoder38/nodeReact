@@ -1649,9 +1649,31 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if ((now - updateTime[id]['trade']) < ORDER_INTERVAL) {
                 return Promise.resolve();
             }
+            //auto cancel credit
+            const closecredit_recur = index => {
+                if (credit[id][current.type]) {
+                    if (index >= credit[id][current.type].length) {
+                        return Promise.resolve();
+                    } else {
+                        if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate > currentRate[current.type].frr * 2) {
+                            if (!closeCredit[id]) {
+                                closeCredit[id] = [credit[id][current.type][index].id];
+                            } else {
+                                closeCredit[id].push(credit[id][current.type][index].id);
+                            }
+                            console.log(closeCredit);
+                            return closecredit_recur(index + 1);
+                        } else {
+                            return closecredit_recur(index + 1);
+                        }
+                    }
+                } else {
+                    return Promise.resolve();
+                }
+            }
             updateTime[id]['trade'] = now;
             console.log(`real singleTrade ${updateTime[id]['trade']}`);
-            return Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+            return closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 fakeOrder[id][current.type] = [];
                 const recur_status = index => {
@@ -2149,7 +2171,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }).catch(err => {
                 updateTime[id]['trade'] = updateTime[id]['trade'] - 2 * RATE_INTERVAL;
                 return Promise.reject(err);
-            });
+            }));
         });
     }
     const getLegder = current => {
