@@ -1652,9 +1652,12 @@ export const setWsOffer = (id, curArr=[], uid) => {
             //auto cancel credit
             const closecredit_recur = index => {
                 if (credit[id][current.type]) {
+                    console.log('auto close credit');
+                    console.log(currentRate[current.type].frr * 2);
                     if (index >= credit[id][current.type].length) {
                         return Promise.resolve();
                     } else {
+                        console.log(credit[id][current.type][index].rate * BITFINEX_EXP);
                         if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr * 2) {
                             if (!closeCredit[id]) {
                                 closeCredit[id] = [credit[id][current.type][index].id];
