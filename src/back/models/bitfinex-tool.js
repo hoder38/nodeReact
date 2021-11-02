@@ -1655,7 +1655,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (index >= credit[id][current.type].length) {
                         return Promise.resolve();
                     } else {
-                        if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate > currentRate[current.type].frr / BITFINEX_EXP * 2) {
+                        if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr * 2) {
                             if (!closeCredit[id]) {
                                 closeCredit[id] = [credit[id][current.type][index].id];
                             } else {
