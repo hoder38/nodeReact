@@ -938,8 +938,8 @@ export default {
                 if (typeDiv) {
                     divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(typeDiv, 'div', 'block-opa-theme-content')[0], 'article')[0], 'div')[0], 'div')[0], 'div', 'layout__region layout__region--second')[0], 'div', 'homepage-block homepage-news-block')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
                 } else {
-                    const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main')[0], 'div', 'layout-content inner-content-page')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
-                }
+                    divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'dialog-off-canvas-main-canvas')[0], 'div')[0], 'main')[0], 'div', 'layout-content inner-content-page')[0], 'div', 'block-opa-theme-content')[0], 'div', 'views-element-container')[0], 'div')[0], 'div');
+                };
                 for (let i in divs) {
                     if (typeDiv) {
                         const a = findTag(findTag(divs[i], 'div')[0], 'a')[0];
