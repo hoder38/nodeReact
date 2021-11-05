@@ -1339,7 +1339,7 @@ export default {
                 for (let d of divs) {
                     const a = findTag(findTag(d, 'span')[0], 'a')[0];
                     if (findTag(a)[0].match(/PDF version/)) {
-                        const url = addPre(a.attribs.href, 'http://www.bea.gov');
+                        const url = addPre(a.attribs.href, 'https://www.bls.gov');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
                         return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
