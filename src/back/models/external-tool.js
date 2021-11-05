@@ -1335,21 +1335,23 @@ export default {
             case 'bls':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const a = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper-basic')[0], 'div', 'main-content-full-width')[0], 'div', 'bodytext')[0], 'h4')[1], 'a')[0];
-                if (!findTag(a)[0].match(/PDF/i)) {
-                    return handleError(new HoError('cannot find release'));
+                const divs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'wrapper-basic')[0], 'div', 'main-content')[0], 'div', 'bodytext')[0], 'div', 'highlight-box-green')[0], 'div')
+                for (let d of divs) {
+                    const a = findTag(findTag(d, 'span')[0], 'a')[0];
+                    if (findTag(a)[0].match(/PDF version/)) {
+                        const url = addPre(a.attribs.href, 'http://www.bea.gov');
+                        driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                        console.log(driveName);
+                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                            type: 'auto',
+                            name: driveName,
+                            filePath,
+                            parent,
+                            rest: () => updateDocDate(type, obj.date),
+                            errhandle: err => handleError(err),
+                        })));
+                    }
                 }
-                const url = addPre(a.attribs.href, 'https://www.bls.gov');
-                driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
-                console.log(driveName);
-                return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                    type: 'auto',
-                    name: driveName,
-                    filePath,
-                    parent,
-                    rest: () => updateDocDate(type, obj.date),
-                    errhandle: err => handleError(err),
-                })));
             });
             case 'cen':
             console.log(obj);
