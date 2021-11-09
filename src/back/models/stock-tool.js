@@ -6553,11 +6553,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     let type = 0;
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
-    const pRemain = pAmount / pOrig;
     const finalSell = () => {
-        if (sCount < (2 * priceTimes) && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
+        if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
             sCount = 2 * priceTimes;
-        } else if (pCount <= (2 * priceTimes) && sCount >= priceTimes) {
+        } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
             sCount = priceTimes;
         }
         if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
@@ -6584,8 +6583,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }*/
     }
     const finalBuy = () => {
-        if (bCount < (2 * priceTimes) && pRemain > (3 / 4)) {
-            bCount = 2 * priceTimes;
+        if (bCount < (2 * priceTimes) && pCount <= (2 * priceTimes)) {
+            bCount = 2 * priceTimes;)
         }
         /*if (pPricecost && pPl && pPl < 0 && bCount > 0 && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
             if (buy <= pPricecost) {
@@ -6595,12 +6594,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 buy = 0;
             }
         }*/
+        if (pCount < priceTimes && buy > upLimit) {
+            buy = upLimit;
+        }
         if (pAmount === 0 || ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price))) {
             bCount = 0;
             buy = 0;
-        }
-        if (pAmount > 9 / 10 && buy > upLimit) {
-            buy = upLimit;
         }
         /*if (pAmount && bCount) {
             const nowC = Math.floor(pAmount / buy)
