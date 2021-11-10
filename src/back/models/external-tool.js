@@ -860,16 +860,20 @@ export default {
                 return Api('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                     console.log(docDate);
-                    let type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid fixedheader')[0];
-                    if (type) {
-                        type = findTag(type, 'div', 'container')[0];
-                    } else {
-                        type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid fixedheader bodyMarNoMsg')[0];
-                        if (type) {
-                            type = findTag(type, 'div', 'container')[0];
-                        } else {
-                            type = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container fixedheader')[0];
+                    const divs = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div');
+                    let type = null;
+                    for (let d of divs) {
+                        if (d.attribs.class && d.attribs.class.match(/fixedheader/)) {
+                            if (d.attribs.class.match(/container /)) {
+                                type = d;
+                            } else {
+                                type = findTag(d, 'div', 'container')[0];
+                            }
+                            break;
                         }
+                    }
+                    if (!type) {
+                        return handleError(new HoError('cannot find type!!!'));
                     }
                     if (findTag(findTag(findTag(findTag(type, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
                         list.push({
