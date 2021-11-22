@@ -113,7 +113,7 @@ const updateStockList = (list, type) => {
     console.log('updateStockList');
     console.log(new Date().toLocaleString());
     console.log(list[0]);
-    return StockTool.getSingleStockV2(type, list[0], 1).then(() => {
+    return StockTool.getSingleStockV2(type, list[0], 1).catch(err => bgError(err, 'Loop checkStock single')).then(() => {
         list.splice(0, 1);
         if (list.length > 0) {
             return updateStockList(list, type);
