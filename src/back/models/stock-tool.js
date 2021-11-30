@@ -7607,7 +7607,12 @@ const getUsStock = (index, stat=['price']) => {
             const ds = findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div');
             for (let i = 0; i < ds.length; i++) {
                 if (findTag(ds[i], 'div')[0].attribs.id.includes('QuoteHeader')) {
-                    price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'span')[0])[0];
+                    const price_div = findTag(findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0];
+                    if (findTag(price_div, 'span')[0]) {
+                        price = findTag(findTag(price_div, 'span')[0])[0];
+                    } else {
+                        price = findTag(findTag(price_div, 'fin-streamer')[0])[0];
+                    }
                     break;
                 }
             }
