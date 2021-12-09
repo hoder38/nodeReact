@@ -134,7 +134,7 @@ const getStockPrice = (type='twse', index, price_only = true) => {
     switch(type) {
         case 'twse':
         let count = 0;
-        const real = () => Api('url', `https://tw.stock.yahoo.com/q/q?s=${index}`).then(raw_data => {
+        const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
             const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
             if (!center) {
                 const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[4], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
