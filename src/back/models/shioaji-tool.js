@@ -177,7 +177,11 @@ export const twseShioajiInit = () => {
                                                     }
                                                 }
                                                 if (is_insert < 2) {
-                                                    profit = profit + p * (1 - TRADE_FEE)
+                                                    profit = profit + p * (1 - TRADE_FEE);
+                                                    while (Number(this_time[i - 1]) === t) {
+                                                        profit = profit + Number(this_profit[i - 1]) * (1 - TRADE_FEE);
+                                                        i--;
+                                                    }
                                                 } else {
                                                     break;
                                                 }
