@@ -1092,6 +1092,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }*/
             if (current.isTrade && current.pair) {
             } else {
+                if (!extremRate[id][current.type]) {
+                    extremRate[id][current.type] = {
+                        high: 1,
+                        low: 0,
+                        is_low: 0,
+                        is_high: 0,
+                    }
+                }
                 return false;
             }
             if (DR.length > 0 && currentRate[current.type].rate > DR[0].rate) {
