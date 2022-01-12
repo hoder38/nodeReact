@@ -224,11 +224,19 @@ export const dbBackup = () => {
 
 export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
-        const checkS = () => {
+        /*const checkS = () => {
             console.log('checkStock');
             const newStr = (new Date().getHours() >= 20) ? true : false;
             return stockStatus(newStr).catch(err => bgError(err, 'Loop checkStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000))).then(() => checkS());
+        }*/
+        //怕程序死掉 改為不等執行完就開始倒數
+        const checkS = () => {
+            console.log('checkStock');
+            const newStr = (new Date().getHours() >= 20) ? true : false;
+            stockStatus(newStr).catch(err => bgError(err, 'Loop checkStock'));
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => checkS());
         }
+
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 330000)).then(() => checkS());
     }
 }
