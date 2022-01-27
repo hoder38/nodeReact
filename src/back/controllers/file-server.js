@@ -2,7 +2,7 @@ import fsModule from 'fs'
 const { readFileSync: FsReadFileSync } = fsModule;
 
 //config
-import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver.js'
+import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
 import { NAS_TMP, EXTENT_FILE_IP, EXTENT_FILE_PORT, FILE_IP, FILE_PORT } from '../config.js'
 
 //external
@@ -38,7 +38,7 @@ const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
+    //passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

@@ -5,7 +5,7 @@ const { readFileSync: FsReadFileSync, createReadStream: FsCreateReadStream } = f
 import { STATIC_PATH } from '../constants.js'
 
 //config
-import { ENV_TYPE, CA, CERT, PKEY, PKEY_PWD } from '../../../ver.js'
+import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
 import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config.js'
 
 //external
@@ -45,7 +45,7 @@ const credentials = {
     cert: FsReadFileSync(CERT),
     ca: FsReadFileSync(CA),
     key: FsReadFileSync(PKEY),
-    passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
+    //passphrase: FsReadFileSync(PKEY_PWD, 'utf-8').slice(0, -1),
     ciphers: [
         "ECDHE-RSA-AES256-SHA384",
         "DHE-RSA-AES256-SHA384",

@@ -189,7 +189,7 @@ sudo systemctl restart mongod
 utils.exec(['ffmpeg','-i',`"${fileInput}"`,'2>&1'], settings, function (error, stdout, stderr) {
 
 ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 記得設定crontab 去更新ssl
-(crontab 設定) sudo certbot renew --pre-hook "service nginx-dev stop" --post-hook "service nginx-dev restart; service nginx-dev restart" 記得改為線上，restart 2次才會正常
+(crontab 設定) sudo certbot renew --pre-hook "service nginx-release stop" --post-hook "service nginx-release restart; service nginx-release restart" 記得改為線上，restart 2次才會正常
 
 cmd:
 sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/cmd.js
