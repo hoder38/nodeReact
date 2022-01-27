@@ -1610,6 +1610,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             }
                         }
                     }
+                    if (availableMargin > 0) {
+                        availableMargin = 0;
+                    }
                     return Promise.resolve(availableMargin);
                 });
             }
