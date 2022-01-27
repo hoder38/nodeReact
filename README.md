@@ -188,8 +188,13 @@ sudo systemctl restart mongod
 修改ffmpeg/lib/ffmpeg.js
 utils.exec(['ffmpeg','-i',`"${fileInput}"`,'2>&1'], settings, function (error, stdout, stderr) {
 
-ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 記得設定crontab 去更新ssl
-(crontab 設定) sudo certbot renew --pre-hook "service nginx-release stop" --post-hook "service nginx-release restart; service nginx-release restart" 記得改為線上，restart 2次才會正常
+ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 要記得先設定nginx
+location ^~ /.well-known/acme-challenge/ {
+    root /var/www/html;
+}
+記得設定crontab 去更新ssl
+sudo crontab -e
+0 12 * * * /usr/bin/certbot renew --pre-hook "service nginx-release stop" --post-hook "sudo killall nginx; service nginx-release restart" --quiet
 
 cmd:
 sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/cmd.js
