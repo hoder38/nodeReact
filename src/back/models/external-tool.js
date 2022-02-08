@@ -1786,44 +1786,24 @@ export default {
                 taglist.add('歐美');
                 const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
                 let title = findTag(findTag(findTag(html, 'head')[0], 'title')[0])[0];
-                title = title.match(/^(.*?) \((\d\d\d\d)\) - IMDb$/);
+                console.log(title);
+                title = title.match(/^(.*?) \([^\d]*(\d\d\d\d)[^\)]*\) - IMDb$/);
                 taglist.add(title[1]).add(title[2]);
-                const main = findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', 'wrapper')[0], 'div', 'root')[0], 'div', 'pagecontent')[0], 'div', 'content-2-wide')[0];
-                let plot = findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper')[0];
-                if (!plot) {
-                    plot = findTag(findTag(findTag(findTag(main, 'div', 'main_top')[0], 'div', 'title-overview')[0], 'div', 'title-overview-widget')[0], 'div', 'plot_summary_wrapper localized')[0];
-                }
-                findTag(findTag(plot, 'div', 'plot_summary ')[0], 'div', 'credit_summary_item').forEach(d => findTag(d, 'a').forEach(a => {
-                    if (a.attribs.href.match(/^\/name\//)) {
-                        taglist.add(findTag(a)[0]);
-                    }
-                }));
-                const main_bottom = findTag(main, 'div', 'main_bottom')[0];
-                findTag(findTag(findTag(main_bottom, 'div', 'titleCast')[0], 'table', 'cast_list')[0], 'tr').forEach(t => {
-                    const cast = findTag(t, 'td');
-                    if (cast.length > 1) {
-                        taglist.add(findTag(findTag(cast[1], 'a')[0])[0]);
-                    }
-                });
-                for (let t of findTag(findTag(main_bottom, 'div', 'titleStoryLine')[0], 'div', 'see-more inline canwrap')) {
-                    if (findTag(findTag(t, 'h4')[0])[0] === 'Genres:') {
-                        findTag(t, 'a').forEach(a => {
-                            const genre = findTag(a)[0].toLowerCase().trim();
-                            taglist.add(genre);
-                            const index = GENRE_LIST.indexOf(genre);
-                            if (index !== -1) {
-                                taglist.add(GENRE_LIST_CH[index]);
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html, 'body')[0], 'div', '__next')[0], 'main')[0], 'div')[0], 'section')[0], 'div')[0], 'section')[0], 'div')[0], 'div')[0], 'section').forEach(sec => {
+                    if (sec.attribs['data-testid'] === 'title-cast') {
+                        findTag(findTag(findTag(sec, 'div')[1], 'div')[1], 'div').forEach(cast => taglist.add(findTag(findTag(findTag(cast, 'div')[1], 'a')[0])[0]));
+                        findTag(findTag(sec, 'ul')[0], 'li').forEach(cast => {
+                            if (findTag(cast, 'div')[0]) {
+                                findTag(findTag(findTag(cast, 'div')[0], 'ul')[0], 'li').forEach(c => taglist.add(findTag(findTag(c, 'a')[0])[0]));
                             }
                         });
-                        break;
+                    } else if (sec.attribs['data-testid'] === 'Storyline') {
+                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[1], 'li')[1], 'div')[0], 'ul')[0], 'li').forEach(genre => taglist.add(findTag(findTag(genre, 'a')[0])[0]));
+                    } else if (sec.attribs['data-testid'] === 'Details') {
+                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li')[1], 'div')[0], 'ul')[0], 'li').forEach(country => taglist.add(findTag(findTag(country, 'a')[0])[0]));
+                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li')[3], 'div')[0], 'ul')[0], 'li').forEach(lang => taglist.add(findTag(findTag(lang, 'a')[0])[0]));
                     }
-                }
-                for (let t of findTag(findTag(main_bottom, 'div', 'titleDetails')[0], 'div', 'txt-block')) {
-                    if (findTag(findTag(t, 'h4')[0])[0] === 'Country:') {
-                        findTag(t, 'a').forEach(a => taglist.add(findTag(a)[0]));
-                        break;
-                    }
-                }
+                });
                 return [...taglist].map(t => toValidName(t.toLowerCase()));
             });
             case 'steam':
