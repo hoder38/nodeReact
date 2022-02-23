@@ -281,7 +281,6 @@ const submitTDOrder = (id, price, count) => {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
     const qspost = JSON.stringify(Object.assign({
-        session: "SEAMLESS",
         duration: "GOOD_TILL_CANCEL",
         orderStrategyType: "SINGLE",
         orderLegCollection: [
@@ -294,7 +293,7 @@ const submitTDOrder = (id, price, count) => {
                 }
             }
         ]
-    }, price === 'MARKET' ? {orderType: "MARKET"} : {orderType: 'LIMIT', price: price}));
+    }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price: price, session: "SEAMLESS"}));
     console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
