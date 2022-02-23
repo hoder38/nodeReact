@@ -302,6 +302,8 @@ const submitTDOrder = (id, price, count) => {
     }, method: 'POST', body: qspost,}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+            console.log(id);
+            console.log(price);
             return res.json().then(err => handleError(new HoError(err.error)))
         }
     })).catch(err => {
