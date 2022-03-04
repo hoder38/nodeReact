@@ -2555,7 +2555,7 @@ export default {
         const month = date.getMonth() + 1;
         if (month < 4) {
             updatequarter = 4;
-            updatequarter--;
+            updateyear--;
         } else if (month < 7) {
             updatequarter = 1;
         } else if (month < 10) {
@@ -4582,7 +4582,7 @@ export default {
         const month = date.getMonth() + 1;
         if (month < 4) {
             updatequarter = 4;
-            updatequarter--;
+            updateyear--;
         } else if (month < 7) {
             updatequarter = 1;
         } else if (month < 10) {
