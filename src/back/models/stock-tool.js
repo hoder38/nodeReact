@@ -5966,7 +5966,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 //new mid
                 let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                 let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                while ((item.newMid.length > 0) && ((item.newMid[item.newMid.length - 1] > checkMid && (price < checkMid || item.newMid[item.newMid.length - 1] <= item.mid || item.newMid[item.newMid.length - 1] <= item.web[item.web.length -1])) || (item.newMid[item.newMid.length - 1] <= checkMid && (price > checkMid || item.newMid[item.newMid.length - 1] > item.mid || item.newMid[item.newMid.length - 1] > item.web[0])))) {
+                while ((item.newMid.length > 0) && (((item.newMid[item.newMid.length - 1] > checkMid) && ((price < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid) || (item.newMid[item.newMid.length - 1] > Math.abs(item.web[0])))) || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((price > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid) || (item.newMid[item.newMid.length - 1] <= Math.abs(item.web[item.web.length - 1])))))) {
+                    console.log(item.newMid[item.newMid.length - 1]);
                     item.newMid.pop();
                     if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
                         item.previous.price = item.tmpPT.price;
@@ -6937,7 +6938,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             let suggest = null;
             let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
             let newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
-            while ((newMid.length > 0) && ((newMid[newMid.length - 1] > checkMid && (price < checkMid || newMid[newMid.length - 1] <= web.mid || newMid[newMid.length - 1] <= web.arr[web.arr.length -1])) || (newMid[newMid.length - 1] <= checkMid && (price > checkMid || newMid[newMid.length - 1] > web.mid || newMid[newMid.length - 1] > web.arr[0])))) {
+            while ((newMid.length > 0) && (((newMid[newMid.length - 1] > checkMid) && ((price < checkMid) || (newMid[newMid.length - 1] <= web.mid) || (newMid[newMid.length - 1] > Math.abs(web.arr[0])))) || ((newMid[newMid.length - 1] <= checkMid) && ((price > checkMid) || (newMid[newMid.length - 1] > web.mid) || (newMid[newMid.length - 1] <= Math.abs(web.arr[web.arr.length -1])))))) {
                 newMid.pop();
                 if (newMid.length === 0 && now - tmpPT.time < rinterval) {
                     priviousTrade.price = tmpPT.price;
