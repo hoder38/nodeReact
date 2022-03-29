@@ -1716,7 +1716,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return Promise.resolve();
             }
-            return dynamicAmount.then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+            return dynamicAmount().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 fakeOrder[id][current.type] = [];
                 const recur_status = index => {
