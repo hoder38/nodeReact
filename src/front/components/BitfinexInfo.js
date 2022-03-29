@@ -383,9 +383,9 @@ class BitfinexInfo extends React.Component {
                                     <UserInput
                                         val={this.state.rate_ratio}
                                         getinput={this._input.getInput('rate_ratio')}
-                                        placeholder="金額隨利率變化，高利率少X倍，低利率多X倍，0~1之間">
+                                        placeholder="金額隨借貸變化，一小時調整的數量">
                                         <tr style={tradeDisplay}>
-                                            <td key={0}>Rate Ratio:</td>
+                                            <td key={0}>Dynamic Amount:</td>
                                             <td key={1} />
                                         </tr>
                                     </UserInput>

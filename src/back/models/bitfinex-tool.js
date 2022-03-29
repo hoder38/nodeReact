@@ -1460,13 +1460,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
             return Promise.resolve();
         }
         //return Promise.resolve();
-        if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
+        //if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
+        if (current.amount > 0 && current.rate_ratio > 0) {
             if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
                 console.log('is low');
-                current.amount = current.amount + current.amount * current.rate_ratio;
+                //current.amount = current.amount + current.amount * current.rate_ratio;
             } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
                 console.log('is high');
-                current.amount = current.amount - current.amount * current.rate_ratio;
+                //current.amount = current.amount - current.amount * current.rate_ratio;
             }
         }
         const getAM = () => {
@@ -1567,8 +1568,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         availableMargin = -margin[id][current.type].avail;
                     }
                     if (credit[id] && credit[id][current.type]) {
+                        const now = Math.round(new Date().getTime() / 1000);
                         credit[id][current.type].forEach(o => {
-                            if (o.side !== 1) {
+                            if (o.side !== 1 && now < (o.time + o.period * 86400)) {
                                 availableMargin = availableMargin + o.amount;
                             }
                         });
@@ -1683,7 +1685,38 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
             updateTime[id]['trade'] = now;
             console.log(`real singleTrade ${updateTime[id]['trade']}`);
-            return closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+            const dynamicAmount = () => {
+                if (current.rate_ratio > 0) {
+                    let lent_credit = 0;
+                    if (credit[id] && credit[id][current.type]) {
+                        credit[id][current.type].forEach(o => {
+                            if (o.side !== 1 && now < (o.time + o.period * 86400)) {
+                                lent_credit = lent_credit + o.amount;
+                            }
+                        });
+                    }
+                    console.log(lent_credit);
+                    if (lent_credit <= 0) {
+                        for (let i = 0; i < curArr.length; i++) {
+                            if (curArr[i].type === current.type) {
+                                return Mongo('update', USERDB, {_id: uid}, {$set : {
+                                    [`bitfinex.${i}.amount`]: current.amount - current.rate_ratio,
+                                }});
+                            }
+                        }
+                    } else if (lent_credit > 2000) {
+                        for (let i = 0; i < curArr.length; i++) {
+                            if (curArr[i].type === current.type) {
+                                return Mongo('update', USERDB, {_id: uid}, {$set : {
+                                    [`bitfinex.${i}.amount`]: current.amount + current.rate_ratio,
+                                }});
+                            }
+                        }
+                    }
+                }
+                return Promise.resolve();
+            }
+            return dynamicAmount.then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 fakeOrder[id][current.type] = [];
                 const recur_status = index => {
@@ -2182,7 +2215,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }).catch(err => {
                 updateTime[id]['trade'] = updateTime[id]['trade'] - 2 * RATE_INTERVAL;
                 return Promise.reject(err);
-            }));
+            })));
         });
     }
     const getLegder = current => {
