@@ -1704,7 +1704,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }});
                             }
                         }
-                    } else if (lent_credit > 2000) {
+                    } else if (lent_credit > 5000) {
                         for (let i = 0; i < curArr.length; i++) {
                             if (curArr[i].type === current.type) {
                                 return Mongo('update', USERDB, {_id: uid}, {$set : {
