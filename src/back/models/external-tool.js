@@ -841,14 +841,21 @@ export default {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                let docDate = `${date.getDate()} ${MONTH_SHORTS[date.getMonth()]}. ${date.getFullYear()}`;
+                let docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                 if (body) {
-                    const con = findTag(body, 'div', 'container tcb-wrapper')[0];
+                    const con = findTag(body, 'div', 'container-fluid fixedheader 1')[0];
                     if (con) {
-                        if (findTag(findTag(findTag(findTag(con, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0] === docDate) {
+                        const pdate = findTag(findTag(findTag(findTag(con, 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'div')[2], 'div')[0];
+                        if (findTag(pdate, 'p', 'date')[0] && findTag(findTag(pdate, 'p', 'date')[0])[0].includes(docDate)) {
+                            list.push({
+                                url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
+                                name: toValidName('Consumer Confidence Survey'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        } else if (findTag(findTag(pdate, 'div', 'chConferences')[0], 'p', 'date')[0] && findTag(findTag(findTag(pdate, 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
                             list.push({
                                 url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
                                 name: toValidName('Consumer Confidence Survey'),
@@ -860,27 +867,25 @@ export default {
                 return Api('url', 'https://www.conference-board.org/data/bcicountry.cfm?cid=1').then(raw_data => {
                     docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                     console.log(docDate);
-                    const divs = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div');
-                    let type = null;
-                    for (let d of divs) {
-                        if (d.attribs.class && d.attribs.class.match(/fixedheader/)) {
-                            if (d.attribs.class.match(/container /)) {
-                                type = d;
-                            } else {
-                                type = findTag(d, 'div', 'container')[0];
+                    const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
+                    if (body) {
+                        const con = findTag(body, 'div', 'container-fluid fixedheader 1')[0];
+                        if (con) {
+                            const pdate = findTag(findTag(findTag(findTag(con, 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'div')[2], 'div')[0];
+                            if (findTag(pdate, 'p', 'date')[0] && findTag(findTag(pdate, 'p', 'date')[0])[0].includes(docDate)) {
+                                list.push({
+                                    url: 'https://www.conference-board.org/data/bcicountry.cfm?cid=1',
+                                    name: toValidName('US Business Cycle Indicators'),
+                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                });
+                            } else if (findTag(findTag(pdate, 'div', 'chConferences')[0], 'p', 'date')[0] &&findTag(findTag(findTag(pdate, 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
+                                list.push({
+                                    url: 'https://www.conference-board.org/data/bcicountry.cfm?cid=1',
+                                    name: toValidName('US Business Cycle Indicators'),
+                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                });
                             }
-                            break;
                         }
-                    }
-                    if (!type) {
-                        return handleError(new HoError('cannot find type!!!'));
-                    }
-                    if (findTag(findTag(findTag(findTag(type, 'div', 'wrap')[0], 'div', 'content')[0], 'p', 'date')[0])[0].match(/[a-zA-Z]+ \d\d?, \d\d\d\d$/)[0] === docDate) {
-                        list.push({
-                            url: 'https://www.conference-board.org/data/bcicountry.cfm?cid=1',
-                            name: toValidName('US Business Cycle Indicators'),
-                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                        });
                     }
                     return list;
                 });
