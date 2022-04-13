@@ -1459,14 +1459,17 @@ export const setWsOffer = (id, curArr=[], uid) => {
         } else {
             return Promise.resolve();
         }
+        let min_available = 5000;
         //return Promise.resolve();
         //if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
         if (current.amount > 0 && current.rate_ratio > 0) {
             if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
                 console.log('is low');
+                min_available = 0;
                 //current.amount = current.amount + current.amount * current.rate_ratio;
             } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
                 console.log('is high');
+                min_available = 10000;
                 //current.amount = current.amount - current.amount * current.rate_ratio;
             }
         }
@@ -1699,16 +1702,22 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (lent_credit <= 0) {
                         for (let i = 0; i < curArr.length; i++) {
                             if (curArr[i].type === current.type) {
+                                current.amount = current.amount - current.rate_ratio;
                                 return Mongo('update', USERDB, {_id: uid}, {$set : {
-                                    [`bitfinex.${i}.amount`]: current.amount - current.rate_ratio,
+                                    [`bitfinex.${i}.amount`]: current.amount,
                                 }});
                             }
                         }
                     } else if (lent_credit > 5000) {
                         for (let i = 0; i < curArr.length; i++) {
                             if (curArr[i].type === current.type) {
+                                if (margin[id] && margin[id][current.type] && available[id] && available[id][current.type] && (current.amount - margin[id][current.type].total) >= (available[id][current.type].total - min_available)) {
+                                    current.amount = margin[id][current.type].total + available[id][current.type].total - min_available;
+                                } else {
+                                    current.amount = current.amount + current.rate_ratio;
+                                }
                                 return Mongo('update', USERDB, {_id: uid}, {$set : {
-                                    [`bitfinex.${i}.amount`]: current.amount + current.rate_ratio,
+                                    [`bitfinex.${i}.amount`]: current.amount,
                                 }});
                             }
                         }
