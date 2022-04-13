@@ -1712,9 +1712,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         for (let i = 0; i < curArr.length; i++) {
                             if (curArr[i].type === current.type) {
                                 if (margin[id] && margin[id][current.type] && available[id] && available[id][current.type] && (current.amount - margin[id][current.type].total) >= (available[id][current.type].total - min_available)) {
-                                    current.amount = margin[id][current.type].total + available[id][current.type].total - min_available;
+                                    current.amount = Math.floor(margin[id][current.type].total + available[id][current.type].total - min_available);
                                 } else {
-                                    current.amount = current.amount + current.rate_ratio;
+                                    current.amount = Math.floor(current.amount + current.rate_ratio);
                                 }
                                 return Mongo('update', USERDB, {_id: uid}, {$set : {
                                     [`bitfinex.${i}.amount`]: current.amount,
