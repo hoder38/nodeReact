@@ -1477,7 +1477,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             console.log(current);
             let needTrans = 0;
             if (margin[id][current.type] && margin[id][current.type]['total'] > 0) {
-                if (Math.abs(current.amount - margin[id][current.type]['total']) > current.amount * 0.05) {
+                if ((Math.abs(current.amount - margin[id][current.type]['total']) >= 2000) || (Math.abs(current.amount - margin[id][current.type]['total']) >= current.amount * 0.05)) {
                     needTrans = current.amount - margin[id][current.type]['total'];
                 }
                 console.log(`margin total: ${margin[id][current.type]['total']}`);
