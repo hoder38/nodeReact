@@ -1362,15 +1362,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     return Promise.resolve();
                 } else {
                     return calKeepCash().then(kp => {
-                        const DRT = getDR(finalNew[index].rate);
-                        console.log(DRT);
                         if (kp < finalNew[index].amount) {
                             return Promise.resolve();
                         }
+                        const finalfinalRate = (((extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7) / BITFINEX_EXP;
+                        const DRT = getDR(finalfinalRate);
+                        console.log(DRT);
                         const fo = new FundingOffer({
                             symbol: current.type,
                             amount: finalNew[index].amount,
-                            rate: (((extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7) / BITFINEX_EXP,
+                            rate: finalfinalRate,
                             period: (DRT === false) ? 2 : DRT.day,
                             type: 'LIMIT',
                         }, userRest);
