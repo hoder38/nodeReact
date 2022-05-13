@@ -43,9 +43,9 @@ export function isValidString(str, type) {
     }
     switch (type) {
         case 'name':
-        //為了方便開放 < ，但是後端只接受default的
+        //為了方便開放 > : ，但是後端只接受default的
         str = str.trim()
-        return str.match(/^[^\\\/\|\*\?"<:]{1,500}$/)
+        return str.match(/^[^\\\/\|\*\?"<]{1,500}$/)
         case 'passwd':
         return str.match(/^[0-9a-zA-Z!@#$%]{2,30}$/)
         case 'verify':

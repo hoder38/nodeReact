@@ -2467,7 +2467,7 @@ export default {
                         const pairArr = [];
                         pair.split(',').forEach(v => {
                             const p = v.trim();
-                            const m = p.match(/^([a-zA-Z]+)\=(\d+)$/);
+                            const m = p.match(/^([a-zA-Z\:]+)\=(\d+)$/);
                             if (m && SUPPORT_PAIR[set.type].indexOf(m[1]) !== -1) {
                                 pairArr.push({
                                     type: m[1],
