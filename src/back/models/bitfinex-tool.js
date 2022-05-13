@@ -2493,8 +2493,17 @@ export default {
             if (set.hasOwnProperty('clear')) {
                 if (set.clear) {
                     let allClear = false;
-                    const clear = isValidString(set.clear, 'name');
-                    if (clear === false) {
+                    const clear = set.clear.trim()
+                    if (clear !== '.' && clear !== '..') {
+                        if (clear.match(/^[^\\\/\|\*\?"<>]{1,500}$/)) {
+                            if (clear.replace(/[\s　]+/g, '') !== '') {
+                            } else {
+                                return handleError(new HoError('Trade Clear is not valid'));
+                            }
+                        } else {
+                            return handleError(new HoError('Trade Clear is not valid'));
+                        }
+                    } else {
                         return handleError(new HoError('Trade Clear is not valid'));
                     }
                     const clearArr = {};
