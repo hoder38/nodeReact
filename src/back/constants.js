@@ -878,10 +878,10 @@ export const TADA_SYM = 'tADAUSD';
 export const FSOL_SYM = 'fSOL';
 export const FADA_SYM = 'fADA';
 export const TXRP_SYM = 'tXRPUSD';
-export const TAVAX_SYM = 'tAVXUSD';
+export const TAVAX_SYM = 'tAVAX:USD';
 export const TTRX_SYM = 'tTRXUSD';
 export const FXRP_SYM = 'fXRP';
-export const FAVAX_SYM = 'fAVX';
+export const FAVAX_SYM = 'fAVAX';
 export const FTRX_SYM = 'fTRX';
 export const BITFINEX_EXP = 100000000;
 export const BITFINEX_MIN = 100;
@@ -921,7 +921,7 @@ export const SUPPORT_LEVERAGE = {
     tSOLUSD: 3.3,
     tADAUSD: 3.3,
     tXRPUSD: 5,
-    tAVAUSD: 3.3,
+    "tAVAX:USD": 3.3,
     tTRXUSD: 3.3,
     tUNIUSD: 3.3,
 }
@@ -972,12 +972,12 @@ export const BITNIFEX_PARENT = [
         show: 'XRP',
     },
     {
-        name: 'avax',
-        show: 'AVAX',
-    },
-    {
         name: 'trx',
         show: 'TRX',
+    },
+    {
+        name: 'avax',
+        show: 'AVAX',
     },
     {
         name: 'uni',
