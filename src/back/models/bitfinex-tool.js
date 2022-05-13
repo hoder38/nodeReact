@@ -2451,8 +2451,17 @@ export default {
             }
             if (set.hasOwnProperty('pair')) {
                 if (set.pair) {
-                    const pair = isValidString(set.pair, 'name');
-                    if (pair === false) {
+                    const pair = set.pair.trim()
+                    if (pair !== '.' && pair !== '..') {
+                        if (pair.match(/^[^\\\/\|\*\?"<>]{1,500}$/)) {
+                            if (pair.replace(/[\s　]+/g, '') !== '') {
+                            } else {
+                                return handleError(new HoError('Trade Pair is not valid'));
+                            }
+                        } else {
+                            return handleError(new HoError('Trade Pair is not valid'));
+                        }
+                    } else {
                         return handleError(new HoError('Trade Pair is not valid'));
                     }
                     /*const mPair = pair.match(/^([a-zA-Z]+)\=([a|c]\d+\.?\d*)([a|c]\d+\.?\d*)?$/);
