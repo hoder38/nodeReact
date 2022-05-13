@@ -1365,13 +1365,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         if (kp < finalNew[index].amount) {
                             return Promise.resolve();
                         }
-                        const finalfinalRate = (((extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7) / BITFINEX_EXP;
+                        const finalfinalRate = ((extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
                         const DRT = getDR(finalfinalRate);
                         console.log(DRT);
                         const fo = new FundingOffer({
                             symbol: current.type,
                             amount: finalNew[index].amount,
-                            rate: finalfinalRate,
+                            rate: finalfinalRate / BITFINEX_EXP,
                             period: (DRT === false) ? 2 : DRT.day,
                             type: 'LIMIT',
                         }, userRest);
