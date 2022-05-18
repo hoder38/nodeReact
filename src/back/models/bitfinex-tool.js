@@ -907,7 +907,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             if (items.length < 1) {
                                                 return handleError(new HoError(`miss ${os.symbol}`));
                                             }
-                                            return processOrderRest(amount, os.price, os.id, os.mtsUpdate / 1000, items[0]);
+                                            return processOrderRest(amount, os.price, os.id, Math.round(os.mtsUpdate / 1000), items[0]);
                                         }).catch(err => {
                                             sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                             handleError(err, `${id} Total Updata Error`);
@@ -1777,7 +1777,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                         if (items.length < 1) {
                                                             return handleError(new HoError(`miss ${os.symbol}`));
                                                         }
-                                                        return processOrderRest(amount, os.orderPrice, os.orderID, os.mtsCreate / 1000, items[0]);
+                                                        return processOrderRest(amount, os.orderPrice, os.orderID, Math.round(os.mtsCreate / 1000), items[0]);
                                                     }).catch(err => {
                                                         sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                         handleError(err, `${id} Total Updata Error`);
