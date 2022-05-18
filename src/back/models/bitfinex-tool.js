@@ -1754,7 +1754,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return Promise.resolve();
             }
-            const orderHistory = () => userRest.accountTrades('', new Date().getTime() + UPDATE_FILL_ORDER * 1000, new Date().getTime(), 120).then(oss => {
+            const orderHistory = () => userRest.accountTrades('', new Date().getTime() + UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
                 //update order
                 const order_recur = index => {
                     if (index >= oss.length) {
@@ -1804,6 +1804,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return order_recur(index + 1);
                     }
                 }
+                return order_recur(0);
             });
             return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
