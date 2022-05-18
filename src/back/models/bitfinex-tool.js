@@ -1754,7 +1754,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return Promise.resolve();
             }
-            const orderHistory = () => userRest.accountTrades('', new Date().getTime() + UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
+            const orderHistory = () => userRest.accountTrades('', new Date().getTime() - UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
                 //update order
                 console.log(oss);
                 console.log(oss.length);
