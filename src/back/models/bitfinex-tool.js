@@ -1759,9 +1759,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 return Promise.resolve();
             }
             const orderHistory = () => userRest.accountTrades(null, new Date().getTime() - UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
-                //update order
-                console.log(oss);
-                console.log(oss.length);
                 const order_recur = index => {
                     if (index < 0) {
                         return Promise.resolve();
@@ -1769,7 +1766,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         const os = oss[index];
                         const symbol = `f${os.symbol.substr(-3)}`;
                         if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                            if (!os.type.includes('EXCHANGE')) {
+                            if (!os.orderType.includes('EXCHANGE')) {
                                 for (let i = 0; i < curArr.length; i++) {
                                     if (curArr[i].type === symbol && curArr[i].pair) {
                                         for (let j = 0; j < curArr[i].pair.length; j++) {
