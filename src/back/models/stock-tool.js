@@ -6407,7 +6407,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (previous.price >= price) {
             let previousP = priceArray.length - 1;
             let pP = 8;
-            let pPrice = previous.price * (2 - (1 + fee) * (1 + fee));
+            let pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
             //let pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
@@ -6440,7 +6440,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                 }
             }
-            pPrice = previous.price * (1 + fee) * (1 + fee);
+            pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
             //pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             previousP = 0;
             pP = 0;
@@ -6460,7 +6460,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (previous.price < price) {
             let previousP = 0;
             let pP = 0;
-            let pPrice = previous.price * (1 + fee) * (1 + fee);
+            let pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
             //let pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; previousP < priceArray.length; previousP++) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
@@ -6493,7 +6493,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = false;
                 }
             }
-            pPrice = previous.price * (2 - (1 + fee) * (1 + fee));
+            pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
             //pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             previousP = priceArray.length - 1;
             pP = 8;

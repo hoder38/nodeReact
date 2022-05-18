@@ -895,6 +895,7 @@ export const EXTREM_RATE_NUMBER = 15;
 //export const COIN_MAX_MAX = -60;
 export const EXTREM_DURATION = 86400;
 export const UPDATE_BOOK = 86400;
+export const UPDATE_FILL_ORDER = 43200;
 export const UPDATE_ORDER = 60;
 export const MINIMAL_OFFER = 50;
 export const BITFINEX_FEE = 0.004;

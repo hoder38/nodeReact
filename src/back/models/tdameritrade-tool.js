@@ -754,12 +754,23 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             item.previous.buy.push({price, time});
                                         }
                                         if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                            item.previous = {
-                                                price,
-                                                time,
-                                                type: 'buy',
-                                                buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                sell: item.previous.sell,
+                                            if (o.fake) {
+                                                item.previous = {
+                                                    price,
+                                                    tprice: item.previous.tprice ? 0 : item.previous.price,
+                                                    time,
+                                                    type: 'buy',
+                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    sell: item.previous.sell,
+                                                }
+                                            } else {
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'buy',
+                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    sell: item.previous.sell,
+                                                }
                                             }
                                         } else {
                                             item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
@@ -779,12 +790,23 @@ export const usseTDInit = () => checkOauth().then(() => {
                                             item.previous.sell.push({price, time});
                                         }
                                         if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                            item.previous = {
-                                                price,
-                                                time,
-                                                type: 'sell',
-                                                sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                buy: item.previous.buy,
+                                            if (o.fake) {
+                                                item.previous = {
+                                                    price,
+                                                    tprice: item.previous.tprice ? 0 : item.previous.price,
+                                                    time,
+                                                    type: 'sell',
+                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    buy: item.previous.buy,
+                                                }
+                                            } else {
+                                                item.previous = {
+                                                    price,
+                                                    time,
+                                                    type: 'sell',
+                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                                                    buy: item.previous.buy,
+                                                }
                                             }
                                         } else {
                                             item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);

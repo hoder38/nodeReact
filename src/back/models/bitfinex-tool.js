@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, /*COIN_MAX, COIN_MAX_MAX, */RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FOMG_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
+import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, /*COIN_MAX, COIN_MAX_MAX, */RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FOMG_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import bfxApiNodeModels from 'bfx-api-node-models'
 const { FundingOffer, Order } = bfxApiNodeModels;
@@ -392,13 +392,16 @@ export const setWsOffer = (id, curArr=[], uid) => {
             return Promise.resolve();
         }
     }
-    const processOrderRest = (amount, price, item) => {
+    const processOrderRest = (amount, price, item, fake) => {
         const time = Math.round(new Date().getTime() / 1000);
         const tradeType = amount > 0 ? 'buy' : 'sell';
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
-                if (price < item.previous.buy[k].price) {
+                if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                    console.log('order duplicate');
+                    return Promise.resolve();
+                } else if (price < item.previous.buy[k].price) {
                     item.previous.buy.splice(k, 0, {price, time});
                     is_insert = true;
                     break;
@@ -407,17 +410,31 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if (!is_insert) {
                 item.previous.buy.push({price, time});
             }
-            item.previous = {
-                price,
-                time,
-                type: 'buy',
-                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                sell: item.previous.sell,
+            if (fake) {
+                item.previous = {
+                    price,
+                    tprice: item.previous.tprice ? 0 : item.previous.price,
+                    time,
+                    type: 'buy',
+                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                    sell: item.previous.sell,
+                }
+            } else {
+                item.previous = {
+                    price,
+                    time,
+                    type: 'buy',
+                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                    sell: item.previous.sell,
+                }
             }
         } else if (tradeType === 'sell') {
             let is_insert = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
-                if (price > item.previous.sell[k].price) {
+                if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                    console.log('order duplicate');
+                    return Promise.resolve();
+                } else if (price > item.previous.sell[k].price) {
                     item.previous.sell.splice(k, 0, {price, time});
                     is_insert = true;
                     break;
@@ -426,12 +443,23 @@ export const setWsOffer = (id, curArr=[], uid) => {
             if (!is_insert) {
                 item.previous.sell.push({price, time});
             }
-            item.previous = {
-                price,
-                time,
-                type: 'sell',
-                sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                buy: item.previous.buy,
+            if (fake) {
+                item.previous = {
+                    price,
+                    tprice: item.previous.tprice ? 0 : item.previous.price,
+                    time,
+                    type: 'sell',
+                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                    buy: item.previous.buy,
+                }
+            } else {
+                item.previous = {
+                    price,
+                    time,
+                    type: 'sell',
+                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                    buy: item.previous.buy,
+                }
             }
         }
         return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
@@ -1365,7 +1393,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         if (kp < finalNew[index].amount) {
                             return Promise.resolve();
                         }
-                        const finalfinalRate = ((extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
+                        const finalfinalRate = ((currentRate[current.type].frr >= current.dynamic) || (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
                         const DRT = getDR(finalfinalRate);
                         console.log(DRT);
                         const fo = new FundingOffer({
@@ -1423,7 +1451,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     console.log(`miss ${o.symbol}`);
                                     return checkFakeOrder(index + 1);
                                 }
-                                return processOrderRest(1, o.price, items[0]).then(() => {
+                                return processOrderRest(1, o.price, items[0], true).then(() => {
                                     o.done = true;
                                     return checkFakeOrder(index + 1);
                                 });
@@ -1436,7 +1464,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     console.log(`miss ${o.symbol}`);
                                     return checkFakeOrder(index + 1);
                                 }
-                                return processOrderRest(-1, o.price, items[0]).then(() => {
+                                return processOrderRest(-1, o.price, items[0], true).then(() => {
                                     o.done = true;
                                     return checkFakeOrder(index + 1);
                                 });
@@ -1726,7 +1754,58 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return Promise.resolve();
             }
-            return dynamicAmount().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+            const orderHistory = () => userRest.accountTrades('', new Date().getTime() + UPDATE_FILL_ORDER * 1000, new Date().getTime(), 120).then(oss => {
+                //update order
+                const order_recur = index => {
+                    if (index >= oss.length) {
+                        return Promise.resolve();
+                    } else {
+                        const os = oss[index];
+                        const symbol = `f${os.symbol.substr(-3)}`;
+                        if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                            if (order[id][symbol]) {
+                                for (let j = 0; j < order[id][symbol].length; j++) {
+                                    if (order[id][symbol][j].id === os.id) {
+                                        console.log(`delete ${os.id}`);
+                                        order[id][symbol].splice(j, 1);
+                                        break;
+                                    }
+                                }
+                            }
+                            if ((Math.round(os.mtsUpdate / 1000) - Math.round(os.mtsCreate / 1000) <= ORDER_INTERVAL) && !os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+                                for (let i = 0; i < curArr.length; i++) {
+                                    if (curArr[i].type === symbol && curArr[i].pair) {
+                                        for (let j = 0; j < curArr[i].pair.length; j++) {
+                                            if (curArr[i].pair[j].type === os.symbol) {
+                                                console.log('HISTORY');
+                                                console.log(os);
+                                                //console.log(`${os.symbol} order executed`);
+                                                const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                                                if (amount !== 0) {
+                                                    return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
+                                                        console.log(items);
+                                                        if (items.length < 1) {
+                                                            return handleError(new HoError(`miss ${os.symbol}`));
+                                                        }
+                                                        return processOrderRest(amount, os.priceAvg, items[0]);
+                                                    }).catch(err => {
+                                                        sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                                        handleError(err, `${id} Total Updata Error`);
+                                                    }).then(() => order_recur(index + 1));
+                                                }
+                                                break;
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        return order_recur(index + 1);
+                    }
+                }
+            });
+            return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 fakeOrder[id][current.type] = [];
                 const recur_status = index => {
@@ -2225,7 +2304,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }).catch(err => {
                 updateTime[id]['trade'] = updateTime[id]['trade'] - 2 * RATE_INTERVAL;
                 return Promise.reject(err);
-            })));
+            }))));
         });
     }
     const getLegder = current => {
