@@ -398,24 +398,23 @@ export const setWsOffer = (id, curArr=[], uid) => {
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
-                if (item.previous.buy[k].price === price && (item.previous.buy[k].id && item.previous.buy[k].id === oid)) {
+                if (item.previous.buy[k].price === price && (oid && item.previous.buy[k].id === oid)) {
                     console.log('order duplicate');
                     return Promise.resolve();
                 } else if (price < item.previous.buy[k].price) {
-                    item.previous.buy.splice(k, 0, {price, time});
+                    item.previous.buy.splice(k, 0, {price, time, id: oid});
                     is_insert = true;
                     break;
                 }
             }
             if (!is_insert) {
-                item.previous.buy.push({price, time});
+                item.previous.buy.push({price, time, id: oid});
             }
             if (fake) {
                 item.previous = {
                     price,
                     tprice: item.previous.tprice ? 0 : item.previous.price,
                     time,
-                    id: oid,
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
@@ -424,7 +423,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 item.previous = {
                     price,
                     time,
-                    id: oid,
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
@@ -433,24 +431,23 @@ export const setWsOffer = (id, curArr=[], uid) => {
         } else if (tradeType === 'sell') {
             let is_insert = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
-                if (item.previous.sell[k].price === price && (item.previous.sell[k].id && item.previous.sell[k].id === oid)) {
+                if (item.previous.sell[k].price === price && (oid && item.previous.sell[k].id === oid)) {
                     console.log('order duplicate');
                     return Promise.resolve();
                 } else if (price > item.previous.sell[k].price) {
-                    item.previous.sell.splice(k, 0, {price, time});
+                    item.previous.sell.splice(k, 0, {price, time, id: oid});
                     is_insert = true;
                     break;
                 }
             }
             if (!is_insert) {
-                item.previous.sell.push({price, time});
+                item.previous.sell.push({price, time, id: oid});
             }
             if (fake) {
                 item.previous = {
                     price,
                     tprice: item.previous.tprice ? 0 : item.previous.price,
                     time,
-                    id: oid,
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,
@@ -459,7 +456,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 item.previous = {
                     price,
                     time,
-                    id: oid,
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,

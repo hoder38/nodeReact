@@ -5973,6 +5973,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.previous.price = item.tmpPT.price;
                         item.previous.time = item.tmpPT.time;
                         item.previous.type = item.tmpPT.type;
+                        item.previous.tprice = 0;
                     } else {
                         item.previous.time = 0;
                     }
