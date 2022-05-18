@@ -392,13 +392,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
             return Promise.resolve();
         }
     }
-    const processOrderRest = (amount, price, item, fake) => {
-        const time = Math.round(new Date().getTime() / 1000);
+    const processOrderRest = (amount, price, oid, time, item, fake) => {
+        //const time = Math.round(new Date().getTime() / 1000);
         const tradeType = amount > 0 ? 'buy' : 'sell';
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < item.previous.buy.length; k++) {
-                if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                if (item.previous.buy[k].price === price && (item.previous.buy[k].id && item.previous.buy[k].id === oid)) {
                     console.log('order duplicate');
                     return Promise.resolve();
                 } else if (price < item.previous.buy[k].price) {
@@ -415,6 +415,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     price,
                     tprice: item.previous.tprice ? 0 : item.previous.price,
                     time,
+                    id: oid,
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
@@ -423,6 +424,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 item.previous = {
                     price,
                     time,
+                    id: oid,
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
@@ -431,7 +433,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         } else if (tradeType === 'sell') {
             let is_insert = false;
             for (let k = 0; k < item.previous.sell.length; k++) {
-                if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                if (item.previous.sell[k].price === price && (item.previous.sell[k].id && item.previous.sell[k].id === oid)) {
                     console.log('order duplicate');
                     return Promise.resolve();
                 } else if (price > item.previous.sell[k].price) {
@@ -448,6 +450,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     price,
                     tprice: item.previous.tprice ? 0 : item.previous.price,
                     time,
+                    id: oid,
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,
@@ -456,6 +459,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 item.previous = {
                     price,
                     time,
+                    id: oid,
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,
@@ -889,7 +893,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         deleteOrder.push({
                             id: os.id,
                             amount,
-                            price: os.priceAvg,
+                            price: os.price,
                             process: (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) ? true : false,
                         });
                     }
@@ -907,7 +911,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             if (items.length < 1) {
                                                 return handleError(new HoError(`miss ${os.symbol}`));
                                             }
-                                            return processOrderRest(amount, os.priceAvg, items[0]);
+                                            return processOrderRest(amount, os.price, os.id, os.mtsUpdate / 1000, items[0]);
                                         }).catch(err => {
                                             sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                             handleError(err, `${id} Total Updata Error`);
@@ -1451,7 +1455,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     console.log(`miss ${o.symbol}`);
                                     return checkFakeOrder(index + 1);
                                 }
-                                return processOrderRest(1, o.price, items[0], true).then(() => {
+                                return processOrderRest(1, o.price, 0, o.time, items[0], true).then(() => {
                                     o.done = true;
                                     return checkFakeOrder(index + 1);
                                 });
@@ -1464,7 +1468,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     console.log(`miss ${o.symbol}`);
                                     return checkFakeOrder(index + 1);
                                 }
-                                return processOrderRest(-1, o.price, items[0], true).then(() => {
+                                return processOrderRest(-1, o.price, 0, o.time, items[0], true).then(() => {
                                     o.done = true;
                                     return checkFakeOrder(index + 1);
                                 });
@@ -1754,27 +1758,18 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return Promise.resolve();
             }
-            const orderHistory = () => userRest.accountTrades('', new Date().getTime() - UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
+            const orderHistory = () => userRest.accountTrades(null, new Date().getTime() - UPDATE_FILL_ORDER * 1000, new Date().getTime(), UPDATE_FILL_ORDER / 3600 * 20).then(oss => {
                 //update order
                 console.log(oss);
                 console.log(oss.length);
                 const order_recur = index => {
-                    if (index >= oss.length) {
+                    if (index < 0) {
                         return Promise.resolve();
                     } else {
                         const os = oss[index];
                         const symbol = `f${os.symbol.substr(-3)}`;
                         if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                            if (order[id][symbol]) {
-                                for (let j = 0; j < order[id][symbol].length; j++) {
-                                    if (order[id][symbol][j].id === os.id) {
-                                        console.log(`delete ${os.id}`);
-                                        order[id][symbol].splice(j, 1);
-                                        break;
-                                    }
-                                }
-                            }
-                            if ((Math.round(os.mtsUpdate / 1000) - Math.round(os.mtsCreate / 1000) <= ORDER_INTERVAL) && !os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+                            if (!os.type.includes('EXCHANGE')) {
                                 for (let i = 0; i < curArr.length; i++) {
                                     if (curArr[i].type === symbol && curArr[i].pair) {
                                         for (let j = 0; j < curArr[i].pair.length; j++) {
@@ -1782,18 +1777,18 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                 console.log('HISTORY');
                                                 console.log(os);
                                                 //console.log(`${os.symbol} order executed`);
-                                                const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                                                const amount = os.execAmount < 0 ? (1 - BITFINEX_FEE) * os.execAmount : os.execAmount;
                                                 if (amount !== 0) {
                                                     return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
                                                         console.log(items);
                                                         if (items.length < 1) {
                                                             return handleError(new HoError(`miss ${os.symbol}`));
                                                         }
-                                                        return processOrderRest(amount, os.priceAvg, items[0]);
+                                                        return processOrderRest(amount, os.orderPrice, os.orderID, os.mtsCreate / 1000, items[0]);
                                                     }).catch(err => {
                                                         sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
                                                         handleError(err, `${id} Total Updata Error`);
-                                                    }).then(() => order_recur(index + 1));
+                                                    }).then(() => order_recur(index - 1));
                                                 }
                                                 break;
                                             }
@@ -1803,10 +1798,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                             }
                         }
-                        return order_recur(index + 1);
+                        return order_recur(index - 1);
                     }
                 }
-                return order_recur(0);
+                return order_recur(oss.length - 1);
             });
             return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
@@ -1849,12 +1844,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         return rest ? rest() : Promise.resolve();
                                     }
                                     if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                        if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
+                                        return real_delete(index + 1);
+                                        /*if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
                                             console.log(`${real_id[index].symbol} order partially filled`);
-                                            return processOrderRest(real_id[index].amount, real_id[index].price, item).then(() => real_delete(index + 1));
+                                            return processOrderRest(real_id[index].amount, real_id[index].price, real_id[index].id, real_id[index]., item).then(() => real_delete(index + 1));
                                         } else {
                                             return real_delete(index + 1);
-                                        }
+                                        }*/
                                     } else {
                                         return userRest.cancelOrder(real_id[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
                                     }
@@ -2202,9 +2198,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                                     if (deleteOrder[i].id === or1[0].id) {
                                                         isDelete = true;
                                                         const delobj = deleteOrder.splice(i, 1);
-                                                        if (delobj.process){
+                                                        /*if (delobj.process){
                                                             return processOrderRest(delobj.amount, delobj.price, item).then(() => recur_NewOrder(index + 1));
-                                                        }
+                                                        }*/
                                                         break;
                                                     }
                                                 }
@@ -2269,9 +2265,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             if (deleteOrder[i].id === or[0].id) {
                                                 isDelete = true;
                                                 const delobj = deleteOrder.splice(i, 1);
-                                                if (delobj.process){
+                                                /*if (delobj.process){
                                                     return processOrderRest(delobj.amount, delobj.price, item).then(() => submitBuy());
-                                                }
+                                                }*/
                                                 break;
                                             }
                                         }
