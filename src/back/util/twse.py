@@ -149,8 +149,11 @@ elif sys.argv[3] == 'submit':
                     sell = int(match.group(7))
                     sell_price = float(match.group(8))
             if buy > 0 and buy_price != 0:
-                if current_cash < buy_price * buy * (1 + fee):
-                    buy = int(current_cash / (buy_price * (1 + fee)))
+                if current_cash < buy_price * buy * (1 + fee) * 4 / 3:
+                    if current_cash < buy_price * buy * (1 + fee) * 2 / 3:
+                        buy = 0
+                    else:
+                        buy = int(current_cash / (buy_price * (1 + fee)))
                 current_cash = current_cash - buy_price * buy * (1 + fee)
                 print(buy)
                 print(buy_price)

@@ -990,8 +990,14 @@ export const usseTDInit = () => checkOauth().then(() => {
                         return initialBook(true).then(() => {
                             console.log(available);
                             const order_avail = (available.tradable > 300) ? available.tradable - 300 : 0;
-                            if (order_avail < suggestion.bCount * suggestion.buy) {
-                                suggestion.bCount = Math.floor(order_avail / suggestion.buy);
+
+                            if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
+                                if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
+                                    suggestion.bCount = 0;
+                                    suggestion.buy = 0;
+                                } else {
+                                    suggestion.bCount = Math.floor(order_avail / suggestion.buy);
+                                }
                             }
                             if (suggestion.bCount > 0 && suggestion.buy) {
                                 console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);

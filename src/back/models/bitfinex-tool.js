@@ -2144,8 +2144,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                                 console.log(margin[id]);
                                 const order_avail = (margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
-                                if (order_avail < suggestion.bCount * suggestion.buy) {
-                                    suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
+                                    if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
+                                        suggestion.bCount = 0;
+                                        suggestion.buy = 0;
+                                    } else {
+                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                                    }
                                 }
                                 if (suggestion.bCount > 0 && suggestion.buy) {
                                     console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
