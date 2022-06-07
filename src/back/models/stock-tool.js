@@ -6107,7 +6107,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
                     sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                 }
-                if (item.count < suggestion.sCount) {
+                if (item.count < suggestion.sCount * 4 / 3) {
                     suggestion.sCount = item.count;
                 }
                 if (item.amount < suggestion.bCount * suggestion.buy) {

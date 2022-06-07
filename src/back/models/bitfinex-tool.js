@@ -1435,8 +1435,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     });
                 }
             }
-            console.log(`fakeOrder ${id} ${current.type}`);
-            console.log(fakeOrder[id][current.type]);
+            if (current.isTrade && fakeOrder[id][current.type]) {
+                console.log(`fakeOrder ${id} ${current.type}`);
+                console.log(fakeOrder[id][current.type]);
+            }
             const checkFakeOrder = index => {
                 if (current.isTrade && fakeOrder[id][current.type]) {
                     if (index >= fakeOrder[id][current.type].length) {
@@ -2000,7 +2002,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                     });
                                 }*/
-                                if (item.count < suggestion.sCount) {
+                                if (item.count < suggestion.sCount * 4 / 3) {
                                     suggestion.sCount = item.count;
                                 }
                                 if (item.amount < suggestion.bCount * suggestion.buy) {

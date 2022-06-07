@@ -185,7 +185,7 @@ elif sys.argv[3] == 'submit':
                     if p.code == match.group(1):
                         q = int(p.quantity // 100)
                         break
-                if q < sell:
+                if q < sell * 4 / 3:
                     sell = q
                 print(sell)
                 print(sell_price)
