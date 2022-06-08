@@ -1393,7 +1393,8 @@ export default {
                 const hs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'div', 'test')[0], 'div', 'region region-content')[0], 'article')[0], 'div', 'row')[0], 'div', 'container')[0], 'div', 'tab-content')[0], 'div', 'menu1')[0], 'div', 'row')[0], 'div')[0], 'h3');
                 for (let h of hs) {
                     const a = findTag(h, 'a')[0];
-                    if (findTag(a)[0].match(/^Full Release/)) {
+                    const tex = findTag(a)[0] ? findTag(a)[0] : findTag(findTag(a, 'div')[0])[0];
+                    if (tex.match(/^Full Release/)) {
                         const url = addPre(a.attribs.href, 'http://www.bea.gov');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
