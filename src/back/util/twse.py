@@ -183,17 +183,19 @@ elif sys.argv[3] == 'submit':
                 q = 0
                 for p in acc_position:
                     if p.code == match.group(1):
-                        q = int(p.quantity // 100)
+                        q = int(p.quantity)
                         break
                 if q < sell * 4 / 3:
                     sell = q
+                else:
+                    sell = sell * 100
                 print(sell)
                 print(sell_price)
                 print(q)
                 if sell > 0:
-                    if sell//10 > 0:
+                    if sell//1000 > 0:
                         order = api.Order(price=sell_price,
-                            quantity=sell//10,
+                            quantity=sell//1000,
                             action="Sell",
                             price_type="LMT",
                             order_type="ROD",
@@ -201,9 +203,9 @@ elif sys.argv[3] == 'submit':
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
-                    if sell%10 > 0:
+                    if sell%1000 > 0:
                         order = api.Order(price=sell_price,
-                            quantity=sell%10*100,
+                            quantity=sell%1000,
                             action="Sell",
                             price_type="LMT",
                             order_type="ROD",
