@@ -15,8 +15,7 @@ import { dbDump } from './cmd.js'
 import { handleError, completeZero } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
-let stock_batch_list = [];
-let stock_batch_list_2 = [];
+const stock_batch_list = [];
 
 let lastSetOffer = 0;
 let lastInitUsse = 0;
@@ -109,76 +108,48 @@ export const checkMedia = () => {
     });
 }*/
 
-const updateStockList = (list, type) => {
+export const updateStockList = () => {
+    if (UPDATE_STOCK(ENV_TYPE)) {
+        //怕程序死掉 改為不等執行完就開始倒數
+        const loopUpdateStockList = () => {
+            console.log('loopUpdateStockList');
+            console.log(new Date().toLocaleString());
+            console.log(stock_batch_list[0]);
+            console.log(stock_batch_list.length);
+            const item = stock_batch_list.splice(0, 1);
+            StockTool.getSingleStockV2(item[0].type, item[0], 1).catch(err => bgError(err, 'Loop updateStockList'))
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => loopUpdateStockList());
+        }
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 540000)).then(() => loopUpdateStockList());
+    }
+}
+
+/*const updateStockList = () => {
     console.log('updateStockList');
     console.log(new Date().toLocaleString());
-    console.log(list[0]);
-    return StockTool.getSingleStockV2(type, list[0], 1).catch(err => bgError(err, 'Loop updateStock single')).then(() => {
-        list.splice(0, 1);
-        if (list.length > 0) {
-            return updateStockList(list, type);
+    console.log(stock_batch_list[0]);
+    console.log(stock_batch_list.length);
+    return StockTool.getSingleStockV2(stock_batch_list[0].type, stock_batch_list[0], 1).catch(err => bgError(err, 'Loop updateStock single')).then(() => {
+        stock_batch_list.splice(0, 1);
+        if (stock_batch_list.length > 0) {
+            return updateStockList();
         }
     });
-}
+}*/
 
 export const updateStock = () => {
     if (UPDATE_STOCK(ENV_TYPE)) {
         const loopUpdateStock = () => {
             console.log('loopUpdateStock');
             console.log(new Date().toLocaleString());
-            /*let use_stock_list = stock_batch_list;
-            if (stock_batch_list.length > 0) {
-                console.log('stock_batch_list remain');
-                console.log(stock_batch_list.length);
-                stock_batch_list_2 = [...stock_batch_list];
-                stock_batch_list = [];
-                use_stock_list = stock_batch_list_2;
-            } else if (stock_batch_list_2.length > 0) {
-                console.log('stock_batch_list_2 remain');
-                console.log(stock_batch_list_2.length);
-                stock_batch_list = [...stock_batch_list_2];
-                stock_batch_list_2 = [];
-                use_stock_list = stock_batch_list;
-            }*/
-            let use_stock_list = [];
+            //let use_stock_list = [];
             const sd = new Date();
-            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 2) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {/*Mongo('find', STOCKDB, {important: 1}).then(items => {
-                let annualList = [];
-                const year = new Date().getFullYear();
-                items.forEach(i => {
-                    if (annualList.indexOf(i.index) === -1) {
-                        annualList.push(i.index);
-                    }
-                });*/
-                stocklist.forEach(i => {
-                    if (use_stock_list.indexOf(i) === -1) {
-                        use_stock_list.push(i);
-                    }
-                });
-                /*let folderList = [];
-                const recur_find = (userlist, index) => (index < userlist.length) ? GoogleApi('list folder', {
-                    folderId: userlist[index].auto,
-                    name: 'downloaded',
-                }).then(downloadedList => {
-                    if (downloadedList.length > 0) {
-                        folderList.push(downloadedList[0].id);
-                    }
-                    return recur_find(userlist, index + 1);
-                }) : (folderList.length > 0) ? updateStockAnnual(year, folderList, annualList, 0, 0): Promise.resolve();
-                const nextUpdate = () => (annualList.length > 0) ? Mongo('find', USERDB, {
-                    auto: {$exists: true},
-                    perm: 1,
-                }).then(userlist => recur_find(userlist, 0)) : Promise.resolve();
-                return nextUpdate().then(() => updateStockList(use_stock_list, 'twse'));
-            }));*/
-                return updateStockList(use_stock_list, 'twse');
+            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 2) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+                stocklist.forEach(i => stock_batch_list.push(i));
+                //return updateStockList();
             }) : (sd.getDay() === 5 && sd.getHours() === 2) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
-                stocklist.forEach(i => {
-                    if (use_stock_list.indexOf(i) === -1) {
-                        use_stock_list.push(i);
-                    }
-                });
-                return updateStockList(use_stock_list, 'usse');
+                stocklist.forEach(i => stock_batch_list.push(i));
+                //return updateStockList();
             }) : Promise.resolve();
             return parseStockList().catch(err => bgError(err, 'Loop updateStock')).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000))).then(() => loopUpdateStock());
         }

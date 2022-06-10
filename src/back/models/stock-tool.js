@@ -6269,6 +6269,7 @@ export const getStockListV2 = (type, year, month) => {
                                         stock_list.push({
                                             index,
                                             tag: tag.map(v => v),
+                                            type: 'twse',
                                         });
                                     }
                                 }
@@ -6311,6 +6312,7 @@ export const getStockListV2 = (type, year, month) => {
                             stock_list.push({
                                 index: sIndex,
                                 tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                                type: 'usse',
                             });
                         }
                     });
