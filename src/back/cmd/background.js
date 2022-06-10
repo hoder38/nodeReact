@@ -112,12 +112,14 @@ export const updateStockList = () => {
     if (UPDATE_STOCK(ENV_TYPE)) {
         //怕程序死掉 改為不等執行完就開始倒數
         const loopUpdateStockList = () => {
-            console.log('loopUpdateStockList');
-            console.log(new Date().toLocaleString());
-            console.log(stock_batch_list[0]);
-            console.log(stock_batch_list.length);
-            const item = stock_batch_list.splice(0, 1);
-            StockTool.getSingleStockV2(item[0].type, item[0], 1).catch(err => bgError(err, 'Loop updateStockList'))
+            if (stock_batch_list.length > 0) {
+                console.log('loopUpdateStockList');
+                console.log(new Date().toLocaleString());
+                console.log(stock_batch_list[0]);
+                console.log(stock_batch_list.length);
+                const item = stock_batch_list.splice(0, 1);
+                StockTool.getSingleStockV2(item[0].type, item[0], 1).catch(err => bgError(err, 'Loop updateStockList'))
+            }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => loopUpdateStockList());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 540000)).then(() => loopUpdateStockList());
