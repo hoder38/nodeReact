@@ -6110,8 +6110,13 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 if (item.count < suggestion.sCount * 4 / 3) {
                     suggestion.sCount = item.count;
                 }
-                if (item.amount < suggestion.bCount * suggestion.buy) {
-                    suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy);
+                if (item.amount < suggestion.bCount * suggestion.buy * 4 / 3) {
+                    if (item.amount < suggestion.bCount * suggestion.buy * 2 / 3) {
+                        suggestion.bCount = 0;
+                        suggestion.buy = 0;
+                    } else {
+                        suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy);
+                    }
                 }
                 if (item.setype === 'usse') {
                     suggestionData['usse'][item.index] = suggestion;
@@ -6558,17 +6563,21 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
     const finalSell = () => {
-        if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
-            sCount = 2 * priceTimes;
-        } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
-            sCount = priceTimes;
-        }
-        if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
-            if (sell >= pPricecost) {
-                //sCount = sTimes * priceTimes;
-            } else {
-                sCount = 0;
-                //sell = 0;
+        if (pAmount === 0) {
+            sCount = pOrig / sell / 5;
+        } else {
+            if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
+                sCount = 2 * priceTimes;
+            } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
+                sCount = priceTimes;
+            }
+            if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
+                if (sell >= pPricecost) {
+                    //sCount = sTimes * priceTimes;
+                } else {
+                    sCount = 0;
+                    //sell = 0;
+                }
             }
         }
         if (pCount === 0) {

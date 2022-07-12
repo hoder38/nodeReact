@@ -2007,8 +2007,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 if (item.count < suggestion.sCount * 4 / 3) {
                                     suggestion.sCount = item.count;
                                 }
-                                if (item.amount < suggestion.bCount * suggestion.buy) {
-                                    suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                if (item.amount < suggestion.bCount * suggestion.buy * 4 / 3) {
+                                    if (item.amount < suggestion.bCount * suggestion.buy * 2 / 3) {
+                                        suggestion.bCount = 0;
+                                        suggestion.buy = 0;
+                                    } else {
+                                        suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                                    }
                                 }
                                 return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                                     newMid: item.newMid,
