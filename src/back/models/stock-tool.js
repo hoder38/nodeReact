@@ -6564,7 +6564,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     sCount = sTimes * sCount * priceTimes;
     const finalSell = () => {
         if (pAmount === 0) {
-            sCount = pOrig / sell / 5;
+            sCount = Math.floor(pOrig / sell / 5);
         } else {
             if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
                 sCount = 2 * priceTimes;
