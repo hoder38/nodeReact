@@ -6646,7 +6646,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //type = 3;
             type = 6;
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
-            buy = Math.abs(priceArray[nowBP + 1]);
+            buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -6658,7 +6658,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Buy 3/4 ${buy} ( ${bCount} ) `;
         } else if (bP > 5) {
             type = 3;
-            buy = Math.abs(priceArray[nowBP + 1]);
+            buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -6670,7 +6670,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         } else if (bP > 4) {
             type = 7;
             //type = 3;
-            buy = Math.abs(priceArray[nowBP + 1]);
+            buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             if (t2) {
                 bCount = bCount * (2 + bAdd);
@@ -6680,7 +6680,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             finalBuy();
             str += `Buy 1/4 ${buy} ( ${bCount} ) `;
         } else {
-            buy = Math.abs(priceArray[nowBP + 1]);
+            buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             /*if (pType === 0) {
                 bCount = bCount * (2 + bAdd);
@@ -6730,7 +6730,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            sell = Math.abs(priceArray[nowSP - 1]);
+            sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             finalSell();
             str += `Sell 3/4 ${sell} ( ${sCount} ) `;
@@ -6746,14 +6746,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else {
                 sCount = sCount * (1 + sAdd);
             }
-            sell = Math.abs(priceArray[nowSP - 1]);
+            sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             finalSell();
             str += `Sell 1/2 ${sell} ( ${sCount} ) `;
         } else if (sP < 4) {
             type = 9;
             //type = 5;
-            sell = Math.abs(priceArray[nowSP - 1]);
+            sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);
@@ -6768,7 +6768,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             finalSell();
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
-            sell = Math.abs(priceArray[nowSP - 1]);
+            sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             /*if (pType === 0) {
                 sCount = sCount * (2 + sAdd);

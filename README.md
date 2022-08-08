@@ -162,6 +162,12 @@ node temp.js --async-stack-traces 追蹤異步錯誤
 
 sudo systemctl restart mongod
 
+修改opensubtitles.com/methods.json
+移除"/download"裡的
+"opts": {
+    "auth": true
+},
+
 修改bfx-api-node-rest/lib/rest2.js
 <   return notification
 ---

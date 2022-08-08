@@ -1,3 +1,4 @@
+import { OPENSUBTITLES_KEY } from '../../../ver.js'
 import { USERDB, STORAGEDB, __dirname } from '../constants.js'
 import Express from 'express'
 //import youtubeDl from 'youtube-dl'
@@ -10,6 +11,7 @@ import Mkdirp from 'mkdirp'
 import readline from 'readline'
 const { createInterface } = readline;
 import ReadTorrent from 'read-torrent'
+import OpenSubtitleRest from 'opensubtitles.com'
 import OpenSubtitle from 'opensubtitles-api'
 import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool.js'
@@ -917,156 +919,96 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
         }
     }
     getId().then(([id, filePath, fileName, size]) => {
+        if (fileName) {
+            const OpenSubtitlesHash = new OpenSubtitle('UserAgent');
+            return OpenSubtitlesHash.hash(filePath).then(infos => {
+                console.log(infos);
+                return [id, filePath, fileName, size, infos.moviehash];
+            });
+        } else {
+            return [id, filePath];
+        }
+    }).then(([id, filePath, fileName, size, moviehash]) => {
         const folderPath = PathDirname(filePath);
         const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();
         const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
         let OpenSubtitles = null;
         try {
-            OpenSubtitles = new OpenSubtitle({
-                useragent: 'hoder agent v0.1',
-                ssl: true,
-            });
+            OpenSubtitles = new OpenSubtitleRest({apikey: OPENSUBTITLES_KEY});
         } catch (err) {
             return handleError(err, next);
         }
-        console.log(Object.assign({
-            filesize: size,
-            path: filePath,
-            filename: fileName,
-            extensions: 'srt',
-            imdbid: name,
-        }, episode ? {
-            episode,
-            season,
-        } : {}));
-        return name.match(/^tt\d+$/i) ? OpenSubtitles.search(Object.assign({
-            filesize: size,
-            path: filePath,
-            filename: fileName,
-            extensions: 'srt',
-            imdbid: name,
-        }, episode ? {
-            episode,
-            season,
-        } : {})).then(subtitles => {
-            console.log(subtitles);
-            const sub_en_url = subtitles.en ? subtitles.en.url : null;
-            const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
-            if (!sub_url && !sub_en_url) {
-                return handleError(new HoError('cannot find subtitle!!!'));
-            }
-            return mkfolder().then(() => getZh(sub_url)).then(() => getEn(sub_en_url)).then(() => {
-                sendWs({
-                    type: 'sub',
-                    data: id,
-                }, 0, 0);
-                res.json({apiOK: true});
-            });
-        }) : OpenSubtitles.search(Object.assign({
-            //filesize: size,
-            //path: filePath,
-            //filename: fileName,
-            extensions: 'srt',
-            query: name,
-        }, episode ? {
-            episode,
-            season,
-        } : {})).then(subtitles => {
-            console.log(subtitles);
-            const sub_en_url = subtitles.en ? subtitles.en.url : null;
-            const sub_url = subtitles.ze ? subtitles.ze.url : subtitles.zt ? subtitles.zt.url : subtitles.zh ? subtitles.zh.url : null;
-            const restSub = () => (sub_url || sub_en_url) ? mkfolder().then(() => getZh(sub_url).then(() => getEn(sub_en_url))).then(() => {
-                sendWs({
-                    type: 'sub',
-                    data: id,
-                }, 0, 0);
-                res.json({apiOK: true});
-            }) : handleError(new HoError('cannot find subtitle!!!'));
-            /*const getSub = name => subHdUrl(name).then(subtitles2 => {
-                if (!subtitles2) {
-                    return handleError(new HoError('cannot find eng or cht subtitle!!!'));
-                }
-                const zip_ext = isZip(subtitles2);
-                if (!zip_ext) {
-                    return handleError(new HoError('is not zip!!!'));
-                }
-                const sub_location = `${filePath}_sub`;
-                const mkfolder2 = () => FsExistsSync(sub_location) ? Promise.resolve() : Mkdirp(sub_location);
-                return mkfolder2().then(() => {
-                    let sub_temp_location = `${sub_location}/0`;
-                    let sub_zip_location = `${sub_location}/0.${zip_ext}`;
-                    let i
-                    for (let i = 0; i <= 10; i++) {
-                        if (i >= 10) {
-                            return handleError(new HoError('too many sub!!!'));
-                        }
-                        sub_temp_location = `${sub_location}/${i}`;
-                        sub_zip_location = `${sub_location}/${i}.${zip_ext}`;
-                        if (!FsExistsSync(sub_temp_location)) {
-                            break;
-                        }
+        let sub_en_url = null;
+        let sub_url = null;
+        const getOSsub = (name, fileName) => {
+            const os_para = Object.assign({
+                languages: 'en,zh-tw,zh-cn,ze',
+                ai_translated: 'include',
+                machine_translated: 'include',
+                order_by: 'votes',
+                order_direction: 'desc',
+            }, fileName ? {
+                query: fileName,
+                moviehash,
+            } : name.match(/^tt\d+$/i) ? {
+                imdb_id: Number(name.substr(2)),
+            } : {query: name}, episode ? {
+                episode_number: episode,
+                season_number: season,
+            } : {})
+            console.log(os_para);
+            return OpenSubtitles.subtitles(os_para).then(subtitles => {
+                console.log(subtitles);
+                console.log(subtitles.data);
+                subtitles.data.forEach(v => {
+                    if (!sub_en_url && v.attributes.language.toLowerCase() === 'en') {
+                        sub_en_url = v.attributes.files[0].file_id;
+                    } else if (!sub_url && v.attributes.language.toLowerCase() === 'zh-tw') {
+                        sub_url = v.attributes.files[0].file_id;
+                    } else if (!sub_url && v.attributes.language.toLowerCase() === 'ze') {
+                        sub_url = v.attributes.files[0].file_id;
+                    } else if (!sub_url && v.attributes.language.toLowerCase() === 'zh-cn') {
+                        sub_url = v.attributes.files[0].file_id;
                     }
-                    return Api('url', subtitles2, {filePath: sub_zip_location}).then(() => Mkdirp(sub_temp_location).then(() => new Promise((resolve, reject) => Child_process.exec((zip_ext === 'rar' || zip_ext === 'cbr') ? `unrar x ${sub_zip_location} ${sub_temp_location} -p123` : (zip_ext === '7z') ? `7za x ${sub_zip_location} -o${sub_temp_location} -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${sub_zip_location} ${sub_temp_location} '123'`, (err, output) => err ? reject(err) : resolve())).then(output => {
-                        let choose = null;
-                        let pri_choose = 9;
-                        let pri_choose_temp = 8;
-                        const pri_choose_arr = ['big5', 'cht', '繁體', '繁体', 'gb', 'chs', '簡體', '简体'];
-                        const episode_pattern = new RegExp('(第0*' + episode + '集|ep?0*' + episode + ')', 'i');
-                        let episode_choose = null;
-                        let episode_pri_choose = 9;
-                        let episode_pri_choose_temp = 8;
-                        recur_dir(sub_temp_location);
-                        function recur_dir(dir) {
-                            FsReaddirSync(dir).forEach((file,index) => {
-                                const curPath = `${dir}/${file}`;
-                                if (FsLstatSync(curPath).isDirectory()) {
-                                    recur_dir(curPath);
-                                } else {
-                                    if (isSub(file)) {
-                                        if (episode && file.match(episode_pattern)) {
-                                            const pri_match = file.match(/(big5|cht|繁體|繁体|gb|chs|簡體|简体)/);
-                                            if (pri_match) {
-                                                episode_pri_choose_temp = pri_choose_arr.indexOf(pri_match[1]);
-                                            }
-                                            if (episode_pri_choose > episode_pri_choose_temp) {
-                                                episode_pri_choose = episode_pri_choose_temp;
-                                                episode_choose = curPath;
-                                            }
-                                        }
-                                        const pri_match2 = file.match(/(big5|cht|繁體|繁体|gb|chs|簡體|简体)/);
-                                        if (pri_match2) {
-                                            pri_choose_temp = pri_choose_arr.indexOf(pri_match2[1]);
-                                        }
-                                        if (pri_choose > pri_choose_temp) {
-                                            pri_choose = pri_choose_temp;
-                                            choose = curPath;
-                                        }
-                                    }
-                                }
-                            });
-                        }
-                        if (episode_choose) {
-                            choose = episode_choose;
-                        }
-                        console.log('choose');
-                        console.log(choose);
-                        return SUB2VTT(choose, filePath, true).then(() => {
-                            deleteFolderRecursive(sub_temp_location);
-                            return new Promise((resolve, reject) => FsUnlink(sub_zip_location, err => err ? reject(err) : resolve())).then(() => {
-                                sendWs({
-                                    type: 'sub',
-                                    data: id,
-                                }, 0, 0);
-                                res.json({apiOK: true});
-                            });
-                        });
-                    })));
                 });
+                if (!sub_url && !sub_en_url) {
+                    return false;
+                } else {
+                    return true;
+                }
             });
-            return restSub().then(() => episode_1 ? getSub(`${name}${episode_1}`).catch(err => getSub(`${name}${episode_2}`)).catch(err => episode_3 ? getSub(`${name}${episode_3}`).catch(err => getSub(`${name}${episode_4}`)).catch(err => (season === 1) ? getSub(name) : handleError(err)) : (season === 1) ? getSub(name) : handleError(err)) : getSub(name));*/
-            return restSub();
-        }).catch(err => handleError(err, next));
+        }
+        const restSub = () => mkfolder().then(() => getZh(sub_url)).then(() => getEn(sub_en_url)).then(() => {
+            sendWs({
+                type: 'sub',
+                data: id,
+            }, 0, 0);
+            res.json({apiOK: true});
+        });
+        if (fileName) {
+            return getOSsub(name, fileName).then(result => {
+                if (result) {
+                    return restSub();
+                } else {
+                    return getOSsub(name).then(result => {
+                        if (result) {
+                            return restSub();
+                        } else {
+                            return handleError(new HoError('cannot find subtitle!!!'));
+                        }
+                    });
+                }
+            });
+        } else {
+            return getOSsub(name).then(result => {
+                if (result) {
+                    return restSub();
+                } else {
+                    return handleError(new HoError('cannot find subtitle!!!'));
+                }
+            });
+        }
         function SUB2VTT(choose_subtitle, subPath, is_file, lang='') {
             if (!choose_subtitle) {
                 return handleError(new HoError('donot have sub!!!'));
@@ -1097,7 +1039,12 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 FsRenameSync(choose_subtitle, `${subPath}.${ext}`);
                 return SRT2VTT(subPath, ext);
             } else {
-                return Api('url', choose_subtitle, {filePath: `${subPath}.${ext}`}).then(() => SRT2VTT(subPath, ext));
+                return OpenSubtitles.download({
+                    file_id: choose_subtitle
+                }).then(subtitles => {
+                    console.log(subtitles);
+                    return Api('url', subtitles.link, {filePath: `${subPath}.${ext}`}).then(() => SRT2VTT(subPath, ext));
+                });
             }
         }
     }).catch(err => handleError(err, next));

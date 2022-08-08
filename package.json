@@ -64,7 +64,8 @@
     "webpack-cli": "^4.2.0",
     "ws": "^7.4.1",
     "xml2js": "^0.4.23",
-    "youtube-dl": "^3.0.2"
+    "youtube-dl": "^3.0.2",
+    "opensubtitles.com": "^1.0.0"
   },
   "author": {
     "name": "hoder",
