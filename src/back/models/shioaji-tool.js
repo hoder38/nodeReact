@@ -78,6 +78,7 @@ export const twseShioajiInit = () => {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.buy.length; k++) {
                                     if (item.previous.buy[k].time === o.time && item.previous.buy[k].price === o.price) {
+                                        console.log('s order duplicate');
                                         return fill_order_recur(index + 1);
                                     } else if (o.price < item.previous.buy[k].price) {
                                         item.previous.buy.splice(k, 0, {
@@ -114,12 +115,17 @@ export const twseShioajiInit = () => {
                                         }
                                     }
                                 } else {
+                                    console.log('s out of time');
+                                    console.log(o.starttime);
+                                    console.log(o.starttime + TWSE_ORDER_INTERVAL);
+                                    console.log(Math.round(new Date().getTime() / 1000));
                                     item.previous.buy = item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                             } else {
                                 let is_insert = false;
                                 for (let k = 0; k < item.previous.sell.length; k++) {
                                     if (item.previous.sell[k].time === o.time && item.previous.sell[k].price === o.price) {
+                                        console.log('s order duplicate');
                                         return fill_order_recur(index + 1);
                                     } else if (o.price > item.previous.sell[k].price) {
                                         item.previous.sell.splice(k, 0, {
@@ -156,6 +162,10 @@ export const twseShioajiInit = () => {
                                         }
                                     }
                                 } else {
+                                    console.log('s out of time');
+                                    console.log(o.starttime);
+                                    console.log(o.starttime + TWSE_ORDER_INTERVAL);
+                                    console.log(Math.round(new Date().getTime() / 1000));
                                     item.previous.sell = item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
                                 //calculate profit
@@ -215,6 +225,7 @@ export const twseShioajiInit = () => {
                                 }
                             }
                             item.profit = item.profit ? item.profit + profit : profit;
+                            console.log(item.previous);
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous, profit: item.profit}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
                         });
                     }

@@ -743,6 +743,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         let is_insert = false;
                                         for (let k = 0; k < item.previous.buy.length; k++) {
                                             if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                                                console.log('t order duplicate');
                                                 return order_recur(index + 1);
                                             } else if (price < item.previous.buy[k].price) {
                                                 item.previous.buy.splice(k, 0, {price, time});
@@ -773,12 +774,17 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                 }
                                             }
                                         } else {
+                                            console.log('t out of time');
+                                            console.log(new Date(o.enteredTime).getTime() / 1000);
+                                            console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
+                                            console.log(Math.round(new Date().getTime() / 1000));
                                             item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                         }
                                     } else {
                                         let is_insert = false;
                                         for (let k = 0; k < item.previous.sell.length; k++) {
                                             if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                                                console.log('t order duplicate');
                                                 return order_recur(index + 1);
                                             } else if (price > item.previous.sell[k].price) {
                                                 item.previous.sell.splice(k, 0, {price, time});
@@ -809,6 +815,10 @@ export const usseTDInit = () => checkOauth().then(() => {
                                                 }
                                             }
                                         } else {
+                                            console.log('t out of time');
+                                            console.log(new Date(o.enteredTime).getTime() / 1000);
+                                            console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
+                                            console.log(Math.round(new Date().getTime() / 1000));
                                             item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
                                         }
                                         //calculate profit
@@ -860,6 +870,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                         }
                                     }
                                     item.profit = item.profit ? item.profit + profit : profit;
+                                    console.log(item.previous);
                                     return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(index + 1));
                                 });
                             } else {
