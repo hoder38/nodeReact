@@ -53,7 +53,7 @@ retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
-if len(acc_settle) > 0 and acc_balance.acc_balance > 0:
+if hasattr(acc_settle, 't_money') and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
         current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 100
     else:
