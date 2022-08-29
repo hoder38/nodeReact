@@ -247,5 +247,5 @@ elif sys.argv[3] == 'sellall':
             account=api.stock_account
         )
         api.place_order(contract, order, timeout=10000)
-api.logout()
+#api.logout()
 print(sys.argv)
