@@ -846,7 +846,7 @@ export default {
                 let list = [];
                 const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                 if (body) {
-                    const con = findTag(body, 'div', 'container-fluid fixedheader 1')[0];
+                    const con = findTag(body, 'div', 'container-fluid fixedheader')[0];
                     if (con) {
                         const pdate = findTag(findTag(findTag(findTag(con, 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'div')[2], 'div')[0];
                         if (findTag(pdate, 'p', 'date')[0] && findTag(findTag(pdate, 'p', 'date')[0])[0].includes(docDate)) {
@@ -869,7 +869,7 @@ export default {
                     console.log(docDate);
                     const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
                     if (body) {
-                        const con = findTag(body, 'div', 'container-fluid fixedheader 1')[0];
+                        const con = findTag(body, 'div', 'container-fluid fixedheader')[0];
                         if (con) {
                             const pdate = findTag(findTag(findTag(findTag(con, 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'div')[2], 'div')[0];
                             if (findTag(pdate, 'p', 'date')[0] && findTag(findTag(pdate, 'p', 'date')[0])[0].includes(docDate)) {
