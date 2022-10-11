@@ -163,10 +163,10 @@ export const updateStock = () => {
             console.log(new Date().toLocaleString());
             //let use_stock_list = [];
             const sd = new Date();
-            const parseStockList = () => (sd.getDay() === 3 && sd.getHours() === 3) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+            const parseStockList = () => (sd.getDay() === 4 && sd.getHours() === 3) ? getStockListV2('twse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
                 stocklist.forEach(i => stock_batch_list.push(i));
                 //return updateStockList();
-            }) : (sd.getDay() === 5 && sd.getHours() === 3) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
+            }) : (sd.getDay() === 6 && sd.getHours() === 3) ? getStockListV2('usse', new Date().getFullYear(), new Date().getMonth() + 1).then(stocklist => {
                 stocklist.forEach(i => stock_batch_list.push(i));
                 //return updateStockList();
             }) : Promise.resolve();
