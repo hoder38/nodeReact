@@ -38,15 +38,11 @@ def retryApi(fun, wait = 10, count = 5):
 retryApi(lambda: api.login(person_id=sys.argv[1],passwd=pw), 30)
 acc_balance = retryApi(lambda: api.account_balance(timeout=10000))
 print(acc_balance)
-if len(acc_balance) > 0:
-    acc_balance = acc_balance[0]
-else:
+if acc_balance.errmsg != '':
     raise ValueError('Miss balance')
 acc_settle = retryApi(lambda: api.list_settlements(api.stock_account, timeout=10000))
 print(acc_settle)
-if len(acc_settle) > 0:
-    acc_settle = acc_settle[0]
-elif len(sys.argv) != 3:
+if not hasattr(acc_settle, 't_money') and len(sys.argv) != 3:
     raise ValueError('Miss settle')
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
 retryApi(lambda: api.update_status(timeout=10000))
