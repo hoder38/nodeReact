@@ -40,20 +40,20 @@ acc_balance = retryApi(lambda: api.account_balance(timeout=10000))
 print(acc_balance)
 if acc_balance.errmsg != '':
     raise ValueError('Miss balance')
-acc_settle = retryApi(lambda: api.list_settlements(api.stock_account, timeout=10000))
+acc_settle = retryApi(lambda: api.settlements(api.stock_account, timeout=10000))
 print(acc_settle)
-if not hasattr(acc_settle, 't_money') and len(sys.argv) != 3:
+if len(acc_settle) < 3 and len(sys.argv) != 3:
     raise ValueError('Miss settle')
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
 retryApi(lambda: api.update_status(timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
-if hasattr(acc_settle, 't_money') and acc_balance.acc_balance > 0:
+if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
-        current_cash = (acc_balance.acc_balance + acc_settle.t_money + acc_settle.t1_money + acc_settle.t2_money) / 100
+        current_cash = (acc_balance.acc_balance + acc_settle[0].amount + acc_settle[1].amount + acc_settle[2].amount) / 100
     else:
-        current_cash = (acc_balance.acc_balance + acc_settle.t1_money + acc_settle.t2_money) / 100
+        current_cash = (acc_balance.acc_balance + acc_settle[1].amount + acc_settle[2].amount) / 100
 else:
     current_cash = 'same'
 if len(sys.argv) == 3:
