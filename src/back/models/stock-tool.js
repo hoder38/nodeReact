@@ -6648,7 +6648,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2) {
+            if (t2 && previous.type !== 'buy') {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6660,7 +6660,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2) {
+            if (t2 && previous.type !== 'buy') {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6672,7 +6672,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2) {
+            if (t2 && previous.type !== 'buy') {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6687,7 +6687,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 4 || pType === 3) {
                 bCount = bCount * 2;
             }*/
-            if (t1) {
+            if (t1 && previous.type !== 'buy') {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6725,7 +6725,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3) {
+            if (t3 && previous.type !== 'sell') {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6741,7 +6741,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3) {
+            if (t3 && previous.type !== 'sell') {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6760,7 +6760,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4) {
                 sCount = sCount * 2;
             }*/
-            if (t3) {
+            if (t3 && previous.type !== 'sell') {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6775,7 +6775,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 2 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t4) {
+            if (t4 && previous.type !== 'sell') {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
