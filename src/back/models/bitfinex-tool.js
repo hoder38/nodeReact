@@ -1887,8 +1887,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         item.previous.price = item.tmpPT.price;
                                         item.previous.time = item.tmpPT.time;
                                         item.previous.type = item.tmpPT.type;
-                                    } else {
-                                        item.previous.time = 0;
+                                        item.previous.tprice = item.tmpPT.tprice;
                                     }
                                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                     checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -1900,9 +1899,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             price: item.previous.price,
                                             time: item.previous.time,
                                             type: item.previous.type,
+                                            tprice: item.previous.tprice,
                                         };
                                     }
                                     item.previous.time = 0;
+                                    item.previous.price = '';
+                                    item.previous.type = '';
+                                    item.previous.tprice = 0;
                                     item.newMid.push(suggestion.newMid);
                                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                     suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);

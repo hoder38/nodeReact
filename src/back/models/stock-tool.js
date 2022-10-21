@@ -5973,9 +5973,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.previous.price = item.tmpPT.price;
                         item.previous.time = item.tmpPT.time;
                         item.previous.type = item.tmpPT.type;
-                        item.previous.tprice = 0;
-                    } else {
-                        item.previous.time = 0;
+                        item.previous.tprice = item.tmpPT.tprice;
                     }
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -5987,9 +5985,13 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             price: item.previous.price,
                             time: item.previous.time,
                             type: item.previous.type,
+                            tprice: item.previous.tprice,
                         };
                     }
                     item.previous.time = 0;
+                    item.previous.price = 0;
+                    item.previous.type = '';
+                    item.previous.tprice = 0;
                     item.newMid.push(suggestion.newMid);
                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, 0, 0, Math.abs(item.web[0]), item.wType, 0, fee);
@@ -6648,7 +6650,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy') {
+            if (t2 && previous.type !== 'buy' && !previous.tprice) {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6660,7 +6662,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy') {
+            if (t2 && previous.type !== 'buy' && !previous.tprice) {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6672,7 +6674,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy') {
+            if (t2 && previous.type !== 'buy' && !previous.tprice) {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6687,7 +6689,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 4 || pType === 3) {
                 bCount = bCount * 2;
             }*/
-            if (t1 && previous.type !== 'buy') {
+            if (t1 && previous.type !== 'buy' && !previous.tprice) {
                 bCount = bCount * (2 + bAdd);
             } else {
                 bCount = bCount * (1 + bAdd);
@@ -6725,7 +6727,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell') {
+            if (t3 && previous.type !== 'sell' && !previous.tprice) {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6741,7 +6743,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell') {
+            if (t3 && previous.type !== 'sell' && !previous.tprice) {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6760,7 +6762,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell') {
+            if (t3 && previous.type !== 'sell' && !previous.tprice) {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6775,7 +6777,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 2 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t4 && previous.type !== 'sell') {
+            if (t4 && previous.type !== 'sell' && !previous.tprice) {
                 sCount = sCount * (2 + sAdd);
             } else {
                 sCount = sCount * (1 + sAdd);
@@ -6956,8 +6958,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     priviousTrade.price = tmpPT.price;
                     priviousTrade.time = tmpPT.time;
                     priviousTrade.type = tmpPT.type;
-                } else {
-                    priviousTrade.time = 0;
+                    priviousTrade.tprice = tmpPT.tprice;
                 }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
                 newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
@@ -6970,9 +6971,13 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                         price: priviousTrade.price,
                         time: priviousTrade.time,
                         type: priviousTrade.type,
+                        tprice: priviousTrade.tprice;
                     };
                 }
                 priviousTrade.time = 0;
+                priviousTrade.price = 0;
+                priviousTrade.type = '';
+                priviousTrade.tprice = 0;
                 //console.log(amount);
                 //console.log(count);
                 if (suggest.resetWeb === 1) {
