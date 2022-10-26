@@ -925,6 +925,42 @@ export const setWsOffer = (id, curArr=[], uid) => {
         userWs[id].open();
     } else if (!userWs[id].isOpen()) {
         console.log('reconnect ws');
+        if (!updateTime[id]) {
+            updateTime[id] = {};
+            updateTime[id]['book'] = 0;
+            updateTime[id]['offer'] = 0;
+            updateTime[id]['credit'] = 0;
+            updateTime[id]['position'] = 0;
+            updateTime[id]['order'] = 0;
+            updateTime[id]['trade'] = Math.round(new Date().getTime() / 1000) - ORDER_INTERVAL + RATE_INTERVAL * 2;
+        }
+        if (!available[id]) {
+            available[id] = {}
+        }
+        if (!margin[id]) {
+            margin[id] = {}
+        }
+        if (!offer[id]) {
+            offer[id] = {};
+        }
+        if (!order[id]) {
+            order[id] = {};
+        }
+        if (!fakeOrder[id]) {
+            fakeOrder[id] = {};
+        }
+        if (!credit[id]) {
+            credit[id] = {};
+        }
+        if (!ledger[id]) {
+            ledger[id] = {};
+        }
+        if (!position[id]) {
+            position[id] = {};
+        }
+        if (!extremRate[id]) {
+            extremRate[id] = {}
+        }
         userWs[id].reconnect();
     }
 
