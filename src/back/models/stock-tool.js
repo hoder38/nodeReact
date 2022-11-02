@@ -3609,7 +3609,7 @@ export default {
                         for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
                             //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
-                                if (!min_vol || v.v < min_vol) {
+                                if ((!min_vol && !v.v) || v.v < min_vol) {
                                     min_vol = v.v;
                                 }
                             });
@@ -3951,7 +3951,7 @@ export default {
                         for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
                             //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
-                                if (!min_vol || v.v < min_vol) {
+                                if ((!min_vol && !v.v) || v.v < min_vol) {
                                     min_vol = v.v;
                                 }
                             });
