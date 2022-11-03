@@ -214,6 +214,7 @@ export const dbBackup = () => {
                     sendWs(`whole backup: local ${BACKUP_PATH(ENV_TYPE)}/${backupName}`, 0, 0, true);
                     return googleBackupWhole(backupName);
                 });
+            }
             const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
             const wdf = () => (sd.getDate() === 3 && (sd.getMonth() === 10 || sd.getMonth() === 1 || sd.getMonth() === 4 || sd.getMonth() === 7)) ? wholeBackup() : Promise.resolve();
             sdf().then(() => wdf()).catch(err => bgError(err, 'Loop allBackup'));
