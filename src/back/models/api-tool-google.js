@@ -1042,13 +1042,12 @@ export const sendPresentName = (text, mail, append=null) => api('send name', {ti
 export const sendLotteryName = (title, text, mail) => api('send name', {title, text: text, mail});
 
 export const googleBackupWhole = backupName => api('upload', {
-        user: ROOT_USER,
-        type: 'auto',
-        parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE),
-        name: backupName,
-        filePath: `${BACKUP_PATH(ENV_TYPE)}/${backupName}`,
-    }).then(() => sendWs(`whole backup: ${backupName}, please clean up previous backup`, 0, 0, true));
-});
+    user: ROOT_USER,
+    type: 'auto',
+    parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE),
+    name: backupName,
+    filePath: `${BACKUP_PATH(ENV_TYPE)}/${backupName}`,
+}).then(() => sendWs(`whole backup: ${backupName}, please clean up previous backup`, 0, 0, true));
 
 export const googleBackupDb = backupDate => api('create', {name: backupDate, parent: GOOGLE_DB_BACKUP_FOLDER(ENV_TYPE)}).then(metadata => {
     const backup_collection = [];
