@@ -1,4 +1,4 @@
-import { ENV_TYPE, DB_USERNAME, DB_PWD, ROOT_USER } from '../../../ver.js'
+import { ENV_TYPE, DB_USERNAME, DB_PWD, ROOT_USER, DEFAULT_PASS } from '../../../ver.js'
 import { DB_IP, DB_PORT, DB_NAME } from '../config.js'
 import mongodb from 'mongodb'
 const { MongoClient, ObjectId } = mongodb;
@@ -34,7 +34,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
             }
             console.log(count);
             if (count === 0) {
-                collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update('test123').digest('hex')}), (err, user) => {
+                collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
                     if (err) {
                         return handleError(err, 'DB connect');
                     }
