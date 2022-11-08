@@ -3606,7 +3606,7 @@ export default {
                         console.log(max);
                         console.log(min);
                         let min_vol = 0;
-                        for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
+                        for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
                             //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
                                 if (!min_vol || (v.v && v.v < min_vol)) {
@@ -3948,7 +3948,7 @@ export default {
                         console.log(max);
                         console.log(min);
                         let min_vol = 0;
-                        for (let i = 12; (i > 0) && interval_data[vol_year][vol_month_str]; i--) {
+                        for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
                             //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
                                 if (!min_vol || (v.v && v.v < min_vol)) {
