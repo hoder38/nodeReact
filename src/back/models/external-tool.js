@@ -1149,67 +1149,50 @@ export default {
                 return list;
             });
             case 'sta':
-            return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=489&CtUnit=1818&BaseDSD=29').then(raw_data => {
+            return Api('url', 'https://www.stat.gov.tw/News.aspx?n=3703&sms=10980').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+                const docDate = `${date.getFullYear() - 1911}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                const findDoc = (title, raw_data) => {
-                    const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                    const html2 = findTag(html, 'html')[0];
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'table')[0], 'tr').forEach(t => {
-                        const timeTd = findTag(t, 'td');
-                        if (timeTd.length > 0) {
-                            if (findTag(timeTd[1])[0] === docDate) {
-                                list.push({
-                                    url: addPre(findTag(timeTd[0], 'a')[0].attribs.href, 'https://www.stat.gov.tw'),
-                                    name: toValidName(title),
-                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                                });
-                            }
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
+                        const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
+                        const staname = findTag(a)[0];
+                        if (staname.match(/消費者物價指數/)) {
+                            list.push({
+                                url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
+                                name: toValidName('物價指數'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
                         }
-                    });
-                }
-                findDoc('物價指數', raw_data);
-                return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=497&CtUnit=1818&BaseDSD=29').then(raw_data => {
-                    findDoc('經濟成長率', raw_data);
-                    return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=527&CtUnit=1818&BaseDSD=29&MP=4').then(raw_data => {
-                        findDoc('受僱員工薪資與生產力', raw_data);
-                        return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2294&CtUnit=1818&BaseDSD=29&mp=4').then(raw_data => {
-                            const pDate = new Date(new Date(date).setMonth(date.getMonth()-1));
-                            const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
-                            console.log(docDate1);
-                            const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                            const html2 = findTag(html, 'html')[0];
-                            const lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
-                            let link = null;
-                            for (let l of lis) {
-                                const a = findTag(l, 'a')[0];
-                                const dateMatch = findTag(a)[0].match(/^\d\d\d年\d\d?月/);
-                                if (dateMatch && dateMatch[0] === docDate1) {
-                                    link = addPre(a.attribs.href, 'https://www.stat.gov.tw');
-                                    break;
-                                }
-                            }
-                            return link ? Api('url', link).then(raw_data => {
-                                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                                const html2 = findTag(html, 'html')[0];
-                                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'div', 'p_date')[0])[0].match(/\d\d\d\d\/\d\d?\/\d\d?$/)[0] === docDate) {
-                                    list.push({
-                                        url: link,
-                                        name: toValidName('失業率'),
-                                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                                    });
-                                }
-                                return list;
-                            }) : list;
-                        });
-                    });
+                        if (staname.match(/經濟成長率/)) {
+                            list.push({
+                                url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
+                                name: toValidName('經濟成長率'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                        if (staname.match(/工業及服務業受僱員工人/)) {
+                            list.push({
+                                url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
+                                name: toValidName('受僱員工薪資與生產力'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                        if (staname.match(/失業人數/)) {
+                            list.push({
+                                url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
+                                name: toValidName('失業率'),
+                                date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                            });
+                        }
+                    }
                 });
+                return list;
             });
             case 'mof':
             return Api('url', 'https://www.mof.gov.tw/multiplehtml/384fb3077bb349ea973e7fc6f13b6974').then(raw_data => {
@@ -1240,74 +1223,40 @@ export default {
                 return list;
             });
             case 'moe':
-            return Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2299&CtUnit=1818&BaseDSD=29').then(raw_data => {
+            return Api('url', 'https://www.stat.gov.tw/News.aspx?n=3635&sms=10980&_CSN=132').then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
                 }
                 date = new Date(new Date(date).setDate(date.getDate() - 1));
-                const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
+                const docDate = `${date.getFullYear() - 1911}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                const pDate = new Date(new Date(date).setMonth(date.getMonth() - 1));
-                const docDate1 = `${pDate.getFullYear() - 1911}年${pDate.getMonth() + 1}月`;
-                console.log(docDate1);
-                let html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                if (!html) {
-                    console.log(raw_data);
-                    return handleError(new HoError('empty html'));
-                }
-                const html2 = findTag(html, 'html')[0];
-                let lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
-                let dUrl = false;
-                for (let l of lis) {
-                    const a = findTag(l, 'a')[0];
-                    const aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
-                    if (aMatch && aMatch[0] === docDate1) {
-                        dUrl = addPre(a.attribs.href, 'http://www.moea.gov.tw');
-                        break;
-                    }
-                };
-                const industrial = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                    const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
-                    console.log(matchT);
-                    if (matchT && matchT[0] === docDate) {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
+                        const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
+                        const staname = findTag(a)[0];
                         list.push({
-                            url: dUrl,
+                            url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
                             name: toValidName('工業生產'),
                             date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                         });
                     }
-                }) : Promise.resolve();
-                return industrial().then(() => Api('url', 'https://www.stat.gov.tw/lp.asp?ctNode=2300&CtUnit=1818&BaseDSD=29').then(raw_data => {
-                    html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                    if (!html) {
-                        console.log(raw_data);
-                        return handleError(new HoError('empty html'));
-                    }
-                    const html2 = findTag(html, 'html')[0];
-                    lis = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'lp')[0], 'div', 'list')[0], 'ul')[0], 'li');
-                    dUrl = false;
-                    for (let l of lis) {
-                        const a = findTag(l, 'a')[0];
-                        const aMatch = a.attribs.title.match(/^\d\d\d年\d\d?月/);
-                        if (aMatch && aMatch[0] === docDate1) {
-                            dUrl = addPre(a.attribs.href, 'http://www.moea.gov.tw');
-                            break;
-                        }
-                    };
-                    const output = () => dUrl ? Api('url', dUrl).then(raw_data => {
-                        const matchT = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'container')[0], 'div')[0], 'div', 'divPageDetail')[0], 'div', 'div-top-info')[0], 'div', 'div-top-info-flex')[0], 'div', 'div-top-left-info')[0], 'div', 'div-sub-info')[0], 'div', 'div-begin-date')[0])[0].match(/\d\d\d\d-\d\d-\d\d/);
-                        if (matchT && matchT[0] === docDate) {
+                });
+                return Api('url', 'https://www.stat.gov.tw/News.aspx?n=3635&sms=10980&_CSN=124').then(raw_data => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                        if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
+                            const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
+                            const staname = findTag(a)[0];
                             list.push({
-                                url: dUrl,
+                                url: addPre(a.attribs.href, 'https://www.stat.gov.tw'),
                                 name: toValidName('外銷訂單統計'),
                                 date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
                             });
                         }
-                    }) : Promise.resolve();
-                    return output().then(() => list);
-                }));
+                    });
+                    return list;
+                });
             });
             case 'cbc':
             return Api('url', 'https://www.cbc.gov.tw/tw/sp-news-list-1.html').then(raw_data => {
@@ -1626,12 +1575,28 @@ export default {
             case 'sta':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                const html = findTag(Htmlparser.parseDOM(raw_data), 'html')[0];
-                const html2 = findTag(html, 'html')[0];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(html2 ? html2 : html, 'body')[0], 'div', 'wrap')[0], 'table', 'layout')[0], 'tr')[0], 'td', 'center')[0], 'div', 'cp')[0], 'div', 'article')[0], 'p').forEach(p => {
-                    let as = findTag(p, 'a');
-                    if (as.length > 0) {
-                        for (let a of as) {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-essay page-caption-p')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'p')[0], 'p')[0], 'span')[0], 'p').forEach(p => {
+                    for (let a of findTag(p, 'a')) {
+                        if (a.attribs.href.match(/\.pdf$/i)) {
+                            const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
+                            if (url.match(/87231699T64V6LTY/)) {
+                                continue;
+                            }
+                            driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
+                            console.log(driveName);
+                            return mkFolder(PathDirname(filePath)).then(() => Api('url', encodeURI(url), {filePath}).then(() => GoogleApi('upload', {
+                                type: 'auto',
+                                name: driveName,
+                                filePath,
+                                parent,
+                                rest: () => updateDocDate(type, obj.date),
+                                errhandle: err => handleError(err),
+                            })));
+                        }
+                    }
+                    for (let b of findTag(p, 'b')) {
+                        for (let a of findTag(b, 'a')) {
+                            console.log(a.attribs.href);
                             if (a.attribs.href.match(/\.pdf$/i)) {
                                 const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
                                 if (url.match(/87231699T64V6LTY/)) {
@@ -1639,7 +1604,7 @@ export default {
                                 }
                                 driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                                 console.log(driveName);
-                                return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                                return mkFolder(PathDirname(filePath)).then(() => Api('url', encodeURI(url), {filePath}).then(() => GoogleApi('upload', {
                                     type: 'auto',
                                     name: driveName,
                                     filePath,
@@ -1647,29 +1612,6 @@ export default {
                                     rest: () => updateDocDate(type, obj.date),
                                     errhandle: err => handleError(err),
                                 })));
-                            }
-                        }
-                    }
-                    const bs = findTag(p, 'b');
-                    if (bs.length > 0) {
-                        for (let b of bs) {
-                            as = findTag(b, 'a');
-                            if (as.length > 0) {
-                                for (let a of as) {
-                                    if (a.attribs.href.match(/\.pdf$/i)) {
-                                        const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
-                                        driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
-                                        console.log(driveName);
-                                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
-                                            type: 'auto',
-                                            name: driveName,
-                                            filePath,
-                                            parent,
-                                            rest: () => updateDocDate(type, obj.date),
-                                            errhandle: err => handleError(err),
-                                        })));
-                                    }
-                                }
                             }
                         }
                     }
