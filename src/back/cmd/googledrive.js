@@ -1,7 +1,7 @@
 import { GOOGLE_SCOPE } from '../constants.js'
 import { GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT } from '../../../ver.js'
-import googleapis from 'googleapis'
-const { Auth } = googleapis;
+import googleapisModule from 'googleapis'
+const { google: googleapis } = googleapisModule;
 import readline from 'readline'
 const { createInterface } = readline;
 
@@ -10,7 +10,8 @@ const rl = createInterface({
     output: process.stdout,
 });
 
-const oauth2Client = new Auth.OAuth2Client(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
+const OAuth2 = googleapis.auth.OAuth2;
+const oauth2Client = new OAuth2(GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT);
 
 const url = oauth2Client.generateAuthUrl({
     scope: GOOGLE_SCOPE,

@@ -213,6 +213,7 @@ sudo -i node /home/pipipi/app/nodeReact/src/back/cmd/googledrive.js
 sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/googledrive.js
 改權限記得刪權限後再要一次refresh token, https://myaccount.google.com/u/0/permissions
 記得update db token
+目前release dev通用token
 
 td ameritrade auth:
 每90天要更新一次token(前7天會提醒) 更新完要重開node
