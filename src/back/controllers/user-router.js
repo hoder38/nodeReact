@@ -18,7 +18,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         name: users[0].username,
         id: users[0]._id,
         newable: false,
-        auto: users[0].auto ? `https://drive.google.com/open?id=${users[0].auto}&authuser=0` : '',
+        auto: users[0].auto ? `https://drive.google.com/drive/folders/${users[0].auto}` : '',
         kindle: users[0].kindle ? `${users[0].kindle}@kindle.com` : '',
         editAuto: false,
         editKindle: true,
@@ -40,7 +40,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         editAuto: true,
         editKindle: true,
         kindle: user.kindle ? `${user.kindle}@kindle.com` : '',
-        auto: user.auto ? `https://drive.google.com/open?id=${user.auto}&authuser=0` : '',
+        auto: user.auto ? `https://drive.google.com/drive/folders/${user.auto}` : '',
     }, user.perm === 1 ? {
         unDay: user.unDay ? user.unDay : UNACTIVE_DAY,
         unHit: user.unHit ? user.unHit : UNACTIVE_HIT,
@@ -70,13 +70,13 @@ router.route('/act/:uid?').get(function(req, res, next) {
         if (!isValidString(req.body.auto, 'url')) {
             return handleError(new HoError('auto is not valid'), next);
         }
-        const autoId = req.body.auto.match(/id=([^\&]*)/i)
+        const autoId = req.body.auto.match(/\/folders\/([^\?]*)/i);
         if (!autoId || !autoId[1]) {
             return handleError(new HoError('auto is not valid'), next);
         }
-        data['auto'] = autoId[1]
-        ret['auto'] = `https://drive.google.com/open?id=${autoId[1]}&authuser=0`
-        needPerm = true
+        data['auto'] = autoId[1];
+        ret['auto'] = `https://drive.google.com/drive/folders/${autoId[1]}`;
+        needPerm = true;
     }
     if (req.body.kindle) {
         if (!isValidString(req.body.kindle, 'email')) {
