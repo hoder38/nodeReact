@@ -5223,6 +5223,41 @@ export default {
                             se: 0,
                         })
                     }
+                    const orderbyStock = () => {
+                        const twseS = [];
+                        const usseS = [];
+                        const totalS = [];
+                        stock.forEach(v => {
+                            if (v.type === 'total') {
+                                totalS.push(v);
+                            } else if (v.se === 1) {
+                                let is_insert = false;
+                                for (let i in usseS) {
+                                    if (v.current > usseS[i].current) {
+                                        usseS.splice(i, 0, v);
+                                        is_insert = true;
+                                        break;
+                                    }
+                                }
+                                if (!is_insert) {
+                                    usseS.push(v);
+                                }
+                            } else {
+                                let is_insert = false;
+                                for (let i in twseS) {
+                                    if (v.current > twseS[i].current) {
+                                        twseS.splice(i, 0, v);
+                                        is_insert = true;
+                                        break;
+                                    }
+                                }
+                                if (!is_insert) {
+                                    twseS.push(v);
+                                }
+                            }
+                        });
+                        return totalS.concat(twseS).concat(usseS);
+                    }
                     return {
                         se: [{
                             type: 'TWSE',
@@ -5235,7 +5270,7 @@ export default {
                             total: totalPrice1 + remain1,
                         }],
                         //total: totalPrice + remain,
-                        stock,
+                        stock: orderbyStock(),
                     };
                 } else {
                     return getStock(items[index]).then(() => recurGet(index + 1))
@@ -5710,6 +5745,41 @@ export default {
                                 se: 0,
                             })
                         }
+                        const orderbyStock = () => {
+                            const twseS = [];
+                            const usseS = [];
+                            const totalS = [];
+                            stock.forEach(v => {
+                                if (v.type === 'total') {
+                                    totalS.push(v);
+                                } else if (v.se === 1) {
+                                    let is_insert = false;
+                                    for (let i in usseS) {
+                                        if (v.current > usseS[i].current) {
+                                            usseS.splice(i, 0, v);
+                                            is_insert = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!is_insert) {
+                                        usseS.push(v);
+                                    }
+                                } else {
+                                    let is_insert = false;
+                                    for (let i in twseS) {
+                                        if (v.current > twseS[i].current) {
+                                            twseS.splice(i, 0, v);
+                                            is_insert = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!is_insert) {
+                                        twseS.push(v);
+                                    }
+                                }
+                            });
+                            return totalS.concat(twseS).concat(usseS);
+                        }
                         return {
                             se: [{
                                 type: 'TWSE',
@@ -5722,7 +5792,7 @@ export default {
                                 total: totalPrice1 + remain1,
                             }],
                             //total: totalPrice + remain,
-                            stock,
+                            stock: orderbyStock(),
                         };
                     } else {
                         return getStock(items[index]).then(() => recurGet(index + 1))
