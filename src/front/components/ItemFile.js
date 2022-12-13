@@ -19,12 +19,6 @@ class ItemFile extends React.Component {
             this.props.addalert('start saving to drive')
         }).catch(err => this.props.addalert(err)) , `Would you sure to download ${name} to drive?`)
     }
-    _send2kindle = (id, name) => {
-        this.props.sendglbcf(() => api(`${this.props.mainUrl}/api/external/2kindle/${id}`).then(result => {
-            this.props.setLatest(id, this.props.bookmark)
-            this.props.addalert('start sending to kindle')
-        }).catch(err => this.props.addalert(err)) , `Would you sure to send ${name} to kindle? TXT need be encoded by ANSI or UTF-8`)
-    }
     _edit = (id, name) => {
         this.props.globalinput(1, new_name => isValidString(new_name, 'name') ? api(`${this.props.mainUrl}/api/file/edit/${id}`, {name: new_name}, 'PUT').then(result => {
             if (result.name) {
@@ -180,9 +174,6 @@ class ItemFile extends React.Component {
             dropList.push({title: 'clear media', onclick: () => this._handleMedia(item.id, item.name, true), key: 13})
         }
         if (item.status === 0 || item.status === 2) {
-            if (!item.thumb) {
-                dropList.push({title: 'send to kindle', onclick: () => this._send2kindle(item.id, item.name), key: 16})
-            }
             if (item.noDb) {
                 dropList.push({title: '儲存到local', onclick: () => this._save2local(item.id, item.name), key: 17})
             }

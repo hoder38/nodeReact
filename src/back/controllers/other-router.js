@@ -14,6 +14,16 @@ router.get('/refresh', function(req, res, next) {
     res.end('refresh');
 });
 
+router.get('/privacy', function(req, res, next) {
+    console.log('privacy');
+    res.end('privacy');
+});
+
+router.get('/homepage', function(req, res, next) {
+    console.log('utility');
+    res.end('homepage');
+});
+
 router.get('/s', function(req, res, next) {
     console.log('short');
     Mongo('find', STORAGEDB, {status: 7}, {

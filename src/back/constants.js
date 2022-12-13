@@ -768,7 +768,8 @@ export const CHART_LIMIT = 4;
 
 export const RANK_LIMIT = 10;
 
-export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
+//export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
+export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
 export const RANDOM_EMAIL = [
     {

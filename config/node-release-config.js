@@ -22,7 +22,7 @@ export default {
     NAS_PREFIX: '/mnt/release/storage',
     BACKUP_PATH: '/mnt/mongodb/backup',
     HINT: true,
-    AUTO_UPLOAD: true,
+    AUTO_UPLOAD: false,
     AUTO_DOWNLOAD: true,
     UPDATE_STOCK: true,
     //UPDATE_EXTERNAL: true,

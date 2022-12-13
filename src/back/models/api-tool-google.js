@@ -992,7 +992,7 @@ export function autoDoc(userlist, index, type, date=null) {
     if (!DOC_TYPE.hasOwnProperty(type)) {
         return handleError(new HoError('do not have this country!!!'));
     }
-    let downloaded = null;
+    /*let downloaded = null;
     let downloaded_data = {
         folderId: userlist[index].auto,
         name: 'downloaded',
@@ -1001,7 +1001,8 @@ export function autoDoc(userlist, index, type, date=null) {
         if (downloadedList.length < 1) {
             return handleError(new HoError('do not have downloaded folder!!!'));
         }
-        downloaded = downloadedList[0].id;
+        downloaded = downloadedList[0].id;*/
+        const downloaded = userlist[index].auto;
         const download_ext_doc = (tIndex, doc_type) => External.getSingleList(doc_type[tIndex], date).then(doclist => {
             console.log(doclist);
             if (doclist.length > 0) {
@@ -1034,7 +1035,7 @@ export function autoDoc(userlist, index, type, date=null) {
                 autoDoc(userlist, index, type, date);
             }
         });
-    });
+    //});
 }
 
 export const sendPresentName = (text, mail, append=null) => api('send name', {title: 'Christmas Presents Exchange', text, mail, append});

@@ -216,9 +216,9 @@ rl.on('line', line => {
         case 'testdata':
         console.log('testdata');
         return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
-        case 'drive':
+        /*case 'drive':
         console.log('drive');
-        return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));
+        return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));*/
         case 'doc':
         console.log('doc');
         return Mongo('find', USERDB, {
@@ -250,7 +250,7 @@ rl.on('line', line => {
         default:
         console.log('help:');
         console.log('stock type index mode');
-        console.log('drive batchNumber [single username]');
+        //console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');
         //console.log('external lovetv|eztv [clear]');

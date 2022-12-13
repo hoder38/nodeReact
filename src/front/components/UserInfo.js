@@ -5,7 +5,7 @@ import { isValidString, api, killEvent, checkInput } from '../utility.js'
 class UserInfo extends React.Component {
     constructor(props) {
         super(props);
-        this._input = new UserInput.Input(['name', 'auto', 'kindle', 'perm', 'desc', 'unDay', 'unHit', 'newPwd', 'conPwd'], this._handleSubmit, this._handleChange)
+        this._input = new UserInput.Input(['name', 'auto', 'perm', 'desc', 'unDay', 'unHit', 'newPwd', 'conPwd'], this._handleSubmit, this._handleChange)
         const edit = this.props.user.newable ? true : false
         this.state = Object.assign({edit}, this._input.initValue(this.props.user))
     }
@@ -18,7 +18,6 @@ class UserInfo extends React.Component {
         const set_obj = Object.assign({},
             checkInput('name', this.state, this.props.addalert, this.props.user.name, 'name'),
             checkInput('auto', this.state, this.props.addalert, this.props.user.auto, 'url'),
-            checkInput('kindle', this.state, this.props.addalert, this.props.user.kindle, 'email'),
             checkInput('perm', this.state, this.props.addalert, this.props.user.perm, 'perm'),
             checkInput('desc', this.state, this.props.addalert, this.props.user.desc, 'desc'),
             checkInput('unDay', this.state, this.props.addalert, this.props.user.unDay, 'int'),
@@ -170,15 +169,6 @@ class UserInfo extends React.Component {
                                                 edit={this.state.edit&&this.props.user.editAuto}>
                                                 <tr>
                                                     <td key={0}>Auto upload:</td>
-                                                    <td key={1} />
-                                                </tr>
-                                            </UserInput>
-                                            <UserInput
-                                                val={this.state.kindle}
-                                                getinput={this._input.getInput('kindle')}
-                                                edit={this.state.edit&&this.props.user.editKindle}>
-                                                <tr>
-                                                    <td key={0}>Kindle email:</td>
                                                     <td key={1} />
                                                 </tr>
                                             </UserInput>

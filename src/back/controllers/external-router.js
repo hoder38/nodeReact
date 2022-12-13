@@ -53,14 +53,15 @@ router.get('/2drive/:uid', function(req, res, next){
                 return handleError(new HoError('file cannot downlad!!!'));
             }
             const filePath = getFileLocation(items[0].owner, items[0]._id);
-            return GoogleApi('list folder', {
+            /*return GoogleApi('list folder', {
                 folderId: userlist[0].auto,
                 name: 'downloaded',
             }).then(downloadedList => {
                 if (downloadedList.length < 1) {
                     return handleError(new HoError('do not have downloaded folder!!!'));
                 }
-                const downloaded = downloadedList[0].id;
+                const downloaded = downloadedList[0].id;*/
+                const downloaded = userlist[0].auto;
                 StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
                 if (items[0].status === 9) {
                     if (items[0]['playList'].length > 0) {
@@ -183,7 +184,7 @@ router.get('/2drive/:uid', function(req, res, next){
                         parent: downloaded,
                     });
                 }
-            });
+            //});
         }).then(() => res.json({apiOK: true}));
     }).catch(err => handleError(err, next));
 });
