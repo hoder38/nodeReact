@@ -36,7 +36,7 @@ export const autoUpload = () => {
     if (AUTO_UPLOAD(ENV_TYPE)) {
         const loopDrive = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentAutoUpload || currentAutoUpload < (now - DRIVE_INTERVAL * MAX_RETRY)) {
+            if (!currentAutoUpload || currentAutoUpload < (now - DRIVE_INTERVAL * (MAX_RETRY + 2))) {
                 currentAutoUpload = now;
                 console.log('loopDrive');
                 console.log(new Date().toLocaleString());
@@ -78,7 +78,7 @@ export const checkMedia = () => {
     if (CHECK_MEDIA(ENV_TYPE)) {
         const loopHandleMedia = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentCheckMedia || currentCheckMedia < (now - MEDIA_INTERVAl * MAX_RETRY)) {
+            if (!currentCheckMedia || currentCheckMedia < (now - MEDIA_INTERVAl * (MAX_RETRY + 2))) {
                 currentCheckMedia = now;
                 console.log('loopCheckMedia');
                 console.log(new Date().toLocaleString());
@@ -128,7 +128,7 @@ export const updateStockList = () => {
         const loopUpdateStockList = () => {
             if (stock_batch_list.length > 0) {
                 const now = Math.round(new Date().getTime() / 1000);
-                if (!currentUpdateStockList || currentUpdateStockList < (now - RATE_INTERVAL * MAX_RETRY)) {
+                if (!currentUpdateStockList || currentUpdateStockList < (now - RATE_INTERVAL * (MAX_RETRY + 2))) {
                     currentUpdateStockList = now;
                     console.log('loopUpdateStockList');
                     console.log(new Date().toLocaleString());
@@ -228,7 +228,7 @@ export const checkStock = () => {
     if (CHECK_STOCK(ENV_TYPE)) {
         const checkS = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentCheckStock || currentCheckStock < (now - PRICE_INTERVAL * MAX_RETRY)) {
+            if (!currentCheckStock || currentCheckStock < (now - PRICE_INTERVAL * (MAX_RETRY + 2))) {
                 currentCheckStock = now;
                 console.log('checkStock');
                 const newStr = (new Date().getHours() >= 20) ? true : false;
@@ -244,7 +244,7 @@ export const rateCalculator = () => {
     if (BITFINEX_LOAN(ENV_TYPE)) {
         const calR = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentRateCalculator || currentRateCalculator < (now - RATE_INTERVAL * MAX_RETRY)) {
+            if (!currentRateCalculator || currentRateCalculator < (now - RATE_INTERVAL * (MAX_RETRY + 2))) {
                 currentRateCalculator = now;
                 calRate(SUPPORT_COIN).catch(err => bgError(err, 'Loop rate calculator')).then(() => currentRateCalculator = 0);
             }
@@ -259,7 +259,7 @@ export const setUserOffer = () => {
         const checkUser = (index, userlist) => (index >= userlist.length) ? Promise.resolve() : setWsOffer(userlist[index].username, userlist[index].bitfinex, userlist[index]._id).then(() => checkUser(index + 1, userlist));
         const setO = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentSetOffer || currentSetOffer < (now - RATE_INTERVAL * MAX_RETRY)) {
+            if (!currentSetOffer || currentSetOffer < (now - RATE_INTERVAL * (MAX_RETRY + 2))) {
                 currentSetOffer = now;
                 console.log('setUserOffer');
                 console.log(new Date().toLocaleString());
@@ -335,7 +335,7 @@ export const usseInit = () => {
     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         const setO = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentInitUsse || currentInitUsse < (now - PRICE_INTERVAL * MAX_RETRY)) {
+            if (!currentInitUsse || currentInitUsse < (now - PRICE_INTERVAL * (MAX_RETRY + 2))) {
                 currentInitUsse = now;
                 console.log('initUsse');
                 console.log(new Date().toLocaleString());
@@ -354,7 +354,7 @@ export const twseInit = () => {
     if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
         const setO = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentInitTwse || currentInitTwse < (now - PRICE_INTERVAL * MAX_RETRY)) {
+            if (!currentInitTwse || currentInitTwse < (now - PRICE_INTERVAL * (MAX_RETRY + 2))) {
                 currentInitTwse = now;
                 console.log('initTwse');
                 console.log(new Date().toLocaleString());

@@ -7730,7 +7730,7 @@ const getUsStock = (index, stat=['price']) => {
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs[0], 'td')[1], 'span')[0]) {
-                    return handleError(new HoError('usa stock parse NA'));
+                    return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
                 if (stat.indexOf('per') !== -1) {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
@@ -7738,7 +7738,7 @@ const getUsStock = (index, stat=['price']) => {
                     } else {
                         const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                         if (!per) {
-                            return handleError(new HoError('usa stock parse error'));
+                            return handleError(new HoError(`usa stock parse error ${index}`));
                         }
                         ret['per'] = per[2] ? Number(per[1].replace(',', '')) * 1000 : Number(per[1].replace(',', ''));
                     }
@@ -7749,7 +7749,7 @@ const getUsStock = (index, stat=['price']) => {
                     } else {
                         const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
                         if (!pbr) {
-                            return handleError(new HoError('usa stock parse error'));
+                            return handleError(new HoError(`usa stock parse error ${index}`));
                         }
                         ret['pbr'] = pbr[2] ? Number(pbr[1].replace(',', '')) * 1000 : Number(pbr[1].replace(',', ''));
                     }
