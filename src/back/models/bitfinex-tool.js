@@ -176,7 +176,7 @@ export const calRate = curArr => {
 
 export const calWeb = curArr => {
     const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR[FUSD_SYM].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '1h', query: {limit: 3600}}).then(entries => {
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '3h', query: {limit: 3600}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
@@ -200,7 +200,7 @@ export const calWeb = curArr => {
         console.log(min);
         console.log(min_vol);
         const loga = logArray(max, min);
-        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE * 3, 240 * 3);
+        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE, 240 * 3);
         console.log(web);
         const month = [];
         const ret_str1 = [];
@@ -297,7 +297,7 @@ export const calWeb = curArr => {
         }
         return loopShow(31).then(() => {
             month.forEach((v, i) => {
-                console.log('month' + (+i + 1));
+                console.log('season' + (+i + 1));
                 v.forEach(k => console.log(k.str));
             });
             ret_str1.forEach(v => console.log(v));
