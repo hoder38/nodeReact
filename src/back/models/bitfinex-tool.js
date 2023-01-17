@@ -200,7 +200,7 @@ export const calWeb = curArr => {
         console.log(min);
         console.log(min_vol);
         const loga = logArray(max, min);
-        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE, 240 * 3);
+        const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE * 3, 240 * 3);
         console.log(web);
         const month = [];
         const ret_str1 = [];
