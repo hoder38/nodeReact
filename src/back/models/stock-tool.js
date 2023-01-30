@@ -2547,7 +2547,7 @@ const getParameterV2 = (data, type, text = null) => {
 }
 
 export default {
-    getSingleStockV2: function(type, obj, stage=0) {
+    getSingleStockV2: function(type, obj, stage=0, back=false) {
         const date = new Date();
         const index = obj.index;
         let updateyear = date.getFullYear();
@@ -2851,7 +2851,7 @@ export default {
                             }
                         }
                     }
-                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr']).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
+                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
                         console.log(ret);
                         let stock_default = [];
                         for (let t of tags) {
@@ -7684,7 +7684,7 @@ const twseTicker = (price, large = true) => {
     }
 }
 
-const getUsStock = (index, stat=['price']) => {
+const getUsStock = (index, stat = ['price'], single = false) => {
     const ret = {};
     if (!Array.isArray(stat) || stat.length < 1) {
         console.log(`getUsStock stat error ${stat}`);
@@ -7772,7 +7772,7 @@ const getUsStock = (index, stat=['price']) => {
         return Promise.resolve(ret);
     }).catch(err => {
         console.log(count);
-        return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+        return (single || (++count > MAX_RETRY)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
     });
     return real();
 }

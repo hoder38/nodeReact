@@ -135,7 +135,10 @@ export const updateStockList = () => {
                     console.log(stock_batch_list[0]);
                     console.log(stock_batch_list.length);
                     const item = stock_batch_list.splice(0, 1);
-                    StockTool.getSingleStockV2(item[0].type, item[0], 1).catch(err => bgError(err, 'Loop updateStockList')).then(() => currentUpdateStockList = 0);
+                    StockTool.getSingleStockV2(item[0].type, item[0], 1, true).catch(err => {
+                        stock_batch_list.push(item);
+                        bgError(err, 'Loop updateStockList');
+                    }).then(() => currentUpdateStockList = 0);
                 }
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), RATE_INTERVAL * 1000)).then(() => loopUpdateStockList());
