@@ -136,7 +136,7 @@ export const updateStockList = () => {
                     console.log(stock_batch_list.length);
                     const item = stock_batch_list.splice(0, 1);
                     StockTool.getSingleStockV2(item[0].type, item[0], 1, true).catch(err => {
-                        stock_batch_list.push(item);
+                        stock_batch_list.push(item[0]);
                         bgError(err, 'Loop updateStockList');
                     }).then(() => currentUpdateStockList = 0);
                 }
