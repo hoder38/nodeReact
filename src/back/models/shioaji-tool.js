@@ -1,4 +1,4 @@
-import { SHIOAJI_ID, SHIOAJI_PW, SHIOAJI_CA, SHIOAJI_CAPW } from '../../../ver.js'
+import { SHIOAJI_APIKEY, SHIOAJI_APISECRET, SHIOAJI_CA, SHIOAJI_CAPW } from '../../../ver.js'
 import { __dirname, TRADE_FEE, UPDATE_ORDER, TOTALDB, RANGE_INTERVAL, TWSE_ORDER_INTERVAL, TWSE_MARKET_TIME, PRICE_INTERVAL, API_WAIT, TWSE_ENTER_MID } from '../constants.js'
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
@@ -335,8 +335,8 @@ export const twseShioajiInit = () => {
 }
 
 const getShioajiData = (simulation = true) => {
-    const id = simulation ? 'PAPIUSER02' : SHIOAJI_ID;
-    const pw = simulation ? '2222' : SHIOAJI_PW;
+    const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
+    const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
         console.log(output);
         const result = output.split('\n');
@@ -376,8 +376,8 @@ const getShioajiData = (simulation = true) => {
 const submitShioajiOrder = (submitList, simulation = true) => {
     fakeOrder = [];
     let list = '';
-    const id = simulation ? 'PAPIUSER02' : SHIOAJI_ID;
-    const pw = simulation ? '2222' : SHIOAJI_PW;
+    const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
+    const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     const ca = simulation ? '2222' : SHIOAJI_CA;
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
     submitList.forEach(s => {
@@ -410,8 +410,8 @@ const submitShioajiOrder = (submitList, simulation = true) => {
 }
 
 const sellallShioajiOrder = (index, simulation = true) => {
-    const id = simulation ? 'PAPIUSER02' : SHIOAJI_ID;
-    const pw = simulation ? '2222' : SHIOAJI_PW;
+    const id = simulation ? 'PAPIUSER02' : SHIOAJI_APIKEY;
+    const pw = simulation ? '2222' : SHIOAJI_APISECRET;
     const ca = simulation ? '2222' : SHIOAJI_CA;
     const capw = simulation ? '2222' : SHIOAJI_CAPW;
     return new Promise((resolve, reject) => Child_process.exec(`${PathJoin(__dirname, 'util/twse.py')} ${id} ${pw} sellall ${ca} ${capw} ${index}`, (err, output) => err ? reject(err) : resolve(output))).then(output => {
