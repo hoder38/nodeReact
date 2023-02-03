@@ -11,15 +11,9 @@ if len(sys.argv) < 3:
     raise ValueError('Need ID and PASSWORD')
 
 simulation = False
-pw = ''
+pw = sys.argv[2]
 if re.match(re.compile(r'^PAPIUSER\d+$'), sys.argv[1]):
     simulation = True
-    pw = sys.argv[2]
-else:
-    fd = open(sys.argv[2],'r')
-    pw = fd.read()
-    pw = pw[:-1]
-    fd.close()
 
 api = sj.Shioaji(simulation=simulation)
 
@@ -35,7 +29,7 @@ def retryApi(fun, wait = 10, count = 5):
             else:
                 raise
 
-retryApi(lambda: api.login(person_id=sys.argv[1],passwd=pw), 30)
+retryApi(lambda: api.login(api_key=sys.argv[1],secret_key=pw), 30)
 acc_balance = retryApi(lambda: api.account_balance(timeout=10000))
 print(acc_balance)
 if acc_balance.errmsg != '':
