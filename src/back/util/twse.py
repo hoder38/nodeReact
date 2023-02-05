@@ -29,7 +29,7 @@ def retryApi(fun, wait = 10, count = 5):
             else:
                 raise
 
-retryApi(lambda: api.login(api_key=sys.argv[1],secret_key=pw), 30)
+person_info = retryApi(lambda: api.login(api_key=sys.argv[1],secret_key=pw), 30)
 acc_balance = retryApi(lambda: api.account_balance(timeout=10000))
 print(acc_balance)
 if acc_balance.errmsg != '':
@@ -105,7 +105,7 @@ elif sys.argv[3] == 'submit':
         api.activate_ca(
             ca_path = sys.argv[4],
             ca_passwd = capw,
-            person_id = sys.argv[1],
+            person_id = person_info[0].person_id,
         )
     for o in acc_order:
         if o.order.price_type == 'LMT' and (o.status.status == 'PendingSubmit' or o.status.status == 'PreSubmitted' or o.status.status == 'Submitted' or o.status.status == 'Filling'):
@@ -213,7 +213,7 @@ elif sys.argv[3] == 'sellall':
         api.activate_ca(
             ca_path = sys.argv[4],
             ca_passwd = capw,
-            person_id = sys.argv[1],
+            person_id = person_info[0].person_id,
         )
     index = sys.argv[6]
     print(index)
