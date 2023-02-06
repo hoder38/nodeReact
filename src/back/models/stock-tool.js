@@ -7730,9 +7730,51 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                 }
             });
+            if (stat.indexOf('pdr') !== -1) {
+                const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
+                    ret['pdr'] = 0;
+                } else {
+                    let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
+                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(',', ''));
+                    ret['pdr'] = (stockYield === 0) ? 0 : Math.round(100 / stockYield * 100) / 100;
+                }
+            }
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs[0], 'td')[1], 'span')[0]) {
+                    if (stat.indexOf('per') !== -1) {
+                        return Api('url', `https://www.gurufocus.com/term/pe/${index}/PE-Ratio`).then(raw_data => {
+                            const per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                            if (per) {
+                                ret['per'] = Number(per[0]);
+                            } else {
+                                ret['per'] = 0;
+                            }
+                            if (stat.indexOf('pbr') !== -1) {
+                                return Api('url', `https://www.gurufocus.com/term/pb/${index}/PB-Ratio`).then(raw_data => {
+                                    const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                                    if (pbr) {
+                                        ret['pbr'] = Number(pbr[0]);
+                                    } else {
+                                        ret['pbr'] = 0;
+                                    }
+                                    return Promise.resolve(ret);
+                                });
+                            }
+                            return Promise.resolve(ret);
+                        });
+                    } else if (stat.indexOf('pbr') !== -1) {
+                        return Api('url', `https://www.gurufocus.com/term/pb/${index}/PB-Ratio`).then(raw_data => {
+                            const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                            if (pbr) {
+                                ret['pbr'] = Number(pbr[0]);
+                            } else {
+                                ret['pbr'] = 0;
+                            }
+                            return Promise.resolve(ret);
+                        });
+                    }
                     return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
                 if (stat.indexOf('per') !== -1) {
@@ -7756,16 +7798,6 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                         }
                         ret['pbr'] = pbr[2] ? Number(pbr[1].replace(',', '')) * 1000 : Number(pbr[1].replace(',', ''));
                     }
-                }
-            }
-            if (stat.indexOf('pdr') !== -1) {
-                const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
-                    ret['pdr'] = 0;
-                } else {
-                    let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
-                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(',', ''));
-                    ret['pdr'] = (stockYield === 0) ? 0 : Math.round(100 / stockYield * 100) / 100;
                 }
             }
         }
