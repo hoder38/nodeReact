@@ -1946,13 +1946,15 @@ const getBasicStockData = (type, index) => {
             result.stock_class = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[1])[0];
             result.stock_ind = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[3])[0];
             result.stock_executive = [];
-            findTag(findTag(findTag(findTag(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                findTag(findTag(findTag(t, 'td')[0], 'span')[0]).forEach(n => {
-                    if (n.match(/^M/)) {
-                        result.stock_executive.push(n);
-                    }
+            if (findTag(findTag(info, 'section')[0], 'table')[0]) {
+                findTag(findTag(findTag(findTag(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    findTag(findTag(findTag(t, 'td')[0], 'span')[0]).forEach(n => {
+                        if (n.match(/^M/)) {
+                            result.stock_executive.push(n);
+                        }
+                    });
                 });
-            });
+            }
             return result;
         }).catch(err => {
             console.log(count);
