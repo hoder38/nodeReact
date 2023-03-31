@@ -7746,16 +7746,19 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs[0], 'td')[1], 'span')[0]) {
                     if (stat.indexOf('per') !== -1) {
-                        return Api('url', `https://www.gurufocus.com/term/pe/${index}/PE-Ratio`).then(raw_data => {
-                            const per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                        if (index === 'BRK-B') {
+                            index = 'BRK.B';
+                        }
+                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/pe-ratio`).then(raw_data => {
+                            const per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
                             if (per) {
                                 ret['per'] = Number(per[0]);
                             } else {
                                 ret['per'] = 0;
                             }
                             if (stat.indexOf('pbr') !== -1) {
-                                return Api('url', `https://www.gurufocus.com/term/pb/${index}/PB-Ratio`).then(raw_data => {
-                                    const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                                return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
+                                    const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
                                     if (pbr) {
                                         ret['pbr'] = Number(pbr[0]);
                                     } else {
@@ -7767,8 +7770,11 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                             return Promise.resolve(ret);
                         });
                     } else if (stat.indexOf('pbr') !== -1) {
-                        return Api('url', `https://www.gurufocus.com/term/pb/${index}/PB-Ratio`).then(raw_data => {
-                            const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[1], 'div', 'defBody')[0], 'div', 'bootstrap-iso')[0], 'div')[0], 'div', 'row')[0], 'div', 'def_body_detail_height')[0], 'font')[0])[0].match(/\d+\.?\d*/);
+                        if (index === 'BRK-B') {
+                            index = 'BRK.B';
+                        }
+                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
+                            const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
                             if (pbr) {
                                 ret['pbr'] = Number(pbr[0]);
                             } else {
