@@ -6444,11 +6444,16 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (priceArray[nowBP] < 0) {
                 if (++count === 3) {
                     newMid = Math.abs(priceArray[nowBP]);
+                }
+                if (++count === 4) {
+                    if (newMid > (Math.abs(priceArray[nowBP]) * (1 - fee * 10))) {
+                        newMid = Math.abs(priceArray[nowBP]) * (1 - fee * 10);
+                    }
                     break;
                 }
             }
         }
-        console.log(`newMid ${newMid} ${price}`)
+        console.log(`newMid L ${newMid} ${price}`)
         return {
             resetWeb: 1,
             newMid,
@@ -6479,10 +6484,16 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (priceArray[nowSP] < 0) {
                 if (++count === 3) {
                     newMid = Math.abs(priceArray[nowSP]);
+                }
+                if (++count === 4) {
+                    if (newMid < (Math.abs(priceArray[nowSP]) * (1 + fee * 10))) {
+                        newMid = Math.abs(priceArray[nowSP]) * (1 + fee * 10);
+                    }
                     break;
                 }
             }
         }
+        console.log(`newMid H ${newMid} ${price}`)
         return {
             resetWeb: 2,
             newMid,
