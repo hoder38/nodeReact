@@ -1748,8 +1748,14 @@ export default {
                     } else if (sec.attribs['data-testid'] === 'Storyline') {
                         findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[1], 'li')[1], 'div')[0], 'ul')[0], 'li').forEach(genre => taglist.add(findTag(findTag(genre, 'a')[0])[0]));
                     } else if (sec.attribs['data-testid'] === 'Details') {
-                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li')[1], 'div')[0], 'ul')[0], 'li').forEach(country => taglist.add(findTag(findTag(country, 'a')[0])[0]));
-                        findTag(findTag(findTag(findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li')[3], 'div')[0], 'ul')[0], 'li').forEach(lang => taglist.add(findTag(findTag(lang, 'a')[0])[0]));
+                        findTag(findTag(findTag(sec, 'div')[1], 'ul')[0], 'li').forEach(de => {
+                            const detype = findTag(de, 'a')[0] ? findTag(findTag(de, 'a')[0])[0] : findTag(findTag(de, 'span')[0])[0];
+                            if (detype === 'Countries of origin') {
+                                findTag(findTag(findTag(de, 'div')[0], 'ul')[0], 'li').forEach(country => taglist.add(findTag(findTag(country, 'a')[0])[0]));
+                            } else if (detype === 'Languages') {
+                                findTag(findTag(findTag(de, 'div')[0], 'ul')[0], 'li').forEach(lang => taglist.add(findTag(findTag(lang, 'a')[0])[0]));
+                            }
+                        });
                     }
                 });
                 return [...taglist].map(t => toValidName(t.toLowerCase()));
