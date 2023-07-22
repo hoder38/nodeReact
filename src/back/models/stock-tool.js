@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS, USERDB } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
@@ -139,10 +139,10 @@ const getStockPrice = (type='twse', index, price_only = true) => {
             if (!center) {
                 const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[4], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
                 let price = findTag(findTag(div, 'span')[0])[0];
-                price = price === '-' ? 0 : Number(price.replace(',', ''));
+                price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (!price_only) {
                     const up = findTag(findTag(div, 'span')[1])[0];
-                    price = `${price} ${Number(up.replace(',', ''))}`;
+                    price = `${price} ${Number(up.replace(/,/g, ''))}`;
                 }
                 console.log(price);
                 return price;
@@ -2853,7 +2853,7 @@ export default {
                             }
                         }
                     }
-                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
+                    return getUsStock(index, ['price', 'per', 'pdr', 'pbr', 'equity'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
                         console.log(ret);
                         let stock_default = [];
                         for (let t of tags) {
@@ -2870,6 +2870,7 @@ export default {
                             per: ret.per,
                             pdr: ret.pdr,
                             pbr: ret.pbr,
+                            equity: ret.equity,
                             latestQuarter: ret.latestQuarter,
                             latestYear: ret.latestYear,
                             tags: normal_tags,
@@ -2883,6 +2884,7 @@ export default {
                             per: ret.per,
                             pdr: ret.pdr,
                             pbr: ret.pbr,
+                            equity: ret.equity,
                             latestQuarter: ret.latestQuarter,
                             latestYear: ret.latestYear,
                             //tags: normal_tags,
@@ -2901,6 +2903,7 @@ export default {
                                 per: ret.per,
                                 pdr: ret.pdr,
                                 pbr: ret.pbr,
+                                equity: ret.equity,
                                 latestQuarter: ret.latestQuarter,
                                 latestYear: ret.latestYear,
                                 stockName: `${type} ${index} ${name}`,
@@ -4598,6 +4601,8 @@ export default {
         let last = false;
         let queried = 0;
         let filterList = [];
+        const etfList = [];
+        const marketcapList = [];
         const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
             const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
                 sendWs({
@@ -4626,6 +4631,8 @@ export default {
             }
             const first_stage = [];
             result.items.forEach(i => {
+                etfList.push(i.type + ' ' + i.index + ' ' + i.name);
+                marketcapList.push(i.equity && i.price ? i.equity * i.price : 0);
                 switch (i.type) {
                     case 'usse':
                     const eok = option['usse'].per ? ((option['usse'].per[1] === '>' && i.per > option['usse'].per[2]) || (option['usse'].per[1] === '<' && i.per && i.per < option['usse'].per[2])) ? true : false : true;
@@ -4680,6 +4687,7 @@ export default {
                         const iok = option['usse'].interval ? ((option['usse'].interval[1] === '>' && intervalVal[8] > option['usse'].interval[2]) || (option['usse'].interval[1] === '<' && intervalVal[8] < option['usse'].interval[2])) ? true : false : true;
                         const vok = option['usse'].vol ? ((option['usse'].vol[1] === '>' && intervalVal[9] > option['usse'].vol[2]) || (option['usse'].vol[1] === '<' && intervalVal[9] < option['usse'].vol[2])) ? true : false : true;
                         if (iok && vok && cok && pok && gok && tok && sok) {
+                            filterList[iIndex].name = filterList[iIndex].name + result;
                             filterList1.push(filterList[iIndex]);
                         }
                         break;
@@ -4692,6 +4700,7 @@ export default {
                         const iok1 = option['twse'].interval ? ((option['twse'].interval[1] === '>' && intervalVal[8] > option['twse'].interval[2]) || (option['twse'].interval[1] === '<' && intervalVal[8] < option['twse'].interval[2])) ? true : false : true;
                         const vok1 = option['twse'].vol ? ((option['twse'].vol[1] === '>' && intervalVal[9] > option['twse'].vol[2]) || (option['twse'].vol[1] === '<' && intervalVal[9] < option['twse'].vol[2])) ? true : false : true;
                         if (iok1 && vok1 && cok1 && pok1 && gok1 && tok1 && sok1) {
+                            filterList[iIndex].name = filterList[iIndex].name + result;
                             filterList1.push(filterList[iIndex]);
                         }
                         break;
@@ -4726,7 +4735,86 @@ export default {
                 handleError(err, 'Stock filter');
             }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
             return addFilter(0);
-        });
+        }).then(filterList => Mongo('find', USERDB, {perm: 1}).then(userlist => {
+            const inList = [];
+            const outList = [];
+            const compare_list = cIndex => (cIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[cIndex]._id, sType: {$exists: false}}).then(items => {
+                let isIn = '';
+                let isOut = '';
+                const totalTwseMarketcapList = [];
+                const totalUsseMarketcapList = [];
+                items.forEach(stock => {
+                    if (stock.type !== 'total') {
+                        const isEtf = etfList.indexOf(stock.name);
+                        if (isEtf === -1) {
+                            isOut = isOut + ' ' + stock.name;
+                        } else {
+                            if (stock.setype === 'twse') {
+                                if (marketcapList[isEtf] > 0) {
+                                    totalTwseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                }
+                            } else if (stock.setype === 'usse') {
+                                if (marketcapList[isEtf] > 0) {
+                                    totalUsseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                }
+                            }
+                        }
+                        for (let i = 0; i < filterList.length; i++) {
+                            if (stock.index === filterList[i].index && stock.setype === filterList[i].type) {
+                                isIn = isIn + ' ' + stock.name;
+                                break;
+                            }
+                        }
+                    }
+                });
+                inList.push(userlist[cIndex].username + ' In trade list are' + isIn);
+                outList.push(userlist[cIndex].username + ' Out trade list are' + isOut);
+                totalTwseMarketcapList.sort((a, b) => {
+                    if (a.mc < b.mc) {
+                        return 1;
+                    } else if (a.mc > b.mc) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalTwseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalTwseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        const mul = totalTwseMarketcapList[i].mc / totalTwseMarketcapList[mcMiddle].mc;
+                        totalTwseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
+                    }
+                }
+                totalUsseMarketcapList.sort((a, b) => {
+                    if (a.mc < b.mc) {
+                        return 1;
+                    } else if (a.mc > b.mc) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalUsseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalUsseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        const mul = totalUsseMarketcapList[i].mc / totalUsseMarketcapList[mcMiddle].mc;
+                        totalUsseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
+                    }
+                }
+                totalTwseMarketcapList.forEach(i => console.log(i));
+                totalUsseMarketcapList.forEach(i => console.log(i));
+                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: totalTwseMarketcapList[mIndex].mul ? totalTwseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                    console.log(mitems);
+                    return updmulTwse(mIndex + 1);
+                }) : Promise.resolve();
+                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: totalUsseMarketcapList[mIndex].mul ? totalUsseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                    console.log(mitems);
+                    return updmulUsse(mIndex + 1);
+                }) : Promise.resolve();
+                return updmulTwse(0).then(() => updmulUsse(0).then(() => compare_list(cIndex + 1)));
+            }) : Promise.resolve({filter: filterList, in: inList, out: outList});
+            return compare_list(0);
+        }));
     },
     stockFilterV2: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
         const web = option ? true : false;
@@ -5046,14 +5134,20 @@ export default {
             return handleError(new HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilterV3(option, user, session).then(list => {
+        return this.stockFilterV3(option, user, session).then(obj => {
             stockFiltering = false;
-            const number = list.length;
+            const number = obj.filter.length;
             console.log(`End: ${number}`);
             sendWs(`stock filter: ${number}`, 0, 0, true);
-            if (number > 0) {
-                sendWs(list.reduce((a, v) => `${a} ${v.name}`, ''), 0, 0, true);
-            }
+            obj.filter.forEach(i => {
+                sendWs(i.name, 0, 0, true);
+            });
+            obj.in.forEach(i => {
+                sendWs(i, 0, 0, true);
+            });
+            obj.out.forEach(i => {
+                sendWs(i, 0, 0, true);
+            });
             return number;
         }).catch(err => {
             stockFiltering = false;
@@ -5175,6 +5269,7 @@ export default {
                             //cost: v.cost,
                             price: v.price,
                             mid: v.mid,
+                            mul: v.mul,
                             count: (v.setype === 'usse') ? v.count : v.count / 10,
                             remain: Math.round(v.amount * 100) / 100,
                             profit: p,
@@ -5697,6 +5792,7 @@ export default {
                                 //cost: v.cost,
                                 price: v.price,
                                 mid: v.mid,
+                                mul: v.mul,
                                 count: (v.setype === 'usse') ? v.count : v.count / 10,
                                 remain: Math.round(v.amount * 100) / 100,
                                 profit: p,
@@ -5994,6 +6090,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     return 0;
                 }
                 const item = items[index];
+                //market cap multiple
+                if (item.mul) {
+                    item.orig = item.orig * item.mul;
+                    item.times = item.times * item.mul;
+                }
                 if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                     item.count = 0;
                     item.amount = item.orig;
@@ -7720,9 +7821,9 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     break;
                 }
             }
-            ret['price'] = price ? Number(price.replace(',', '')) : 0;
+            ret['price'] = price ? Number(price.replace(/,/g, '')) : 0;
         }
-        if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1) {
+        if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[1];
             findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr')[1], 'td')[1]).forEach(d => {
                 const m = d.match(/^([a-zA-Z][a-zA-Z][a-zA-Z]) \d+, (\d+)$/);
@@ -7743,13 +7844,28 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                 }
             });
+            if (stat.indexOf('equity') !== -1) {
+                const trs0 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
+                const equity = findTag(findTag(trs0[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                if (equity[2] === 'k' || equity[2] === 'K') {
+                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000;
+                } else if (equity[2] === 'm' || equity[2] === 'M') {
+                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000;
+                } else if (equity[2] === 'b' || equity[2] === 'B') {
+                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000000;
+                } else if (equity[2] === 't' || equity[2] === 'T') {
+                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000000000;
+                } else {
+                    ret['equity'] = Number(equity[1].replace(/,/g, ''));
+                }
+            }
             if (stat.indexOf('pdr') !== -1) {
                 const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
                     ret['pdr'] = 0;
                 } else {
                     let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
-                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(',', ''));
+                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(/,/g, ''));
                     ret['pdr'] = (stockYield === 0) ? 0 : Math.round(100 / stockYield * 100) / 100;
                 }
             }
@@ -7800,22 +7916,42 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
                         ret['per'] = 0;
                     } else {
-                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
+                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
                         if (!per) {
                             return handleError(new HoError(`usa stock parse error ${index}`));
                         }
-                        ret['per'] = per[2] ? Number(per[1].replace(',', '')) * 1000 : Number(per[1].replace(',', ''));
+                        if (per[2] === 'k' || per[2] === 'K') {
+                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000;
+                        } else if (per[2] === 'm' || per[2] === 'M') {
+                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000;
+                        } else if (per[2] === 'b' || per[2] === 'B') {
+                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000000;
+                        } else if (per[2] === 't' || per[2] === 'T') {
+                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000000000;
+                        } else {
+                            ret['per'] = Number(per[1].replace(/,/g, ''));
+                        }
                     }
                 }
                 if (stat.indexOf('pbr') !== -1) {
                     if (findTag(findTag(trs[6], 'td')[1], 'span')[0]) {
                         ret['pbr'] = 0;
                     } else {
-                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)(k)?$/);
+                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
                         if (!pbr) {
                             return handleError(new HoError(`usa stock parse error ${index}`));
                         }
-                        ret['pbr'] = pbr[2] ? Number(pbr[1].replace(',', '')) * 1000 : Number(pbr[1].replace(',', ''));
+                        if (pbr[2] === 'k' || pbr[2] === 'K') {
+                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000;
+                        } else if (pbr[2] === 'm' || pbr[2] === 'M') {
+                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000;
+                        } else if (pbr[2] === 'b' || pbr[2] === 'B') {
+                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000000;
+                        } else if (pbr[2] === 't' || pbr[2] === 'T') {
+                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000000000;
+                        } else {
+                            ret['pbr'] = Number(pbr[1].replace(/,/g, ''));
+                        }
                     }
                 }
             }

@@ -46,6 +46,7 @@
     "node-fetch": "^2.6.1",
     "node-opencc": "^2.0.1",
     "opensubtitles-api": "^5.1.2",
+    "opensubtitles.com": "^1.0.0",
     "passport": "^0.4.1",
     "passport-local": "^1.0.0",
     "password-generator": "^2.3.2",
@@ -64,8 +65,7 @@
     "webpack-cli": "^4.2.0",
     "ws": "^7.4.1",
     "xml2js": "^0.4.23",
-    "youtube-dl": "^3.0.2",
-    "opensubtitles.com": "^1.0.0"
+    "youtube-dl": "^3.0.2"
   },
   "author": {
     "name": "hoder",

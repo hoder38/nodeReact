@@ -89,10 +89,11 @@ class StockTotal extends React.Component {
             dropList.push({title: `Count: ${v.count}`, onclick: () => {}, key: 1})
             dropList.push({title: `Price: ${v.price}`, onclick: () => {}, key: 2})
             dropList.push({title: `mid: ${Math.round(v.mid * 100) / 100}`, onclick: () => {}, key: 3})
-            dropList.push({title: `${v.str}`, onclick: () => {}, key: 4})
+            dropList.push({title: `mul: ${v.mul ? v.mul : 0}`, onclick: () => {}, key: 4})
+            dropList.push({title: `${v.str}`, onclick: () => {}, key: 5})
             if (v.order) {
                 v.order.forEach((o, i) => {
-                    dropList.push({title: `Order: ${o}`, onclick: () => {}, key: i + 5})
+                    dropList.push({title: `Order: ${o}`, onclick: () => {}, key: i + 6})
                 })
             }
             const percent = totals.se[v.se].total === 0 ? 0 : Math.floor(v.current / totals.se[v.se].total * 100);

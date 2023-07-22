@@ -1,12 +1,14 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
 import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, /*COIN_MAX, COIN_MAX_MAX, */RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FOMG_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
+import Htmlparser from 'htmlparser2'
 import BFX from 'bitfinex-api-node'
 import bfxApiNodeModels from 'bfx-api-node-models'
 const { FundingOffer, Order } = bfxApiNodeModels;
 import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool.js'
 import Mongo from '../models/mongo-tool.js'
 import Redis from '../models/redis-tool.js'
-import { handleError, HoError, isValidString } from '../util/utility.js'
+import Api from './api-tool.js'
+import { handleError, HoError, isValidString, findTag } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 //system
@@ -353,7 +355,56 @@ export const calWeb = curArr => {
         });
     });
     //return recurPrice(0).then(() => recurType(0));
-    return recurType(0);
+    return recurType(0).then(() => Api('url', 'https://www.slickcharts.com/currency').then(raw_data => {
+        const coinMC = [];
+        const coinName = [];
+        let con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid mt-4 maxWidth')[0];
+        if (!con) {
+            con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid maxWidth')[0];
+            if (!con) {
+                con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid  maxWidth')[0];
+            }
+        }
+        const row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
+        findTag(findTag(findTag(findTag(findTag(findTag(row, 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(tr => {
+            coinName.push(findTag(findTag(findTag(tr, 'td')[1], 'a')[0])[0].match(/\(([\da-zA-Z]+)\)/)[1]);
+            coinMC.push(Number(findTag(findTag(tr, 'td')[2])[0].replace(/,/g, '')));
+        });
+        return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => {
+            const recurUser = uIndex => (uIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[uIndex]._id, sType: 1, type: FUSD_SYM}).then(items => {
+                const mcList = [];
+                items.forEach(i => {
+                    const cn = coinName.indexOf(i.name.match(/^([\da-zA-Z]+)\:?USD$/)[1]);
+                    if (cn !== -1) {
+                        mcList.push({id: i._id, mc: coinMC[cn]});
+                    }
+                });
+                mcList.sort((a, b) => {
+                    if (a.mc < b.mc) {
+                        return 1;
+                    } else if (a.mc > b.mc) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (mcList.length > 2) {
+                    const mcMiddle = Math.round(mcList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        const mul = mcList[i].mc / mcList[mcMiddle].mc;
+                        mcList[i].mul = (mul > 5) ? 5 : mul;
+                    }
+                }
+                console.log(mcList);
+                const updmul = mIndex => (mIndex < mcList.length) ? Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: mcList[mIndex].mul ? mcList[mIndex].mul : 0}}).then(mitems => {
+                    console.log(mitems);
+                    return updmul(mIndex + 1);
+                }) : Promise.resolve();
+                return updmul(0).then(() => recurUser(uIndex + 1));
+            }) : Promise.resolve();
+            return recurUser(0);
+        });
+    }));
 }
 
 export const setWsOffer = (id, curArr=[], uid) => {
@@ -1849,6 +1900,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return Promise.resolve();
                     } else {
                         let item = items[index];
+                        //market cap multiple
+                        if (item.mul) {
+                            item.orig = item.orig * item.mul;
+                            item.times = item.times * item.mul;
+                        }
                         margin[id][current.type][item.index] = item.profit;
                         console.log('margin');
                         console.log(margin[id]);
