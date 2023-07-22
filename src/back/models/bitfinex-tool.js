@@ -376,7 +376,7 @@ export const calWeb = curArr => {
                 items.forEach(i => {
                     const cn = coinName.indexOf(i.name.match(/^([\da-zA-Z]+)\:?USD$/)[1]);
                     if (cn !== -1) {
-                        mcList.push({id: i._id, mc: coinMC[cn]});
+                        mcList.push({_id: i._id, mc: coinMC[cn]});
                     }
                 });
                 mcList.sort((a, b) => {
