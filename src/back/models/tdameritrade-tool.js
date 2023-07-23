@@ -917,6 +917,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                     if (item.index === 0 || !usseSuggestion[item.index]) {
                         return recur_status(index + 1);
                     }
+                    //market cap multiple
+                    if (item.mul) {
+                        item.orig = item.orig * item.mul;
+                        item.times = item.times * item.mul;
+                    }
                     const price = usseSuggestion[item.index].price;
                     console.log(item);
                     const cancelOrder = rest => initialBook(true).then(() => {

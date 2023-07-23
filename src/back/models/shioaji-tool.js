@@ -270,6 +270,11 @@ export const twseShioajiInit = () => {
                         return recur_status(index + 1);
                     }
                     const price = twseSuggestion[item.index].price;
+                    //market cap multiple
+                    if (item.mul) {
+                        item.orig = item.orig * item.mul;
+                        item.times = item.times * item.mul;
+                    }
                     console.log(item);
                     const startStatus = () => {
                         isSubmit = true;

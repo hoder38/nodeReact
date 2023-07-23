@@ -5243,7 +5243,7 @@ export default {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = v.price * v.count;
                         v.amount = v.profit ? v.amount + v.profit : v.amount;
-                        let p = current + v.amount - v.orig;
+                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
                         let se = 0;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;
@@ -5516,7 +5516,7 @@ export default {
                                     items[i].web = newWeb.arr;
                                     items[i].mid = newWeb.mid;
                                     items[i].times = newWeb.times;
-                                    items[i].amount = items[i].amount + +cmd[2] - items[i].orig;
+                                    items[i].amount = items[i].amount + +cmd[2] - (items[i].mul ? items[i].orig * items[i].mul : items[i].orig);
                                     items[i].orig = +cmd[2];
                                     if (items[i].ing === 2) {
                                         items[i].ing = 0;
@@ -5548,15 +5548,15 @@ export default {
                                     items[i].count = +cmd[2];
                                     switch(setype) {
                                         case 'twse':
-                                        remain = remain + items[i].orig - items[i].amount - +cmd[3];
+                                        remain = remain + (items[i].mul ? items[i].orig * items[i].mul : items[i].orig) - items[i].amount - +cmd[3];
                                         updateTotal[totalId] = {amount: remain};
                                         break;
                                         case 'usse':
-                                        remain1 = remain1 + items[i].orig - items[i].amount - +cmd[3];
+                                        remain1 = remain1 + (items[i].mul ? items[i].orig * items[i].mul : items[i].orig) - items[i].amount - +cmd[3];
                                         updateTotal[totalId1] = {amount: remain1};
                                         break;
                                     }
-                                    items[i].amount = items[i].orig - +cmd[3];
+                                    items[i].amount = (items[i].mul ? items[i].orig * items[i].mul : items[i].orig) - +cmd[3];
                                     if (items[i]._id) {
                                         if (updateTotal[items[i]._id]) {
                                             updateTotal[items[i]._id].count = items[i].count;
@@ -5767,7 +5767,7 @@ export default {
                             let se = 0;
                             let current = v.price * v.count;
                             v.amount = v.profit ? v.amount + v.profit : v.amount;
-                            let p = current + v.amount - v.orig;
+                            let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
                             if (v.setype === 'usse') {
                                 totalPrice1 += current;
                                 profit1 += p;

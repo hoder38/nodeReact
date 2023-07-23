@@ -1956,6 +1956,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     return handleError(new HoError(`miss ${item.index}`));
                                 }
                                 item = nitem[0];
+                                //market cap multiple
+                                if (item.mul) {
+                                    item.orig = item.orig * item.mul;
+                                    item.times = item.times * item.mul;
+                                }
                                 item.count = 0;
                                 item.amount = item.orig;
                                 item.pricecost = 0;
