@@ -4631,7 +4631,7 @@ export default {
             }
             const first_stage = [];
             result.items.forEach(i => {
-                etfList.push(i.type + ' ' + i.index + ' ' + i.name);
+                etfList.push(i.type + ' ' + i.index);
                 marketcapList.push(i.equity && i.price ? i.equity * i.price : 0);
                 switch (i.type) {
                     case 'usse':
@@ -4745,7 +4745,7 @@ export default {
                 const totalUsseMarketcapList = [];
                 items.forEach(stock => {
                     if (stock.type !== 'total') {
-                        const isEtf = etfList.indexOf(stock.name);
+                        let isEtf = etfList.indexOf(stock.setype + ' ' + stock.index);
                         if (isEtf === -1) {
                             isOut = isOut + ' ' + stock.name;
                         } else {
@@ -5269,7 +5269,7 @@ export default {
                             //cost: v.cost,
                             price: v.price,
                             mid: v.mid,
-                            mul: v.mul,
+                            mul: Math.round(v.mul * 100) / 100,
                             count: (v.setype === 'usse') ? v.count : v.count / 10,
                             remain: Math.round(v.amount * 100) / 100,
                             profit: p,
@@ -5293,7 +5293,7 @@ export default {
                             name: totalName1,
                             type: totalType1,
                             profit: profit1,
-                            price: totalPrice1,
+                            price: Math.round(totalPrice1 * 100) / 100,
                             mid: 1,
                             remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
                             count: 1,
@@ -5309,7 +5309,7 @@ export default {
                             name: totalName,
                             type: totalType,
                             profit,
-                            price: totalPrice,
+                            price: Math.round(totalPrice * 100) / 100,
                             mid: 1,
                             remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
                             count: 1,
@@ -5792,7 +5792,7 @@ export default {
                                 //cost: v.cost,
                                 price: v.price,
                                 mid: v.mid,
-                                mul: v.mul,
+                                mul: Math.round(v.mul * 100) / 100,
                                 count: (v.setype === 'usse') ? v.count : v.count / 10,
                                 remain: Math.round(v.amount * 100) / 100,
                                 profit: p,
@@ -5816,7 +5816,7 @@ export default {
                                 name: totalName1,
                                 type: totalType1,
                                 profit: profit1,
-                                price: totalPrice1,
+                                price: Math.round(totalPrice1 * 100) / 100,
                                 mid: 1,
                                 remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
                                 count: 1,
@@ -5832,7 +5832,7 @@ export default {
                                 name: totalName,
                                 type: totalType,
                                 profit,
-                                price: totalPrice,
+                                price: Math.round(totalPrice * 100) / 100,
                                 mid: 1,
                                 remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
                                 count: 1,
