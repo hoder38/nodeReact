@@ -976,6 +976,7 @@ export default {
             });
             case 'rea':
             return Api('url', 'https://www.nar.realtor/newsroom').then(raw_data => {
+                console.log(raw_data);
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));

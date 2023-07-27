@@ -7844,21 +7844,6 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                 }
             });
-            if (stat.indexOf('equity') !== -1) {
-                const trs0 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[1], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                const equity = findTag(findTag(trs0[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                if (equity[2] === 'k' || equity[2] === 'K') {
-                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000;
-                } else if (equity[2] === 'm' || equity[2] === 'M') {
-                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000;
-                } else if (equity[2] === 'b' || equity[2] === 'B') {
-                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000000;
-                } else if (equity[2] === 't' || equity[2] === 'T') {
-                    ret['equity'] = Number(equity[1].replace(/,/g, '')) * 1000000000000;
-                } else {
-                    ret['equity'] = Number(equity[1].replace(/,/g, ''));
-                }
-            }
             if (stat.indexOf('pdr') !== -1) {
                 const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
@@ -7872,12 +7857,79 @@ const getUsStock = (index, stat = ['price'], single = false) => {
             if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 if (findTag(findTag(trs[0], 'td')[1], 'span')[0]) {
-                    if (stat.indexOf('per') !== -1) {
+                    if (stat.indexOf('equity') !== -1) {
+                        if (index === 'BRK-B') {
+                            index = 'BRK.B';
+                        }
+                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/net-worth`).then(raw_data => {
+                            let marketCap = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                            if (findTag(marketCap, 'p')[0]) {
+                                marketCap = findTag(findTag(findTag(marketCap, 'p')[0], 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                            } else {
+                                marketCap = findTag(findTag(marketCap, 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                            }
+                            if (marketCap[2] === 'k' || marketCap[2] === 'K') {
+                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000;
+                            } else if (marketCap[2] === 'm' || marketCap[2] === 'M') {
+                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000;
+                            } else if (marketCap[2] === 'b' || marketCap[2] === 'B') {
+                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000;
+                            } else if (marketCap[2] === 't' || marketCap[2] === 'T') {
+                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000000;
+                            } else {
+                                marketCap = Number(marketCap[1].replace(/,/g, ''));
+                            }
+                            ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
+                            if (marketCap) {
+                                ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
+                            } else {
+                                ret['equity'] = 0;
+                            }
+                            if (stat.indexOf('per') !== -1) {
+                                return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/pe-ratio`).then(raw_data => {
+                                    let per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                                    if (findTag(per, 'p')[0]) {
+                                        per = findTag(findTag(findTag(per, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                                    } else {
+                                        per = findTag(findTag(per, 'strong')[0])[0].match(/\d+\.?\d*/);
+                                    }
+                                    if (per) {
+                                        ret['per'] = Number(per[0]);
+                                    } else {
+                                        ret['per'] = 0;
+                                    }
+                                    if (stat.indexOf('pbr') !== -1) {
+                                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
+                                            let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                                            if (findTag(pbr, 'p')[0]) {
+                                                pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                                            } else {
+                                                pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
+                                            }
+                                            if (pbr) {
+                                                ret['pbr'] = Number(pbr[0]);
+                                            } else {
+                                                ret['pbr'] = 0;
+                                            }
+                                            return Promise.resolve(ret);
+                                        });
+                                    }
+                                    return Promise.resolve(ret);
+                                });
+                            }
+                            return Promise.resolve(ret);
+                        });
+                    } else if (stat.indexOf('per') !== -1) {
                         if (index === 'BRK-B') {
                             index = 'BRK.B';
                         }
                         return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/pe-ratio`).then(raw_data => {
-                            const per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                            let per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                            if (findTag(per, 'p')[0]) {
+                                per = findTag(findTag(findTag(per, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                            } else {
+                                per = findTag(findTag(per, 'strong')[0])[0].match(/\d+\.?\d*/);
+                            }
                             if (per) {
                                 ret['per'] = Number(per[0]);
                             } else {
@@ -7885,7 +7937,12 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                             }
                             if (stat.indexOf('pbr') !== -1) {
                                 return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
-                                    const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                                    let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                                    if (findTag(pbr, 'p')[0]) {
+                                        pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                                    } else {
+                                        pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
+                                    }
                                     if (pbr) {
                                         ret['pbr'] = Number(pbr[0]);
                                     } else {
@@ -7901,7 +7958,12 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                             index = 'BRK.B';
                         }
                         return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
-                            const pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0], 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                            let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+                            if (findTag(pbr, 'p')[0]) {
+                                pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+                            } else {
+                                pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
+                            }
                             if (pbr) {
                                 ret['pbr'] = Number(pbr[0]);
                             } else {
@@ -7911,6 +7973,21 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                         });
                     }
                     return handleError(new HoError(`usa stock parse NA ${index}`));
+                }
+                if (stat.indexOf('equity') !== -1) {
+                    let marketCap = findTag(findTag(trs[0], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                    if (marketCap[2] === 'k' || marketCap[2] === 'K') {
+                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000;
+                    } else if (marketCap[2] === 'm' || marketCap[2] === 'M') {
+                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000;
+                    } else if (marketCap[2] === 'b' || marketCap[2] === 'B') {
+                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000;
+                    } else if (marketCap[2] === 't' || marketCap[2] === 'T') {
+                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000000;
+                    } else {
+                        marketCap = Number(marketCap[1].replace(/,/g, ''));
+                    }
+                    ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
                 }
                 if (stat.indexOf('per') !== -1) {
                     if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
