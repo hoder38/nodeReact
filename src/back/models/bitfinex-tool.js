@@ -1903,7 +1903,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         //market cap multiple
                         if (item.mul) {
                             item.orig = item.orig * item.mul;
-                            item.times = Math.floor(item.times * item.mul * 10000) / 10000,
+                            item.times = Math.floor(item.times * item.mul * 10000) / 10000;
                         }
                         margin[id][current.type][item.index] = item.profit;
                         console.log('margin');
@@ -1959,7 +1959,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 //market cap multiple
                                 if (item.mul) {
                                     item.orig = item.orig * item.mul;
-                                    item.times = Math.floor(item.times * item.mul * 10000) / 10000
+                                    item.times = Math.floor(item.times * item.mul * 10000) / 10000;
                                 }
                                 item.count = 0;
                                 item.amount = item.orig;
