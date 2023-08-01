@@ -920,7 +920,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     //market cap multiple
                     if (item.mul) {
                         item.orig = item.orig * item.mul;
-                        item.times = item.times * item.mul;
+                        item.times = Math.floor(item.times * item.mul);
                     }
                     const price = usseSuggestion[item.index].price;
                     console.log(item);

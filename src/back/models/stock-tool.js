@@ -6093,7 +6093,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 //market cap multiple
                 if (item.mul) {
                     item.orig = item.orig * item.mul;
-                    item.times = item.times * item.mul;
+                    item.times = Math.floor(item.times * item.mul);
                 }
                 if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                     item.count = 0;

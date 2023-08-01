@@ -273,7 +273,7 @@ export const twseShioajiInit = () => {
                     //market cap multiple
                     if (item.mul) {
                         item.orig = item.orig * item.mul;
-                        item.times = item.times * item.mul;
+                        item.times = Math.floor(item.times * item.mul);
                     }
                     console.log(item);
                     const startStatus = () => {
