@@ -1789,11 +1789,20 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     if (index >= credit[id][current.type].length) {
                         return Promise.resolve();
                     } else {
-                        if ((credit[id][current.type][index].side !== 1) && currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr * 2) {
-                            if (!closeCredit[id]) {
-                                closeCredit[id] = [credit[id][current.type][index].id];
-                            } else {
-                                closeCredit[id].push(credit[id][current.type][index].id);
+                        if (credit[id][current.type][index].side !== 1) {
+                            //frr
+                            if (!credit[id][current.type][index].rate) {
+                                if (!closeCredit[id]) {
+                                    closeCredit[id] = [credit[id][current.type][index].id];
+                                } else {
+                                    closeCredit[id].push(credit[id][current.type][index].id);
+                                }
+                            } else if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) {
+                                if (!closeCredit[id]) {
+                                    closeCredit[id] = [credit[id][current.type][index].id];
+                                } else {
+                                    closeCredit[id].push(credit[id][current.type][index].id);
+                                }
                             }
                             return closecredit_recur(index + 1);
                         } else {
