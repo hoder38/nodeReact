@@ -1330,7 +1330,7 @@ export default {
             if (ext1 === '.pdf') {
                 driveName = `${obj.name} ${obj.date}${ext1}`;
                 console.log(driveName);
-                return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
+                return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath, agent: {}}).then(() => GoogleApi('upload', {
                     type: 'auto',
                     name: driveName,
                     filePath,
@@ -1339,7 +1339,7 @@ export default {
                     errhandle: err => handleError(err),
                 })));
             }
-            return Api('url', obj.url).then(raw_data => {
+            return Api('url', obj.url, {agent: {}}).then(raw_data => {
                 const hs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'div', 'test')[0], 'div', 'region region-content')[0], 'article')[0], 'div', 'row')[0], 'div', 'container')[0], 'div', 'tab-content')[0], 'div', 'menu1')[0], 'div', 'row')[0], 'div')[0], 'h3');
                 for (let h of hs) {
                     const a = findTag(h, 'a')[0];
