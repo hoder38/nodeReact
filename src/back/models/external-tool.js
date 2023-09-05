@@ -1348,7 +1348,7 @@ export default {
                         const url = addPre(a.attribs.href, 'http://www.bea.gov');
                         driveName = `${obj.name} ${obj.date}${PathExtname(url)}`;
                         console.log(driveName);
-                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath}).then(() => GoogleApi('upload', {
+                        return mkFolder(PathDirname(filePath)).then(() => Api('url', url, {filePath, agent: {}}).then(() => GoogleApi('upload', {
                             type: 'auto',
                             name: driveName,
                             filePath,
