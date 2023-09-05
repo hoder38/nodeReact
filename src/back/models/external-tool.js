@@ -784,7 +784,7 @@ export default {
                 return list;
             });
             case 'bea':
-            return Api('url', 'https://www.bea.gov/news/current-releases').then(raw_data => {
+            return Api('url', 'https://www.bea.gov/news/current-releases', {agent: {}}).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
