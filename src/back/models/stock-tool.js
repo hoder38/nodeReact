@@ -4241,6 +4241,9 @@ export default {
                             });
                         }).catch(err => {
                             console.log(financeCount);
+                            if (err.name === 'HoError' && err.message.includes('data miss')) {
+                                financeCount = 10;
+                            }
                             return (++financeCount > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(getFinance()), 60000));
                         });
                         return getFinance();
