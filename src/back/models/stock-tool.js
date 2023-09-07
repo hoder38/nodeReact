@@ -4620,6 +4620,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
+                sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
             }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
             return delFilter(0);
         });
@@ -4719,6 +4720,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
+                sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
             }).then(() => stage3(iIndex + 1)) : Promise.resolve();
             console.log('stage three');
             return (option['twse'].interval || option['usse'].interval || option['twse'].vol || option['usse'].vol || option.close) ? stage3(0).then(() => filterList1) : filterList;
@@ -4736,6 +4738,7 @@ export default {
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
+                sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
             }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
             return addFilter(0);
         }).then(filterList => Mongo('find', USERDB, {perm: 1}).then(userlist => {
