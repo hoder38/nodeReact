@@ -178,7 +178,7 @@ export const calRate = curArr => {
 
 export const calWeb = curArr => {
     const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR[FUSD_SYM].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
-    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '3h', query: {limit: 7200}}).then(entries => {
+    const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '6h', query: {limit: 3600}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
