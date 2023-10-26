@@ -137,7 +137,7 @@ const getStockPrice = (type='twse', index, price_only = true) => {
         const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
             const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
             if (!center) {
-                const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[4], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
                 let price = findTag(findTag(div, 'span')[0])[0];
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (!price_only) {
