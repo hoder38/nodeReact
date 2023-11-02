@@ -194,6 +194,25 @@ sudo systemctl restart mongod
 修改ffmpeg/lib/ffmpeg.js
 utils.exec(['ffmpeg','-i',`"${fileInput}"`,'2>&1'], settings, function (error, stdout, stderr) {
 
+修改opensubtitles.com/opensubtitles.js
+constructor(settings = {}) {
+    if (!settings.apikey) throw Error('requires an apikey')
+        if (!settings.useragent) throw Error('requires an useragent')
+
+    this._authentication = {}
+    this._settings = {
+      apikey: settings.apikey,
+      endpoint: 'https://api.opensubtitles.com',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': '*/*',
+        'User-Agent': settings.useragent,
+      }
+    }
+
+    this._construct()
+  }
+
 ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 要記得先設定nginx
 location ^~ /.well-known/acme-challenge/ {
     root /var/www/html;

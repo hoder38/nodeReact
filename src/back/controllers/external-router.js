@@ -1,4 +1,4 @@
-import { OPENSUBTITLES_KEY } from '../../../ver.js'
+import { OPENSUBTITLES_KEY, OPENSUBTITLES_USERNAME, OPENSUBTITLES_PASSWORD } from '../../../ver.js'
 import { USERDB, STORAGEDB, __dirname } from '../constants.js'
 import Express from 'express'
 //import youtubeDl from 'youtube-dl'
@@ -936,7 +936,8 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
         const getEn = sub_en_url => sub_en_url ? SUB2VTT(sub_en_url, filePath, false, 'en') : Promise.resolve();
         let OpenSubtitles = null;
         try {
-            OpenSubtitles = new OpenSubtitleRest({apikey: OPENSUBTITLES_KEY});
+            OpenSubtitles = new OpenSubtitleRest({apikey: OPENSUBTITLES_KEY, useragent: 'anomopi v1.0'});
+            OpenSubtitles.login({username: OPENSUBTITLES_USERNAME, password: OPENSUBTITLES_PASSWORD})
         } catch (err) {
             return handleError(err, next);
         }
