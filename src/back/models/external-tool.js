@@ -793,6 +793,7 @@ export default {
                 const docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
+                console.log(raw_data);
                 const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div')[0], 'div', 'row')[0], 'section')[0], 'div', 'region region-content')[0], 'div')[0], 'div')[0], 'div', 'view-content')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
                 for (let tr of trs) {
                     const vs = findTag(findTag(tr, 'td')[1]);
