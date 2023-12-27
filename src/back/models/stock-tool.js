@@ -4742,11 +4742,16 @@ export default {
             }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
             return addFilter(0);
         }).then(filterList => Mongo('find', USERDB, {perm: 1}).then(userlist => {
+            //檢查現有total中的stock名單
             const inList = [];
             const outList = [];
+            const rangeList = [];
+            const twentyList = [];
             const compare_list = cIndex => (cIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[cIndex]._id, sType: {$exists: false}}).then(items => {
                 let isIn = '';
                 let isOut = '';
+                let isTwenty = '';
+                let isRange = '';
                 const totalTwseMarketcapList = [];
                 const totalUsseMarketcapList = [];
                 items.forEach(stock => {
@@ -4765,6 +4770,12 @@ export default {
                                 }
                             }
                         }
+                        if ((stock.price > stock.mid * 1.2) || (stock.price < stock.mid * 0.8)) {
+                            isTwenty = isTwenty + ' ' + stock.name;
+                        }
+                        if ((stock.price > Math.abs(stock.web[0])) || (stock.price < Math.abs(stock.web[stock.web.length - 1]))) {
+                            isRange = isRange + ' ' + stock.name;
+                        }
                         for (let i = 0; i < filterList.length; i++) {
                             if (stock.index === filterList[i].index && stock.setype === filterList[i].type) {
                                 isIn = isIn + ' ' + stock.name;
@@ -4775,6 +4786,8 @@ export default {
                 });
                 inList.push(userlist[cIndex].username + ' In trade list are' + isIn);
                 outList.push(userlist[cIndex].username + ' Out trade list are' + isOut);
+                twentyList.push(userlist[cIndex].username + ' Current out of twenty are' + isTwenty);
+                rangeList.push(userlist[cIndex].username + ' Current out of range are' + isRange);
                 totalTwseMarketcapList.sort((a, b) => {
                     if (a.mc < b.mc) {
                         return 1;
@@ -4818,7 +4831,7 @@ export default {
                     return updmulUsse(mIndex + 1);
                 }) : Promise.resolve();
                 return updmulTwse(0).then(() => updmulUsse(0).then(() => compare_list(cIndex + 1)));
-            }) : Promise.resolve({filter: filterList, in: inList, out: outList});
+            }) : Promise.resolve({filter: filterList, in: inList, out: outList, twenty: twentyList, range: rangeList});
             return compare_list(0);
         }));
     },
@@ -5152,6 +5165,12 @@ export default {
                 sendWs(i, 0, 0, true);
             });
             obj.out.forEach(i => {
+                sendWs(i, 0, 0, true);
+            });
+            obj.twenty.forEach(i => {
+                sendWs(i, 0, 0, true);
+            });
+            obj.range.forEach(i => {
                 sendWs(i, 0, 0, true);
             });
             return number;
