@@ -109,7 +109,7 @@ class StockTotal extends React.Component {
                 </div>
             )
         });
-        const remain = totals.se.map(t => `${t.type} ${Math.round(t.remain * 100) / 100}(${(t.total > 0) ? Math.round(t.remain / (t.total) * 100) : 0}%)`).join(' / ');
+        const remain = totals.se.map(t => `${t.type} ${Math.round(t.total * 100) / 100}(${Math.round(t.remain * 100) / 100})`).join(' / ');
         return (
             <section id="stock-total-section" className="panel panel-warning" style={{maxWidth: '500px', marginBottom: '0px', float: 'right', position: 'fixed', bottom: '0px', zIndex: FILE_ZINDEX}}>
                 <div className="panel-heading" onClick={e => killEvent(e, this.props.toggle)}>
