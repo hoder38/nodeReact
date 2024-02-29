@@ -904,7 +904,7 @@ export const BITFINEX_INTERVAL = 3600 * 6;
 export const RANGE_BITFINEX_INTERVAL = 259200;
 export const USSE_FEE = 0.004;
 export const TRADE_FEE = 0.006;
-export const TRADE_INTERVAL = 86400 * 3;
+export const TRADE_INTERVAL = 86400 * 5;
 export const TRADE_TIME = 21600;
 export const RANGE_INTERVAL = 7776000;
 export const API_WAIT = 5;
@@ -1011,18 +1011,21 @@ export const STOCK_INDEX = {
     twse: [
         {
             name: '元大台灣卓越50證券投資信託基金',
-            tag: ['元大台灣卓越50證券投資信託基金', '0050','tw50'],
+            tag: ['元大台灣卓越50證券投資信託基金', '0050', 'tw50'],
         },
-        {
+        /*{
             name: '元大台灣高股息證券投資信託基金',
-            tag: ['元大台灣高股息證券投資信託基金', '0056'],
-        },
+            tag: ['元大台灣高股息證券投資信託基金', '0056', 'twhigh'],
+        },*/
         {
             name: '元大台灣中型100證券投資信託基金',
-            tag: ['元大台灣中型100證券投資信託基金', '0051'],
+            tag: ['元大台灣中型100證券投資信託基金', '0051', 'tw100'],
         },
     ],
 }
+
+export const TWSE_NUM = 40;
+export const USSE_NUM = 60;
 
 export const TD_AUTH_URL = 'https://auth.tdameritrade.com/auth?';
 export const TD_TOKEN_URL = 'https://api.tdameritrade.com/v1/oauth2/token';

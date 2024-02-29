@@ -140,7 +140,7 @@ router.get('/getInterval/:uid', function(req, res,next) {
     StockTool.getIntervalWarp(id, req.session).then(([result, index]) => res.json({interval: `${index}: ${result}`})).catch(err => handleError(err, next));
 });
 
-router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
+/*router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next) {
     console.log('stock filter');
     const name = isValidString(req.params.tag, 'name');
     if (!name) {
@@ -229,7 +229,7 @@ router.put('/filter/:tag/:sortName(name|mtime|count)/:sortType(desc|asc)', funct
         }, 0);
         return handleError(err, 'Stock filter');
     });
-});
+});*/
 
 router.get('/getTotal', function(req, res,next) {
     console.log('stock get total');

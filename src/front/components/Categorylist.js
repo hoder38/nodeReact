@@ -39,7 +39,7 @@ class Categorylist extends React.Component {
     _bookmarkItem = id => {
         bookmarkItemList(this.props.itemType, 'get', this.props.sortName, this.props.sortType, this.props.set, id).catch(err => this.props.addalert(err))
     }
-    _filter = (tag, exact, cond) => {
+    /*_filter = (tag, exact, cond) => {
         if (!isValidString(tag, 'name')) {
             return Promise.reject('Filter tag is not vaild!!!')
         }
@@ -107,7 +107,7 @@ class Categorylist extends React.Component {
         } else {
             return Promise.reject('Must set one condition!!!')
         }
-    }
+    }*/
     render() {
         let rows = []
         this.props.dirs.forEach(dir => rows.push(
@@ -130,13 +130,13 @@ class Categorylist extends React.Component {
             )
             break
             case STOCK:
-            open = (
+            /*open = (
                 <li>
                     <a href="#" onClick={e => killEvent(e, () => this.props.globalinput(2, this._filter, 'danger', 'Filter Tag', null, 'per<10 pdr<30 pbr<10'))}>
                         Filter&nbsp;<i className="glyphicon glyphicon-play"></i>
                     </a>
                 </li>
-            )
+            )*/
             open2 = (
                 <li>
                     <a href="#" onClick={e => killEvent(e, this.props.stockopen2)}>

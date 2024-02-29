@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS, USERDB } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS, USERDB, TWSE_NUM, USSE_NUM } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
@@ -4583,6 +4583,254 @@ export default {
             return handleError(err);
         });
     },
+    stockFilterV4: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
+        const date = new Date();
+        let updateyear = date.getFullYear();
+        let updatequarter = 3;
+        const month = date.getMonth() + 1;
+        if (month < 4) {
+            updatequarter = 4;
+            updateyear--;
+        } else if (month < 7) {
+            updatequarter = 1;
+        } else if (month < 10) {
+            updatequarter = 2;
+        }
+        const web = option ? true : false;
+        if (!option) {
+            option = STOCK_FILTER;
+        }
+        console.log(`filter update: ${updateyear}q${updatequarter}`);
+        let last = false;
+        let queried = 0;
+        let filterList = [];
+        const etfList = [];
+        const marketcapList = [];
+        const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
+            const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
+                sendWs({
+                    type: 'stock',
+                    data: del_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${result.items[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+                sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
+            }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
+            return delFilter(0);
+        });
+        const recur_query = () => StockTagTool.tagQuery(queried, `${updateyear}q${updatequarter}`, true, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
+            console.log(queried);
+            if (result.items.length < STOCK_FILTER_LIMIT) {
+                last = true;
+            }
+            queried += result.items.length;
+            if (result.items.length < 1) {
+                return filterList;
+            }
+            const first_stage = [];
+            result.items.forEach(i => {
+                etfList.push(i.type + ' ' + i.index);
+                i.mcap = i.equity && i.price ? i.equity * i.price : 0
+                marketcapList.push(i.mcap);
+                if (i.tags.indexOf('tw50') !== -1) {
+                    i.etf = 5;
+                } else if (i.tags.indexOf('tw100') !== -1) {
+                    i.etf = 4;
+                } else if (i.tags.indexOf('dow jones') !== -1) {
+                    i.etf = 3;
+                } else if (i.tags.indexOf('nasdaq 100') !== -1) {
+                    i.etf = 2;
+                } else if (i.tags.indexOf('s&p 500') !== -1) {
+                    i.etf = 1;
+                }
+                first_stage.push(i);
+            });
+            /*if (first_stage.length < 1) {
+                return filterList;
+            }*/
+            const recur_per = index => {
+                if (index >= first_stage.length) {
+                    if (!last) {
+                        return recur_query();
+                    }
+                    return filterList;
+                } else {
+                    filterList.push(first_stage[index]);
+                    return recur_per(index + 1);
+                }
+            }
+            return recur_per(0);
+        });
+        return clearName().then(() => recur_query()).then(filterList => {
+            filterList.sort((a, b) => (a.etf !== b.etf) ? (b.etf - a.etf) : (b.mcap - a.mcap));
+            const filterList1 = [];
+            let tw50 = 0;
+            let tw100 = 0;
+            let dow = 0;
+            let nas = 0;
+            let sp = 0;
+            const twseNum = Math.floor(TWSE_NUM / 2);
+            const usseNum = Math.floor(USSE_NUM / 3);
+            const stage3 = iIndex => {
+                if (iIndex < filterList.length) {
+                    if (filterList[iIndex].etf === 5 && tw50 < twseNum) {
+                        tw50++;
+                    } else if (filterList[iIndex].etf === 4 && tw100 < twseNum) {
+                        tw100++;
+                    } else if (filterList[iIndex].etf === 3 && dow < usseNum) {
+                        dow++;
+                    } else if (filterList[iIndex].etf === 2 && nas < usseNum) {
+                        nas++;
+                    } else if (filterList[iIndex].etf === 1 && sp < usseNum) {
+                        sp++;
+                    } else {
+                        return stage3(iIndex + 1);
+                    }
+                    return this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
+                        console.log(filterList[iIndex].name);
+                        console.log(result);
+                        const intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
+                        if (intervalVal) {
+                            filterList[iIndex].name = filterList[iIndex].name + result;
+                            filterList1.push(filterList[iIndex]);
+                        }
+                    }).catch(err => {
+                        if (web) {
+                            sendWs({
+                                type: user.username,
+                                data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                            }, 0);
+                        }
+                        handleError(err, 'Stock filter');
+                        sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
+                    }).then(() => stage3(iIndex + 1));
+                } else {
+                    return Promise.resolve();
+                }
+            }
+            console.log('stage three');
+            return stage3(0).then(() => filterList1);
+        }).then(filterList => {
+            const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
+                sendWs({
+                    type: 'stock',
+                    data: add_result.id,
+                }, 0, 1);
+            }).catch(err => {
+                if (web) {
+                    sendWs({
+                        type: user.username,
+                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                    }, 0);
+                }
+                handleError(err, 'Stock filter');
+                sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
+            }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
+            return addFilter(0);
+        }).then(filterList => Mongo('find', USERDB, {perm: 1}).then(userlist => {
+            //檢查現有total中的stock名單
+            const inList = [];
+            const outList = [];
+            const compare_list = cIndex => (cIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[cIndex]._id, sType: {$exists: false}}).then(items => {
+                let isIn = '';
+                let isOut = '';
+                const totalTwseMarketcapList = [];
+                const totalUsseMarketcapList = [];
+                const inListIndex = [];
+                items.forEach(stock => {
+                    if (stock.type !== 'total') {
+                        let isEtf = etfList.indexOf(stock.setype + ' ' + stock.index);
+                        if (isEtf !== -1) {
+                            if (stock.setype === 'twse') {
+                                if (marketcapList[isEtf] > 0) {
+                                    totalTwseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                }
+                            } else if (stock.setype === 'usse') {
+                                if (marketcapList[isEtf] > 0) {
+                                    totalUsseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                }
+                            }
+                        }
+                        let notIn = true;
+                        for (let i = 0; i < filterList.length; i++) {
+                            if (stock.index === filterList[i].index && stock.setype === filterList[i].type) {
+                                notIn = false;
+                                inListIndex.push(i);
+                                break;
+                            }
+                        }
+                        if (notIn) {
+                            isOut = isOut + ' ' + stock.name;
+                        }
+                    }
+                });
+                if (inListIndex.length > 0) {
+                    for (let i = 0; i < filterList.length; i++) {
+                        if (inListIndex.indexOf(i) === -1) {
+                            isIn = isIn + ' ' + filterList[i].type + ' ' + filterList[i].index;
+                        }
+                    }
+                } else {
+                    isIn = ' all';
+                }
+                if (!isOut) {
+                    isOut = ' none';
+                }
+                inList.push(userlist[cIndex].username + ' In trade list are' + isIn);
+                outList.push(userlist[cIndex].username + ' Out trade list are' + isOut);
+                totalTwseMarketcapList.sort((a, b) => {
+                    if (a.mc < b.mc) {
+                        return 1;
+                    } else if (a.mc > b.mc) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalTwseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalTwseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        const mul = totalTwseMarketcapList[i].mc / totalTwseMarketcapList[mcMiddle].mc;
+                        totalTwseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
+                    }
+                }
+                totalUsseMarketcapList.sort((a, b) => {
+                    if (a.mc < b.mc) {
+                        return 1;
+                    } else if (a.mc > b.mc) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalUsseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalUsseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        const mul = totalUsseMarketcapList[i].mc / totalUsseMarketcapList[mcMiddle].mc;
+                        totalUsseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
+                    }
+                }
+                totalTwseMarketcapList.forEach(i => console.log(i));
+                totalUsseMarketcapList.forEach(i => console.log(i));
+                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: totalTwseMarketcapList[mIndex].mul ? totalTwseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                    console.log(mitems);
+                    return updmulTwse(mIndex + 1);
+                }) : Promise.resolve();
+                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: totalUsseMarketcapList[mIndex].mul ? totalUsseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                    console.log(mitems);
+                    return updmulUsse(mIndex + 1);
+                }) : Promise.resolve();
+                return updmulTwse(0).then(() => updmulUsse(0).then(() => compare_list(cIndex + 1)));
+            }) : Promise.resolve({filter: filterList, in: inList, out: outList});
+            return compare_list(0);
+        }));
+    },
     stockFilterV3: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
         const date = new Date();
         let updateyear = date.getFullYear();
@@ -5153,24 +5401,18 @@ export default {
             return handleError(new HoError('there is another filter running'));
         }
         stockFiltering = true;
-        return this.stockFilterV3(option, user, session).then(obj => {
+        return this.stockFilterV4(option, user, session).then(obj => {
             stockFiltering = false;
             const number = obj.filter.length;
             console.log(`End: ${number}`);
             sendWs(`stock filter: ${number}`, 0, 0, true);
             obj.filter.forEach(i => {
-                sendWs(i.name, 0, 0, true);
+                sendWs(i.type + ' ' + i.index + ' ' + i.name, 0, 0, true);
             });
             obj.in.forEach(i => {
                 sendWs(i, 0, 0, true);
             });
             obj.out.forEach(i => {
-                sendWs(i, 0, 0, true);
-            });
-            obj.twenty.forEach(i => {
-                sendWs(i, 0, 0, true);
-            });
-            obj.range.forEach(i => {
                 sendWs(i, 0, 0, true);
             });
             return number;
