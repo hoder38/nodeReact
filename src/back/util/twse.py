@@ -53,7 +53,7 @@ else:
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:
-        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity/100) + ',\"price\":' + str(p.price) + '}')
+        position.append('{\"symbol\":\"' + p.code + '\",\"amount\":' + str(p.quantity/10) + ',\"price\":' + str(p.price) + '}')
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
