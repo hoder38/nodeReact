@@ -45,9 +45,9 @@ now = datetime.datetime.now()
 
 if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
-        current_cash = (acc_balance.acc_balance + acc_settle[0].amount + acc_settle[1].amount + acc_settle[2].amount) / 100
+        current_cash = (acc_balance.acc_balance + acc_settle[0].amount + acc_settle[1].amount + acc_settle[2].amount) / 10
     else:
-        current_cash = (acc_balance.acc_balance + acc_settle[1].amount + acc_settle[2].amount) / 100
+        current_cash = (acc_balance.acc_balance + acc_settle[1].amount + acc_settle[2].amount) / 10
 else:
     current_cash = 'same'
 if len(sys.argv) == 3:
@@ -77,14 +77,14 @@ if len(sys.argv) == 3:
                 ptime = ptime + str(d.ts) + 't'
                 quantity = quantity + d.quantity
                 if o.order.order_lot == 'IntradayOdd':
-                    profit = profit + str(d.price * d.quantity / 100) + 'p'
+                    profit = profit + str(d.price * d.quantity / 10) + 'p'
                 else :
-                    profit = profit + str(d.price * d.quantity * 10) + 'p'
+                    profit = profit + str(d.price * d.quantity * 100) + 'p'
             if o.order.order_lot == 'IntradayOdd':
-                quantity = (o.order.quantity - quantity) // 100
+                quantity = (o.order.quantity - quantity) // 10
                 quantitystr = '\"oddquantity\":' + str(quantity)
             else :
-                quantity = (o.order.quantity - quantity) * 10
+                quantity = (o.order.quantity - quantity) * 100
                 quantitystr = '\"quantity\":' + str(quantity)
             fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + o.order.action + '\",\"time\":' + str(time) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
     order = '[' + ','.join(order) + ']'
@@ -112,7 +112,7 @@ elif sys.argv[3] == 'submit':
             api.cancel_order(o, timeout=10000)
     retryApi(lambda: api.update_status(timeout=10000))
     fee = float(sys.argv[6])
-    current_cash = current_cash - 1000
+    current_cash = current_cash - 10000
     for a in sys.argv:
         p = re.compile(r'^(.+)\=(buy|sell)(\d+)\=(\d+\.?\d*)((buy|sell)(\d+)\=(\d+\.?\d*))?$')
         match = re.match(p, a)
@@ -149,9 +149,9 @@ elif sys.argv[3] == 'submit':
                 print(buy_price)
                 print(current_cash)
                 if buy > 0:
-                    if buy//10 > 0:
+                    if buy//100 > 0:
                         order = api.Order(price=buy_price,
-                            quantity=buy//10,
+                            quantity=buy//100,
                             action="Buy",
                             price_type="LMT",
                             order_type="ROD",
@@ -159,9 +159,9 @@ elif sys.argv[3] == 'submit':
                             account=api.stock_account
                             )
                         api.place_order(contract, order, timeout=10000)
-                    if buy%10 > 0:
+                    if buy%100 > 0:
                         order = api.Order(price=buy_price,
-                            quantity=buy%10*100,
+                            quantity=buy%100*10,
                             action="Buy",
                             price_type="LMT",
                             order_type="ROD",
@@ -177,8 +177,7 @@ elif sys.argv[3] == 'submit':
                         break
                 if q < sell * 4 / 3:
                     sell = q
-                else:
-                    sell = sell * 100
+                sell = sell * 10
                 print(sell)
                 print(sell_price)
                 print(q)
