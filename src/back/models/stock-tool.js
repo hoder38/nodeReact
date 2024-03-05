@@ -5684,7 +5684,7 @@ export default {
             const removeTotal = [];
             const single = v => {
                 //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
-                const cmd = v.match(/^([\da-zA-Z]+)\s+([\da-zA-Z]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
+                const cmd = v.match(/^([\da-zA-Z\-]+)\s+([\da-zA-Z\-]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     let remainM = null;
                     if (remainM = cmd[1].match(/^remain(.*)$/)) {
