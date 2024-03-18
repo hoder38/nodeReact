@@ -7,7 +7,7 @@ const { join: PathJoin, dirname: PathDirname } = pathModule;
 import Child_process from 'child_process'
 import Ffmpeg from 'ffmpeg'
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import GoogleApi from '../models/api-tool-google.js'
+import GoogleApi, { isApiing } from '../models/api-tool-google.js'
 import TagTool, { normalize, isDefaultTag } from '../models/tag-tool.js'
 import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName } from '../util/utility.js'
 import { extTag, extType, isZip, isImage, changeExt, addPost } from '../util/mime.js'
@@ -666,7 +666,7 @@ export default {
     },
     checkMedia: function() {
         //避免重複下載
-        if (GoogleApi.isApiing()) {
+        if (isApiing()) {
             return Promise.resolve();
         }
         return Mongo('find', STORAGEDB, {mediaType: {$exists: true}}).then(items => {
