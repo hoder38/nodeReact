@@ -1038,6 +1038,8 @@ export function autoDoc(userlist, index, type, date=null) {
     //});
 }
 
+export const isApiing = () => (api_ing > 0) ? true : false;
+
 export const sendPresentName = (text, mail, append=null) => api('send name', {title: 'Christmas Presents Exchange', text, mail, append});
 
 export const sendLotteryName = (title, text, mail) => api('send name', {title, text: text, mail});

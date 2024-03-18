@@ -665,6 +665,10 @@ export default {
         });
     },
     checkMedia: function() {
+        //避免重複下載
+        if (GoogleApi.isApiing()) {
+            return Promise.resolve();
+        }
         return Mongo('find', STORAGEDB, {mediaType: {$exists: true}}).then(items => {
             if (items.length > 0) {
                 let timeoutItems = [];
