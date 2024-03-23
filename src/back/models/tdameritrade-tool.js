@@ -293,7 +293,7 @@ const submitTDOrder = (id, price, count) => {
                 }
             }
         ]
-    }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price: price, session: "SEAMLESS"}));
+    }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price: Math.round(price * 100) / 100, session: "SEAMLESS"}));
     console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
