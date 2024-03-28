@@ -7064,11 +7064,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             }
         }*/
         if (pCount < priceTimes && buy > upLimit) {
-            buy = upLimit;
+            buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(upLimit, false) : usseTicker(upLimit, false) : (sType === 1) ? bitfinexTicker(upLimit, false) : upLimit;
         }
         if (pAmount === 0 || ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price))) {
             bCount = 0;
-            buy = 0;
+            //buy = 0;
         }
         /*if (pAmount && bCount) {
             const nowC = Math.floor(pAmount / buy)
@@ -8018,10 +8018,18 @@ const bitfinexTicker = (price, large = true) => {
 }
 
 const usseTicker = (price, large = true) => {
-    if (large) {
-        return Math.ceil(price * 100) / 100;
+    if (price < 1) {
+        if (large) {
+            return Math.ceil(price * 10000) / 10000;
+        } else {
+            return Math.floor(price * 10000) / 10000;
+        }
     } else {
-        return Math.floor(price * 100) / 100;
+        if (large) {
+            return Math.ceil(price * 100) / 100;
+        } else {
+            return Math.floor(price * 100) / 100;
+        }
     }
 }
 
