@@ -844,8 +844,15 @@ export default {
                 let docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                const body = findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0];
-                if (body) {
+                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'publicationWrap esfPubWrap')[0], 'section', 'mbN-40')[0], 'div', 'publctnInWrap mbN-80 pubHubGrayBox')[0], 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
+                    list.push({
+                        url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
+                        name: toValidName('Consumer Confidence Survey'),
+                        date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                    });
+                }
+                return list;
+                /*if (body) {
                     const con = findTag(body, 'div', 'container-fluid fixedheader')[0];
                     if (con) {
                         const pdate = findTag(findTag(findTag(findTag(con, 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'div')[2], 'div')[0];
@@ -888,7 +895,7 @@ export default {
                         }
                     }
                     return list;
-                });
+                });*/
             });
             case 'sem':
             return Api('url', 'https://www.semi.org/en/news-resources/press/semi/rss.xml').then(raw_data => {
@@ -1563,6 +1570,17 @@ export default {
             }));
             case 'ndc':
             console.log(obj);
+            driveName = `${obj.name} ${obj.date}.txt`;
+            console.log(driveName);
+            return GoogleApi('upload', {
+                type: 'auto',
+                name: driveName,
+                body: obj.url,
+                parent,
+                rest: () => updateDocDate(type, obj.date),
+                errhandle: err => handleError(err),
+            });
+            /*console.log(obj);
             driveName = `${obj.name} ${obj.date}${PathExtname(obj.url)}`;
             console.log(driveName);
             return mkFolder(PathDirname(filePath)).then(() => Api('url', obj.url, {filePath}).then(() => GoogleApi('upload', {
@@ -1572,9 +1590,20 @@ export default {
                 parent,
                 rest: () => updateDocDate(type, obj.date),
                 errhandle: err => handleError(err),
-            })));
+            })));*/
             case 'sta':
             console.log(obj);
+            driveName = `${obj.name} ${obj.date}.txt`;
+            console.log(driveName);
+            return GoogleApi('upload', {
+                type: 'auto',
+                name: driveName,
+                body: obj.url,
+                parent,
+                rest: () => updateDocDate(type, obj.date),
+                errhandle: err => handleError(err),
+            });
+            /*console.log(obj);
             return Api('url', obj.url).then(raw_data => {
                 findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-essay page-caption-p')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'p')[0], 'p')[0], 'span')[0], 'p').forEach(p => {
                     for (let a of findTag(p, 'a')) {
@@ -1617,9 +1646,20 @@ export default {
                         }
                     }
                 });
-            });
+            });*/
             case 'mof':
             console.log(obj);
+            driveName = `${obj.name} ${obj.date}.txt`;
+            console.log(driveName);
+            return GoogleApi('upload', {
+                type: 'auto',
+                name: driveName,
+                body: obj.url,
+                parent,
+                rest: () => updateDocDate(type, obj.date),
+                errhandle: err => handleError(err),
+            });
+            /*console.log(obj);
             return Api('url', obj.url, {referer: 'https://www.mof.gov.tw/'}).then(raw_data => {
                 const ps = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div')[1], 'article')[0], 'p');
                 for (let p of ps) {
@@ -1657,9 +1697,20 @@ export default {
                         }
                     }
                 };
-            });
+            });*/
             case 'moe':
             console.log(obj);
+            driveName = `${obj.name} ${obj.date}.txt`;
+            console.log(driveName);
+            return GoogleApi('upload', {
+                type: 'auto',
+                name: driveName,
+                body: obj.url,
+                parent,
+                rest: () => updateDocDate(type, obj.date),
+                errhandle: err => handleError(err),
+            });
+            /*console.log(obj);
             return Api('url', obj.url).then(raw_data => {
                 const files = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form', 'form1')[0], 'main')[0], 'div', 'Float_layer')[0], 'div', 'divContent')[0], 'div', 'divContainer')[0], 'div', 'divDetail')[0], 'div', 'divRightContent')[0], 'div', 'div_Content')[0], 'div', 'news-detail-backcolor')[0], 'div', 'container')[0], 'div', 'divPageDetail_Content')[0], 'div')[0], 'div', 'div-flex-info')[0], 'div', 'div-right-info')[0], 'div')[0], 'div')[0], 'div');
                 for (let f of files) {
@@ -1679,7 +1730,7 @@ export default {
                         })));
                     }
                 }
-            });
+            });*/
             case 'cbc':
             console.log(obj);
             return Api('url', obj.url).then(raw_data => {
