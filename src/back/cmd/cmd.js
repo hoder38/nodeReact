@@ -10,7 +10,7 @@ import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google.j
 import { completeMimeTag } from '../models/tag-tool.js'
 //import External from '../models/external-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import StockTool from '../models/stock-tool.js'
+import StockTool, { getStockListV2 } from '../models/stock-tool.js'
 import { updatePasswordCipher } from '../models/password-tool.js'
 import { handleError, isValidString, HoError, completeZero } from '../util/utility.js'
 
@@ -213,6 +213,27 @@ rl.on('line', line => {
         case 'stock':
         console.log('stock');
         return StockTool.getSingleStockV2(cmd[1]||'twse', {index: cmd[2]||'2330', tag: []}, cmd[3]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
+        case 'stocklist':
+        console.log('stock list');
+        const date = new Date();
+        return getStockListV2(cmd[1]||'twse', date.getFullYear(), date.getMonth() + 1).then(stocklist => {
+            let updateyear = date.getFullYear();
+            let updatequarter = 3;
+            const month = date.getMonth() + 1;
+            if (month < 4) {
+                updatequarter = 4;
+                updateyear--;
+            } else if (month < 7) {
+                updatequarter = 1;
+            } else if (month < 10) {
+                updatequarter = 2;
+            }
+            console.log(updateyear + 'q' + updatequarter);
+            stocklist.forEach(st => {
+                console.log(st.index);
+                console.log(st.tag);
+            });
+        }).catch(err => handleError(err, 'CMD stock list'));
         case 'testdata':
         console.log('testdata');
         return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
@@ -250,6 +271,7 @@ rl.on('line', line => {
         default:
         console.log('help:');
         console.log('stock type index mode');
+        console.log('stocklist type');
         //console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');
