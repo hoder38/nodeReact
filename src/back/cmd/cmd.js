@@ -212,7 +212,7 @@ rl.on('line', line => {
     switch (cmd[0]) {
         case 'stock':
         console.log('stock');
-        return StockTool.getSingleStockV2(cmd[1]||'twse', {index: cmd[2]||2330, tag: []}, cmd[3]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
+        return StockTool.getSingleStockV2(cmd[1]||'twse', {index: cmd[2]||'2330', tag: []}, cmd[3]||1).then(() => console.log('done')).catch(err => handleError(err, 'CMD stock'));
         case 'testdata':
         console.log('testdata');
         return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
