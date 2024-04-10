@@ -1029,5 +1029,7 @@ export const STOCK_INDEX = {
 export const TWSE_NUM = 40;
 export const USSE_NUM = 60;
 
-export const TD_AUTH_URL = 'https://auth.tdameritrade.com/auth?';
-export const TD_TOKEN_URL = 'https://api.tdameritrade.com/v1/oauth2/token';
+//export const TD_AUTH_URL = 'https://auth.tdameritrade.com/auth?';
+export const TD_AUTH_URL = 'https://api.schwabapi.com/v1/oauth/authorize?'
+//export const TD_TOKEN_URL = 'https://api.tdameritrade.com/v1/oauth2/token';
+export const TD_TOKEN_URL = 'https://api.schwabapi.com/trader/v1/oAuth/token';
