@@ -6356,9 +6356,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                 if (price === 0) {
                     return 0;
                 }
-                return Mongo('find', TOTALDB, {_id: item._id}).then(sitems => {
-                    if (nitem.length < 1) {
-                        return handleError(new HoError(`miss ${item.index}`));
+                return Mongo('find', TOTALDB, {_id: items[index]._id}).then(sitems => {
+                    if (sitems.length < 1) {
+                        return handleError(new HoError(`miss ${items[index].index}`));
                     }
                     const item = sitems[0];
                     let change_previous = false;
