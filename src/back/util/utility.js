@@ -453,8 +453,12 @@ export const findTag = (node, tag=null, id=null) => {
         if (tag) {
             if ((c.type === 'tag' || c.type === 'script') && c.name === tag) {
                 if (id) {
-                    if (c.attribs && (c.attribs.class === id || c.attribs.id === id)) {
-                        ret.push(c);
+                    if (c.attribs) {
+                        Object.keys(c.attribs).forEach(a => {
+                            if (c.attribs[a] === id) {
+                                ret.push(c);
+                            }
+                        });
                     }
                 } else {
                     ret.push(c);

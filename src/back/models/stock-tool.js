@@ -6,6 +6,7 @@ import fsModule from 'fs'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
 import Mkdirp from 'mkdirp'
 import Xml2js from 'xml2js'
+import Child_process from 'child_process'
 import Redis from '../models/redis-tool.js'
 import Mongo from '../models/mongo-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
@@ -1922,39 +1923,25 @@ const getBasicStockData = (type, index) => {
         return real();
         break;
         case 'usse':
-        const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
+        //const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`).then(raw_data => {
+        const real1 = () => new Promise((resolve, reject) => Child_process.exec(`curl 'https://finance.yahoo.com/quote/${index}/profile?p=${index}' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
-            const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
-            const ds = findTag(findTag(findTag(findTag(app, 'div')[1], 'div')[0], 'div')[0], 'div');
-            let mn = null;
-            for (let i = 0; i < ds.length; i++) {
-                if (findTag(ds[i], 'div')[0].attribs.id.includes('QuoteHeader')) {
-                    mn = findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0];
-                    break;
-                }
-            }
-            const name = findTag(findTag(findTag(mn, 'div')[0], 'h1')[0])[0];
+            const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
+            const name = findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'div')[0], 'section', 'container')[0], 'h1')[0])[0];
             result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
             result.stock_name = [result.stock_full];
-            const market = findTag(findTag(findTag(mn, 'div')[1], 'span')[0])[0];
+            const market = findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'span')[0], 'span')[0])[0];
             result.stock_market = market.substring(0, market.indexOf('-')).trim();
-            const info = findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0];
-            if (!findTag(info, 'div')[0]) {
-                return result;
-            }
-            const section = findTag(findTag(info, 'div')[0], 'div')[0];
-            result.stock_class = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[1])[0];
-            result.stock_ind = findTag(findTag(findTag(findTag(section, 'div')[0], 'p')[1], 'span')[3])[0];
+            const profile = findTag(findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'asset-profile')[0], 'div')[0], 'dl')[0];
+            result.stock_class = findTag(findTag(findTag(findTag(profile, 'div')[0], 'dd')[0], 'a')[0])[0];
+            result.stock_ind = findTag(findTag(findTag(profile, 'div')[1], 'a')[0])[0];
             result.stock_executive = [];
-            if (findTag(findTag(info, 'section')[0], 'table')[0]) {
-                findTag(findTag(findTag(findTag(info, 'section')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                    findTag(findTag(findTag(t, 'td')[0], 'span')[0]).forEach(n => {
-                        if (n.match(/^M/)) {
-                            result.stock_executive.push(n);
-                        }
-                    });
-                });
-            }
+            findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'key-executives')[0], 'div')[1], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                const n = findTag(findTag(t, 'td')[0])[0];
+                if (n.match(/^[Mr|Ms|Dr]/)) {
+                    result.stock_executive.push(n);
+                }
+            });
             return result;
         }).catch(err => {
             console.log(count);
@@ -8103,58 +8090,39 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         return Promise.resolve(ret);
     }
     let count = 0;
-    const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
-        const app = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0];
+    //Market Cap (intraday) Trailing P/E Price/Book (mrq)
+    //const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`).then(raw_data => {
+    const real = () => new Promise((resolve, reject) => Child_process.exec(`curl 'https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
+        const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
         if (stat.indexOf('price') !== -1) {
-            let price = null;
-            const ds = findTag(findTag(findTag(findTag(app, 'div', 'YDC-Lead')[0], 'div')[0], 'div')[0], 'div');
-            for (let i = 0; i < ds.length; i++) {
-                if (findTag(ds[i], 'div')[0].attribs.id.includes('QuoteHeader')) {
-                    const price_div = findTag(findTag(findTag(findTag(findTag(findTag(ds[i], 'div')[0], 'div')[0], 'div')[0], 'div')[2], 'div')[0], 'div')[0];
-                    if (findTag(price_div, 'span')[0]) {
-                        price = findTag(findTag(price_div, 'span')[0])[0];
-                    } else {
-                        price = findTag(findTag(price_div, 'fin-streamer')[0])[0];
-                    }
-                    break;
-                }
-            }
+            const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[1], 'div')[0], 'section', 'quote-price')[0], 'div')[0], 'section')[0], 'div')[0], 'fin-streamer', 'regularMarketPrice')[0], 'span')[0])[0];
             ret['price'] = price ? Number(price.replace(/,/g, '')) : 0;
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
-            const table = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(app, 'div')[2], 'div', 'YDC-Col1')[0], 'div', 'Main')[0], 'div')[0], 'div')[0], 'div')[0], 'section')[0], 'div')[1];
-            findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[2], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr')[1], 'td')[1]).forEach(d => {
-                const m = d.match(/^([a-zA-Z][a-zA-Z][a-zA-Z]) \d+, (\d+)$/);
-                if (m) {
-                    ret['latestYear'] = Number(m[2]);
-                    const q = MONTH_SHORTS.indexOf(m[1]);
-                    if (q !== -1) {
-                        if (q < 3) {
-                            ret['latestQuarter'] = 1;
-                        } else if (q < 6) {
-                            ret['latestQuarter'] = 2;
-                        } else if (q < 9) {
-                            ret['latestQuarter'] = 3;
-                        } else {
-                            ret['latestQuarter'] = 0;
-                            ret['latestYear']++;
-                        }
-                    }
-                }
-            });
-            if (stat.indexOf('pdr') !== -1) {
-                const trs1 = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[1], 'div')[0], 'div')[2], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                if (findTag(findTag(trs1[3], 'td')[1], 'span')[0]) {
-                    ret['pdr'] = 0;
+            const table = findTag(findTag(findTag(bigSection,'section')[1], 'div')[0], 'table')[0];
+            const fiscalDate = findTag(findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2])[0];
+            const m = fiscalDate.match(/^(\d+)\/(\d+)\/(\d+)/);
+            if (m) {
+                ret['latestYear'] = Number(m[3]);
+                if (m[1] < 3) {
+                    ret['latestQuarter'] = 1;
+                } else if (m[0] < 6) {
+                    ret['latestQuarter'] = 2;
+                } else if (m[0] < 9) {
+                    ret['latestQuarter'] = 3;
                 } else {
-                    let stockYield = findTag(findTag(trs1[3], 'td')[1])[0];
-                    stockYield = Number(stockYield.substring(0, stockYield.length -1).replace(/,/g, ''));
-                    ret['pdr'] = (stockYield === 0) ? 0 : Math.round(100 / stockYield * 100) / 100;
+                    ret['latestQuarter'] = 0;
+                    ret['latestYear']++;
                 }
+            } else {
+                return handleError(new HoError(`usa stock parse NO YEAR ${index}`));
             }
-            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1) {
-                const trs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(table, 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr');
-                if (findTag(findTag(trs[0], 'td')[1], 'span')[0]) {
+            if (stat.indexOf('pdr') !== -1) {
+                ret['pdr'] = 0;
+            }
+            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('equity') !== -1) {
+                let marketCap = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[0], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                if (!marketCap) {
                     if (stat.indexOf('equity') !== -1) {
                         if (index === 'BRK-B') {
                             index = 'BRK.B';
@@ -8273,7 +8241,6 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
                 if (stat.indexOf('equity') !== -1) {
-                    let marketCap = findTag(findTag(trs[0], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
                     if (marketCap[2] === 'k' || marketCap[2] === 'K') {
                         marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000;
                     } else if (marketCap[2] === 'm' || marketCap[2] === 'M') {
@@ -8288,13 +8255,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
                 }
                 if (stat.indexOf('per') !== -1) {
-                    if (findTag(findTag(trs[2], 'td')[1], 'span')[0]) {
+                    const per = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[2], 'td')[2])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                    if (!per) {
                         ret['per'] = 0;
                     } else {
-                        const per = findTag(findTag(trs[2], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                        if (!per) {
-                            return handleError(new HoError(`usa stock parse error ${index}`));
-                        }
                         if (per[2] === 'k' || per[2] === 'K') {
                             ret['per'] = Number(per[1].replace(/,/g, '')) * 1000;
                         } else if (per[2] === 'm' || per[2] === 'M') {
@@ -8309,13 +8273,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                 }
                 if (stat.indexOf('pbr') !== -1) {
-                    if (findTag(findTag(trs[6], 'td')[1], 'span')[0]) {
+                    const pbr = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[6], 'td')[2])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                    if (!pbr) {
                         ret['pbr'] = 0;
                     } else {
-                        const pbr = findTag(findTag(trs[6], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                        if (!pbr) {
-                            return handleError(new HoError(`usa stock parse error ${index}`));
-                        }
                         if (pbr[2] === 'k' || pbr[2] === 'K') {
                             ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000;
                         } else if (pbr[2] === 'm' || pbr[2] === 'M') {
