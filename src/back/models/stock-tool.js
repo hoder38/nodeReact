@@ -1936,12 +1936,15 @@ const getBasicStockData = (type, index) => {
             result.stock_class = findTag(findTag(findTag(findTag(profile, 'div')[0], 'dd')[0], 'a')[0])[0];
             result.stock_ind = findTag(findTag(findTag(profile, 'div')[1], 'a')[0])[0];
             result.stock_executive = [];
-            findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'key-executives')[0], 'div')[1], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                const n = findTag(findTag(t, 'td')[0])[0];
-                if (n.match(/^[Mr|Ms|Dr]/)) {
-                    result.stock_executive.push(n);
-                }
-            });
+            const executives = findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'key-executives')[0], 'div')[1];
+            if (executives) {
+                findTag(findTag(findTag(executives, 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    const n = findTag(findTag(t, 'td')[0])[0];
+                    if (n.match(/^[Mr|Ms|Dr]/)) {
+                        result.stock_executive.push(n);
+                    }
+                });
+            }
             return result;
         }).catch(err => {
             console.log(count);
@@ -8100,22 +8103,37 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             const table = findTag(findTag(findTag(bigSection,'section')[1], 'div')[0], 'table')[0];
-            const fiscalDate = findTag(findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2])[0];
-            const m = fiscalDate.match(/^(\d+)\/(\d+)\/(\d+)/);
-            if (m) {
-                ret['latestYear'] = Number(m[3]);
-                if (m[1] < 3) {
-                    ret['latestQuarter'] = 1;
-                } else if (m[0] < 6) {
-                    ret['latestQuarter'] = 2;
-                } else if (m[0] < 9) {
-                    ret['latestQuarter'] = 3;
+            let isHistory = true;
+            if (findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2]) {
+                const fiscalDate = findTag(findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2])[0];
+                const m = fiscalDate.match(/^(\d+)\/(\d+)\/(\d+)/);
+                if (m) {
+                    ret['latestYear'] = Number(m[3]);
+                    if (m[1] < 3) {
+                        ret['latestQuarter'] = 1;
+                    } else if (m[0] < 6) {
+                        ret['latestQuarter'] = 2;
+                    } else if (m[0] < 9) {
+                        ret['latestQuarter'] = 3;
+                    } else {
+                        ret['latestQuarter'] = 0;
+                        ret['latestYear']++;
+                    }
                 } else {
-                    ret['latestQuarter'] = 0;
-                    ret['latestYear']++;
+                    return handleError(new HoError(`usa stock parse NO YEAR ${index}`));
                 }
             } else {
-                return handleError(new HoError(`usa stock parse NO YEAR ${index}`));
+                isHistory = false;
+                ret['latestYear'] = new Date().getFullYear();
+                if (new Date().getMonth() < 3) {
+                    ret['latestQuarter'] = 0;
+                } else if (new Date().getMonth() < 6) {
+                    ret['latestQuarter'] = 1;
+                } else if (new Date().getMonth() < 9) {
+                    ret['latestQuarter'] = 2;
+                } else {
+                    ret['latestQuarter'] = 3;
+                }
             }
             if (stat.indexOf('pdr') !== -1) {
                 ret['pdr'] = 0;
@@ -8255,7 +8273,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
                 }
                 if (stat.indexOf('per') !== -1) {
-                    const per = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[2], 'td')[2])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                    const per = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[2], 'td')[isHistory ? 2 : 1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
                     if (!per) {
                         ret['per'] = 0;
                     } else {
@@ -8273,7 +8291,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                 }
                 if (stat.indexOf('pbr') !== -1) {
-                    const pbr = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[6], 'td')[2])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
+                    const pbr = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[6], 'td')[isHistory ? 2 : 1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
                     if (!pbr) {
                         ret['pbr'] = 0;
                     } else {
