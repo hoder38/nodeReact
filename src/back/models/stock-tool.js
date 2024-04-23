@@ -4629,7 +4629,7 @@ export default {
                 if (index < result.items.length) {
                     const i = result.items[index];
                     console.log(i.type + ' ' + i.index);
-                    return getStockPrice(i.type, i.index).then(price => {
+                    /*return getStockPrice(i.type, i.index).then(price => {
                         etfList.push(i.type + ' ' + i.index);
                         i.mcap = (i.equity && price) ? i.equity * price : 0;
                         console.log(i.mcap);
@@ -4648,7 +4648,25 @@ export default {
                         console.log(i.etf);
                         filterList.push(i);
                         return recur_ETFMcap(index + 1);
-                    });
+                    });*/
+                        etfList.push(i.type + ' ' + i.index);
+                        i.mcap = (i.equity && price) ? i.equity * i.price : 0;
+                        console.log(i.mcap);
+                        marketcapList.push(i.mcap);
+                        if (i.tags.indexOf('tw50') !== -1) {
+                            i.etf = 5;
+                        } else if (i.tags.indexOf('tw100') !== -1) {
+                            i.etf = 4;
+                        } else if (i.tags.indexOf('dow jones') !== -1) {
+                            i.etf = 3;
+                        } else if (i.tags.indexOf('nasdaq 100') !== -1) {
+                            i.etf = 2;
+                        } else if (i.tags.indexOf('s&p 500') !== -1) {
+                            i.etf = 1;
+                        }
+                        console.log(i.etf);
+                        filterList.push(i);
+                        return recur_ETFMcap(index + 1);
                 } else {
                     if (!last) {
                         return recur_query();
@@ -4670,16 +4688,24 @@ export default {
             const usseNum = Math.floor(USSE_NUM / 3);
             const stage3 = iIndex => {
                 if (iIndex < filterList.length) {
+                    console.log(filterList[iIndex].index);
+                    console.log(filterList[iIndex].etf);
+                    console.log(filterList[iIndex].mcap);
                     if (filterList[iIndex].etf === 5 && tw50 < twseNum) {
                         tw50++;
+                        console.log(tw50);
                     } else if (filterList[iIndex].etf === 4 && tw100 < twseNum) {
                         tw100++;
+                        console.log(tw100);
                     } else if (filterList[iIndex].etf === 3 && dow < usseNum) {
                         dow++;
+                        console.log(dow);
                     } else if (filterList[iIndex].etf === 2 && nas < usseNum) {
                         nas++;
+                        console.log(nas);
                     } else if (filterList[iIndex].etf === 1 && sp < usseNum) {
                         sp++;
+                        console.log(sp);
                     } else {
                         return stage3(iIndex + 1);
                     }

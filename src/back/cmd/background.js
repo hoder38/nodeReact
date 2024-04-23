@@ -190,7 +190,8 @@ export const filterStock = () => {
             console.log('loopStockFilter');
             console.log(new Date().toLocaleString());
             const sd = new Date();
-            const sdf = () => (sd.getDay() === 2 && sd.getHours() === 3) ? StockTool.stockFilterWarp() : Promise.resolve();
+            const sdf = () => (sd.getDay() === 2 && sd.getHours() === 16) ? StockTool.stockFilterWarp() : Promise.resolve();
+            //const sdf = () => (sd.getDay() === 2 && sd.getHours() === 3) ? StockTool.stockFilterWarp() : Promise.resolve();
             sdf().catch(err => bgError(err, 'Loop stockFilter'));
             return new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000)).then(() => loopStockFilter());
         }
