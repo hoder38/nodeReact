@@ -4597,6 +4597,7 @@ export default {
         const etfList = [];
         const marketcapList = [];
         const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
+            console.log(result.items.length);
             const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
                 sendWs({
                     type: 'stock',
@@ -4611,7 +4612,7 @@ export default {
                 }
                 handleError(err, 'Stock filter');
                 sendWs(`stock filter: ${(err.message || err.msg)}`, 0, 0, true);
-            }).then(() => delFilter(index+1)) : Promise.resolve(result.items.length);
+            }).then(() => delFilter(index+1)) : Promise.resolve();
             return delFilter(0);
         });
         const recur_query = () => StockTagTool.tagQuery(queried, `${updateyear}q${updatequarter}`, true, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
@@ -4620,15 +4621,16 @@ export default {
                 last = true;
             }
             queried += result.items.length;
+            console.log(queried);
             if (result.items.length < 1) {
                 return filterList;
             }
             const recur_ETFMcap = index => {
                 if (index < result.items.length) {
                     const i = result.items[index];
+                    console.log(i.type + ' ' + i.index);
                     return getStockPrice(i.type, i.index).then(price => {
                         etfList.push(i.type + ' ' + i.index);
-                        console.log(i.type + ' ' + i.index);
                         i.mcap = (i.equity && price) ? i.equity * price : 0;
                         console.log(i.mcap);
                         marketcapList.push(i.mcap);
