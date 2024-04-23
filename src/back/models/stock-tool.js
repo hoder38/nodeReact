@@ -4624,26 +4624,34 @@ export default {
                 return filterList;
             }
             const first_stage = [];
-            result.items.forEach(i => {
-                etfList.push(i.type + ' ' + i.index);
-                i.mcap = i.equity && i.price ? i.equity * i.price : 0
-                marketcapList.push(i.mcap);
-                if (i.tags.indexOf('tw50') !== -1) {
-                    i.etf = 5;
-                } else if (i.tags.indexOf('tw100') !== -1) {
-                    i.etf = 4;
-                } else if (i.tags.indexOf('dow jones') !== -1) {
-                    i.etf = 3;
-                } else if (i.tags.indexOf('nasdaq 100') !== -1) {
-                    i.etf = 2;
-                } else if (i.tags.indexOf('s&p 500') !== -1) {
-                    i.etf = 1;
+            const recur_ETFMcap = index => {
+                if (index < result.items.length) {
+                    const i = result.items[index];
+                    return getStockPrice(i.type, i.index).then(price => {
+                        etfList.push(i.type + ' ' + i.index);
+                        console.log(i.type + ' ' + i.index);
+                        i.mcap = (i.equity && price) ? i.equity * price : 0;
+                        console.log(i.mcap);
+                        marketcapList.push(i.mcap);
+                        if (i.tags.indexOf('tw50') !== -1) {
+                            i.etf = 5;
+                        } else if (i.tags.indexOf('tw100') !== -1) {
+                            i.etf = 4;
+                        } else if (i.tags.indexOf('dow jones') !== -1) {
+                            i.etf = 3;
+                        } else if (i.tags.indexOf('nasdaq 100') !== -1) {
+                            i.etf = 2;
+                        } else if (i.tags.indexOf('s&p 500') !== -1) {
+                            i.etf = 1;
+                        }
+                        console.log(i.etf);
+                        first_stage.push(i);
+                        return recur_ETFMcap(index + 1);
+                    });
+                } else {
+                    return Promise.resolve();
                 }
-                first_stage.push(i);
-            });
-            /*if (first_stage.length < 1) {
-                return filterList;
-            }*/
+            }
             const recur_per = index => {
                 if (index >= first_stage.length) {
                     if (!last) {
@@ -4655,7 +4663,7 @@ export default {
                     return recur_per(index + 1);
                 }
             }
-            return recur_per(0);
+            return recur_ETFMcap(0).then(() => recur_per(0));
         });
         return clearName().then(() => recur_query()).then(filterList => {
             filterList.sort((a, b) => (a.etf !== b.etf) ? (b.etf - a.etf) : (b.mcap - a.mcap));
