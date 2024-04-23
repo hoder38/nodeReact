@@ -4623,7 +4623,6 @@ export default {
             if (result.items.length < 1) {
                 return filterList;
             }
-            const first_stage = [];
             const recur_ETFMcap = index => {
                 if (index < result.items.length) {
                     const i = result.items[index];
@@ -4645,25 +4644,17 @@ export default {
                             i.etf = 1;
                         }
                         console.log(i.etf);
-                        first_stage.push(i);
+                        filterList.push(i);
                         return recur_ETFMcap(index + 1);
                     });
                 } else {
-                    return Promise.resolve();
-                }
-            }
-            const recur_per = index => {
-                if (index >= first_stage.length) {
                     if (!last) {
                         return recur_query();
                     }
                     return filterList;
-                } else {
-                    filterList.push(first_stage[index]);
-                    return recur_per(index + 1);
                 }
             }
-            return recur_ETFMcap(0).then(() => recur_per(0));
+            return recur_ETFMcap(0);
         });
         return clearName().then(() => recur_query()).then(filterList => {
             filterList.sort((a, b) => (a.etf !== b.etf) ? (b.etf - a.etf) : (b.mcap - a.mcap));
