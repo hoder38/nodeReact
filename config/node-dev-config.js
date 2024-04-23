@@ -30,7 +30,7 @@ export default {
     UPDATE_STOCK: false,
     //UPDATE_EXTERNAL: false,
     CHECK_MEDIA: false,
-    STOCK_FILTER: true,
+    STOCK_FILTER: false,
     DB_BACKUP: false,
     CHECK_STOCK: false,
     BITFINEX_FILTER: false,
