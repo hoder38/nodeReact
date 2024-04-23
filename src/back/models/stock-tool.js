@@ -4663,6 +4663,8 @@ export default {
                             i.etf = 2;
                         } else if (i.tags.indexOf('s&p 500') !== -1) {
                             i.etf = 1;
+                        } else {
+                            i.etf = 0;
                         }
                         console.log(i.etf);
                         filterList.push(i);
