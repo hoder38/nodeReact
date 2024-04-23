@@ -195,7 +195,8 @@ export const filterStock = () => {
             sdf().catch(err => bgError(err, 'Loop stockFilter'));
             return new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000)).then(() => loopStockFilter());
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 480000)).then(() => loopStockFilter());
+        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 480000)).then(() => loopStockFilter());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 60000)).then(() => loopStockFilter());
     }
 }
 

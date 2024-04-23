@@ -4650,7 +4650,7 @@ export default {
                         return recur_ETFMcap(index + 1);
                     });*/
                         etfList.push(i.type + ' ' + i.index);
-                        i.mcap = (i.equity && price) ? i.equity * i.price : 0;
+                        i.mcap = (i.equity && i.price) ? i.equity * i.price : 0;
                         console.log(i.mcap);
                         marketcapList.push(i.mcap);
                         if (i.tags.indexOf('tw50') !== -1) {
