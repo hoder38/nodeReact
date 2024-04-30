@@ -280,6 +280,9 @@ const submitTDOrder = (id, price, count) => {
     if (!usseWs || !userPrincipalsResponse) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
+    if (id === 'BRK-B') {
+        id = 'BRK.B';
+    }
     const qspost = JSON.stringify(Object.assign({
         duration: "GOOD_TILL_CANCEL",
         orderStrategyType: "SINGLE",
@@ -554,7 +557,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             //console.log(o);
                             if (o.cancelable) {
                                 order.push({
-                                    id: o.orderId,
+                                    id: (o.orderId === 'BRK.B') ? 'BRK-B' : o.orderId,
                                     time: new Date(o.enteredTime).getTime() / 1000,
                                     amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
                                     type: o.orderType,
