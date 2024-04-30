@@ -557,11 +557,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                             //console.log(o);
                             if (o.cancelable) {
                                 order.push({
-                                    id: (o.orderId === 'BRK.B') ? 'BRK-B' : o.orderId,
+                                    id: o.orderId,
                                     time: new Date(o.enteredTime).getTime() / 1000,
                                     amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
                                     type: o.orderType,
-                                    symbol: o.orderLegCollection[0].instrument.symbol,
+                                    symbol: (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol,
                                     price: o.price,
                                     duration: o.duration,
                                     partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
@@ -569,7 +569,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 if (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
                                     console.log(o);
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                    const symbol = o.orderLegCollection[0].instrument.symbol;
+                                    const symbol = (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
                                     let profit = 0;
                                     const type = o.orderLegCollection[0].instruction;
                                     let time = 0;
@@ -709,7 +709,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 if (!o.fake) {
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
                                 }
-                                const symbol = o.fake ? o.symbol : o.orderLegCollection[0].instrument.symbol;
+                                const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
                                 let profit = 0;
                                 const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
                                 let time = o.fake ? o.time : 0;
