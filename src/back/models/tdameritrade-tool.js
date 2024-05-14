@@ -91,7 +91,7 @@ const cancelTDOrder = id => {
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-            return res.json().then(err => handleError(new HoError(err.error)))
+            return res.json().then(err => handleError(new HoError(res.error)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -104,7 +104,7 @@ const submitTDOrder = (id, price, count) => {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
     if (id === 'BRK-B') {
-        id = 'BRK.B';
+        id = 'BRK/B';
     }
     const qspost = JSON.stringify(Object.assign({
         duration: "GOOD_TILL_CANCEL",
@@ -129,7 +129,7 @@ const submitTDOrder = (id, price, count) => {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             console.log(id);
             console.log(price);
-            return res.json().then(err => handleError(new HoError(err.error)))
+            return res.json().then(err => handleError(new HoError(res.error)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -231,20 +231,17 @@ export const usseTDInit = () => checkOauth().then(() => {
                     }
                 });
                 let orderDate = new Date();
-                orderDate.setDate(orderDate.getDate() + 1);
                 const to = orderDate.toISOString();
-                console.log(to);
-                orderDate.setFullYear(orderDate.getFullYear() - 1);
+                orderDate.setMonth(orderDate.getMonth() - 1);
                 const from = orderDate.toISOString();
-                console.log(from);
                 return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders?fromEnteredTime=${from}&toEnteredTime=${to}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                    console.log(result);
                     if (result['error']) {
                         if (force === true) {
                             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                         }
                         return handleError(new HoError(result['error']));
                     }
+                    console.log(result.length);
                     const order_recur = index => {
                         if (index >= result.length) {
                             return Promise.resolve();
@@ -257,7 +254,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     time: new Date(o.enteredTime).getTime() / 1000,
                                     amount: o.orderLegCollection[0].instruction === 'BUY' ? o.quantity : -o.quantity,
                                     type: o.orderType,
-                                    symbol: (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol,
+                                    symbol: (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol,
                                     price: o.price,
                                     duration: o.duration,
                                     partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
@@ -265,7 +262,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 if (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
                                     console.log(o);
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                    const symbol = (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
+                                    const symbol = (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
                                     let profit = 0;
                                     const type = o.orderLegCollection[0].instruction;
                                     let time = 0;
@@ -405,7 +402,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 if (!o.fake) {
                                     console.log(o.orderActivityCollection[0].executionLegs[0]);
                                 }
-                                const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK.B' || o.orderLegCollection[0].instrument.symbol === 'BRK B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
+                                const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
                                 let profit = 0;
                                 const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
                                 let time = o.fake ? o.time : 0;
@@ -777,7 +774,8 @@ export const getUssePosition = () => {
     for (let i = 0; i < position.length; i++) {
         if (position[i].symbol === 0) {
             is_exist = true;
-            break;
+        } else if (position[i].symbol === 'BRK.B' || position[i].symbol === 'BRK/B') {
+            position[i].symbol = 'BRK-B';
         }
     }
     if (!is_exist) {
