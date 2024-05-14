@@ -585,7 +585,7 @@ export const usseTDInit = () => checkOauth().then(() => {
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
         console.log(`td ${updateTime['trade']}`);
-        if (updateTime['trade'] % (Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
+        /*if (updateTime['trade'] % (Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
             return Promise.resolve();
         } else {
             //避開交易時間
@@ -599,7 +599,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                 updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }
-        }
+        }*/
         return Mongo('find', TOTALDB, {setype: 'usse', sType: {$exists: false}}).then(items => {
             fakeOrder = [];
             const newOrder = [];
