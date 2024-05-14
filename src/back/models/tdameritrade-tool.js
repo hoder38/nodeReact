@@ -6,18 +6,9 @@ import { handleError, HoError } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
 import { getSuggestionData } from '../models/stock-tool.js'
 import sendWs from '../util/sendWs.js'
-//import Ws from 'ws'
-//import Event from 'events'
-//import Xml2js from 'xml2js'
 
-//const Xmlparser = new Xml2js.Parser();
-
-//let eventEmitter = new Event.EventEmitter();
 let tokens = {};
-let userPrincipalsResponse = null;
-//let usseWs = null;
-//let requestid = 0;
-//let emitter = [];
+let encryptedId = null;
 let updateTime = {book: 0, trade: 0};
 let available = {tradable: 0, cash: 0};
 let order = [];
@@ -93,183 +84,11 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
     console.log(tokens);
 }).then(() => getToken()) : getToken();
 
-/*const usseAuth = fn => {
-    if (!usseWs || !userPrincipalsResponse) {
-        return handleError(new HoError('TD cannot be authed!!!'));
-    }
-    eventEmitter.once('LOGIN', data => {
-        switch(data.code) {
-            case 0:
-            console.log("TD auth's done");
-            fn();
-            break;
-            case 3:
-            default:
-            usseWs.close();
-            return handleError(new HoError(`TD LOGIN FAIL: ${data.msg}`));
-        }
-    });
-    usseWs.send(JSON.stringify({
-        "requests": [
-            {
-                "service": "ADMIN",
-                "command": "LOGIN",
-                "requestid": (requestid++).toString(),
-                "account": userPrincipalsResponse.accounts[0].accountNumber,
-                "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": {
-                    "credential": userPrincipalsResponse.credentials,
-                    "token": userPrincipalsResponse.streamerInfo.token,
-                    "version": "1.0"
-                }
-            }
-        ]
-    }));
-}*/
-
-/*const usseLogout = () => {
-    if (!usseWs || !userPrincipalsResponse) {
-        console.log('TD has already shut down!!!');
-        return true;
-        //return handleError(new HoError('TD cannot be logouted!!!'));
-    }
-    eventEmitter.once('LOGOUT', data => {
-        switch(data.code) {
-            case 0:
-            console.log("TD auth's done logout");
-            usseWs.close();
-            break;
-            default:
-            console.log(`TD LOGOUT FAIL: ${data.msg}`);
-            usseWs.close();
-            //return handleError(new HoError(`TD LOGOUT FAIL: ${data.msg}`));
-            break;
-        }
-    });
-    usseWs.send(JSON.stringify({
-        "requests": [
-            {
-                "service": "ADMIN",
-                "requestid": (requestid++).toString(),
-                "command": "LOGOUT",
-                "account": userPrincipalsResponse.accounts[0].accountNumber,
-                "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": {}
-            }
-        ]
-    }));
-}*/
-
-/*const usseSubAccount = (sub = true) => {
-    if (!usseWs || !userPrincipalsResponse) {
-        return handleError(new HoError('TD cannot be subscript!!!'));
-    }
-    usseWs.send(JSON.stringify({
-        "requests": [
-            {
-                "service": "ACCT_ACTIVITY",
-                "requestid": (requestid++).toString(),
-                "command": "SUBS",
-                "account": userPrincipalsResponse.accounts[0].accountNumber,
-                "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": {
-                    "keys": userPrincipalsResponse.streamerSubscriptionKeys.keys[0].key,
-                    "fields": "0,1,2,3"
-                }
-            }
-        ]
-    }));
-}
-
-const usseOnAccount = fn => {
-    eventEmitter.on('ACCOUNT', data => {
-        if (data.hasOwnProperty('code')) {
-            switch(data.code) {
-                case 0:
-                console.log(data.msg);
-                break;
-                default:
-                return handleError(new HoError(`TD subscript account FAIL: ${data.msg}`));
-            }
-        } else {
-            fn(data);
-        }
-    });
-}*/
-
-/*export const usseSubStock = (symbol, sub = true) => {
-    if (!usseWs || !userPrincipalsResponse) {
-        return handleError(new HoError('TD cannot be subscript!!!'));
-    }
-    usseWs.send(JSON.stringify({
-        "requests": [
-            {
-                "service": "CHART_EQUITY",
-                "requestid": (requestid++).toString(),
-                "command": sub ? "SUBS" : 'ADD',
-                "account": userPrincipalsResponse.accounts[0].accountNumber,
-                "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": {
-                    "keys": symbol.join(',').toUpperCase(),
-                    "fields": "0,1,2,3,4,5,6,7,8"
-                },
-            },*/
-            /*{
-                "service": "CHART_FUTURES",
-                "requestid": (requestid++).toString(),
-                "command": "SUBS",
-                "account": userPrincipalsResponse.accounts[0].accountNumber,
-                "source": userPrincipalsResponse.streamerInfo.appId,
-                "parameters": {
-                    "keys": "/ES",
-                    "fields": "0,1,2,3,4,5,6,7"
-                }
-            }*/
-        /*]
-    }));
-}
-
-const usseOnStock = fn => {
-    eventEmitter.on('STOCK', data => {
-        if (data.hasOwnProperty('code')) {
-            switch(data.code) {
-                case 0:
-                console.log(data.msg);
-                break;
-                default:
-                return handleError(new HoError(`TD subscript ${symbol.join(',').toUpperCase()} FAIL: ${data.msg}`));
-            }
-        } else {
-            fn(data);
-        }
-    });
-}
-
-const usseHandler = res => {
-    if (res.service === 'ADMIN' && res.command === 'LOGIN') {
-        return eventEmitter.emit('LOGIN', res.content);
-    }
-    if (res.service === 'ADMIN' && res.command === 'LOGOUT') {
-        return eventEmitter.emit('LOGOUT', res.content);
-    }
-    if (res.service === 'CHART_EQUITY') {
-        return eventEmitter.emit('STOCK', res.content);
-    }
-    if (res.service === 'ACCT_ACTIVITY') {
-        return eventEmitter.emit('ACCOUNT', res.content);
-    }
-    if (res.heartbeat) {
-        return true;
-    }
-    console.log(res);
-}*/
-
 const cancelTDOrder = id => {
-    //if (!usseWs || !userPrincipalsResponse) {
-    if (!userPrincipalsResponse) {
+    if (!encryptedId) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
-    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
+    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
@@ -281,8 +100,7 @@ const cancelTDOrder = id => {
 }
 
 const submitTDOrder = (id, price, count) => {
-    //if (!usseWs || !userPrincipalsResponse) {
-    if (!userPrincipalsResponse) {
+    if (!encryptedId) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
     if (id === 'BRK-B') {
@@ -303,7 +121,7 @@ const submitTDOrder = (id, price, count) => {
         ]
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
     console.log(Math.abs(count));
-    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders`, {headers: {
+    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
@@ -321,177 +139,30 @@ const submitTDOrder = (id, price, count) => {
 
 export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
-        //if (!usseWs || !userPrincipalsResponse) {
-        if (!userPrincipalsResponse) {
-            //return Fetch('https://api.schwabapi.com/trader/v1/userPreference?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-            return Fetch('https://api.schwabapi.com/trader/v1/userPreference', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                console.log(result);
-                userPrincipalsResponse = result;
-                /*const tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
-                const tokenTimeStampAsMs = tokenTimeStampAsDateObj.getTime()
-                const credentials = {
-                    "userid": userPrincipalsResponse.accounts[0].accountNumber,
-                    "token": userPrincipalsResponse.streamerInfo.token,
-                    "company": userPrincipalsResponse.accounts[0].company,
-                    "segment": userPrincipalsResponse.accounts[0].segment,
-                    "cddomain": userPrincipalsResponse.accounts[0].accountCdDomainId,
-                    "usergroup": userPrincipalsResponse.streamerInfo.userGroup,
-                    "accesslevel": userPrincipalsResponse.streamerInfo.accessLevel,
-                    "authorized": "Y",
-                    "timestamp": tokenTimeStampAsMs,
-                    "appid": userPrincipalsResponse.streamerInfo.appId,
-                    "acl": userPrincipalsResponse.streamerInfo.acl
+        if (!encryptedId) {
+            return Fetch('https://api.schwabapi.com/trader/v1/accounts/accountNumbers', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+                if (result['error']) {
+                    return handleError(new HoError(result['error']));
                 }
-                userPrincipalsResponse.credentials = Object.keys(credentials).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(credentials[key])}`).join('&');*/
-
-                //usseWs = new Ws(`wss://${userPrincipalsResponse.streamerInfo.streamerSocketUrl}/ws`, {perMessageDeflate: false});
-                /*usseWs.on('open', () => {
-                    //auth
-                    console.log('TD usse ticker open');
-                    usseAuth(() => {*/
-                        /*Mongo('find', TOTALDB, {setype: 'usse'}).then(item => {
-                            if (item.length > 0) {
-                                usseSubStock(item.map(v => v.index));
-                            }
-                        });*/
-                        /*usseSubAccount();
-                    });
-                });*/
-                /*usseWs.on('message', data => {
-                    data = JSON.parse(data);
-                    const res = (data.response || data.notify || data.data) ? (data.response || data.notify || data.data)[0] : null;
-                    if (!res) {
-                        console.log(data);
-                    }
-                    usseHandler(res);
-                });
-                usseWs.on('error', err => {
-                    const msg = (err.message || err.msg) ? (err.message || err.msg) : '';
-                    if (!msg) {
-                        console.log(err);
-                    }
-                    sendWs(`TD Ameritrade Ws Error: ${msg}`, 0, 0, true);
-                    handleError(err, `TD Ameritrade Ws Error`);
-                });
-                usseWs.on('close', () => {
-                    userPrincipalsResponse = null;
-                    usseWs = null;
-                    console.log('TD usse ticker close');
-                });*/
-                /*usseOnAccount(data => {
-                    if (data) {
-                        data.forEach(d => {
-                            console.log(d[2]);
-                            console.log(d[3]);
-                            if (d[2] === 'SUBSCRIBED') {
-                            } else if (d[2] === 'ERROR') {
-                                resetTD();
-                            } else {
-                                initialBook()*//*.then(() => new Promise((resolve, reject) => Xmlparser.parseString(d[3], (err, result) => err ? reject(err) : resolve(result)))).then(result => {
-                                    //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
-                                    const xmlMsg = result.OrderFillMessage;
-                                    if (xmlMsg && xmlMsg.ExecutionInformation) {
-                                        console.log(xmlMsg.Order[0].Security[0].Symbol[0]);
-                                        return Mongo('find', TOTALDB, {setype: 'usse', index: xmlMsg.Order[0].Security[0].Symbol[0]}).then(items => {
-                                            if (items.length > 0) {
-                                                const item = items[0];
-                                                //const time = Math.round(new Date().getTime() / 1000);
-                                                const time = Math.round(new Date(xmlMsg.ExecutionInformation[0].Timestamp[0]).getTime() / 1000);
-                                                const price = xmlMsg.ExecutionInformation[0].ExecutionPrice[0];
-                                                let profit = 0;
-                                                if (xmlMsg.ExecutionInformation[0].Type[0] === 'Bought') {
-                                                    let is_insert = false;
-                                                    for (let k = 0; k < item.previous.buy.length; k++) {
-                                                        if (price < item.previous.buy[k].price) {
-                                                            item.previous.buy.splice(k, 0, {price, time});
-                                                            is_insert = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!is_insert) {
-                                                        item.previous.buy.push({price, time});
-                                                    }
-                                                    item.previous = {
-                                                        price,
-                                                        time,
-                                                        type: 'buy',
-                                                        buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                        sell: item.previous.sell,
-                                                    }
-                                                } else if (xmlMsg.ExecutionInformation[0].Type[0] === 'sold') {
-                                                    console.log(position);
-                                                    const sellcount = xmlMsg.ExecutionInformation[0].Quantity[0];
-                                                    for (let i = 0; i < position.length; i++) {
-                                                        if (position[i].symbol === item.index) {
-                                                            if (sellcount >= position[i].amount) {
-                                                                console.log('td position close');
-                                                                profit = price * sellcount * (1 - USSE_FEE) - position[i].amount * position[i].price;
-                                                            }
-                                                            break;
-                                                        }
-                                                    }
-                                                    let is_insert = false;
-                                                    for (let k = 0; k < item.previous.sell.length; k++) {
-                                                        if (price > item.previous.sell[k].price) {
-                                                            item.previous.sell.splice(k, 0, {price, time});
-                                                            is_insert = true;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!is_insert) {
-                                                        item.previous.sell.push({price, time});
-                                                    }
-                                                    item.previous = {
-                                                        price,
-                                                        time,
-                                                        type: 'sell',
-                                                        sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                        buy: item.previous.buy,
-                                                    }
-                                                }
-                                                item.profit = item.profit ? item.profit + profit : profit;
-                                                return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}});
-                                            }
-                                        });
-                                    }
-                                }).catch(err => {
-                                    sendWs(`TD Ameritrade XML Error: ${err.code} ${err.message}`, 0, 0, true);
-                                    handleError(err, `TD Ameritrade XML Error`);
-                                });*/
-                            /*}
-                        })
-                    }
-                });*/
-                /*usseOnStock(data => {
-                    console.log(data);
-                    ussePrice = data.map(p => {
-                        const ret = {};
-                        ret[p['key']] = {
-                            p: p[4],
-                            t: p[7] / 1000,
-                        };
-                        return ret;
-                    })
-                });*/
+                if (result[0]) {
+                    encryptedId = result[0].hashValue;
+                } else {
+                    return handleError(new HoError("No account"));
+                }
             });
         } else {
             return Promise.resolve();
         }
     }
     const initialBook = (force = false) => {
-        //if (!usseWs || !userPrincipalsResponse) {
-        if (!userPrincipalsResponse) {
+        if (!encryptedId) {
             return handleError(new HoError('TD cannot be inital book!!!'));
         }
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
-            console.log(userPrincipalsResponse);
-            console.log(userPrincipalsResponse.accounts[0]);
-            console.log(userPrincipalsResponse.accounts[0].accountNumber);
-            //return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
                     if (force === true) {
@@ -559,8 +230,10 @@ export const usseTDInit = () => checkOauth().then(() => {
                         });
                     }
                 });
-                return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders?fromEnteredTime=2023-05-14T00:00:00.000Z&toEnteredTime=2024-05-15T00:00:00.000Z`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                //if (result['securitiesAccount']['orderStrategies']) {
+                let orderDate = new Date();
+                orderDate = orderDate.setDate(orderDate.getDate() + 1);
+                let orderDate1 = orderDate.setFullYear(orderDate.getFullYear() - 1);
+                return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders?fromEnteredTime=${orderDate1.toISOString()}&toEnteredTime=${orderDate.toISOString()}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                     console.log(result);
                     if (result['error']) {
                         if (force === true) {
@@ -1121,7 +794,4 @@ export const resetTD = (update=false) => {
     updateTime = {};
     updateTime['book'] = 0;
     updateTime['trade'] = trade_count;
-    /*if (!update) {
-        usseLogout();
-    }*/
 }
