@@ -487,7 +487,8 @@ export const usseTDInit = () => checkOauth().then(() => {
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
-            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            //return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
                     if (force === true) {
