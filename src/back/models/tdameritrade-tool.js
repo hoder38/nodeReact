@@ -323,7 +323,8 @@ export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
         //if (!usseWs || !userPrincipalsResponse) {
         if (!userPrincipalsResponse) {
-            return Fetch('https://api.schwabapi.com/trader/v1/userPreference?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            //return Fetch('https://api.schwabapi.com/trader/v1/userPreference?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch('https://api.schwabapi.com/trader/v1/userPreference', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 userPrincipalsResponse = result;
                 /*const tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
