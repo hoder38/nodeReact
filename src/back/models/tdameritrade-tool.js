@@ -487,6 +487,9 @@ export const usseTDInit = () => checkOauth().then(() => {
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
+            console.log(userPrincipalsResponse);
+            console.log(userPrincipalsResponse.accounts[0]);
+            console.log(userPrincipalsResponse.accounts[0].accountNumber);
             //return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
             return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
@@ -556,13 +559,20 @@ export const usseTDInit = () => checkOauth().then(() => {
                         });
                     }
                 });
-                if (result['securitiesAccount']['orderStrategies']) {
-
+                return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders?fromEnteredTime=2023-05-14T00:00:00.000Z&toEnteredTime=2024-05-15T00:00:00.000Z`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+                //if (result['securitiesAccount']['orderStrategies']) {
+                    console.log(result);
+                    if (result['error']) {
+                        if (force === true) {
+                            updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
+                        }
+                        return handleError(new HoError(result['error']));
+                    }
                     const order_recur = index => {
-                        if (index >= result['securitiesAccount']['orderStrategies'].length) {
+                        if (index >= result.length) {
                             return Promise.resolve();
                         } else {
-                            const o = result['securitiesAccount']['orderStrategies'][index];
+                            const o = result[index];
                             //console.log(o);
                             if (o.cancelable) {
                                 order.push({
@@ -891,7 +901,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         }
                     }
                     return order_recur(0);
-                }
+                });
             });
         } else {
             console.log('TD no new');
