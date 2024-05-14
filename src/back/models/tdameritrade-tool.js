@@ -6,18 +6,18 @@ import { handleError, HoError } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
 import { getSuggestionData } from '../models/stock-tool.js'
 import sendWs from '../util/sendWs.js'
-import Ws from 'ws'
-import Event from 'events'
-import Xml2js from 'xml2js'
+//import Ws from 'ws'
+//import Event from 'events'
+//import Xml2js from 'xml2js'
 
-const Xmlparser = new Xml2js.Parser();
+//const Xmlparser = new Xml2js.Parser();
 
-let eventEmitter = new Event.EventEmitter();
+//let eventEmitter = new Event.EventEmitter();
 let tokens = {};
 let userPrincipalsResponse = null;
-let usseWs = null;
-let requestid = 0;
-let emitter = [];
+//let usseWs = null;
+//let requestid = 0;
+//let emitter = [];
 let updateTime = {book: 0, trade: 0};
 let available = {tradable: 0, cash: 0};
 let order = [];
@@ -93,7 +93,7 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
     console.log(tokens);
 }).then(() => getToken()) : getToken();
 
-const usseAuth = fn => {
+/*const usseAuth = fn => {
     if (!usseWs || !userPrincipalsResponse) {
         return handleError(new HoError('TD cannot be authed!!!'));
     }
@@ -115,7 +115,7 @@ const usseAuth = fn => {
                 "service": "ADMIN",
                 "command": "LOGIN",
                 "requestid": (requestid++).toString(),
-                "account": userPrincipalsResponse.accounts[0].accountId,
+                "account": userPrincipalsResponse.accounts[0].accountNumber,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {
                     "credential": userPrincipalsResponse.credentials,
@@ -125,9 +125,9 @@ const usseAuth = fn => {
             }
         ]
     }));
-}
+}*/
 
-const usseLogout = () => {
+/*const usseLogout = () => {
     if (!usseWs || !userPrincipalsResponse) {
         console.log('TD has already shut down!!!');
         return true;
@@ -152,15 +152,15 @@ const usseLogout = () => {
                 "service": "ADMIN",
                 "requestid": (requestid++).toString(),
                 "command": "LOGOUT",
-                "account": userPrincipalsResponse.accounts[0].accountId,
+                "account": userPrincipalsResponse.accounts[0].accountNumber,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {}
             }
         ]
     }));
-}
+}*/
 
-const usseSubAccount = (sub = true) => {
+/*const usseSubAccount = (sub = true) => {
     if (!usseWs || !userPrincipalsResponse) {
         return handleError(new HoError('TD cannot be subscript!!!'));
     }
@@ -170,7 +170,7 @@ const usseSubAccount = (sub = true) => {
                 "service": "ACCT_ACTIVITY",
                 "requestid": (requestid++).toString(),
                 "command": "SUBS",
-                "account": userPrincipalsResponse.accounts[0].accountId,
+                "account": userPrincipalsResponse.accounts[0].accountNumber,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {
                     "keys": userPrincipalsResponse.streamerSubscriptionKeys.keys[0].key,
@@ -195,9 +195,9 @@ const usseOnAccount = fn => {
             fn(data);
         }
     });
-}
+}*/
 
-export const usseSubStock = (symbol, sub = true) => {
+/*export const usseSubStock = (symbol, sub = true) => {
     if (!usseWs || !userPrincipalsResponse) {
         return handleError(new HoError('TD cannot be subscript!!!'));
     }
@@ -207,25 +207,25 @@ export const usseSubStock = (symbol, sub = true) => {
                 "service": "CHART_EQUITY",
                 "requestid": (requestid++).toString(),
                 "command": sub ? "SUBS" : 'ADD',
-                "account": userPrincipalsResponse.accounts[0].accountId,
+                "account": userPrincipalsResponse.accounts[0].accountNumber,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {
                     "keys": symbol.join(',').toUpperCase(),
                     "fields": "0,1,2,3,4,5,6,7,8"
                 },
-            },
+            },*/
             /*{
                 "service": "CHART_FUTURES",
                 "requestid": (requestid++).toString(),
                 "command": "SUBS",
-                "account": userPrincipalsResponse.accounts[0].accountId,
+                "account": userPrincipalsResponse.accounts[0].accountNumber,
                 "source": userPrincipalsResponse.streamerInfo.appId,
                 "parameters": {
                     "keys": "/ES",
                     "fields": "0,1,2,3,4,5,6,7"
                 }
             }*/
-        ]
+        /*]
     }));
 }
 
@@ -262,13 +262,14 @@ const usseHandler = res => {
         return true;
     }
     console.log(res);
-}
+}*/
 
 const cancelTDOrder = id => {
-    if (!usseWs || !userPrincipalsResponse) {
+    //if (!usseWs || !userPrincipalsResponse) {
+    if (!userPrincipalsResponse) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
-    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
+    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
@@ -280,7 +281,8 @@ const cancelTDOrder = id => {
 }
 
 const submitTDOrder = (id, price, count) => {
-    if (!usseWs || !userPrincipalsResponse) {
+    //if (!usseWs || !userPrincipalsResponse) {
+    if (!userPrincipalsResponse) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
     if (id === 'BRK-B') {
@@ -301,7 +303,7 @@ const submitTDOrder = (id, price, count) => {
         ]
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
     console.log(Math.abs(count));
-    return checkOauth().then(() => Fetch(`hhttps://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
+    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
@@ -319,14 +321,15 @@ const submitTDOrder = (id, price, count) => {
 
 export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
-        if (!usseWs || !userPrincipalsResponse) {
+        //if (!usseWs || !userPrincipalsResponse) {
+        if (!userPrincipalsResponse) {
             return Fetch('https://api.schwabapi.com/trader/v1/userPreference?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                //console.log(result);
+                console.log(result);
                 userPrincipalsResponse = result;
-                const tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
+                /*const tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
                 const tokenTimeStampAsMs = tokenTimeStampAsDateObj.getTime()
                 const credentials = {
-                    "userid": userPrincipalsResponse.accounts[0].accountId,
+                    "userid": userPrincipalsResponse.accounts[0].accountNumber,
                     "token": userPrincipalsResponse.streamerInfo.token,
                     "company": userPrincipalsResponse.accounts[0].company,
                     "segment": userPrincipalsResponse.accounts[0].segment,
@@ -338,22 +341,22 @@ export const usseTDInit = () => checkOauth().then(() => {
                     "appid": userPrincipalsResponse.streamerInfo.appId,
                     "acl": userPrincipalsResponse.streamerInfo.acl
                 }
-                userPrincipalsResponse.credentials = Object.keys(credentials).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(credentials[key])}`).join('&');
+                userPrincipalsResponse.credentials = Object.keys(credentials).map(key => `${encodeURIComponent(key)}=${encodeURIComponent(credentials[key])}`).join('&');*/
 
-                usseWs = new Ws(`wss://${userPrincipalsResponse.streamerInfo.streamerSocketUrl}/ws`, {perMessageDeflate: false});
-                usseWs.on('open', () => {
+                //usseWs = new Ws(`wss://${userPrincipalsResponse.streamerInfo.streamerSocketUrl}/ws`, {perMessageDeflate: false});
+                /*usseWs.on('open', () => {
                     //auth
                     console.log('TD usse ticker open');
-                    usseAuth(() => {
+                    usseAuth(() => {*/
                         /*Mongo('find', TOTALDB, {setype: 'usse'}).then(item => {
                             if (item.length > 0) {
                                 usseSubStock(item.map(v => v.index));
                             }
                         });*/
-                        usseSubAccount();
+                        /*usseSubAccount();
                     });
-                });
-                usseWs.on('message', data => {
+                });*/
+                /*usseWs.on('message', data => {
                     data = JSON.parse(data);
                     const res = (data.response || data.notify || data.data) ? (data.response || data.notify || data.data)[0] : null;
                     if (!res) {
@@ -373,8 +376,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                     userPrincipalsResponse = null;
                     usseWs = null;
                     console.log('TD usse ticker close');
-                });
-                usseOnAccount(data => {
+                });*/
+                /*usseOnAccount(data => {
                     if (data) {
                         data.forEach(d => {
                             console.log(d[2]);
@@ -383,7 +386,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             } else if (d[2] === 'ERROR') {
                                 resetTD();
                             } else {
-                                initialBook()/*.then(() => new Promise((resolve, reject) => Xmlparser.parseString(d[3], (err, result) => err ? reject(err) : resolve(result)))).then(result => {
+                                initialBook()*//*.then(() => new Promise((resolve, reject) => Xmlparser.parseString(d[3], (err, result) => err ? reject(err) : resolve(result)))).then(result => {
                                     //const xmlMsg = result.OrderFillMessage || result.OrderPartialFillMessage;
                                     const xmlMsg = result.OrderFillMessage;
                                     if (xmlMsg && xmlMsg.ExecutionInformation) {
@@ -454,10 +457,10 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     sendWs(`TD Ameritrade XML Error: ${err.code} ${err.message}`, 0, 0, true);
                                     handleError(err, `TD Ameritrade XML Error`);
                                 });*/
-                            }
+                            /*}
                         })
                     }
-                });
+                });*/
                 /*usseOnStock(data => {
                     console.log(data);
                     ussePrice = data.map(p => {
@@ -475,14 +478,15 @@ export const usseTDInit = () => checkOauth().then(() => {
         }
     }
     const initialBook = (force = false) => {
-        if (!usseWs || !userPrincipalsResponse) {
+        //if (!usseWs || !userPrincipalsResponse) {
+        if (!userPrincipalsResponse) {
             return handleError(new HoError('TD cannot be inital book!!!'));
         }
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
-            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountNumber}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
                     if (force === true) {
@@ -1105,7 +1109,7 @@ export const resetTD = (update=false) => {
     updateTime = {};
     updateTime['book'] = 0;
     updateTime['trade'] = trade_count;
-    if (!update) {
+    /*if (!update) {
         usseLogout();
-    }
+    }*/
 }
