@@ -231,9 +231,13 @@ export const usseTDInit = () => checkOauth().then(() => {
                     }
                 });
                 let orderDate = new Date();
-                orderDate = orderDate.setDate(orderDate.getDate() + 1);
-                let orderDate1 = orderDate.setFullYear(orderDate.getFullYear() - 1);
-                return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders?fromEnteredTime=${orderDate1.toISOString()}&toEnteredTime=${orderDate.toISOString()}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+                orderDate.setDate(orderDate.getDate() + 1);
+                const to = orderDate.toISOString();
+                console.log(to);
+                orderDate.setFullYear(orderDate.getFullYear() - 1);
+                const from = orderDate.toISOString();
+                console.log(from);
+                return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders?fromEnteredTime=${from}&toEnteredTime=${to}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                     console.log(result);
                     if (result['error']) {
                         if (force === true) {
