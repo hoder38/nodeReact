@@ -1,4 +1,4 @@
-import { TDAMERITRADE_KEY, GOOGLE_REDIRECT } from '../../../ver.js'
+import { TDAMERITRADE_KEY, GOOGLE_REDIRECT, TDAMERITRADE_SECRET } from '../../../ver.js'
 import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
@@ -30,24 +30,25 @@ export const generateAuthUrl = () => `${TD_AUTH_URL}redirect_uri=${GOOGLE_REDIRE
 export const getToken = code => {
     const qspost = code ? QStringify({
         grant_type: 'authorization_code',
-        refresh_token: '',
-        access_type: 'offline',
+        //refresh_token: '',
+        //access_type: 'offline',
         code: decodeURIComponent(code),
-        client_id: TDAMERITRADE_KEY,
+        //client_id: TDAMERITRADE_KEY,
         redirect_uri: GOOGLE_REDIRECT,
     }) : (tokens && tokens.expiry_date < (Date.now() / 1000 + 590)) ? QStringify({
         grant_type: 'refresh_token',
         refresh_token: tokens.refresh_token,
-        access_type: '',
-        code: '',
-        client_id: TDAMERITRADE_KEY,
-        redirect_uri: '',
+        //access_type: '',
+        //code: '',
+        //client_id: TDAMERITRADE_KEY,
+        //redirect_uri: '',
     }) : null;
-
+    const authHeader = Buffer.from(`${TDAMERITRADE_KEY}:${TDAMERITRADE_SECRET}`).toString('base64');
     return qspost ? Fetch(TD_TOKEN_URL, {
         method: 'POST',
         body: qspost,
         headers: {
+            'Authorization' : `Basic ${authHeader}`,
             'Content-Type': 'application/x-www-form-urlencoded',
             'Content-Length': qspost.length,
         },
@@ -58,11 +59,12 @@ export const getToken = code => {
         if (token['expires_in']) {
             token['expiry_date'] = Math.floor(Date.now() / 1000) + token['expires_in'];
         }
-        if (token['refresh_token_expires_in']) {
-            token['refresh_token_expiry_date'] = Math.floor(Date.now() / 1000) + token['refresh_token_expires_in'];
+        if (code) {
+        //if (token['refresh_token_expires_in']) {
+            token['refresh_token_expiry_date'] = Math.floor(Date.now() / 1000) + 7 * 86400;
         } else {
-            if (tokens && tokens.refresh_token_expiry_date < (Date.now() / 1000 + 604800)) {
-                sendWs(`TD AMERITRADE: Please refresh token in 7 days`, 0, 0, true);
+            if (tokens && tokens.refresh_token_expiry_date < (Date.now() / 1000 + 259200)) {
+                sendWs(`TD AMERITRADE: Please refresh token in 3 days`, 0, 0, true);
             }
         }
         console.log(token);
@@ -266,7 +268,7 @@ const cancelTDOrder = id => {
     if (!usseWs || !userPrincipalsResponse) {
         return handleError(new HoError('TD cannot cancel order!!!'));
     }
-    return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
+    return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             return res.json().then(err => handleError(new HoError(err.error)))
@@ -296,7 +298,7 @@ const submitTDOrder = (id, price, count) => {
         ]
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
     console.log(Math.abs(count));
-    return checkOauth().then(() => Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
+    return checkOauth().then(() => Fetch(`hhttps://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
         'Content-Type': 'application/json',
     }, method: 'POST', body: qspost,}).then(res => {
@@ -315,7 +317,7 @@ const submitTDOrder = (id, price, count) => {
 export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
         if (!usseWs || !userPrincipalsResponse) {
-            return Fetch('https://api.tdameritrade.com/v1/userprincipals?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch('https://api.schwabapi.com/trader/v1/userPreference?fields=streamerSubscriptionKeys,streamerConnectionInfo,preferences,surrogateIds', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 //console.log(result);
                 userPrincipalsResponse = result;
                 const tokenTimeStampAsDateObj = new Date(userPrincipalsResponse.streamerInfo.tokenTimestamp);
@@ -477,7 +479,7 @@ export const usseTDInit = () => checkOauth().then(() => {
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
             console.log(updateTime['book']);
-            return Fetch(`https://api.tdameritrade.com/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
+            return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${userPrincipalsResponse.accounts[0].accountId}?fields=positions,orders`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
                 if (result['error']) {
                     if (force === true) {
