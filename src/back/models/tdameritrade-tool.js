@@ -51,7 +51,6 @@ export const getToken = code => {
             token['expiry_date'] = Math.floor(Date.now() / 1000) + token['expires_in'];
         }
         if (code) {
-        //if (token['refresh_token_expires_in']) {
             token['refresh_token_expiry_date'] = Math.floor(Date.now() / 1000) + 7 * 86400;
         } else {
             if (tokens && tokens.refresh_token_expiry_date < (Date.now() / 1000 + 259200)) {
@@ -120,7 +119,6 @@ const submitTDOrder = (id, price, count) => {
             }
         ]
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
-    console.log(qspost);
     console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
@@ -164,7 +162,7 @@ export const usseTDInit = () => checkOauth().then(() => {
             updateTime['book'] = now;
             console.log(updateTime['book']);
             return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                console.log(result);
+                //console.log(result);
                 if (result['message']) {
                     if (force === true) {
                         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -586,7 +584,7 @@ export const usseTDInit = () => checkOauth().then(() => {
     return initWs().then(() => initialBook()).then(() => {
         updateTime['trade']++;
         console.log(`td ${updateTime['trade']}`);
-        /*if (updateTime['trade'] % (Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
+        if (updateTime['trade'] % (Math.ceil(USSE_ORDER_INTERVAL / PRICE_INTERVAL) - 3) !== 3) {
             return Promise.resolve();
         } else {
             //避開交易時間
@@ -600,7 +598,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                 updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }
-        }*/
+        }
         return Mongo('find', TOTALDB, {setype: 'usse', sType: {$exists: false}}).then(items => {
             fakeOrder = [];
             const newOrder = [];

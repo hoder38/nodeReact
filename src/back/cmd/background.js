@@ -351,8 +351,7 @@ export const usseInit = () => {
             }
             return new Promise((resolve, reject) => setTimeout(() => resolve(), PRICE_INTERVAL * 1000)).then(() => setO());
         }
-        //return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 30000)).then(() => setO());
+        return new Promise((resolve, reject) => setTimeout(() => resolve(), 210000)).then(() => setO());
     }
 }
 

@@ -37,11 +37,8 @@ export default {
     //STOCK_DATE: [6, 13, 21, 27],
     //STOCK_MODE: 1,
     //3: xml重抓 2: xml重parse 1: parse tag
-    //BITFINEX_LOAN: true,
-    //BITFINEX_FILTER: true,
-    BITFINEX_LOAN: false,
-    BITFINEX_FILTER: false,
+    BITFINEX_LOAN: true,
+    BITFINEX_FILTER: true,
     USSE_TICKER: true,
-    //TWSE_TICKER: true,
-    TWSE_TICKER: false,
+    TWSE_TICKER: true,
 }
