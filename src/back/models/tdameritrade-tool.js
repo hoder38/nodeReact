@@ -44,8 +44,8 @@ export const getToken = code => {
             'Content-Length': qspost.length,
         },
     }).then(res => res.json()).then(token => {
-        if (token.error) {
-            return handleError(new HoError(token.error));
+        if (token.message) {
+            return handleError(new HoError(token.message));
         }
         if (token['expires_in']) {
             token['expiry_date'] = Math.floor(Date.now() / 1000) + token['expires_in'];
@@ -91,8 +91,7 @@ const cancelTDOrder = id => {
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-            console.log(res);
-            return res.json().then(err => handleError(new HoError(err.error)))
+            return res.json().then(err => handleError(new HoError(err.message)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -112,7 +111,7 @@ const submitTDOrder = (id, price, count) => {
         orderStrategyType: "SINGLE",
         orderLegCollection: [
             {
-                "instruction": (count > 0) ? 'Buy' : 'SELL',
+                "instruction": (count > 0) ? 'BUY' : 'SELL',
                 "quantity": Math.abs(count),
                 "instrument": {
                     "symbol": id,
@@ -131,8 +130,7 @@ const submitTDOrder = (id, price, count) => {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             console.log(id);
             console.log(price);
-            console.log(res);
-            return res.json().then(err => handleError(new HoError(err.error)))
+            return res.json().then(err => handleError(new HoError(err.message)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -144,8 +142,8 @@ export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
         if (!encryptedId) {
             return Fetch('https://api.schwabapi.com/trader/v1/accounts/accountNumbers', {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
-                if (result['error']) {
-                    return handleError(new HoError(result['error']));
+                if (result['message']) {
+                    return handleError(new HoError(result['message']));
                 }
                 if (result[0]) {
                     encryptedId = result[0].hashValue;
@@ -167,11 +165,11 @@ export const usseTDInit = () => checkOauth().then(() => {
             console.log(updateTime['book']);
             return Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}?fields=positions`, {headers: {Authorization: `Bearer ${tokens.access_token}`}}).then(res => res.json()).then(result => {
                 console.log(result);
-                if (result['error']) {
+                if (result['message']) {
                     if (force === true) {
                         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     }
-                    return handleError(new HoError(result['error']));
+                    return handleError(new HoError(result['message']));
                 }
                 if (!result['securitiesAccount']) {
                     if (force === true) {
