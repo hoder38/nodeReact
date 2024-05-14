@@ -91,7 +91,8 @@ const cancelTDOrder = id => {
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
-            return res.json().then(err => handleError(new HoError(res.error)))
+            console.log(res);
+            return res.json().then(err => handleError(new HoError(err.error)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -111,7 +112,7 @@ const submitTDOrder = (id, price, count) => {
         orderStrategyType: "SINGLE",
         orderLegCollection: [
             {
-                "instruction": (count > 0) ? "Buy" : 'SELL',
+                "instruction": (count > 0) ? 'Buy' : 'SELL',
                 "quantity": Math.abs(count),
                 "instrument": {
                     "symbol": id,
@@ -120,6 +121,7 @@ const submitTDOrder = (id, price, count) => {
             }
         ]
     }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
+    console.log(qspost);
     console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
@@ -129,7 +131,8 @@ const submitTDOrder = (id, price, count) => {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
             console.log(id);
             console.log(price);
-            return res.json().then(err => handleError(new HoError(res.error)))
+            console.log(res);
+            return res.json().then(err => handleError(new HoError(err.error)))
         }
     })).catch(err => {
         updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
