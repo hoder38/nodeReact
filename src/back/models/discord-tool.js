@@ -3,6 +3,7 @@ import { DISCORD_TOKEN, DISCORD_CHANNEL } from '../../../ver.js'
 import Discord from 'discord.js'
 import Mongo from '../models/mongo-tool.js'
 import { stockShow } from '../models/stock-tool.js'
+import { generateAuthUrl, getToken } from '../models/tdameritrade-tool.js'
 
 let channel = null;
 export const init = () => {
@@ -13,19 +14,29 @@ export const init = () => {
         channel.send('Nice to serve you!!!');
     });
     client.on('message', msg=> {
+        console.log(msg.content);
+        console.log(msg.author.bot);
         if (!msg.author.bot) {
-            const cmd = msg.content.toLowerCase();
-            switch (cmd) {
-                case 'checkdoc':
-                checkDoc(msg);
-                break;
-                case 'stock':
-                stockPrice(msg);
-                break;
-                case 'help':
-                default:
-                help(msg);
-                break;
+            const cmd = msg.content.match(/\<\@.*\> ([^\s]*)(.*)/);
+            if (cmd) {
+                switch (cmd[1].toLowerCase()) {
+                    case 'checkdoc':
+                    checkDoc(msg);
+                    break;
+                    case 'stock':
+                    stockPrice(msg);
+                    break;
+                    case 'schwab':
+                    schwabAuth(msg);
+                    break;
+                    case 'schwabcode':
+                    schwabCode(msg, cmd[2].trim());
+                    break;
+                    case 'help':
+                    default:
+                    help(msg);
+                    break;
+                }
             }
         }
     });
@@ -38,11 +49,15 @@ export const init = () => {
     client.login(DISCORD_TOKEN);
 }
 
-const help = msg => msg.reply('\nCommand:\ncheckdoc\nstock');
+const help = msg => msg.reply('\nCommand:\ncheckDoc\nstock\nschwab\nschwabCode code');
 
 const checkDoc = msg => Mongo('find', DOCDB).then(doclist => msg.reply(doclist.reduce((a, v) => `${a}\ntype: ${v.type}, date: ${v.date}`, ''))).catch(err => msg.reply(err.message));
 
 const stockPrice = msg => stockShow().then(ret => (ret.length > 0) ? msg.reply(ret) : Promise.resolve()).catch(err => msg.reply(err.message));
+
+const schwabAuth = msg => msg.reply(generateAuthUrl());
+
+const schwabCode = (msg, code) => (code) ? getToken(code).then(ret => msg.reply("Update token Successed!!!")).catch(err => msg.reply(err.message)) : msg.reply("Need input code!!!");
 
 export default function discordSend(msg) {
     if (channel) {

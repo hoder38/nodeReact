@@ -44,8 +44,8 @@ export const getToken = code => {
             'Content-Length': qspost.length,
         },
     }).then(res => res.json()).then(token => {
-        if (token.message) {
-            return handleError(new HoError(token.message));
+        if (token.error) {
+            return handleError(new HoError(token.error));
         }
         if (token['expires_in']) {
             token['expiry_date'] = Math.floor(Date.now() / 1000) + token['expires_in'];
