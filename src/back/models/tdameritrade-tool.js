@@ -19,11 +19,13 @@ let fakeOrder = [];
 export const generateAuthUrl = () => `${TD_AUTH_URL}redirect_uri=${GOOGLE_REDIRECT}&client_id=${TDAMERITRADE_KEY}`;
 
 export const getToken = code => {
-    const codeM = code.match(/code\=([^&]*)/);
-    if (codeM) {
-        code = codeM[1];
+    if (code) {
+        const codeM = code.match(/code\=([^&]*)/);
+        if (codeM) {
+            code = codeM[1];
+        }
+        console.log(code);
     }
-    console.log(code);
     const qspost = code ? QStringify({
         grant_type: 'authorization_code',
         //refresh_token: '',
