@@ -1927,7 +1927,7 @@ const getBasicStockData = (type, index) => {
         const real1 = () => new Promise((resolve, reject) => Child_process.exec(`curl 'https://finance.yahoo.com/quote/${index}/profile?p=${index}' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
-            const name = findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'div')[0], 'section', 'container')[0], 'h1')[0])[0];
+            const name = findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'div')[0], 'section')[0], 'h1')[0])[0];
             result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
             result.stock_name = [result.stock_full];
             const market = findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'span')[0], 'span')[0])[0];
