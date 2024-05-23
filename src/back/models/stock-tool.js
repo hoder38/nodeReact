@@ -6752,22 +6752,24 @@ export const getStockListV2 = (type, year, month) => {
                     }
                     let row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
                     findTag(findTag(findTag(findTag(findTag(findTag(row, 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                        const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
-                        const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
-                        let is_exit = false;
-                        for (let i = 0; i < stock_list.length; i++) {
-                            if (stock_list[i].index === sIndex) {
-                                is_exit = true;
-                                stock_list[i].tag.push(list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500');
-                                break;
+                        if (findTag(t, 'td')[2]) {
+                            const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
+                            const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
+                            let is_exit = false;
+                            for (let i = 0; i < stock_list.length; i++) {
+                                if (stock_list[i].index === sIndex) {
+                                    is_exit = true;
+                                    stock_list[i].tag.push(list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500');
+                                    break;
+                                }
                             }
-                        }
-                        if (!is_exit && sIndex !== 'ETFC') {
-                            stock_list.push({
-                                index: sIndex,
-                                tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
-                                type: 'usse',
-                            });
+                            if (!is_exit && sIndex !== 'ETFC') {
+                                stock_list.push({
+                                    index: sIndex,
+                                    tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                                    type: 'usse',
+                                });
+                            }
                         }
                     });
                     return recur_get(index + 1);
