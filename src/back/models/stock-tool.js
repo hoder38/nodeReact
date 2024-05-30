@@ -1923,10 +1923,10 @@ const getBasicStockData = (type, index) => {
         return real();
         break;
         case 'usse':
-        //const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile?p=${index}`, {accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'}).then(raw_data => {
-        const url = `https://finance.yahoo.com/quote/${index}/profile?p=${index}`;
+        //const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile/`).then(raw_data => {
+        const url = `https://finance.yahoo.com/quote/${index}/profile/`;
         console.log(url);
-        const real1 = () => new Promise((resolve, reject) => Child_process.exec(`curl '${url}' -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
+        const real1 = () => new Promise((resolve, reject) => Child_process.exec(`curl "${url}"  -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
             const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
             const name = findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'div')[0], 'section')[0], 'h1')[0])[0];
@@ -6637,7 +6637,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         previous: item.previous,
                     } : {})});
                 });
-            }).then(() => recur_price(index + 1));
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), 3000)))
+            //}).then(() => recur_price(index + 1));
         }
     }
     return recur_price(0).then(() => {
@@ -8103,10 +8104,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
     }
     let count = 0;
     //Market Cap (intraday) Trailing P/E Price/Book (mrq)
-    //const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`, {accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'}).then(raw_data => {
-    const url = `https://finance.yahoo.com/quote/${index}/key-statistics?p=${index}`;
+    //const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics/?p=${index}`).then(raw_data => {
+    const url = `https://finance.yahoo.com/quote/${index}/key-statistics/?p=${index}`;
     console.log(url);
-    const real = () => new Promise((resolve, reject) => Child_process.exec(`curl '${url}' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
+    const real = () => new Promise((resolve, reject) => Child_process.exec(`curl "${url}"  -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
         const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
         if (stat.indexOf('price') !== -1) {
             const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[1], 'div')[0], 'section', 'quote-price')[0], 'div')[0], 'section')[0], 'div')[0], 'fin-streamer', 'regularMarketPrice')[0], 'span')[0])[0];
