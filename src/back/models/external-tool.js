@@ -844,7 +844,16 @@ export default {
                 let docDate = `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'publicationWrap esfPubWrap')[0], 'section', 'mbN-40')[0], 'div', 'publctnInWrap mbN-80 pubHubGrayBox')[0], 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
+                const div = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'publicationWrap esfPubWrap')[0];
+                if (div) {
+                    if (findTag(findTag(findTag(findTag(findTag(findTag(div, 'section', 'mbN-40')[0], 'div', 'publctnInWrap mbN-80 pubHubGrayBox')[0], 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
+                        list.push({
+                            url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
+                            name: toValidName('Consumer Confidence Survey'),
+                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                        });
+                    }
+                } else if (findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'publicationWrap esfPubWrap esfTopicsBannerMain')[0], 'section', 'mbN-40')[0], 'div', 'publctnInWrap mbN-80 pubHubGrayBox')[0], 'div', 'mainContainer')[0], 'div', 'chConferences')[0], 'p', 'date')[0])[0].includes(docDate)) {
                     list.push({
                         url: 'https://www.conference-board.org/data/consumerconfidence.cfm',
                         name: toValidName('Consumer Confidence Survey'),
