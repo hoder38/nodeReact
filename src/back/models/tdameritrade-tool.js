@@ -125,7 +125,8 @@ const submitTDOrder = (id, price, count) => {
                 }
             }
         ]
-    }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
+    //}, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "SEAMLESS"}));
+    }, price === 'MARKET' ? {orderType: "MARKET", session: "NORMAL",} : {orderType: 'LIMIT', price, session: "NORMAL"}));
     console.log(Math.abs(count));
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders`, {headers: {
         Authorization: `Bearer ${tokens.access_token}`,
