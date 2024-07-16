@@ -2537,7 +2537,10 @@ const getParameterV2 = (data, type, text = null) => {
     if (text && !matchProfit[1].match(new RegExp(text))) {
         return false;
     }
-    return matchProfit[1].match(/\>[\d,]+\</g).map(v => Number(v.replace(/[\>\<,]/g, '')));
+    return matchProfit[1].match(/[^\>\<]*(\>[\d,]+\<)/g).map(v => {
+        const ret = Number(v.match(/\>[\d,]+\</)[0].replace(/[\>\<,]/g, ''))
+        return v.match(/sign\=\"\-\"/) ? -ret : ret;
+    });
 }
 
 export default {
@@ -2593,9 +2596,9 @@ export default {
                                 }
                             }
                         }
-                        const per = (profit === 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
-                        const pdr = (dividends === 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
-                        const pbr = (netValue === 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
+                        const per = (profit <= 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
+                        const pdr = (dividends <= 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
+                        const pbr = (netValue <= 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
                         console.log(per);
                         console.log(pdr);
                         console.log(pbr);
