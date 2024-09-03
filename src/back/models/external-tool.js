@@ -1223,16 +1223,22 @@ export default {
                 const application = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0];
                 if (application) {
                     for (let l of findTag(findTag(findTag(application, 'table')[0], 'tbody')[0], 'tr')) {
-                        if (findTag(findTag(findTag(l, 'td')[2], 'span')[0])[0] === docDate) {
-                            const a = findTag(findTag(findTag(l, 'td')[1], 'span')[0], 'a')[0];
-                            const name = findTag(a)[0];
-                            if (name.match(/海關進出口貿易/)) {
-                                list.push({
-                                    url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
-                                    name: toValidName(name),
-                                    date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
-                                });
-                                break;
+                        const t2 = findTag(l, 'td')[2];
+                        if (t2) {
+                            const t2s = findTag(t2, 'span')[0];
+                            if (t2s) {
+                                if (findTag(t2s)[0] === docDate) {
+                                    const a = findTag(findTag(findTag(l, 'td')[1], 'span')[0], 'a')[0];
+                                    const name = findTag(a)[0];
+                                    if (name.match(/海關進出口貿易/)) {
+                                        list.push({
+                                            url: addPre(a.attribs.href, 'https://www.mof.gov.tw'),
+                                            name: toValidName(name),
+                                            date: `${date.getMonth() + 1}_${date.getDate()}_${date.getFullYear()}`,
+                                        });
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
