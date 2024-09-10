@@ -14,7 +14,7 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Api from './api-tool.js'
 import { getUssePosition, getUsseOrder } from '../models/tdameritrade-tool.js'
 import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
-import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName } from '../util/utility.js'
+import { handleError, HoError, findTag, completeZero, getJson, addPre, isValidString, toValidName, convertTimestampToDate } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
@@ -4152,88 +4152,86 @@ export default {
                             }
                         }
                         let financeCount = 0;
-                        const getFinance = () => Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=split`).then(raw_data => {
-                            if (raw_data.split("\n").length > 1) {
+                        const getFinance = () => Api('url', `https://query1.finance.yahoo.com/v8/finance/chart/${items[0].index}?events=capitalGain%7Cdiv%7Csplit&formatted=true&includeAdjustedClose=true&interval=1d&period1=${end_get}&period2=${start_get}&symbol=${items[0].index}&userYfid=true&lang=en-US&region=US`).then(raw_data => {
+                            const stockData = JSON.parse(raw_data);
+                            const timestamps = stockData.chart.result[0].timestamp;
+                            const quotes = stockData.chart.result[0].indicators.quote[0];
+                            const events = stockData.chart.result[0].events;
+                            if (events.hasOwnProperty('splits') && events.splits.length > 0) {
                                 raw_arr = [];
                                 interval_data = null;
                                 //min_vol = 0;
                                 max = 0;
                                 min = 0;
                                 end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
-                            } else if (raw_data !== 'Date,Stock Splits') {
-                                return handleError(new HoError('yahoo finance missing'));
                             }
-                            return Api('url', `https://query1.finance.yahoo.com/v7/finance/download/${items[0].index}?period1=${end_get}&period2=${start_get}&interval=1d&events=history`).then(raw_data => {
-                                raw_data = raw_data.split("\n").reverse();
-                                let y = '';
-                                let m = '';
-                                let tmp_interval = [];
-                                let tmp_max = 0;
-                                let tmp_min = 0;
-                                for (let i = 0; i < raw_data.length - 1; i++) {
-                                    const len = raw_data[i].split(',');
-                                    const match = len[0].match(/^(\d+)\-(\d+)\-/);
-                                    if (match[1] !== y || match[2] !== m) {
-                                        if (y && m) {
-                                            if (!interval_data) {
-                                                interval_data = {};
-                                            }
-                                            if (!interval_data[y]) {
-                                                interval_data[y] = {};
-                                            }
-                                            interval_data[y][m] = {
-                                                raw: tmp_interval.slice().reverse(),
-                                                max: tmp_max,
-                                                min: tmp_min,
-                                            };
-                                            tmp_interval = [];
-                                            tmp_max = 0;
-                                            tmp_min = 0;
+                            let y = '';
+                            let m = '';
+                            let tmp_interval = [];
+                            let tmp_max = 0;
+                            let tmp_min = 0;
+                            for (let i = 0; i < timestamps.length - 1; i++) {
+                                const sDate = convertTimestampToDate(timestamps[i]);
+                                if (sDate.year !== y || sDate.month !== m) {
+                                    if (y && m) {
+                                        if (!interval_data) {
+                                            interval_data = {};
                                         }
-                                        y = match[1];
-                                        m = match[2];
+                                        if (!interval_data[y]) {
+                                            interval_data[y] = {};
+                                        }
+                                        interval_data[y][m] = {
+                                            raw: tmp_interval.slice().reverse(),
+                                            max: tmp_max,
+                                            min: tmp_min,
+                                        };
+                                        tmp_interval = [];
+                                        tmp_max = 0;
+                                        tmp_min = 0;
                                     }
-                                    raw_arr.push({
-                                        h: Number(len[2]),
-                                        l: Number(len[3]),
-                                        v: Number(len[6]),
-                                    });
-                                    tmp_interval.push({
-                                        h: Number(len[2]),
-                                        l: Number(len[3]),
-                                        v: Number(len[6]),
-                                    });
-                                    if (Number(len[2]) > max) {
-                                        max = Number(len[2]);
-                                    }
-                                    if (!min || Number(len[3]) < min) {
-                                        min = Number(len[3]);
-                                    }
-                                    if (Number(len[2]) > tmp_max) {
-                                        tmp_max = Number(len[2]);
-                                    }
-                                    if (!tmp_min || Number(len[3]) < tmp_min) {
-                                        tmp_min = Number(len[3]);
-                                    }
+                                    y = sDate.year;
+                                    m = sDate.month;
                                 }
-                                if (y && m) {
-                                    if (!interval_data) {
-                                        interval_data = {};
-                                    }
-                                    if (!interval_data[y]) {
-                                        interval_data[y] = {};
-                                    }
-                                    interval_data[y][m] = {
-                                        raw: tmp_interval.slice().reverse(),
-                                        max: tmp_max,
-                                        min: tmp_min,
-                                    };
-                                    tmp_interval = [];
-                                    tmp_max = 0;
-                                    tmp_min = 0;
+                                raw_arr.push({
+                                    h: Number(quotes.high[i]),
+                                    l: Number(quotes.low[i]),
+                                    v: Number(quotes.volume[i]),
+                                });
+                                tmp_interval.push({
+                                    h: Number(quotes.high[i]),
+                                    l: Number(quotes.low[i]),
+                                    v: Number(quotes.volume[i]),
+                                });
+                                if (Number(quotes.high[i]) > max) {
+                                    max = Number(quotes.high[i]);
                                 }
-                                return rest_interval();
-                            });
+                                if (!min || Number(quotes.low[i]) < min) {
+                                    min = Number(quotes.low[i]);
+                                }
+                                if (Number(quotes.high[i]) > tmp_max) {
+                                    tmp_max = Number(quotes.high[i]);
+                                }
+                                if (!tmp_min || Number(quotes.low[i]) < tmp_min) {
+                                    tmp_min = Number(quotes.low[i]);
+                                }
+                            }
+                            if (y && m) {
+                                if (!interval_data) {
+                                    interval_data = {};
+                                }
+                                if (!interval_data[y]) {
+                                    interval_data[y] = {};
+                                }
+                                interval_data[y][m] = {
+                                    raw: tmp_interval.slice().reverse(),
+                                    max: tmp_max,
+                                    min: tmp_min,
+                                };
+                                tmp_interval = [];
+                                tmp_max = 0;
+                                tmp_min = 0;
+                            }
+                            return rest_interval();
                         }).catch(err => {
                             console.log(financeCount);
                             if (err.name === 'HoError' && err.message.includes('data miss')) {

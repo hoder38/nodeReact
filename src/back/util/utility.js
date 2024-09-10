@@ -493,4 +493,12 @@ export const findTag = (node, tag=null, id=null) => {
     return ret;
 }
 
+export const convertTimestampToDate = (timestamp) => {
+  const date = new Date(timestamp * 1000);
+  const year = date.getFullYear();
+  const month = ('0' + (date.getMonth() + 1)).slice(-2); // Add leading zero
+  const day = ('0' + date.getDate()).slice(-2); // Add leading zero
+  return {year, month, day};
+};
+
 export const addPre = (url, pre) => url.match(/^(https|http):\/\//) ? url : url.match(/^\//) ? `${pre}${url}` : `${pre}/${url}`;
