@@ -4156,8 +4156,7 @@ export default {
                             const stockData = JSON.parse(raw_data);
                             const timestamps = stockData.chart.result[0].timestamp;
                             const quotes = stockData.chart.result[0].indicators.quote[0];
-                            const events = stockData.chart.result[0].events;
-                            if (events.hasOwnProperty('splits') && events.splits.length > 0) {
+                            if (stockData.chart.result[0].hasOwnProperty('events') && stockData.chart.result[0].events.hasOwnProperty('splits') && stockData.chart.result[0].events.splits.length > 0) {
                                 raw_arr = [];
                                 interval_data = null;
                                 //min_vol = 0;
