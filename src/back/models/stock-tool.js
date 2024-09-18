@@ -4154,6 +4154,9 @@ export default {
                         let financeCount = 0;
                         const getFinance = () => Api('url', `https://query1.finance.yahoo.com/v8/finance/chart/${items[0].index}?events=capitalGain%7Cdiv%7Csplit&formatted=true&includeAdjustedClose=true&interval=1d&period1=${end_get}&period2=${start_get}&symbol=${items[0].index}&userYfid=true&lang=en-US&region=US`).then(raw_data => {
                             const stockData = JSON.parse(raw_data);
+                            if (!stockData.chart.result[0]) {
+                                return handleError(new HoError(`${items[0].index} data miss!!!`));
+                            }
                             const timestamps = stockData.chart.result[0].timestamp;
                             const quotes = stockData.chart.result[0].indicators.quote[0];
                             if (stockData.chart.result[0].hasOwnProperty('events') && stockData.chart.result[0].events.hasOwnProperty('splits') && stockData.chart.result[0].events.splits.length > 0) {
