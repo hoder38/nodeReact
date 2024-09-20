@@ -8091,6 +8091,7 @@ const twseTicker = (price, large = true) => {
 
 const getUsStock = (index, stat = ['price'], single = false) => {
     const ret = {};
+    let count = 0;
     if (!Array.isArray(stat) || stat.length < 1) {
         console.log(`getUsStock stat error ${stat}`);
         return Promise.resolve(ret);
@@ -8234,7 +8235,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
             }
         }
         return Promise.resolve(ret);
-    }).catch(err => handleError(err));
+    }).catch(err => {
+        console.log(`${index} ${count}`);
+        return (single || (++count > MAX_RETRY)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+    });
     return real();
 }
 
