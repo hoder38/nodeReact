@@ -66,7 +66,7 @@
     "ws": "^7.4.1",
     "xml2js": "^0.4.23",
     "youtube-dl": "^3.0.2",
-    "yahoo-finance2": "^2.12.3",
+    "yahoo-finance2": "^2.12.3"
   },
   "author": {
     "name": "hoder",
