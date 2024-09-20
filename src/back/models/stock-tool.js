@@ -3,6 +3,7 @@ import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
 import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, GAIN_LOSS, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME/*, MINIMAL_EXTREM_RATE, MINIMAL_DS_RATE*/, USSE_FEE, MONTH_SHORTS, USERDB, TWSE_NUM, USSE_NUM } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
+import yahooFinance from 'yahoo-finance2'
 const { existsSync: FsExistsSync, readFile: FsReadFile, statSync: FsStatSync, unlinkSync: FsUnlinkSync } = fsModule;
 import Mkdirp from 'mkdirp'
 import Xml2js from 'xml2js'
@@ -1923,31 +1924,20 @@ const getBasicStockData = (type, index) => {
         return real();
         break;
         case 'usse':
-        //const real1 = () => Api('url', `https://finance.yahoo.com/quote/${index}/profile/`).then(raw_data => {
-        const url = `https://finance.yahoo.com/quote/${index}/profile/`;
-        console.log(url);
-        const real1 = () => new Promise((resolve, reject) => Child_process.exec(`curl "${url}"  -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
+        const real1 = () => yahooFinance.quote(index).then(yFresult => {
             let result = {stock_location: ['us', '美國'], stock_index: index};
-            const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
-            const name = findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'div')[0], 'section')[0], 'h1')[0])[0];
-            result.stock_full = name.substring(0, name.indexOf('(')).trim().replace('&amp;', '&').replace('&#x27;', "'");
+            result.stock_full = yFresult['longName'];
             result.stock_name = [result.stock_full];
-            const market = findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[0], 'span')[0], 'span')[0])[0];
-            result.stock_market = market.substring(0, market.indexOf('-')).trim();
-            const profile = findTag(findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'asset-profile')[0], 'div')[0], 'dl')[0];
-            result.stock_class = findTag(findTag(findTag(findTag(profile, 'div')[0], 'dd')[0], 'a')[0])[0];
-            result.stock_ind = findTag(findTag(findTag(profile, 'div')[1], 'a')[0])[0];
-            result.stock_executive = [];
-            const executives = findTag(findTag(findTag(bigSection, 'section')[1], 'section', 'key-executives')[0], 'div')[1];
-            if (executives) {
-                findTag(findTag(findTag(executives, 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                    const n = findTag(findTag(t, 'td')[0])[0];
-                    if (n.match(/^[Mr|Ms|Dr]/)) {
-                        result.stock_executive.push(n);
-                    }
+            result.stock_market = yFresult['fullExchangeName'];
+            return yahooFinance.quoteSummary('AAPL', { modules: [ "assetProfile" ] }).then(summary => {
+                result.stock_class = summary['assetProfile']['sector'];
+                result.stock_ind = summary['assetProfile']['industry'];
+                result.stock_executive = [];
+                summary['assetProfile']['companyOfficers'].forEach(v => {
+                    result.stock_executive.push(v['name']);
                 });
-            }
-            return result;
+                return result;
+            });
         }).catch(err => {
             console.log(`${index} ${count}`);
             return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), 60000));
@@ -8105,57 +8095,17 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         console.log(`getUsStock stat error ${stat}`);
         return Promise.resolve(ret);
     }
-    let count = 0;
     //Market Cap (intraday) Trailing P/E Price/Book (mrq)
-    //const real = () => Api('url', `https://finance.yahoo.com/quote/${index}/key-statistics/?p=${index}`).then(raw_data => {
-    const url = `https://finance.yahoo.com/quote/${index}/key-statistics/?p=${index}`;
-    console.log(url);
-    const real = () => new Promise((resolve, reject) => Child_process.exec(`curl "${url}"  -H "accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"  -H "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"`, {maxBuffer: 1024 * 1024 * 10}, (err, output) => err ? reject(err) : resolve(output))).then(raw_data => {
-        const bigSection = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'main')[0], 'section')[0], 'section')[0], 'section')[0], 'article')[0];
+    const real = () => yahooFinance.quote(index).then(result => {
         if (stat.indexOf('price') !== -1) {
-            const price = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(bigSection, 'section')[0], 'div')[1], 'div')[0], 'section', 'quote-price')[0], 'div')[0], 'section')[0], 'div')[0], 'fin-streamer', 'regularMarketPrice')[0], 'span')[0])[0];
-            ret['price'] = price ? Number(price.replace(/,/g, '')) : 0;
+            ret['price'] = result['regularMarketPrice'];
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
-            const table = findTag(findTag(findTag(bigSection,'section')[1], 'div')[0], 'table')[0];
-            let isHistory = true;
-            if (findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2]) {
-                const fiscalDate = findTag(findTag(findTag(findTag(table, 'thead')[0], 'tr')[0], 'th')[2])[0];
-                const m = fiscalDate.match(/^(\d+)\/(\d+)\/(\d+)/);
-                if (m) {
-                    ret['latestYear'] = Number(m[3]);
-                    if (m[1] < 3) {
-                        ret['latestQuarter'] = 1;
-                    } else if (m[0] < 6) {
-                        ret['latestQuarter'] = 2;
-                    } else if (m[0] < 9) {
-                        ret['latestQuarter'] = 3;
-                    } else {
-                        ret['latestQuarter'] = 0;
-                        ret['latestYear']++;
-                    }
-                } else {
-                    return handleError(new HoError(`usa stock parse NO YEAR ${index}`));
-                }
-            } else {
-                isHistory = false;
-                ret['latestYear'] = new Date().getFullYear();
-                if (new Date().getMonth() < 3) {
-                    ret['latestQuarter'] = 0;
-                } else if (new Date().getMonth() < 6) {
-                    ret['latestQuarter'] = 1;
-                } else if (new Date().getMonth() < 9) {
-                    ret['latestQuarter'] = 2;
-                } else {
-                    ret['latestQuarter'] = 3;
-                }
-            }
             if (stat.indexOf('pdr') !== -1) {
                 ret['pdr'] = 0;
             }
-            if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('equity') !== -1) {
-                let marketCap = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[0], 'td')[1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                if (!marketCap) {
+            let marketCap = result['marketCap'];
+            if (!marketCap) {
                     if (stat.indexOf('equity') !== -1) {
                         if (index === 'BRK-B') {
                             index = 'BRK.B';
@@ -8273,63 +8223,18 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                     }
                     return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
-                if (stat.indexOf('equity') !== -1) {
-                    if (marketCap[2] === 'k' || marketCap[2] === 'K') {
-                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000;
-                    } else if (marketCap[2] === 'm' || marketCap[2] === 'M') {
-                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000;
-                    } else if (marketCap[2] === 'b' || marketCap[2] === 'B') {
-                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000;
-                    } else if (marketCap[2] === 't' || marketCap[2] === 'T') {
-                        marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000000;
-                    } else {
-                        marketCap = Number(marketCap[1].replace(/,/g, ''));
-                    }
-                    ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
-                }
-                if (stat.indexOf('per') !== -1) {
-                    const per = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[2], 'td')[isHistory ? 2 : 1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                    if (!per) {
-                        ret['per'] = 0;
-                    } else {
-                        if (per[2] === 'k' || per[2] === 'K') {
-                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000;
-                        } else if (per[2] === 'm' || per[2] === 'M') {
-                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000;
-                        } else if (per[2] === 'b' || per[2] === 'B') {
-                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000000;
-                        } else if (per[2] === 't' || per[2] === 'T') {
-                            ret['per'] = Number(per[1].replace(/,/g, '')) * 1000000000000;
-                        } else {
-                            ret['per'] = Number(per[1].replace(/,/g, ''));
-                        }
-                    }
-                }
-                if (stat.indexOf('pbr') !== -1) {
-                    const pbr = findTag(findTag(findTag(findTag(table, 'tbody')[0], 'tr')[6], 'td')[isHistory ? 2 : 1])[0].match(/^([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                    if (!pbr) {
-                        ret['pbr'] = 0;
-                    } else {
-                        if (pbr[2] === 'k' || pbr[2] === 'K') {
-                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000;
-                        } else if (pbr[2] === 'm' || pbr[2] === 'M') {
-                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000;
-                        } else if (pbr[2] === 'b' || pbr[2] === 'B') {
-                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000000;
-                        } else if (pbr[2] === 't' || pbr[2] === 'T') {
-                            ret['pbr'] = Number(pbr[1].replace(/,/g, '')) * 1000000000000;
-                        } else {
-                            ret['pbr'] = Number(pbr[1].replace(/,/g, ''));
-                        }
-                    }
-                }
+            if (stat.indexOf('equity') !== -1) {
+                ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
+            }
+            if (stat.indexOf('per') !== -1) {
+                ret['per'] = result['trailingPE'];
+            }
+            if (stat.indexOf('pbr') !== -1) {
+                ret['pbr'] = result['priceToBook'];
             }
         }
         return Promise.resolve(ret);
-    }).catch(err => {
-        console.log(`${index} ${count}`);
-        return (single || (++count > MAX_RETRY)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
-    });
+    }).catch(err => handleError(err));
     return real();
 }
 
