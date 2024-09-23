@@ -2,7 +2,6 @@ import { DOCDB } from '../constants.js'
 import { DISCORD_TOKEN, DISCORD_CHANNEL } from '../../../ver.js'
 import Discord from 'discord.js'
 import Mongo from '../models/mongo-tool.js'
-import { stockShow } from '../models/stock-tool.js'
 import { generateAuthUrl, getToken } from '../models/tdameritrade-tool.js'
 
 let channel = null;
@@ -22,9 +21,6 @@ export const init = () => {
                 switch (cmd[1].toLowerCase()) {
                     case 'checkdoc':
                     checkDoc(msg);
-                    break;
-                    case 'stock':
-                    stockPrice(msg);
                     break;
                     case 'schwab':
                     schwabAuth(msg);
@@ -49,11 +45,9 @@ export const init = () => {
     client.login(DISCORD_TOKEN);
 }
 
-const help = msg => msg.reply('\nCommand:\ncheckDoc\nstock\nschwab\nschwabCode code');
+const help = msg => msg.reply('\nCommand:\ncheckDoc\nschwab\nschwabCode code');
 
 const checkDoc = msg => Mongo('find', DOCDB).then(doclist => msg.reply(doclist.reduce((a, v) => `${a}\ntype: ${v.type}, date: ${v.date}`, ''))).catch(err => msg.reply(err.message));
-
-const stockPrice = msg => stockShow().then(ret => (ret.length > 0) ? msg.reply(ret) : Promise.resolve()).catch(err => msg.reply(err.message));
 
 const schwabAuth = msg => msg.reply(generateAuthUrl());
 

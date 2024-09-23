@@ -131,23 +131,32 @@ const quarterIsEmpty = quarter => {
     return true;
 }
 
-
-const getStockPrice = (type='twse', index, price_only = true) => {
+const getStockPrice = (type='twse', index, previous = false) => {
     switch(type) {
         case 'twse':
         let count = 0;
         const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
             const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
             if (!center) {
-                const div = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                const tabs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0];
+                const div = findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
                 let price = findTag(findTag(div, 'span')[0])[0];
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
-                if (!price_only) {
-                    const up = findTag(findTag(div, 'span')[1])[0];
-                    price = `${price} ${Number(up.replace(/,/g, ''))}`;
+                if (previous) {
+                    let previousPrice = 0;
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
+                        if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
+                            previousPrice = findTag(findTag(l, 'span')[1])[0];
+                            previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
+                        }
+                    });
+                    console.log(price);
+                    console.log(previousPrice);
+                    return [price, previousPrice];
+                } else {
+                    console.log(price);
+                    return price;
                 }
-                console.log(price);
-                return price;
             }
             const table1 = findTag(center, 'table')[1];
             if (!table1) {
@@ -177,12 +186,12 @@ const getStockPrice = (type='twse', index, price_only = true) => {
                 price[0] = last_price[0];
             }
             price[0] = +price[0];
-            if (!price_only) {
+            /*if (!price_only) {
                 const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
                 if (up && up[0]) {
                     price[0] = `${price[0]} ${up[0]}`;
                 }
-            }
+            }*/
             console.log(price[0]);
             return price[0];
         }).catch(err => {
@@ -201,8 +210,14 @@ const getStockPrice = (type='twse', index, price_only = true) => {
                 if (!ret.price) {
                     return 0;
                 }
-                console.log(ret.price);
-                return ret.price;
+                if (previous) {
+                    console.log(ret.price);
+                    console.log(ret.previous);
+                    return [ret.price, ret.previous];
+                } else {
+                    console.log(ret.price);
+                    return ret.price;
+                }
             });
         //}
         break;
@@ -5500,7 +5515,8 @@ export default {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = v.price * v.count;
                         v.amount = v.profit ? v.amount + v.profit : v.amount;
-                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        let p = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                         let se = 0;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;
@@ -6024,7 +6040,8 @@ export default {
                             let se = 0;
                             let current = v.price * v.count;
                             v.amount = v.profit ? v.amount + v.profit : v.amount;
-                            let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                            //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                            let p = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                             if (v.setype === 'usse') {
                                 totalPrice1 += current;
                                 profit1 += p;
@@ -6342,7 +6359,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             }
             return Promise.resolve();
         } else {
-            return (items[index].index === 0 || !items[index].index) ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index).then(price => {
+            return (items[index].index === 0 || !items[index].index) ? recur_price(index + 1) : getStockPrice(items[index].setype, items[index].index, true).then(([price, previousPrice]) => {
                 if (price === 0) {
                     return 0;
                 }
@@ -6615,6 +6632,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     }*/
                     return Mongo('update', TOTALDB, {_id: item._id}, {$set : Object.assign({
                         price,
+                        previousPrice,
                         str: suggestion.str,
                         //sent: item.sent,
                         //bTarget: item.bTarget,
@@ -6655,11 +6673,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             return Promise.resolve();
         }
     });
-});
-
-export const stockShow = () => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    const recur_price = (index, ret) => (index >= items.length) ? Promise.resolve(ret) : (items[index].index === 0) ? recur_price(index + 1, ret) : getStockPrice(items[index].setype, items[index].index, false).then(price => `${ret}\n${items[index].name} ${price}`).then(ret => recur_price(index + 1, ret));
-    return recur_price(0, '');
 });
 
 export const getStockListV2 = (type, year, month) => {
@@ -6925,7 +6938,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            if (pAmount !== 0) {
+            if (pAmount > 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
             }
@@ -6943,7 +6956,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            if (pAmount !== 0) {
+            if (pAmount > 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
             }
@@ -7035,14 +7048,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
     const finalSell = () => {
-        if (pAmount === 0) {
-            sCount = Math.floor(pOrig / sell / 5 / priceTimes) * priceTimes;
+        if (pAmount <= 0) {
+            sCount = Math.floor(pOrig / sell / 4 / priceTimes) * priceTimes;
         } else {
-            if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
+            /*if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
                 sCount = 2 * priceTimes;
             } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
                 sCount = priceTimes;
-            }
+            }*/
             if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
                 if (sell >= pPricecost) {
                     //sCount = sTimes * priceTimes;
@@ -7068,9 +7081,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }*/
     }
     const finalBuy = () => {
-        if (bCount < (2 * priceTimes) && pCount <= (2 * priceTimes)) {
+        /*if (bCount < (2 * priceTimes) && pCount <= (2 * priceTimes)) {
             bCount = 2 * priceTimes;
-        }
+        }*/
         /*if (pPricecost && pPl && pPl < 0 && bCount > 0 && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
             if (buy <= pPricecost) {
                 //bCount = bTimes * priceTimes;
@@ -7079,10 +7092,13 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 buy = 0;
             }
         }*/
+        if (pCount == 0) {
+            bCount = Math.floor(pOrig / buy / 2 / priceTimes) * priceTimes;
+        }
         if (pCount < priceTimes && buy > upLimit) {
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(upLimit, false) : usseTicker(upLimit, false) : (sType === 1) ? bitfinexTicker(upLimit, false) : upLimit;
         }
-        if (pAmount === 0 || ((Math.floor(pAmount / price * 10000) / 10000) <= 0 || (!sType && pAmount < price))) {
+        if (pAmount <= 0 || ((pAmount / price * 10000) < 1) || (!sType && pAmount < price)) {
             bCount = 0;
             //buy = 0;
         }
@@ -8100,6 +8116,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
     const real = () => yahooFinance.quote(index).then(result => {
         if (stat.indexOf('price') !== -1) {
             ret['price'] = result['regularMarketPrice'];
+            ret['previous'] = result['regularMarketPreviousClose'];
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             if (stat.indexOf('pdr') !== -1) {
