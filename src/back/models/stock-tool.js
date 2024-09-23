@@ -5515,16 +5515,16 @@ export default {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = v.price * v.count;
                         v.amount = v.profit ? v.amount + v.profit : v.amount;
-                        //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
-                        let p = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
+                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                         let se = 0;
                         if (v.setype === 'usse') {
                             totalPrice1 += current;
-                            profit1 += p;
+                            profit1 += y;
                             se = 1;
                         } else {
                             totalPrice += current;
-                            profit += p;
+                            profit += y;
                         }
                         //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                         //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
@@ -6040,15 +6040,15 @@ export default {
                             let se = 0;
                             let current = v.price * v.count;
                             v.amount = v.profit ? v.amount + v.profit : v.amount;
-                            //let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
-                            let p = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
+                            let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                            let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                             if (v.setype === 'usse') {
                                 totalPrice1 += current;
-                                profit1 += p;
+                                profit1 += y;
                                 se = 1;
                             } else {
                                 totalPrice += current;
-                                profit += p;
+                                profit += y;
                             }
                             //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
                             //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
