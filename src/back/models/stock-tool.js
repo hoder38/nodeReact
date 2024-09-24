@@ -7050,6 +7050,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const finalSell = () => {
         if (pAmount <= sell * priceTimes * 2) {
             sCount = Math.floor(pOrig / sell / 4 / priceTimes) * priceTimes;
+            if (type === 8 || type === 5 || type === 9) {
+                type = 0;
+            }
         } else {
             /*if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
                 sCount = 2 * priceTimes;
@@ -7062,12 +7065,18 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 } else {
                     sCount = 0;
                     //sell = 0;
+                    if (type === 8 || type === 5 || type === 9) {
+                        type = 0;
+                    }
                 }
             }
         }
         if (pCount === 0) {
             sCount = 0;
             //sell = 0;
+            if (type === 8 || type === 5 || type === 9) {
+                type = 0;
+            }
         }
         /*if (pAmount && sCount) {
             const remain = pCount - sCount;
@@ -7097,9 +7106,15 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (buy > upLimit) {
                 buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(upLimit, false) : usseTicker(upLimit, false) : (sType === 1) ? bitfinexTicker(upLimit, false) : upLimit;
             }
+            if (type === 6 || type === 3 || type === 7) {
+                type = 0;
+            }
         }
         if (pAmount <= 0 || ((pAmount / price * 10000) < 1) || (!sType && pAmount < price)) {
             bCount = 0;
+            if (type === 6 || type === 3 || type === 7) {
+                type = 0;
+            }
             //buy = 0;
         }
         /*if (pAmount && bCount) {
