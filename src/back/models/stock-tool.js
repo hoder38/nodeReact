@@ -8260,11 +8260,12 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                 ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
             }
             if (stat.indexOf('per') !== -1) {
-                ret['per'] = result['trailingPE'];
+                ret['per'] = result['trailingPE'] ? (Math.round(result['trailingPE'] * 100) / 100) : 0 ;
             }
             if (stat.indexOf('pbr') !== -1) {
-                ret['pbr'] = result['priceToBook'];
+                ret['pbr'] = result['priceToBook'] ? (Math.round(result['priceToBook'] * 100) / 100) : 0;
             }
+            console.log(result);
         }
         return Promise.resolve(ret);
     }).catch(err => {
