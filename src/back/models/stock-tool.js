@@ -8265,7 +8265,6 @@ const getUsStock = (index, stat = ['price'], single = false) => {
             if (stat.indexOf('pbr') !== -1) {
                 ret['pbr'] = result['priceToBook'] ? (Math.round(result['priceToBook'] * 100) / 100) : 0;
             }
-            console.log(result);
         }
         return Promise.resolve(ret);
     }).catch(err => {
