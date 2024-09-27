@@ -3566,6 +3566,44 @@ export default {
             return recur_test(0);
         });
     },
+    cleanUseless: function(dryRun = true) {
+        const date = new Date();
+        let updateyear = date.getFullYear();
+        let updatequarter = 3;
+        const month = date.getMonth() + 1;
+        if (month < 4) {
+            updatequarter = 4;
+            updateyear--;
+        } else if (month < 7) {
+            updatequarter = 1;
+        } else if (month < 10) {
+            updatequarter = 2;
+        }
+        const latestQuarter = `${updateyear}q${updatequarter}`;
+        //const latestQuarter = "美國";
+        const keepList = [];
+        console.log(`keep tag: ${latestQuarter}`);
+        return Mongo('find', STOCKDB, {tags:{$nin:[latestQuarter]}}).then(items => {
+            const recur_remove = index => (index >= items.length) ? Promise.resolve() : Mongo('find', TOTALDB, {index: items[index].index, setype: items[index].type}, {limit: 1}).then(stock => {
+                if (stock.length < 1) {
+                    if (dryRun) {
+                        console.log(`dry run ${items[index].type} ${items[index].index}`);
+                        return recur_remove(index + 1);
+                    } else {
+                        console.log(`remove ${items[index].type} ${items[index].index}`);
+                        return Mongo('deleteMany', STOCKDB, {_id: items[index]._id}).then(() => recur_remove(index + 1));
+                    }
+                } else {
+                    keepList.push(`${items[index].type} ${items[index].index}`);
+                    return recur_remove(index + 1);
+                }
+            });
+            return recur_remove(0).then(() => {
+                console.log("In total but out of list:");
+                keepList.forEach(k => console.log(k));
+            });
+        });
+    },
     getIntervalV2: function(id, session) {
         const date = new Date();
         let year = date.getFullYear();

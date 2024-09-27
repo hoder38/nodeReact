@@ -237,6 +237,9 @@ rl.on('line', line => {
         case 'testdata':
         console.log('testdata');
         return StockTool.testData().then(() => console.log('done')).catch(err => handleError(err, 'CMD testdata'));
+        case 'cleanstock':
+        console.log('clean stock');
+        return StockTool.cleanUseless(cmd[1] === 'remove' ? false : true).then(() => console.log('done')).catch(err => handleError(err, 'CMD clean stock'));
         /*case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));*/
@@ -281,6 +284,7 @@ rl.on('line', line => {
         console.log('dbrestore collection');
         console.log('randomsend list|edit|send [name:email|append]');
         console.log('testdata');
+        console.log('cleanstock [remove]');
         console.log('resettotal newmid|profit bfx|twse|usse');
         console.log('updatepassword');
     }
