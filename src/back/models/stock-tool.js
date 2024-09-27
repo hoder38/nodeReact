@@ -8135,7 +8135,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             if (stat.indexOf('pdr') !== -1) {
-                ret['pdr'] = 9999;
+                ret['pdr'] = 0;
             }
             let marketCap = result['marketCap'];
             if (!marketCap) {
