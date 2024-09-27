@@ -2601,9 +2601,9 @@ export default {
                                 }
                             }
                         }
-                        const per = (profit <= 0) ? 0 : Math.round(price / profit * equity * 10) / 100;
-                        const pdr = (dividends <= 0) ? 0 : Math.round(price / dividends * equity * 10) / 100;
-                        const pbr = (netValue <= 0) ? 0 : Math.round(price / netValue * equity * 10) / 100;
+                        const per = (profit <= 0) ? 9999 : Math.round(price / profit * equity * 10) / 100;
+                        const pdr = (dividends <= 0) ? 9999 : Math.round(price / dividends * equity * 10) / 100;
+                        const pbr = (netValue <= 0) ? 9999 : Math.round(price / netValue * equity * 10) / 100;
                         console.log(per);
                         console.log(pdr);
                         console.log(pbr);
@@ -3204,7 +3204,7 @@ export default {
                     const per = (items[0].profit === 0) ? 0 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
                     const pdr = (items[0].dividends === 0) ? 0 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
                     const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
-                    return [per, pdr, pbr, items[0].index, start];
+                    return [(per > 0) ? per : 9999, (pdr > 0) ? pdr : 9999, (pbr > 0) ? pbr : 9999, items[0].index, start];
                 });
                 break;
                 case 'usse':
@@ -8175,7 +8175,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             if (stat.indexOf('pdr') !== -1) {
-                ret['pdr'] = 0;
+                ret['pdr'] = 9999;
             }
             let marketCap = result['marketCap'];
             if (!marketCap) {
