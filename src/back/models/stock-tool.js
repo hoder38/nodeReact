@@ -8135,7 +8135,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         }
         if (stat.indexOf('per') !== -1 || stat.indexOf('pbr') !== -1 || stat.indexOf('pdr') !== -1 || stat.indexOf('equity') !== -1) {
             if (stat.indexOf('pdr') !== -1) {
-                ret['pdr'] = 0;
+                ret['pdr'] = 9999;
             }
             let marketCap = result['marketCap'];
             if (!marketCap) {
@@ -8178,7 +8178,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                                     if (per) {
                                         ret['per'] = Number(per[0]);
                                     } else {
-                                        ret['per'] = 0;
+                                        ret['per'] = 9999;
                                     }
                                     if (stat.indexOf('pbr') !== -1) {
                                         return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
@@ -8191,7 +8191,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                                             if (pbr) {
                                                 ret['pbr'] = Number(pbr[0]);
                                             } else {
-                                                ret['pbr'] = 0;
+                                                ret['pbr'] = 9999;
                                             }
                                             return Promise.resolve(ret);
                                         });
@@ -8215,7 +8215,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                             if (per) {
                                 ret['per'] = Number(per[0]);
                             } else {
-                                ret['per'] = 0;
+                                ret['per'] = 9999;
                             }
                             if (stat.indexOf('pbr') !== -1) {
                                 return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
@@ -8228,7 +8228,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                                     if (pbr) {
                                         ret['pbr'] = Number(pbr[0]);
                                     } else {
-                                        ret['pbr'] = 0;
+                                        ret['pbr'] = 9999;
                                     }
                                     return Promise.resolve(ret);
                                 });
@@ -8249,7 +8249,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                             if (pbr) {
                                 ret['pbr'] = Number(pbr[0]);
                             } else {
-                                ret['pbr'] = 0;
+                                ret['pbr'] = 9999;
                             }
                             return Promise.resolve(ret);
                         });
@@ -8260,10 +8260,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
                 ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
             }
             if (stat.indexOf('per') !== -1) {
-                ret['per'] = result['trailingPE'] ? (Math.round(result['trailingPE'] * 100) / 100) : 0 ;
+                ret['per'] = result['trailingPE'] ? (Math.round(result['trailingPE'] * 100) / 100) : 9999;
             }
             if (stat.indexOf('pbr') !== -1) {
-                ret['pbr'] = result['priceToBook'] ? (Math.round(result['priceToBook'] * 100) / 100) : 0;
+                ret['pbr'] = result['priceToBook'] ? (Math.round(result['priceToBook'] * 100) / 100) : 9999;
             }
         }
         return Promise.resolve(ret);
