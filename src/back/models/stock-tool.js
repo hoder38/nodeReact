@@ -3587,20 +3587,22 @@ export default {
             const recur_remove = index => (index >= items.length) ? Promise.resolve() : Mongo('find', TOTALDB, {index: items[index].index, setype: items[index].type}, {limit: 1}).then(stock => {
                 if (stock.length < 1) {
                     if (dryRun) {
-                        console.log(`dry run ${items[index].type} ${items[index].index}`);
+                        console.log(`dry run ${items[index].type} ${items[index].index} ${items[index].name}`);
                         return recur_remove(index + 1);
                     } else {
-                        console.log(`remove ${items[index].type} ${items[index].index}`);
+                        console.log(`remove ${items[index].type} ${items[index].index} ${items[index].name}`);
                         return Mongo('deleteMany', STOCKDB, {_id: items[index]._id}).then(() => recur_remove(index + 1));
                     }
                 } else {
-                    keepList.push(`${items[index].type} ${items[index].index}`);
+                    keepList.push(`${items[index].type} ${items[index].index} ${items[index].name}`);
                     return recur_remove(index + 1);
                 }
             });
             return recur_remove(0).then(() => {
-                console.log("In total but out of list:");
-                keepList.forEach(k => console.log(k));
+                if (keepList.length > 0) {
+                    console.log("In total but out of list:");
+                    keepList.forEach(k => console.log(k));
+                }
             });
         });
     },
