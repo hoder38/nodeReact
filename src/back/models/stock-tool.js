@@ -6739,7 +6739,7 @@ export const getStockListV2 = (type, year, month) => {
             fund_no: '0',
         }}).then(raw_data => {
             const stock_list = [];
-            const tables = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'table');
+            const tables = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'table');
             let tag = false;
             tables.forEach(table => {
                 if (table.attribs.class === 'noBorder') {
