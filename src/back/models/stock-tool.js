@@ -6812,7 +6812,7 @@ export const getStockListV2 = (type, year, month) => {
                                     break;
                                 }
                             }
-                            if (!is_exit && sIndex !== 'ETFC') {
+                            if (!is_exit && sIndex !== 'ETFC' && sIndex.length <= 6) {
                                 stock_list.push({
                                     index: sIndex,
                                     tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
