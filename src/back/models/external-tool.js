@@ -8,11 +8,12 @@ const { getInfo: YouGetInfo} = youtubeDl;
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync } = fsModule;
+import ReadTorrent from 'read-torrent'
 import Redis from '../models/redis-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
 import { normalize, isDefaultTag } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre } from '../util/utility.js'
+import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre, torrent2Magnet } from '../util/utility.js'
 import { addPost } from '../util/mime.js'
 import Api from './api-tool.js'
 //import { JuicyCodes, kuboInfo, jwplayer } from '../util/kubo.js'
@@ -2337,14 +2338,28 @@ export default {
                 }
                 let magnet = null;
                 for (let i of json_data['data']['movie']['torrents']) {
-                    if (i['quality'] === '1080p' || (!magnet && i['quality'] === '720p')) {
-                        magnet = `magnet:?xt=urn:btih:${i['hash']}&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969`;
+                    if ((i['quality'] === '1080p' && i['type'] === 'bluray') || (!magnet && (i['quality'] === '720p' || i['quality'] === '1080p'))) {
+                        //magnet = `magnet:?xt=urn:btih:${i['hash']}&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969`;
+                        magnet = i['url'];
                     }
                 }
-                return [[{
-                    magnet,
-                    title: json_data['data']['movie']['title'],
-                }], false];
+                if (magnet) {
+                    return new Promise((resolve, reject) => ReadTorrent(magnet, (err, torrent) => err ? reject(err) : resolve(torrent))).then(torrent => {
+                        magnet = torrent2Magnet(torrent);
+                        if (!magnet) {
+                            return handleError(new HoError('magnet create fail'));
+                        }
+                        return [[{
+                            magnet,
+                            title: json_data['data']['movie']['title'],
+                        }], false];
+                    });
+                } else {
+                    return [[{
+                        magnet,
+                        title: json_data['data']['movie']['title'],
+                    }], false];
+                }
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
