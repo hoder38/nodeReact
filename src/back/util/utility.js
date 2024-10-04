@@ -381,10 +381,16 @@ export const torrent2Magnet = torInfo => {
     let magnet = `magnet:?xt=urn:btih:${torInfo.infoHash}&dn=`;
     if (torInfo.announceList) {
         for (let i = 0; i < 10; i++) {
+            if (!torInfo.announceList[i]) {
+                break;
+            }
             magnet = `${magnet}&tr=${encodeURIComponent(torInfo.announceList[i])}`;
         }
     } else if (torInfo.announce) {
         for (let i = 0; i < 10; i++) {
+            if (!torInfo.announce[i]) {
+                break;
+            }
             magnet = `${magnet}&tr=${encodeURIComponent(torInfo.announce[i])}`;
         }
     }
