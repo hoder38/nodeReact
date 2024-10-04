@@ -378,7 +378,7 @@ export const torrent2Magnet = torInfo => {
         console.log('miss infoHash');
         return false;
     }
-    let magnet = `magnet:?xt=urn:btih:${torInfo.infoHash}&dn=`;
+    let magnet = `magnet:?xt=urn:btih:${torInfo.infoHash}`;
     if (torInfo.announceList) {
         for (let i = 0; i < 10; i++) {
             if (!torInfo.announceList[i]) {

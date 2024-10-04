@@ -885,6 +885,7 @@ function torrentInfo(magnet, filePath) {
         uploads: TORRENT_UPLOAD,
     });
     return new Promise((resolve, reject) => engine.on('ready', () => {
+        console.log(engine);
         const data = {
             files: engine.files,
             name: engine.torrent.name ? engine.torrent.name : 'torrent',
