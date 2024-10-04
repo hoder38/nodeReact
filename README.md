@@ -242,3 +242,6 @@ sudo -i node /home/pipipi/release/nodeReact/src/back/cmd/tdameritrade.js
 http://slashview.com/archive2021/20210602.html
 hodervpn dandan123
 f436434g$F$dft346$@t
+
+https://github.com/XIU2/TrackersListCollection
+可以到上面找best.txt更新torrent的tracker
