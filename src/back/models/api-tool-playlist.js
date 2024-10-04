@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { TORRENT_LIMIT, ZIP_LIMIT, MEGA_LIMIT, NAS_TMP } from '../config.js'
-import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION, __dirname } from '../constants.js'
+import { TORRENT_CONNECT, TORRENT_UPLOAD, STORAGEDB, TORRENT_DURATION, ZIP_DURATION, MEGA_DURATION, __dirname, BEST_TRACKER_LIST } from '../constants.js'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync } = fsModule;
 import pathModule from 'path'
@@ -192,6 +192,7 @@ const torrentGet = () => setLock('torrent').then(go => {
                     path: `${getFileLocation(torrent_pool[i].fileOwner, torrent_pool[i].fileId)}/real`,
                     connections: TORRENT_CONNECT,
                     uploads: TORRENT_UPLOAD,
+                    trackers: BEST_TRACKER_LIST,
                 });
                 console.log('new engine');
                 torrent_pool[i].engine = engine;
@@ -789,6 +790,7 @@ function torrentAdd(user, torrent, fileIndex, id, owner, pType=0) {
                     path: `${filePath}/real`,
                     connections: TORRENT_CONNECT,
                     uploads: TORRENT_UPLOAD,
+                    trackers: BEST_TRACKER_LIST,
                 });
                 console.log('new engine');
                 const rest = () => setLock('torrent').then(go => {
@@ -883,6 +885,7 @@ function torrentInfo(magnet, filePath) {
         path: `${filePath}/real`,
         connections: TORRENT_CONNECT,
         uploads: TORRENT_UPLOAD,
+        trackers: BEST_TRACKER_LIST,
     });
     return new Promise((resolve, reject) => engine.on('ready', () => {
         console.log(engine);
