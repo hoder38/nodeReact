@@ -2337,10 +2337,16 @@ export default {
                     return handleError(new HoError('yify api fail'));
                 }
                 let magnet = null;
+		let bluray = null;
                 for (let i of json_data['data']['movie']['torrents']) {
-                    if ((i['quality'] === '1080p' && i['type'] === 'bluray') || (!magnet && (i['quality'] === '720p' || i['quality'] === '1080p'))) {
+                    if (i['quality'] === '1080p' || (!magnet && i['quality'] === '720p')) {
                         //magnet = `magnet:?xt=urn:btih:${i['hash']}&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969`;
-                        magnet = i['url'];
+                        if (i['type'] === 'bluray') {
+				bluray = true;
+			}
+			if (!bluray || i['type'] === 'bluray') {
+				magnet = i['url'];
+			}
                     }
                 }
                 if (magnet) {
