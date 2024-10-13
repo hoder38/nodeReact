@@ -8301,9 +8301,11 @@ const getUsStock = (index, stat = ['price'], single = false) => {
             }
             if (stat.indexOf('per') !== -1) {
                 ret['per'] = result['trailingPE'] ? (Math.round(result['trailingPE'] * 100) / 100) : 9999;
+                ret['per'] = (ret['per'] > 0) ? ret['per'] : 9999;
             }
             if (stat.indexOf('pbr') !== -1) {
                 ret['pbr'] = result['priceToBook'] ? (Math.round(result['priceToBook'] * 100) / 100) : 9999;
+                ret['pbr'] = (ret['pbr'] > 0) ? ret['pbr'] : 9999;
             }
         }
         return Promise.resolve(ret);
