@@ -3816,22 +3816,50 @@ export default {
                             });
                         })
                     }
-                    const getTpexList = () => Api('url', `https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php?l=zh-tw&d=${year - 1911}/${month_str}&stkno=${items[0].index}&_=${new Date().getTime()}`).then(raw_data => {
-                        const json_data = getJson(raw_data);
-                        if (json_data === false) {
-                            return handleError(new HoError('json parse error!!!'));
-                        }
+                    const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${new Date().getTime()}`).then(raw_data => {
                         let high = [];
                         let low = [];
                         let vol = [];
-                        if (json_data && json_data['iTotalRecords'] > 0) {
-                            for (let i of json_data['aaData']) {
-                                high.push(Number(i[4].replace(/,/g, '')));
-                                low.push(Number(i[5].replace(/,/g, '')));
-                                vol.push(Number(i[8].replace(/,/g, '')));
+                        if (raw_data.length > 200) {
+                            const year_str = year - 1911;
+                            const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
+                            if (data_list && data_list.length > 0) {
+                                let tmp_index = -1;
+                                let tmp_number = '';
+                                for (let i of data_list) {
+                                    let tmp_list_1 = [];
+                                    const tmp_list = i.split(',');
+                                    for (let j in tmp_list) {
+                                        if (tmp_list[j].match(/^".*"$/)) {
+                                            tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
+                                        } else if (tmp_list[j].match(/^"/)) {
+                                            tmp_index = j;
+                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                        } else if (tmp_list[j].match(/"$/)) {
+                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                                            for (let k = +tmp_index; k <= j; k++) {
+                                                tmp_number = `${tmp_number}${tmp_list[k]}`;
+                                            }
+                                            tmp_list_1.push(tmp_number);
+                                            tmp_index = -1;
+                                            tmp_number = '';
+                                        } else {
+                                            if (tmp_index === -1) {
+                                                tmp_list_1.push(tmp_list[j]);
+                                            }
+                                        }
+                                    }
+                                    if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
+                                        high.push(Number(tmp_list_1[4]));
+                                        low.push(Number(tmp_list_1[5]));
+                                        vol.push(Number(tmp_list_1[8]));
+                                    }
+                                }
                             }
+                            return [2, {high, low, vol}];
+                        } else {
+                            return [2, {high, low, vol}, true];
                         }
-                        return [2, {high, low, vol}];
                     });
                     const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => Api('url', `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
                         let high = [];
@@ -3885,7 +3913,7 @@ export default {
                             } else if (type === 3) {
                                 return getTwseList();
                             } else {
-                                const getType = () => getTpexList().then(([type, list]) => (list.high.length > 0) ? [type, list] : getTwseList().then(([type, list]) => (list.high.length > 0) ? [type, list] : [1, list]));
+                                const getType = () => getTwseList().then(([type, list]) => (list.high.length > 0) ? [type, list] : getTpexList().then(([type, list]) => (list.high.length > 0) ? [type, list] : [1, list]));
                                 return getType();
                             }
                         }
