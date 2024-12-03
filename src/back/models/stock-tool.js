@@ -7146,6 +7146,19 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 type = 0;
             }
         }
+        //維持賣掉後至剩1/4
+        if (pAmount > 0 && ((pAmount + sCount * sell) > (pOrig * 3 / 4))) {
+            let count = 0;
+            let tmpAmount = pOrig * 3 / 4 - pAmount;
+            while ((tmpAmount - sell * (1 - fee)) > 0) {
+                pAmount += (sell * (1 - fee));
+                tmpAmount = pOrig * 3 / 4 - pAmount;
+                count++;
+            }
+            if (count < sCount) {
+                sCount = count;
+            }
+        }
         /*if (pAmount && sCount) {
             const remain = pCount - sCount;
             if (pCount < 3 * priceTimes) {
