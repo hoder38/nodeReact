@@ -1926,7 +1926,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             position[id][current.type].forEach(v => {
                                 if (v.symbol === item.index) {
                                     item.count += v.amount;
-                                    item.amount = item.amount - v.amount * v.price + item.profit + v.pl;
+                                    item.amount = item.amount - v.amount * v.price + item.profit;
                                     item.pricecost = v.price;
                                     item.pl += v.pl;
                                 }
@@ -1978,7 +1978,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {
                                             item.count += v.amount;
-                                            item.amount = item.amount - v.amount * v.price + item.profit + v.pl;
+                                            item.amount = item.amount - v.amount * v.price + item.profit;
                                             item.pricecost = v.price;
                                             item.pl += v.pl;
                                         }
