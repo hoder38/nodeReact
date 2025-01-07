@@ -281,7 +281,7 @@ export const twseShioajiInit = () => {
                         if (twseSuggestion[item.index]) {
                             let is_insert = false;
                             for (let i = 0; i < newOrder.length; i++) {
-                                if ((item.orig + item.profit - item.amount) > (newOrder[i].item.orig + newOrder[i].item.profit - newOrder[i].item.amount)) {
+                                if ((item.orig + item.profit - item.amount) < (newOrder[i].item.orig + newOrder[i].item.profit - newOrder[i].item.amount)) {
                                     newOrder.splice(i, 0, {item, suggestion: twseSuggestion[item.index]});
                                     is_insert = true;
                                     break;
