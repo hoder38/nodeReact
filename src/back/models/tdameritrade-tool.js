@@ -645,7 +645,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                         if (usseSuggestion[item.index]) {
                             let is_insert = false;
                             for (let i = 0; i < newOrder.length; i++) {
-                                if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
+                                if (item.price * item.count > newOrder[i].item.price * newOrder[i].item.count) {
                                     newOrder.splice(i, 0, {item, suggestion: usseSuggestion[item.index]});
                                     is_insert = true;
                                     break;
@@ -661,11 +661,11 @@ export const usseTDInit = () => checkOauth().then(() => {
                         const sellAll = () => initialBook(true).then(() => {
                             const delTotal = () => Mongo('deleteMany', TOTALDB, {_id: item._id}).then(() => recur_status(index + 1));
                             item.count = 0;
-                            item.amount = item.orig;
+                            //item.amount = item.orig;
                             for (let i = 0; i < position.length; i++) {
                                 if (position[i].symbol === item.index) {
                                     item.count = position[i].amount;
-                                    item.amount = item.orig - position[i].amount * position[i].price;
+                                    //item.amount = item.orig - position[i].amount * position[i].price + item.profit;
                                     break;
                                 }
                             }

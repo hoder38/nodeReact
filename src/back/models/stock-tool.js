@@ -6467,7 +6467,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         for (let i = 0; i < twsePosition.length; i++) {
                             if (twsePosition[i].symbol === item.index) {
                                 item.count = twsePosition[i].amount;
-                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price;
+                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price + item.profit;
                                 break;
                             }
                         }
