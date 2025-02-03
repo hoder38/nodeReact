@@ -139,7 +139,12 @@ const getStockPrice = (type='twse', index, previous = false) => {
             const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
             if (!center) {
                 const tabs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0];
-                const div = findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                let div = null;
+                if (findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0]) {
+                    div = findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                } else {
+                    div = findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div')[0], 'div', 'main-0-QuoteHeader-Proxy')[0], 'div')[0], 'div')[1], 'div')[0], 'div')[0];
+                }
                 let price = findTag(findTag(div, 'span')[0])[0];
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (previous) {
