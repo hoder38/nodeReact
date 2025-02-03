@@ -149,12 +149,22 @@ const getStockPrice = (type='twse', index, previous = false) => {
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (previous) {
                     let previousPrice = 0;
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
-                        if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
-                            previousPrice = findTag(findTag(l, 'span')[1])[0];
-                            previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
-                        }
-                    });
+                    if (findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0]) {
+                        findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
+                            if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
+                                previousPrice = findTag(findTag(l, 'span')[1])[0];
+                                previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
+                            }
+                        });
+                    } else {
+                        findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div')[0], 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
+                            if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
+                                previousPrice = findTag(findTag(l, 'span')[1])[0];
+                                previousPrice = previousPrice === '-' ? 0 : Number(previousPrice.replace(/,/g, ''));
+                            }
+                        });
+                    }
+
                     console.log(price);
                     console.log(previousPrice);
                     return [price, previousPrice];
