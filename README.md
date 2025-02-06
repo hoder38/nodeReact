@@ -245,3 +245,6 @@ f436434g$F$dft346$@t
 
 https://github.com/XIU2/TrackersListCollection
 可以到上面找best.txt更新torrent的tracker
+
+shioaji更新api key & 憑證
+https://www.sinotrade.com.tw/newweb/PythonAPIKey/
