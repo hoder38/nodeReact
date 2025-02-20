@@ -771,7 +771,12 @@ export const usseTDInit = () => checkOauth().then(() => {
                     }
                 }
             }
-            return recur_status(0).then(() => recur_NewOrder(0));
+            return recur_status(0).then(() => {
+                for (let i = 0; i < newOrder.length; i++) {
+                    console.log(`${newOrder[i].item.index} ${newOrder[i].item.amount}`);
+                }
+                return recur_NewOrder(0);
+            });
         });
     });
 });
