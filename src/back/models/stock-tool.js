@@ -1890,7 +1890,7 @@ const getBasicStockData = (type, index) => {
     let count = 0;
     switch(type) {
         case 'twse':
-        const real = () => Api('url', `https://mops.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
+        const real = () => Api('url', `https://mopsov.twse.com.tw/mops/web/ajax_quickpgm?encodeURIComponent=1&step=4&firstin=1&off=1&keyword4=${index}&code1=&TYPEK2=&checkbtn=1&queryName=co_id&TYPEK=all&co_id=${index}`).then(raw_data => {
             let result = {stock_location: ['tw', '台灣', '臺灣']};
             let i = 0;
             const form = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
@@ -2678,7 +2678,7 @@ export default {
                 const recur_getTwseProfit = () => {
                     console.log(year);
                     console.log(quarter);
-                    return Api('url', `https://mops.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
+                    return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
                         if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
                             if (latestQuarter) {
                                 return handleError(new HoError('too short stock data'));
@@ -6770,7 +6770,7 @@ export const getStockListV2 = (type, year, month) => {
         } else if (month < 10) {
             quarter = 2;
         }
-        return Api('url', 'https://mops.twse.com.tw/mops/web/ajax_t78sb04', {post: {
+        return Api('url', 'https://mopsov.twse.com.tw/mops/web/ajax_t78sb04', {post: {
             encodeURIComponent: '1',
             TYPEK: 'all',
             step: '1',
