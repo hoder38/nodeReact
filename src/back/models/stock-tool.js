@@ -7021,10 +7021,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            if (pAmount > 0) {
+            //if (pAmount > 0) {
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
-            }
+            //}
         }
         if (previous.price < price) {
             let previousP = 0;
@@ -7131,12 +7131,12 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
     const finalSell = () => {
-        if (pAmount <= sell * priceTimes * 2) {
+        /*if (pAmount <= sell * priceTimes * 2) {
             sCount = Math.floor(pOrig / sell / 4 / priceTimes) * priceTimes;
             if (type === 8 || type === 5 || type === 9) {
                 type = 0;
             }
-        } else {
+        } else {*/
             /*if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
                 sCount = 2 * priceTimes;
             } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
@@ -7153,7 +7153,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     }
                 }
             }
-        }
+        //}
         if (pCount === 0) {
             sCount = 0;
             //sell = 0;
