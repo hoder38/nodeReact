@@ -1750,7 +1750,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 return userRest.transfer({
                     from: 'funding',
                     to: 'margin',
-                    amount: availableMargin.toString(),
+                    amount: (Math.floor(availableMargin * 1000000) / 1000000).toString(),
                     currency: current.type.substr(1),
                 }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(data => {
                     console.log(data);
