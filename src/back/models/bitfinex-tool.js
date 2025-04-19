@@ -51,7 +51,7 @@ export const calRate = curArr => {
             }*/
             return Promise.resolve();
         } else {
-            return rest.restPublicTicker(SUPPORT_PRICE[index]).then(ticker => {
+            return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
                 if (ticker && ticker.lastPrice) {
                     return Redis('hgetall', `bitfinex: ${SUPPORT_PRICE[index]}`).then(item => {
                         priceData[SUPPORT_PRICE[index]] = {
@@ -69,7 +69,7 @@ export const calRate = curArr => {
             });
         }
     }
-    const singleCal = (curType, index) => rest.restPublicTicker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
+    const singleCal = (curType, index) => rest.ticker(curType).then(curTicker => rest.orderBook(curType, 'P0', 100).then(orderBooks => {
         currentRate[curType] = {
             rate: curTicker.lastPrice * BITFINEX_EXP,
             time: Math.round(new Date().getTime() / 1000),
