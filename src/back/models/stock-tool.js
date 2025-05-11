@@ -6457,14 +6457,17 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
                     }
-                    item.orig = item.orig + item.profit;
+                    item.count = 0;
+                    item.amount = item.orig;
+                    item.orig += item.profit;
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
-                        item.count = 0;
-                        item.amount = item.orig;
                         for (let i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
+                                item.pricecost = ussePosition[i].price;
+                                item.pl = ussePosition[i].amount * (price - ussePosition[i].price);
+                                item.orig += item.pl;
                                 item.count = ussePosition[i].amount;
-                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price - item.profit;
+                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price;
                                 break;
                             }
                         }
@@ -6478,12 +6481,13 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
-                        item.count = 0;
-                        item.amount = item.orig;
                         for (let i = 0; i < twsePosition.length; i++) {
                             if (twsePosition[i].symbol === item.index) {
+                                item.pricecost = twsePosition[i].price;
+                                item.pl = twsePosition[i].amount * (price - twsePosition[i].price);
+                                item.orig += item.pl;
                                 item.count = twsePosition[i].amount;
-                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price - item.profit;
+                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price;
                                 break;
                             }
                         }
@@ -6515,7 +6519,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                         checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                     }
-                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, 0, 0, Math.abs(item.web[0]), item.wType, 0, fee);
+                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
                     while(suggestion.resetWeb) {
                         if (item.newMid.length === 0) {
                             item.tmpPT = {
@@ -6532,7 +6536,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.previous.tprice = 0;
                         item.newMid.push(suggestion.newMid);
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, 0, 0, Math.abs(item.web[0]), item.wType, 0, fee);
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
                     }
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
