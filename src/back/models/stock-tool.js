@@ -6457,13 +6457,14 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
                     }
+                    item.orig = item.orig + item.profit;
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                         item.count = 0;
                         item.amount = item.orig;
                         for (let i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
                                 item.count = ussePosition[i].amount;
-                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price + item.profit;
+                                item.amount = item.orig - ussePosition[i].amount * ussePosition[i].price - item.profit;
                                 break;
                             }
                         }
@@ -6482,7 +6483,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         for (let i = 0; i < twsePosition.length; i++) {
                             if (twsePosition[i].symbol === item.index) {
                                 item.count = twsePosition[i].amount;
-                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price + item.profit;
+                                item.amount = item.orig - twsePosition[i].amount * twsePosition[i].price - item.profit;
                                 break;
                             }
                         }

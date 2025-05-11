@@ -1918,6 +1918,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         console.log('margin');
                         console.log(margin[id]);
                         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
+                        item.orig = item.orig + item.profit;
                         item.count = 0;
                         item.amount = item.orig;
                         item.pricecost = 0;
@@ -1926,7 +1927,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             position[id][current.type].forEach(v => {
                                 if (v.symbol === item.index) {
                                     item.count += v.amount;
-                                    item.amount = item.amount - v.amount * v.price + item.profit;
+                                    item.amount = item.amount - v.amount * v.price - item.profit;
                                     item.pricecost = v.price;
                                     item.pl += v.pl;
                                 }
@@ -1970,6 +1971,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     item.orig = item.orig * item.mul;
                                     item.times = Math.floor(item.times * item.mul * 10000) / 10000;
                                 }
+                                item.orig = item.orig + item.profit;
                                 item.count = 0;
                                 item.amount = item.orig;
                                 item.pricecost = 0;
@@ -1978,7 +1980,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                     position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {
                                             item.count += v.amount;
-                                            item.amount = item.amount - v.amount * v.price + item.profit;
+                                            item.amount = item.amount - v.amount * v.price - item.profit;
                                             item.pricecost = v.price;
                                             item.pl += v.pl;
                                         }
