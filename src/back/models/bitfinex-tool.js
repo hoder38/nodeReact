@@ -1921,6 +1921,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         item.count = 0;
                         item.pricecost = 0;
                         item.pl = 0;
+                        if (item.profit) {
+                            item.orig += item.profit;
+                        }
                         item.amount = item.orig;
                         if (position[id][current.type]) {
                             position[id][current.type].forEach(v => {
@@ -1930,7 +1933,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                             });
                         }
-                        item.orig += item.profit;
                         if (position[id][current.type]) {
                             position[id][current.type].forEach(v => {
                                 if (v.symbol === item.index) {
@@ -1981,6 +1983,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 item.count = 0;
                                 item.pricecost = 0;
                                 item.pl = 0;
+                                if (item.profit) {
+                                    item.orig += item.profit;
+                                }
                                 item.amount = item.orig;
                                 if (position[id][current.type]) {
                                     position[id][current.type].forEach(v => {
@@ -1990,7 +1995,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                     });
                                 }
-                                item.orig += item.profit;
                                 if (position[id][current.type]) {
                                     position[id][current.type].forEach(v => {
                                         if (v.symbol === item.index) {

@@ -5597,7 +5597,7 @@ export default {
                 } else {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                         let current = v.price * v.count;
-                        v.amount = v.profit ? v.amount + v.profit : v.amount;
+                        v.amount = v.profit ? (v.amount - v.profit) : v.amount;
                         let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
                         let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                         let se = 0;
@@ -6122,7 +6122,7 @@ export default {
                         //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
                             let se = 0;
                             let current = v.price * v.count;
-                            v.amount = v.profit ? v.amount + v.profit : v.amount;
+                            v.amount = v.profit ? (v.amount - v.profit) : v.amount;
                             let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
                             let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
                             if (v.setype === 'usse') {
@@ -6458,8 +6458,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.times = Math.floor(item.times * item.mul);
                     }
                     item.count = 0;
+                    if (item.profit) {
+                        item.orig += item.profit;
+                    }
                     item.amount = item.orig;
-                    item.orig += item.profit;
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                         for (let i = 0; i < ussePosition.length; i++) {
                             if (ussePosition[i].symbol === item.index) {
