@@ -4239,7 +4239,7 @@ export default {
                                 }
                             }
                         }
-                        let financeCount = 0;
+                        //let financeCount = 0;
                         const getFinance = () => yahooFinance.chart(items[0].index, {
                             period1: end_get,
                             period2: start_get,
@@ -4342,12 +4342,12 @@ export default {
                                 tmp_min = 0;
                             }
                             return rest_interval();
-                        }).catch(err => {
+                        /*}).catch(err => {
                             console.log(financeCount);
                             if (err.name === 'HoError' && err.message.includes('data miss')) {
                                 financeCount = 10;
                             }
-                            return (++financeCount > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(getFinance()), 60000));
+                            return (++financeCount > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(getFinance()), 60000));*/
                         });
                         return getFinance();
                     }
