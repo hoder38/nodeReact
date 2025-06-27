@@ -461,7 +461,7 @@ export const findTag = (node, tag=null, id=null) => {
                 if (id) {
                     if (c.attribs) {
                         Object.keys(c.attribs).forEach(a => {
-                            if (c.attribs[a] === id) {
+                            if (c.attribs[a].trim() === id) {
                                 ret.push(c);
                             }
                         });
