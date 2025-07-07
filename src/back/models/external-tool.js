@@ -425,7 +425,7 @@ export default {
                     let list = [];
                     if (json_data['html']) {
                         const dom = Htmlparser.parseDOM(json_data['html']);
-                        list = findTag(dom, 'li', 'video matrix ').map(v => {
+                        list = findTag(dom, 'li', 'video matrix').map(v => {
                             const a = findTag(v, 'a')[0];
                             return {
                                 id: a.attribs.href.match(/av\d+/)[0],
@@ -938,7 +938,7 @@ export default {
                 const docDate = `${date.getDate()} ${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'newsroom-lists')[0], 'div', 'news-col block')[1], 'ul', 'block-list')[0], 'li', 'news-event-item linked ').forEach(l => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'section container')[0], 'div', 'row')[0], 'div', 'col-sm-9 leftnav-content-wrapper')[0], 'div', 'newsroom-lists')[0], 'div', 'news-col block')[1], 'ul', 'block-list')[0], 'li', 'news-event-item linked').forEach(l => {
                     if (findTag(findTag(l, 'p')[0])[0] === docDate) {
                         list.push({
                             url: addPre(findTag(l, 'a')[0].attribs.href, 'http://www.oecd.org'),
@@ -1176,7 +1176,7 @@ export default {
                 const docDate = `${date.getFullYear() - 1911}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                     if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
                         const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
                         const staname = findTag(a)[0];
@@ -1221,7 +1221,7 @@ export default {
                 const docDate = `${date.getFullYear()}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                const application = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', ' paging-content')[0], 'div', 'application')[0];
+                const application = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'function-cabinet')[0], 'div', 'container')[0], 'div', 'row')[0], 'div', 'left-content')[0], 'div', 'left-content-text')[0], 'div', 'paging-content')[0], 'div', 'application')[0];
                 if (application) {
                     for (let l of findTag(findTag(findTag(application, 'table')[0], 'tbody')[0], 'tr')) {
                         const t2 = findTag(l, 'td')[2];
@@ -1256,7 +1256,7 @@ export default {
                 const docDate = `${date.getFullYear() - 1911}-${completeZero(date.getMonth() + 1, 2)}-${completeZero(date.getDate(), 2)}`;
                 console.log(docDate);
                 let list = [];
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                     if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
                         const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
                         const staname = findTag(a)[0];
@@ -1268,7 +1268,7 @@ export default {
                     }
                 });
                 return Api('url', 'https://www.stat.gov.tw/News.aspx?n=3635&sms=10980&_CSN=124').then(raw_data => {
-                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-table rwd-straight')[0], 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
                         if (findTag(findTag(findTag(t, 'td')[1], 'span')[0])[0] === docDate) {
                             const a = findTag(findTag(findTag(t, 'td')[0], 'span')[0], 'a')[0];
                             const staname = findTag(a)[0];
@@ -1621,7 +1621,7 @@ export default {
             });
             /*console.log(obj);
             return Api('url', obj.url).then(raw_data => {
-                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content ')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-essay page-caption-p')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'p')[0], 'p')[0], 'span')[0], 'p').forEach(p => {
+                findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0], 'div', 'group sys-root')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-wrapper')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'base-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-page-area')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group base-section')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'group page-content')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'area-essay page-caption-p')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div', 'p')[0], 'p')[0], 'span')[0], 'p').forEach(p => {
                     for (let a of findTag(p, 'a')) {
                         if (a.attribs.href.match(/\.pdf$/i)) {
                             const url = addPre(a.attribs.href, 'https://www.stat.gov.tw');
@@ -2617,7 +2617,7 @@ export default {
                         const a = findTag(l, 'a')[0];
                         let title = findTag(a)[0];
                         if (!title) {
-                            title = findTag(findTag(findTag(a, 'div', 'info')[0], 'p', 'title ')[0])[0];
+                            title = findTag(findTag(findTag(a, 'div', 'info')[0], 'p', 'title')[0])[0];
                         }
                         list.push({
                             //title: OpenCC.simplifiedToTraditional(title),
