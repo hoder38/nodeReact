@@ -6528,7 +6528,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     //new mid
                     let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                     let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                    while ((item.newMid.length > 0) && (((item.newMid[item.newMid.length - 1] > checkMid) && ((price < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid) || (item.newMid[item.newMid.length - 1] > Math.abs(item.web[0])))) || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((price > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid) || (item.newMid[item.newMid.length - 1] <= Math.abs(item.web[item.web.length - 1])))))) {
+                    while ((item.newMid.length > 0) &&
+                        (((item.newMid[item.newMid.length - 1] > checkMid) && ((price < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
+                         || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((price > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
+                    {
                         console.log(item.newMid[item.newMid.length - 1]);
                         item.newMid.pop();
                         if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
@@ -6935,10 +6938,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         let count = 0;
         for (nowBP = priceArray.length - 1; nowBP >= 0; nowBP--) {
             if (priceArray[nowBP] < 0) {
-                if (++count === 3) {
+                count++;
+                if (count === 3) {
                     newMid = Math.abs(priceArray[nowBP]);
                 }
-                if (++count === 4) {
+                if (count === 4) {
                     if (newMid > (Math.abs(priceArray[nowBP]) * (1 - fee * 10))) {
                         newMid = Math.abs(priceArray[nowBP]) * (1 - fee * 10);
                     }
@@ -6975,10 +6979,11 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         let count = 0;
         for (nowSP = 0; nowSP < priceArray.length; nowSP++) {
             if (priceArray[nowSP] < 0) {
-                if (++count === 3) {
+                count++;
+                if (count === 3) {
                     newMid = Math.abs(priceArray[nowSP]);
                 }
-                if (++count === 4) {
+                if (count === 4) {
                     if (newMid < (Math.abs(priceArray[nowSP]) * (1 + fee * 10))) {
                         newMid = Math.abs(priceArray[nowSP]) * (1 + fee * 10);
                     }
@@ -8252,6 +8257,10 @@ const getUsStock = (index, stat = ['price'], single = false) => {
     }
     //Market Cap (intraday) Trailing P/E Price/Book (mrq)
     const real = () => yahooFinance.quote(index).then(result => {
+        if (!result) {
+            console.log(`getUsStock result ${index} empty`);
+            return Promise.resolve(ret);
+        }
         if (stat.indexOf('price') !== -1) {
             ret['price'] = result['regularMarketPrice'];
             ret['previous'] = result['regularMarketPreviousClose'];
