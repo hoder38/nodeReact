@@ -2006,7 +2006,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                 }
                                 let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                 let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                                 while ((item.newMid.length > 0) && (((item.newMid[item.newMid.length - 1] > checkMid) && ((+priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid) || (item.newMid[item.newMid.length - 1] > Math.abs(item.web[0])))) || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((+priceData[item.index].lastPrice > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid) || (item.newMid[item.newMid.length - 1] <= Math.abs(item.web[item.web.length -1])))))) {
+                                 while ((item.newMid.length > 0) &&
+                                    (((item.newMid[item.newMid.length - 1] > checkMid) && ((+priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
+                                     || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((+priceData[item.index].lastPrice > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
+                                 {
                                     console.log(item.newMid[item.newMid.length - 1]);
                                     item.newMid.pop();
                                     if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
