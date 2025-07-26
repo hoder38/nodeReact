@@ -6830,20 +6830,22 @@ export const getStockListV2 = (type, year, month) => {
                             if (tr.attribs.class === 'even' || tr.attribs.class === 'odd') {
                                 const index = findTag(findTag(tr, 'td')[0])[0];
                                 if (Number(index)) {
-                                    let exist = false;
-                                    for (let i = 0; i < stock_list.length; i++) {
-                                        if (stock_list[i].index === index) {
-                                            exist = true;
-                                            tag.forEach(v => stock_list[i].tag.push(v));
-                                            break;
+                                    if (index != '2888') {
+                                        let exist = false;
+                                        for (let i = 0; i < stock_list.length; i++) {
+                                            if (stock_list[i].index === index) {
+                                                exist = true;
+                                                tag.forEach(v => stock_list[i].tag.push(v));
+                                                break;
+                                            }
                                         }
-                                    }
-                                    if (!exist) {
-                                        stock_list.push({
-                                            index,
-                                            tag: tag.map(v => v),
-                                            type: 'twse',
-                                        });
+                                        if (!exist) {
+                                            stock_list.push({
+                                                index,
+                                                tag: tag.map(v => v),
+                                                type: 'twse',
+                                            });
+                                        }
                                     }
                                 }
                             }
