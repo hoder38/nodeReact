@@ -865,11 +865,11 @@ export const FUSD_SYM = 'fUSD'
 export const FUSDT_SYM = 'fUST'
 export const FBTC_SYM = 'fBTC'
 export const FETH_SYM = 'fETH'
-export const FOMG_SYM = 'fOMG'
+//export const FOMG_SYM = 'fOMG'
 export const TBTC_SYM = 'tBTCUSD'
 export const TETH_SYM = 'tETHUSD';
 export const TUSDT_SYM = 'tUSTUSD';
-export const TOMG_SYM = 'tOMGUSD';
+//export const TOMG_SYM = 'tOMGUSD';
 export const FLTC_SYM = 'fLTC'
 export const FUNI_SYM = 'fUNI'
 export const FDOT_SYM = 'fDOT'
@@ -912,7 +912,7 @@ export const RANGE_INTERVAL = 7776000;
 export const API_WAIT = 5;
 //export const MINIMAL_DS_RATE = 0.05;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FLTC_SYM/*, FOMG_SYM*/, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FTRX_SYM, FAVAX_SYM, FUNI_SYM];
-export const SUPPORT_PRICE = [TUSDT_SYM, TBTC_SYM, TETH_SYM, TLTC_SYM, TOMG_SYM, TDOT_SYM, TSOL_SYM, TADA_SYM, TXRP_SYM, TTRX_SYM, TAVAX_SYM, TUNI_SYM];
+export const SUPPORT_PRICE = [TUSDT_SYM, TBTC_SYM, TETH_SYM, TLTC_SYM/*, TOMG_SYM*/, TDOT_SYM, TSOL_SYM, TADA_SYM, TXRP_SYM, TTRX_SYM, TAVAX_SYM, TUNI_SYM];
 export const SUPPORT_PAIR = {
     fUSD: [TBTC_SYM, TETH_SYM, TLTC_SYM/*, TOMG_SYM*/, TDOT_SYM, TSOL_SYM, TADA_SYM, TXRP_SYM, TTRX_SYM, TAVAX_SYM, TUNI_SYM],
 }
@@ -955,10 +955,10 @@ export const BITNIFEX_PARENT = [
         name: 'ltc',
         show: 'LTC',
     },
-    {
+    /*{
         name: 'omg',
         show: 'OMG',
-    },
+    },*/
     {
         name: 'dot',
         show: 'DOT',
