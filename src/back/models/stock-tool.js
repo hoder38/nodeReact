@@ -4852,15 +4852,18 @@ export default {
                 const totalUsseMarketcapList = [];
                 const inListIndex = [];
                 items.forEach(stock => {
+                    let mcap = 0;
                     if (stock.type !== 'total') {
                         let isEtf = etfList.indexOf(stock.setype + ' ' + stock.index);
                         if (isEtf !== -1) {
                             if (stock.setype === 'twse') {
                                 if (marketcapList[isEtf] > 0) {
+                                    mcap = Math.round(marketcapList[isEtf] / 1000);
                                     totalTwseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
                                 }
                             } else if (stock.setype === 'usse') {
                                 if (marketcapList[isEtf] > 0) {
+                                    mcap = Math.round(marketcapList[isEtf] / 1000);
                                     totalUsseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
                                 }
                             }
@@ -4874,14 +4877,19 @@ export default {
                             }
                         }
                         if (notIn) {
-                            isOut = isOut + ' ' + stock.name;
+                            isOut = isOut + ' ' + stock.name + ' ' + mcap;
                         }
                     }
                 });
                 if (inListIndex.length > 0) {
                     for (let i = 0; i < filterList.length; i++) {
                         if (inListIndex.indexOf(i) === -1) {
-                            isIn = isIn + ' ' + filterList[i].type + ' ' + filterList[i].index;
+                            let isEtf = etfList.indexOf(filterList[i].type + ' ' + filterList[i].index);
+                            let mcap = 0;
+                            if (isEtf !== -1) {
+                                mcap = Math.round(marketcapList[isEtf] / 1000);
+                            }
+                            isIn = isIn + ' ' + filterList[i].type + ' ' + filterList[i].index + ' ' + mcap;
                         }
                     }
                 } else {
