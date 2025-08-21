@@ -6573,107 +6573,108 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     }
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
-                    let count = 0;
-                    //let amount = item.amount;
-                    let amount = item.clear ? 0 : item.amount;
-                    if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
-                        if (suggestion.buy > 0) {
-                            if (suggestion.type === 7) {
-                                if (amount > item.orig * 7 / 8) {
-                                    let tmpAmount = amount - item.orig * 3 / 4;
-                                    while ((tmpAmount - suggestion.buy) > 0) {
-                                        amount -= suggestion.buy;
-                                        tmpAmount = amount - item.orig * 3 / 4;
-                                        count++;
+                    if (!item.clear) {
+                        let count = 0;
+                        let amount = item.amount;
+                        if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+                            if (suggestion.buy > 0) {
+                                if (suggestion.type === 7) {
+                                    if (amount > item.orig * 7 / 8) {
+                                        let tmpAmount = amount - item.orig * 3 / 4;
+                                        while ((tmpAmount - suggestion.buy) > 0) {
+                                            amount -= suggestion.buy;
+                                            tmpAmount = amount - item.orig * 3 / 4;
+                                            count++;
+                                        }
+                                        if (count > suggestion.bCount) {
+                                            suggestion.bCount = count;
+                                        }
+                                        suggestion.str += `[new buy ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new buy no need] ';
                                     }
-                                    if (count > suggestion.bCount) {
-                                        suggestion.bCount = count;
+                                } else if (suggestion.type === 3) {
+                                    if (amount > item.orig * 5 / 8) {
+                                        let tmpAmount = amount - item.orig / 2;
+                                        while ((tmpAmount - suggestion.buy) > 0) {
+                                            amount -= suggestion.buy;
+                                            tmpAmount = amount - item.orig / 2;
+                                            count++;
+                                        }
+                                        if (count > suggestion.bCount) {
+                                            suggestion.bCount = count;
+                                        }
+                                        suggestion.str += `[new buy ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new buy no need] ';
                                     }
-                                    suggestion.str += `[new buy ${count}] `;
-                                } else {
-                                    suggestion.str += '[new buy no need] ';
-                                }
-                            } else if (suggestion.type === 3) {
-                                if (amount > item.orig * 5 / 8) {
-                                    let tmpAmount = amount - item.orig / 2;
-                                    while ((tmpAmount - suggestion.buy) > 0) {
-                                        amount -= suggestion.buy;
-                                        tmpAmount = amount - item.orig / 2;
-                                        count++;
+                                } else if (suggestion.type === 6) {
+                                    if (amount > item.orig * 3 / 8) {
+                                        let tmpAmount = amount - item.orig / 4;
+                                        while ((tmpAmount - suggestion.buy) > 0) {
+                                            amount -= suggestion.buy;
+                                            tmpAmount = amount - item.orig / 4;
+                                            count++;
+                                        }
+                                        if (count > suggestion.bCount) {
+                                            suggestion.bCount = count;
+                                        }
+                                        suggestion.str += `[new buy ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new buy no need] ';
                                     }
-                                    if (count > suggestion.bCount) {
-                                        suggestion.bCount = count;
-                                    }
-                                    suggestion.str += `[new buy ${count}] `;
-                                } else {
-                                    suggestion.str += '[new buy no need] ';
-                                }
-                            } else if (suggestion.type === 6) {
-                                if (amount > item.orig * 3 / 8) {
-                                    let tmpAmount = amount - item.orig / 4;
-                                    while ((tmpAmount - suggestion.buy) > 0) {
-                                        amount -= suggestion.buy;
-                                        tmpAmount = amount - item.orig / 4;
-                                        count++;
-                                    }
-                                    if (count > suggestion.bCount) {
-                                        suggestion.bCount = count;
-                                    }
-                                    suggestion.str += `[new buy ${count}] `;
-                                } else {
-                                    suggestion.str += '[new buy no need] ';
                                 }
                             }
                         }
-                    }
-                    count = 0;
-                    amount = item.amount;
-                    if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
-                        if (suggestion.sell > 0) {
-                            if (suggestion.type === 9) {
-                                if (amount < item.orig / 8) {
-                                    let tmpAmount = item.orig / 4 - amount;
-                                    while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                                        amount += (suggestion.sell * (1 - fee));
-                                        tmpAmount = item.orig / 4 - amount;
-                                        count++;
+                        count = 0;
+                        amount = item.amount;
+                        if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+                            if (suggestion.sell > 0) {
+                                if (suggestion.type === 9) {
+                                    if (amount < item.orig / 8) {
+                                        let tmpAmount = item.orig / 4 - amount;
+                                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                            amount += (suggestion.sell * (1 - fee));
+                                            tmpAmount = item.orig / 4 - amount;
+                                            count++;
+                                        }
+                                        if (count > suggestion.sCount) {
+                                            suggestion.sCount = count;
+                                        }
+                                        suggestion.str += `[new sell ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new sell no need] ';
                                     }
-                                    if (count > suggestion.sCount) {
-                                        suggestion.sCount = count;
+                                } else if (suggestion.type === 5) {
+                                    if (amount < item.orig * 3 / 8) {
+                                        let tmpAmount = item.orig / 2 - amount;
+                                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                            amount += (suggestion.sell * (1 - fee));
+                                            tmpAmount = item.orig / 2 - amount;
+                                            count++;
+                                        }
+                                        if (count > suggestion.sCount) {
+                                            suggestion.sCount = count;
+                                        }
+                                        suggestion.str += `[new sell ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new sell no need] ';
                                     }
-                                    suggestion.str += `[new sell ${count}] `;
-                                } else {
-                                    suggestion.str += '[new sell no need] ';
-                                }
-                            } else if (suggestion.type === 5) {
-                                if (amount < item.orig * 3 / 8) {
-                                    let tmpAmount = item.orig / 2 - amount;
-                                    while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                                        amount += (suggestion.sell * (1 - fee));
-                                        tmpAmount = item.orig / 2 - amount;
-                                        count++;
+                                } else if (suggestion.type === 8) {
+                                    if (amount < item.orig * 5 / 8) {
+                                        let tmpAmount = item.orig * 3 / 4 - amount;
+                                        while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                            amount += (suggestion.sell * (1 - fee));
+                                            tmpAmount = item.orig * 3 / 4 - amount;
+                                            count++;
+                                        }
+                                        if (count > suggestion.sCount) {
+                                            suggestion.sCount = count;
+                                        }
+                                        suggestion.str += `[new sell ${count}] `;
+                                    } else {
+                                        suggestion.str += '[new sell no need] ';
                                     }
-                                    if (count > suggestion.sCount) {
-                                        suggestion.sCount = count;
-                                    }
-                                    suggestion.str += `[new sell ${count}] `;
-                                } else {
-                                    suggestion.str += '[new sell no need] ';
-                                }
-                            } else if (suggestion.type === 8) {
-                                if (amount < item.orig * 5 / 8) {
-                                    let tmpAmount = item.orig * 3 / 4 - amount;
-                                    while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
-                                        amount += (suggestion.sell * (1 - fee));
-                                        tmpAmount = item.orig * 3 / 4 - amount;
-                                        count++;
-                                    }
-                                    if (count > suggestion.sCount) {
-                                        suggestion.sCount = count;
-                                    }
-                                    suggestion.str += `[new sell ${count}] `;
-                                } else {
-                                    suggestion.str += '[new sell no need] ';
                                 }
                             }
                         }
@@ -7215,6 +7216,9 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (count < sCount) {
                 sCount = count;
             }
+        }
+        if (pAmount == 0) {
+            sCount = 4 * priceTimes;
         }
         /*if (pAmount && sCount) {
             const remain = pCount - sCount;
