@@ -950,7 +950,7 @@ export default {
                 return list;
             });
             case 'dol':
-            return Api('url', 'https://www.dol.gov/newsroom/releases').then(raw_data => {
+            return Api('url', 'https://www.dol.gov/newsroom/releases', {agent: {}, }).then(raw_data => {
                 let date = new Date(url);
                 if (isNaN(date.getTime())) {
                     return handleError(new HoError('date invalid'));
