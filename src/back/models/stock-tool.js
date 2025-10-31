@@ -7626,7 +7626,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                         time: priviousTrade.time,
                         type: priviousTrade.type,
                         tprice: priviousTrade.tprice,
-                        real: priviousTrade.real;
+                        real: priviousTrade.real,
                     };
                 }
                 priviousTrade.time = 0;
