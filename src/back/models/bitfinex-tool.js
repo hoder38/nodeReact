@@ -469,6 +469,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
+                    real: false,
                 }
             } else {
                 item.previous = {
@@ -477,6 +478,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     type: 'buy',
                     buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     sell: item.previous.sell,
+                    real: true,
                 }
             }
         } else if (tradeType === 'sell') {
@@ -502,6 +504,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,
+                    real: false,
                 }
             } else {
                 item.previous = {
@@ -510,6 +513,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     type: 'sell',
                     sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                     buy: item.previous.buy,
+                    real: true,
                 }
             }
         }
@@ -2017,6 +2021,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         item.previous.time = item.tmpPT.time;
                                         item.previous.type = item.tmpPT.type;
                                         item.previous.tprice = item.tmpPT.tprice;
+                                        item.previous.real = item.tmpPT.real;
                                     }
                                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                     checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -2029,12 +2034,14 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             time: item.previous.time,
                                             type: item.previous.type,
                                             tprice: item.previous.tprice,
+                                            real: item.previous.real,
                                         };
                                     }
                                     item.previous.time = 0;
                                     item.previous.price = '';
                                     item.previous.type = '';
                                     item.previous.tprice = 0;
+                                    item.previous.real = false;
                                     item.newMid.push(suggestion.newMid);
                                     newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                                     suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);

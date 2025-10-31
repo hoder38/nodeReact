@@ -104,6 +104,7 @@ export const twseShioajiInit = () => {
                                             type: 'buy',
                                             buy: item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                             sell: item.previous.sell,
+                                            real: false,
                                         }
                                     } else {
                                         item.previous = {
@@ -112,6 +113,7 @@ export const twseShioajiInit = () => {
                                             type: 'buy',
                                             buy: item.previous.buy.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                             sell: item.previous.sell,
+                                            real: true,
                                         }
                                     }
                                 } else {
@@ -151,6 +153,7 @@ export const twseShioajiInit = () => {
                                             type: 'sell',
                                             sell: item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                             buy: item.previous.buy,
+                                            real: false,
                                         }
                                     } else {
                                         item.previous = {
@@ -159,6 +162,7 @@ export const twseShioajiInit = () => {
                                             type: 'sell',
                                             sell: item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false),
                                             buy: item.previous.buy,
+                                            real: true,
                                         }
                                     }
                                 } else {

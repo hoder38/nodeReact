@@ -6548,6 +6548,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             item.previous.time = item.tmpPT.time;
                             item.previous.type = item.tmpPT.type;
                             item.previous.tprice = item.tmpPT.tprice;
+                            item.previous.real = item.tmpPT.real;
                         }
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                         checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
@@ -6560,6 +6561,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                 time: item.previous.time,
                                 type: item.previous.type,
                                 tprice: item.previous.tprice,
+                                real: item.previous.real,
                             };
                         }
                         change_previous = true;
@@ -6567,6 +6569,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.previous.price = 0;
                         item.previous.type = '';
                         item.previous.tprice = 0;
+                        item.previous.real = false;
                         item.newMid.push(suggestion.newMid);
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                         suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
@@ -7035,6 +7038,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
+                } else if (!previous.real && (now - previous.time) >= ttime) {
+                    is_buy = true;
                 } else {
                     is_buy = false;
                 }
@@ -7095,6 +7100,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
+                } else if (!previous.real && (now - previous.time) >= ttime) {
+                    is_sell = true;
                 } else {
                     is_sell = false;
                 }
@@ -7605,6 +7612,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     priviousTrade.time = tmpPT.time;
                     priviousTrade.type = tmpPT.type;
                     priviousTrade.tprice = tmpPT.tprice;
+                    priviousTrade.real = tmpPT.real;
                 }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
                 newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
@@ -7618,12 +7626,14 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                         time: priviousTrade.time,
                         type: priviousTrade.type,
                         tprice: priviousTrade.tprice,
+                        real: priviousTrade.real;
                     };
                 }
                 priviousTrade.time = 0;
                 priviousTrade.price = 0;
                 priviousTrade.type = '';
                 priviousTrade.tprice = 0;
+                priviousTrade.real = false;
                 //console.log(amount);
                 //console.log(count);
                 if (suggest.resetWeb === 1) {
