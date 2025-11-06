@@ -7038,8 +7038,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
-                } else if (!previous.real && (now - previous.time) >= ttime) {
-                    is_buy = true;
                 } else {
                     is_buy = false;
                 }
@@ -7047,6 +7045,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = true;
                 } else {
                     is_sell = false;
+                }
+                if (!previous.real) {
+                    is_buy = true;
+                    is_sell = true;
                 }
             } else if (previous.type === 'sell') {
                 if ((now - previous.time) >= ttime) {
@@ -7055,6 +7057,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 } else {
                     is_sell = false;
                     is_buy = false;
+                }
+                if (!previous.real) {
+                    is_buy = true;
+                    is_sell = true;
                 }
             }
             pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
@@ -7100,8 +7106,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
-                } else if (!previous.real && (now - previous.time) >= ttime) {
-                    is_sell = true;
                 } else {
                     is_sell = false;
                 }
@@ -7109,6 +7113,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = true;
                 } else {
                     is_buy = false;
+                }
+                if (!previous.real) {
+                    is_buy = true;
+                    is_sell = true;
                 }
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
@@ -7117,6 +7125,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 } else {
                     is_buy = false;
                     is_sell = false;
+                }
+                if (!previous.real) {
+                    is_buy = true;
+                    is_sell = true;
                 }
             }
             pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
