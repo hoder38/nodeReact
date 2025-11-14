@@ -3798,7 +3798,8 @@ export default {
                                         return Promise.resolve();
                                     }
                                 }
-                                return loopShow(31).then(() => {
+                                //return loopShow(31).then(() => {
+                                return loopShow(0).then(() => {
                                     year.forEach((v, i) => {
                                         console.log('year' + (+i + 1));
                                         v.forEach(k => console.log(k.str));
@@ -4168,7 +4169,8 @@ export default {
                                         return Promise.resolve();
                                     }
                                 }
-                                return loopShow(31).then(() => {
+                                //return loopShow(31).then(() => {
+                                return loopShow(0).then(() => {
                                     year.forEach((v, i) => {
                                         console.log('year' + (+i + 1));
                                         v.forEach(k => console.log(k.str));
@@ -6926,7 +6928,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     const t2 = (pType|2) === pType ? true : false;
     const t3 = (pType|4) === pType ? true : false;
     const t4 = (pType|8) === pType ? true : false;
-    const t5 = (pType|16) === pType ? true : false;
+    //const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
     let bTimes = 1;
@@ -7149,36 +7151,36 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             }
         }
         //if (pType === 0 && previous.buy && previous.sell) {
-        if (previous.buy.length > 0 && previous.sell.length > 0) {
+        /*if (previous.buy.length > 0 && previous.sell.length > 0) {
             if (!t5) {
                 if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
-                }/* else if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                }*//* else if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd++;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd++;
-                } else */if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                } else *//*if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
                 }
             } else {
-                /*if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                    bAdd--;
-                } else*/ if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
+                *//*if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
+                    bAdd++;
+                } else*/ /*if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
                     bAdd--;
                 }
                 if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
                     sAdd--;
-                } /*else if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                    sAdd--;
+                }*/ /*else if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
+                    sAdd++;
                 }*/
-            }
+            //}
             //console.log(previous);
             /*console.log(Math.abs(priceArray[nowBP + 1]));
             console.log(bAdd);
             console.log(Math.abs(priceArray[nowSP - 1]));
             console.log(sAdd);*/
-        }
+        //}
     }
     /*console.log(nowBP);
     console.log(nowSP);

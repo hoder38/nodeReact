@@ -297,7 +297,8 @@ export const calWeb = curArr => {
                 return Promise.resolve();
             }
         }
-        return loopShow(31).then(() => {
+        //return loopShow(31).then(() => {
+        return loopShow(0).then(() => {
             month.forEach((v, i) => {
                 console.log('season' + (+i + 1));
                 v.forEach(k => console.log(k.str));
