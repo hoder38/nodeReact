@@ -223,7 +223,11 @@ const getStockPrice = (type='twse', index, previous = false) => {
         } else {*/
             return getUsStock(index).then(ret => {
                 if (!ret.price) {
-                    return 0;
+                    if (previous) {
+                        return [0, 0];
+                    } else {
+                        return 0;
+                    }
                 }
                 if (previous) {
                     console.log(ret.price);
