@@ -6548,34 +6548,41 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     {
                         console.log(item.newMid[item.newMid.length - 1]);
                         item.newMid.pop();
-                        if (item.newMid.length === 0 && Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
+                        if (/*item.newMid.length === 0 && */Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
                             change_previous = true;
                             item.previous.price = item.tmpPT.price;
                             item.previous.time = item.tmpPT.time;
                             item.previous.type = item.tmpPT.type;
                             item.previous.tprice = item.tmpPT.tprice;
-                            item.previous.real = item.tmpPT.real;
+                            //item.previous.real = item.tmpPT.real;
+                            item.tmpPT = {
+                                price: 0,
+                                time: 0,
+                                type: '',
+                                tprice: 0,
+                                //real: item.previous.real,
+                            };
                         }
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                         checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
                     }
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
                     while(suggestion.resetWeb) {
-                        if (item.newMid.length === 0) {
+                        //if (item.newMid.length === 0) {
                             item.tmpPT = {
                                 price: item.previous.price,
                                 time: item.previous.time,
                                 type: item.previous.type,
                                 tprice: item.previous.tprice,
-                                real: item.previous.real,
+                                //real: item.previous.real,
                             };
-                        }
+                        //}
                         change_previous = true;
                         item.previous.time = 0;
                         item.previous.price = 0;
                         item.previous.type = '';
                         item.previous.tprice = 0;
-                        item.previous.real = false;
+                        //item.previous.real = false;
                         item.newMid.push(suggestion.newMid);
                         newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
                         suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
@@ -6928,10 +6935,14 @@ export const getStockListV2 = (type, year, month) => {
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
-    const t1 = (pType|1) === pType ? true : false;
-    const t2 = (pType|2) === pType ? true : false;
-    const t3 = (pType|4) === pType ? true : false;
-    const t4 = (pType|8) === pType ? true : false;
+    //const t1 = (pType|1) === pType ? true : false;
+    //const t2 = (pType|2) === pType ? true : false;
+    //const t3 = (pType|4) === pType ? true : false;
+    //const t4 = (pType|8) === pType ? true : false;
+    const t1 = false;
+    const t2 = false;
+    const t3 = false;
+    const t4 = false;
     //const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
@@ -7052,10 +7063,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 } else {
                     is_sell = false;
                 }
-                if (!previous.real) {
+                /*if (!previous.real) {
                     is_buy = true;
                     is_sell = true;
-                }
+                }*/
             } else if (previous.type === 'sell') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
@@ -7064,10 +7075,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                     is_buy = false;
                 }
-                if (!previous.real) {
+                /*if (!previous.real) {
                     is_buy = true;
                     is_sell = true;
-                }
+                }*/
             }
             pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
             //pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
@@ -7120,10 +7131,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 } else {
                     is_buy = false;
                 }
-                if (!previous.real) {
+                /*if (!previous.real) {
                     is_buy = true;
                     is_sell = true;
-                }
+                }*/
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
@@ -7132,10 +7143,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = false;
                     is_sell = false;
                 }
-                if (!previous.real) {
+                /*if (!previous.real) {
                     is_buy = true;
                     is_sell = true;
-                }
+                }*/
             }
             pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
             //pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
@@ -7630,7 +7641,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     priviousTrade.time = tmpPT.time;
                     priviousTrade.type = tmpPT.type;
                     priviousTrade.tprice = tmpPT.tprice;
-                    priviousTrade.real = tmpPT.real;
+                    //priviousTrade.real = tmpPT.real;
                 }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
                 newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
@@ -7644,14 +7655,14 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                         time: priviousTrade.time,
                         type: priviousTrade.type,
                         tprice: priviousTrade.tprice,
-                        real: priviousTrade.real,
+                        //real: priviousTrade.real,
                     };
                 }
                 priviousTrade.time = 0;
                 priviousTrade.price = 0;
                 priviousTrade.type = '';
                 priviousTrade.tprice = 0;
-                priviousTrade.real = false;
+                //priviousTrade.real = false;
                 //console.log(amount);
                 //console.log(count);
                 if (suggest.resetWeb === 1) {
