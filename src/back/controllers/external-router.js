@@ -952,7 +952,7 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 order_direction: 'desc',
             }, fileName ? {
                 query: fileName,
-                moviehash,
+                //moviehash,
             } : name.match(/^tt\d+$/i) ? {
                 imdb_id: Number(name.substr(2)),
             } : {query: name}, episode ? {
