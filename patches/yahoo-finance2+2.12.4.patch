@@ -1,0 +1,70 @@
+diff --git a/node_modules/yahoo-finance2/dist/esm/src/lib/getCrumb.js b/node_modules/yahoo-finance2/dist/esm/src/lib/getCrumb.js
+index ec7cfea..c02e439 100644
+--- a/node_modules/yahoo-finance2/dist/esm/src/lib/getCrumb.js
++++ b/node_modules/yahoo-finance2/dist/esm/src/lib/getCrumb.js
+@@ -1,6 +1,8 @@
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-ignore: we have to ignore this for csm output.
+-import pkg from "../../package.json" assert { type: "json" };
++import { createRequire } from 'module';
++const require = createRequire(import.meta.url);
++const pkg = require('../../package.json');
+ import { Cookie } from "tough-cookie";
+ import { showNotice } from "./notices.js";
+ const CONFIG_FAKE_URL = "http://config.yf2/";
+@@ -190,7 +192,7 @@ export async function _getCrumb(cookieJar, fetch, fetchOptionsBase, logger, url
+             ...fetchOptions.headers,
+             // Big thanks to @nocodehummel who figured out a User-Agent that both
+             // works but still allows us to identify ourselves honestly.
+-            "User-Agent": `Mozilla/5.0 (compatible; ${pkg.name}/${pkg.version})`,
++            "User-Agent": `Mozilla/5.0 (compatible; yahoo-finance2/${pkg.version})`,
+             cookie: await cookieJar.getCookieString(GET_CRUMB_URL),
+             origin: "https://finance.yahoo.com",
+             referer: url,
+diff --git a/node_modules/yahoo-finance2/dist/esm/src/lib/validateAndCoerceTypes.js b/node_modules/yahoo-finance2/dist/esm/src/lib/validateAndCoerceTypes.js
+index 83e1905..c9251d9 100644
+--- a/node_modules/yahoo-finance2/dist/esm/src/lib/validateAndCoerceTypes.js
++++ b/node_modules/yahoo-finance2/dist/esm/src/lib/validateAndCoerceTypes.js
+@@ -1,6 +1,8 @@
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-ignore: we have to ignore this for csm output.
+-import pkg from "../../package.json" assert { type: "json" };
++import { createRequire } from 'module';
++const require = createRequire(import.meta.url);
++const pkg = require('../../package.json');
+ import { FailedYahooValidationError, InvalidOptionsError } from "./errors.js";
+ import { TransformDecodeCheckError, TransformDecodeError, Value, } from "@sinclair/typebox/value";
+ const handleResultError = (e, options) => {
+diff --git a/node_modules/yahoo-finance2/dist/esm/src/lib/yahooFinanceFetch.js b/node_modules/yahoo-finance2/dist/esm/src/lib/yahooFinanceFetch.js
+index f7fb8ea..e43944e 100644
+--- a/node_modules/yahoo-finance2/dist/esm/src/lib/yahooFinanceFetch.js
++++ b/node_modules/yahoo-finance2/dist/esm/src/lib/yahooFinanceFetch.js
+@@ -2,9 +2,11 @@ import Queue from "./queue.js";
+ import errors from "./errors.js";
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-ignore: we have to ignore this for csm output.assert
+-import pkg from "../../package.json" assert { type: "json" };
++import { createRequire } from 'module';
++const require = createRequire(import.meta.url);
++const pkg = require('../../package.json');
+ import getCrumb from "./getCrumb.js";
+-const userAgent = `${pkg.name}/${pkg.version} (+${pkg.repository})`;
++const userAgent = `Mozilla/5.0 (compatible; yahoo-finance2/${pkg.version})`;
+ const _queue = new Queue();
+ function assertQueueOptions(queue, opts) {
+     opts; //?
+diff --git a/node_modules/yahoo-finance2/dist/esm/src/modules/fundamentalsTimeSeries.js b/node_modules/yahoo-finance2/dist/esm/src/modules/fundamentalsTimeSeries.js
+index 864681b..0ea612d 100644
+--- a/node_modules/yahoo-finance2/dist/esm/src/modules/fundamentalsTimeSeries.js
++++ b/node_modules/yahoo-finance2/dist/esm/src/modules/fundamentalsTimeSeries.js
+@@ -1,7 +1,9 @@
+ import { Type } from "@sinclair/typebox";
+ // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ // @ts-ignore: we have to ignore this for csm output.
+-import Timeseries_Keys from "../lib/timeseries.json" assert { type: "json" };
++import { createRequire } from 'module';
++const require = createRequire(import.meta.url);
++const Timeseries_Keys = require('../lib/timeseries.json');
+ import { YahooFinanceDate, YahooNumber } from "../lib/yahooFinanceTypes.js";
+ const FundamentalsTimeSeries_Types = ["quarterly", "annual", "trailing"];
+ const FundamentalsTimeSeries_Modules = [

@@ -10,7 +10,8 @@
     "dev-front": "webpack --watch --config config/webpack.dev.config.cjs",
     "dev-stop": "sudo service nginx-dev stop;sudo service nodejs-file.sh stop;sudo service nodejs.sh stop",
     "release": "git pull; sudo service nginx-release restart; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop; sudo service release-nodejs-file.sh start; sleep 10; sudo service release-nodejs.sh start",
-    "release-stop": "sudo service nginx-release stop; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop"
+    "release-stop": "sudo service nginx-release stop; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop",
+    "postinstall": "patch-package"
   },
   "type": "module",
   "dependencies": {
@@ -65,11 +66,14 @@
     "webpack-cli": "^4.2.0",
     "ws": "^7.4.1",
     "xml2js": "^0.4.23",
-    "youtube-dl": "^3.0.2",
-    "yahoo-finance2": "^2.12.3"
+    "yahoo-finance2": "^2.12.4",
+    "youtube-dl-exec": "^2.4.7"
   },
   "author": {
     "name": "hoder",
     "emial": "hoder3388@gmail.com"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

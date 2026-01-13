@@ -3,8 +3,7 @@ import OpenCC from 'node-opencc'
 import Htmlparser from 'htmlparser2'
 import pathModule from 'path'
 const { dirname: PathDirname, extname: PathExtname, join: PathJoin } = pathModule;
-import youtubeDl from 'youtube-dl'
-const { getInfo: YouGetInfo} = youtubeDl;
+import youtubedl from 'youtube-dl-exec'
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync } = fsModule;
@@ -3137,7 +3136,7 @@ export const youtubeVideoUrl = (id, url) => {
     //} else if (id === 'ope') {
     //    ret_obj['iframe'] = [url];
     } else {
-        return new Promise((resolve, reject) => YouGetInfo(url, [], {maxBuffer: 10 * 1024 * 1024}, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+        return youtubedl(url, { dumpSingleJson: true }).then(info => {
             ret_obj.title = info.title;
             const ret_info = info.formats ? info.formats : info;
             if (id === 'you') {

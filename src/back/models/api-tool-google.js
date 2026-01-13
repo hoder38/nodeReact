@@ -4,7 +4,7 @@ import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_D
 import googleapisModule from 'googleapis'
 const { google: googleapis } = googleapisModule;
 import Fetch from 'node-fetch'
-import Youtubedl from 'youtube-dl'
+import youtubedl from 'youtube-dl-exec'
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
 import Child_process from 'child_process'
@@ -628,25 +628,22 @@ function downloadMedia(data) {
         return handleError(new HoError('get parameter lost!!!'), data['errhandle']);
     }
     let index = 0;
-    const proc = () => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, ['-F'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-        let info = [];
-        for (let i of output) {
-            const row = i.match(/^(\d+)\s+mp4\s+\d+x(\d+)/);
-            if (row) {
-                info.push({
-                    id: row[1],
-                    height: row[2],
-                });
-            }
-        }
-        console.log(info);
+    const proc = () => youtubedl(`https://drive.google.com/open?id=${data['key']}`, {
+        dumpSingleJson: true,
+        noCheckCertificates: true,
+        noWarnings: true,
+        addHeader: ['referer:youtube.com', 'user-agent:googlebot']
+    }).then(output => {
+        console.log(output.formats);
         let media_id = null;
         let currentHeight = 0;
-        for (let i in info) {
-            if (info[i].height >= (data['hd'] * 0.7)) {
-                if (info[i].height > currentHeight) {
-                    media_id = info[i].id;
-                    currentHeight = +info[i].height;
+        for (let fmt of output.formats) {
+            if (fmt.ext && fmt.ext.toLowerCase() === 'mp4' && fmt['vcodec'] !== 'none' && fmt['acodec'] !== 'none' && fmt.height && fmt.width) {
+                if (fmt.height >= (data['hd'] * 0.7)) {
+                    if (fmt.height > currentHeight) {
+                        media_id = fmt['format_id'];
+                        currentHeight = +fmt.height;
+                    }
                 }
             }
         }
@@ -655,8 +652,11 @@ function downloadMedia(data) {
             return handleError(new HoError('quality low'));
         }
         const getSavePath = () => FsExistsSync(data['filePath']) ? FsExistsSync(`${data['filePath']}_t`) ? new Promise((resolve, reject) => FsUnlink(`${data['filePath']}_t`, err => err ? reject(err) : resolve(`${data['filePath']}_t`))) : Promise.resolve(`${data['filePath']}_t`) : Promise.resolve(data['filePath']);
-        return getSavePath().then(savePath => new Promise((resolve, reject) => Youtubedl.exec(`https://drive.google.com/open?id=${data['key']}`, [`--format=${media_id}`, '-o', savePath, '--write-thumbnail'], {maxBuffer: 10 * 1024 * 1024}, (err, output) => err ? reject(err) : resolve(output))).then(output => {
-            console.log(output);
+        return getSavePath().then(savePath => youtubedl(`https://drive.google.com/open?id=${data['key']}`, {
+            format: media_id,
+            output: savePath,
+            writeThumbnail: true
+        })).then(() => {
             const clearPath = () => savePath === data['filePath'] ? Promise.resolve() : new Promise((resolve, reject) => FsUnlink(data['filePath'], err => err ? reject(err) : resolve())).then(() => FsRenameSync(savePath, data['filePath']));
             return clearPath().then(() => {
                 if (FsExistsSync(`${savePath}.jpg`)) {
@@ -666,7 +666,7 @@ function downloadMedia(data) {
                     return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](currentHeight)).catch(err => data['errhandle'](err));
                 }
             });
-        }));
+        });
     }).catch(err => {
         console.log(index);
         handleError(err, 'Youtubedl Fetch');
@@ -804,12 +804,12 @@ export function googleDownloadSubtitle(url, filePath) {
     const sub_location = `${filePath}_sub/youtube`;
     console.log(sub_location);
     const mkfolder = () => FsExistsSync(sub_location) ? Promise.resolve() : Mkdirp(sub_location);
-    return mkfolder().then(() => new Promise((resolve, reject) => Youtubedl.getSubs(url, {
+    return mkfolder().then(() => youtubedl.getSubs(url, {
             auto: true,
             all: false,
             lang: 'zh-TW,zh-Hant,zh-CN,zh-Hans,zh-HK,zh-SG,en',
             cwd: sub_location,
-        }, (err, info) => err ? reject(err) : resolve(info))).then(info => {
+        })).then(info => {
         let choose = null;
         let en = null;
         let pri = 0;
@@ -895,7 +895,7 @@ export function googleDownloadSubtitle(url, filePath) {
             }
         }
         return renameSub(choose, '', ext).then(() => renameSub(en, '.en', en_ext).then(() => deleteFolderRecursive(sub_location)));
-    }));
+    });
 }
 
 export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {

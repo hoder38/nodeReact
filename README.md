@@ -144,8 +144,8 @@ x86
 node & npm
 redis-server
 mongodb (到官網)
-youtubedl
-python3
+yt-dlp
+python3(3.10)
 nginx
 git
 unrar
@@ -212,6 +212,11 @@ constructor(settings = {}) {
 
     this._construct()
   }
+
+修改yahoo-finance2/dist/esm/src/lib/getCrumb.js
+"User-Agent": `Mozilla/5.0 (compatible; yahoo-finance2/${pkg.version})`,
+修改yahoo-finance2/dist/esm/src/lib/yahooFinanceFetch.js
+const userAgent = `Mozilla/5.0 (compatible; yahoo-finance2/${pkg.version})`;
 
 ssl 之後改https://certbot.eff.org/lets-encrypt/ubuntufocal-nginx 要記得先設定nginx
 location ^~ /.well-known/acme-challenge/ {

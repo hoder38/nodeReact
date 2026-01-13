@@ -1,8 +1,6 @@
 import { OPENSUBTITLES_KEY, OPENSUBTITLES_USERNAME, OPENSUBTITLES_PASSWORD } from '../../../ver.js'
 import { USERDB, STORAGEDB, __dirname } from '../constants.js'
 import Express from 'express'
-//import youtubeDl from 'youtube-dl'
-//const { getInfo: YouGetInfo} = youtubeDl;
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, createReadStream: FsCreateReadStream, writeFile: FsWriteFile } = fsModule;
 import pathModule from 'path'
