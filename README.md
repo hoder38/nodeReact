@@ -147,12 +147,13 @@ mongodb (到官網)
 yt-dlp
 python3(3.10)
 nginx
-git
 unrar
 p7zip-full
 megatools
 pdffk
 ffmpeg
+
+git(版控用不用進docker)
 
 sudo npm install webpack webpack-cli -g
 
