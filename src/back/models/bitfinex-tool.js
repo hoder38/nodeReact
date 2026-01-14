@@ -364,6 +364,15 @@ export const calWeb = curArr => {
             con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid maxWidth')[0];
             if (!con) {
                 con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid  maxWidth')[0];
+                if (!con) {
+                    con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid mt-4 maxWidth')[0];
+                    if (!con) {
+                        con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid maxWidth')[0];
+                        if (!con) {
+                            con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid  maxWidth')[0];
+                        }
+                    }
+                }
             }
         }
         const row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
