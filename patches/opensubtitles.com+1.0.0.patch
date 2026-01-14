@@ -1,0 +1,36 @@
+diff --git a/node_modules/opensubtitles.com/methods.json b/node_modules/opensubtitles.com/methods.json
+index 232eff5..7b5763e 100644
+--- a/node_modules/opensubtitles.com/methods.json
++++ b/node_modules/opensubtitles.com/methods.json
+@@ -42,9 +42,6 @@
+     "method": "GET"
+   },
+   "/download": {
+-    "opts": {
+-      "auth": true
+-    },
+     "url": "/api/v1/download",
+     "method": "POST",
+     "body": {
+diff --git a/node_modules/opensubtitles.com/opensubtitles.js b/node_modules/opensubtitles.com/opensubtitles.js
+index 8dff246..6823e30 100644
+--- a/node_modules/opensubtitles.com/opensubtitles.js
++++ b/node_modules/opensubtitles.com/opensubtitles.js
+@@ -6,6 +6,7 @@ const methods = require('./methods.json')
+ module.exports = class OS {
+   constructor(settings = {}) {
+     if (!settings.apikey) throw Error('requires an apikey')
++        if (!settings.useragent) throw Error('requires an useragent')
+ 
+     this._authentication = {}
+     this._settings = {
+@@ -13,7 +14,8 @@ module.exports = class OS {
+       endpoint: 'https://api.opensubtitles.com',
+       headers: {
+         'Content-Type': 'application/json',
+-        'Accept': '*/*'
++        'Accept': '*/*',
++        'User-Agent': settings.useragent,
+       }
+     }
+ 

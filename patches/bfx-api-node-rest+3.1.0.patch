@@ -1,0 +1,51 @@
+diff --git a/node_modules/bfx-api-node-rest/lib/.rest2.js.swp b/node_modules/bfx-api-node-rest/lib/.rest2.js.swp
+new file mode 100644
+index 0000000..85e5d1c
+Binary files /dev/null and b/node_modules/bfx-api-node-rest/lib/.rest2.js.swp differ
+diff --git a/node_modules/bfx-api-node-rest/lib/rest2.js b/node_modules/bfx-api-node-rest/lib/rest2.js
+index 0a09a6e..e267184 100644
+--- a/node_modules/bfx-api-node-rest/lib/rest2.js
++++ b/node_modules/bfx-api-node-rest/lib/rest2.js
+@@ -54,7 +54,7 @@ const API_URL = 'https://api.bitfinex.com'
+  */
+ function _takeResNotify (data) {
+   const notification = new Notification(data)
+-  return notification
++  return notification.notifyInfo
+ }
+ 
+ /**
+@@ -382,8 +382,8 @@ class RESTv2 {
+    * @returns {Promise} p
+    * @see https://docs.bitfinex.com/v2/reference#rest-public-books
+    */
+-  orderBook (symbol = 'tBTCUSD', prec = 'P0', cb) {
+-    return this._makePublicRequest(`/book/${symbol}/${prec}`, cb)
++  orderBook (symbol = 'tBTCUSD', prec = 'P0', len = 25, cb) {
++    return this._makePublicRequest(`/book/${symbol}/${prec}?len=${len}`, cb)
+   }
+ 
+   /**
+@@ -532,9 +532,10 @@ class RESTv2 {
+     timeframe = '1m',
+     symbol = 'tBTCUSD',
+     section = 'hist',
++    period = null,
+     query = {}
+   }, cb) {
+-    let url = `/candles/trade:${timeframe}:${symbol}/${section}`
++    let url = period ? `/candles/trade:${timeframe}:${symbol}:${period}/${section}` : `/candles/trade:${timeframe}:${symbol}/${section}`
+ 
+     if (Object.keys(query).length > 0) {
+       url += `?${new URLSearchParams(query).toString()}`
+@@ -1293,8 +1294,8 @@ class RESTv2 {
+       .then((res) => {
+         // 2 orders can be returned if OCO was used. But due to the interface
+         // we can only return one. User should use getOrders instead
+-        const orders = _takeResNotify(res).notifyInfo || []
+-        return orders[0] || []
++        const orders = _takeResNotify(res) || []
++        return orders || []
+       })
+   }
+ 
