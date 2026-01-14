@@ -254,3 +254,6 @@ https://github.com/XIU2/TrackersListCollection
 
 shioaji更新api key & 憑證
 https://www.sinotrade.com.tw/newweb/PythonAPIKey/
+================================================================================
+docker
+use this cmd to build node_modules: nvm use 14 && npm ci --legacy-peer-deps
