@@ -33,7 +33,7 @@
     "detect-character-encoding": "^0.8.0",
     "discord.js": "^12.5.1",
     "express": "^4.7.1",
-    "express-session": "^1.17.1",
+    "express-session": "^1.18.2",
     "ffmpeg": "^0.0.4",
     "file-loader": "^6.2.0",
     "googleapis": "^66.0.0",
