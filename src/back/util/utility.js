@@ -10,7 +10,7 @@ import pathModule from 'path'
 const { join: PathJoin } = pathModule;
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, unlinkSync: FsUnlinkSync, rmdirSync: FsRmdirSync, readFile: FsReadFile, writeFile: FsWriteFile, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream } = fsModule;
-import detectCharacterEncoding from 'detect-character-encoding'
+import jsCharDet from 'jschardet'
 import Ass2vtt from 'ass-to-vtt'
 
 let pwCheck = {}
@@ -351,7 +351,7 @@ export const SRT2VTT = (filePath, ext) => new Promise((resolve, reject) => FsRea
 })).then(() => FsUnlinkSync(`${filePath}.sub`)));
 
 export const bufferToString = (buffer, big5=false) => {
-    const charset = detectCharacterEncoding(buffer);
+    const charset = jsCharDet(buffer);
     if (charset) {
         try {
             return buffer.toString(big5 ? 'big5' : charset.encoding);

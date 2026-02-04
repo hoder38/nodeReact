@@ -1,0 +1,30 @@
+services:
+  reactnode-server:
+    build:
+      context: .
+      dockerfile: reactnode-server.Dockerfile
+    container_name: reactnode-server
+    expose:
+      - "8082" # Expose internally for Nginx to access
+    restart: always
+
+  reactnode-file-server:
+    build:
+      context: .
+      dockerfile: reactnode-file-server.Dockerfile
+    container_name: reactnode-file-server
+    expose:
+      - "8084" # Expose internally for Nginx to access
+    restart: always
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    container_name: nginx-proxy
+    ports:
+      - "8080:8080" # Map host 8080 to Nginx container 8080
+    depends_on:
+      - reactnode-server
+      - reactnode-file-server
+    restart: always
