@@ -19,6 +19,8 @@ services:
       - "8084" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - reactnode-server
     restart: always
 
   nginx:

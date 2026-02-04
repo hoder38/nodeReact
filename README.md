@@ -258,5 +258,36 @@ https://www.sinotrade.com.tw/newweb/PythonAPIKey/
 docker
 use this cmd to build node_modules: nvm use 14 && npm ci --legacy-peer-deps
 "detect-character-encoding": "^0.8.0"要換成"jschardet": "^3.0.0"
+
+已安裝
+node & npm
+yt-dlp
+python3(3.10)
+nginx
+
+
+redis-server v=5.0.7 sha=00000000:0 malloc=jemalloc-5.2.1 bits=64 build=636cde3b5c7a3923
+mongodb (到官網)
+db version v4.4.2
+Build Info: {
+    "version": "4.4.2",
+    "gitVersion": "15e73dc5738d2278b688f8929aee605fe4279b0e",
+    "openSSLVersion": "OpenSSL 1.1.1f  31 Mar 2020",
+    "modules": [],
+    "allocator": "tcmalloc",
+    "environment": {
+        "distmod": "ubuntu2004",
+        "distarch": "x86_64",
+        "target_arch": "x86_64"
+    }
+}
+unrar
+p7zip-full
+megatools
+pdffk
+ffmpeg
+
+
+還沒做
 外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt
 0 0 * * * certbot renew --deploy-hook "docker exec <nginx容器名稱> nginx -s reload"
