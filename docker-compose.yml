@@ -6,6 +6,8 @@ services:
     container_name: reactnode-server
     expose:
       - "8082" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
     restart: always
 
   reactnode-file-server:
@@ -15,6 +17,8 @@ services:
     container_name: reactnode-file-server
     expose:
       - "8084" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
     restart: always
 
   nginx:
@@ -24,6 +28,8 @@ services:
     container_name: nginx-proxy
     ports:
       - "8080:8080" # Map host 8080 to Nginx container 8080
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
     depends_on:
       - reactnode-server
       - reactnode-file-server

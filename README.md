@@ -258,3 +258,5 @@ https://www.sinotrade.com.tw/newweb/PythonAPIKey/
 docker
 use this cmd to build node_modules: nvm use 14 && npm ci --legacy-peer-deps
 "detect-character-encoding": "^0.8.0"要換成"jschardet": "^3.0.0"
+外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt
+0 0 * * * certbot renew --deploy-hook "docker exec <nginx容器名稱> nginx -s reload"
