@@ -28,8 +28,9 @@ export function mainInit(server) {
     });
     //client
     const server0 = NetCreateServer(c => {
-        console.log('client connected');
-        c.on('end', () => console.log('client disconnected'));
+        //console.log('client connected');
+        c.setKeepAlive(true, 10000);
+        //c.on('end', () => console.log('client disconnected'));
         c.on('data', data => {
             try {
                 const recvData = JSON.parse(data.toString());
@@ -40,12 +41,15 @@ export function mainInit(server) {
                 console.log(data);
             }
         });
-    }).listen(COM_PORT(ENV_TYPE));
+    }).listen(COM_PORT(ENV_TYPE), '0.0.0.0');
     initDs();
 }
 
 export function init() {
-    client = NetConnect(COM_PORT(ENV_TYPE), FILE_IP(ENV_TYPE), () => console.log('connected to server!'));
+    client = NetConnect(COM_PORT(ENV_TYPE), FILE_IP(ENV_TYPE), () => {
+        console.log('connected to server!');
+        client.setKeepAlive(true, 10000);
+    });
     client.on('end', () => console.log('disconnected from server'));
 }
 

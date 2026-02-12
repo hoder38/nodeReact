@@ -8,7 +8,7 @@ import { handleError, HoError } from '../util/utility.js'
 
 let mongo = null;
 
-MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {
+MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}?authSource=admin`, {
     poolSize: 10,
     useUnifiedTopology: true,
 }, (err, client) => {

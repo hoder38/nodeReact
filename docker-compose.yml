@@ -1,27 +1,37 @@
 services:
-  reactnode-server:
+  redis:
     build:
       context: .
-      dockerfile: reactnode-server.Dockerfile
-    container_name: reactnode-server
-    expose:
-      - "8082" # Expose internally for Nginx to access
+      dockerfile: redis.Dockerfile
+    container_name: redis
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-    restart: always
+      - /mnt/redis-docker:/data
+    command: redis-server /etc/redis/redis.conf
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "pipipi", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  reactnode-file-server:
+  mongodb:
     build:
       context: .
-      dockerfile: reactnode-file-server.Dockerfile
-    container_name: reactnode-file-server
-    expose:
-      - "8084" # Expose internally for Nginx to access
+      dockerfile: mongodb.Dockerfile
+    container_name: mongodb
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-    depends_on:
-      - reactnode-server
-    restart: always
+      - /mnt/mongodb-docker:/data/db
+    command: mongod --config /etc/mongo/mongod.conf
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mydb
+      MONGO_INITDB_ROOT_PASSWORD: pipipi
+      MONGO_INITDB_DATABASE: mydb
+    healthcheck:
+      test: test $$(echo "db.version()" | mongo --port 27017 --quiet)
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   nginx:
     build:
@@ -32,7 +42,47 @@ services:
       - "8080:8080" # Map host 8080 to Nginx container 8080
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+
+  reactnode-file-server:
+    build:
+      context: .
+      dockerfile: reactnode-file-server.Dockerfile
+    container_name: reactnode-file-server
+    expose:
+      - "8083"
+      - "8084" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/storage_dev:/mnt/storage
+      - /mnt/mongodb/backup_dev:/mnt/mongodb/backup
     depends_on:
-      - reactnode-server
-      - reactnode-file-server
-    restart: always
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8083 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  reactnode-server:
+    build:
+      context: .
+      dockerfile: reactnode-server.Dockerfile
+    container_name: reactnode-server
+    expose:
+      - "8082" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/storage_dev:/mnt/storage
+      - /mnt/mongodb/backup_dev:/mnt/mongodb/backup
+    depends_on:
+      reactnode-file-server:
+        condition: service_healthy
+    restart: unless-stopped
+
