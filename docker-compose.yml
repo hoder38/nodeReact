@@ -41,7 +41,7 @@ services:
     ports:
       - "8080:8080" # Map host 8080 to Nginx container 8080
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
 
   reactnode-file-server:
@@ -53,21 +53,16 @@ services:
       - "8083"
       - "8084" # Expose internally for Nginx to access
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
-      - /mnt/storage_dev:/mnt/storage
-      - /mnt/mongodb/backup_dev:/mnt/mongodb/backup
+      - /mnt/storage:/mnt/storage
+      - .:/app/
     depends_on:
       redis:
         condition: service_healthy
       mongodb:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 8083 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   reactnode-server:
     build:
@@ -77,12 +72,14 @@ services:
     expose:
       - "8082" # Expose internally for Nginx to access
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
-      - /mnt/storage_dev:/mnt/storage
-      - /mnt/mongodb/backup_dev:/mnt/mongodb/backup
+      - /mnt/storage:/mnt/storage
+      - .:/app/
     depends_on:
-      reactnode-file-server:
+      redis:
+        condition: service_healthy
+      mongodb:
         condition: service_healthy
     restart: unless-stopped
 

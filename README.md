@@ -264,8 +264,6 @@ node & npm
 yt-dlp
 python3(3.10)
 nginx
-
-
 redis-server v=5.0.7 sha=00000000:0 malloc=jemalloc-5.2.1 bits=64 build=636cde3b5c7a3923
 mongodb (到官網)
 db version v4.4.2
@@ -281,6 +279,8 @@ Build Info: {
         "target_arch": "x86_64"
     }
 }
+
+
 unrar
 p7zip-full
 megatools
@@ -291,3 +291,5 @@ ffmpeg
 還沒做
 外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt
 0 0 * * * certbot renew --deploy-hook "docker exec <nginx容器名稱> nginx -s reload"
+
+新環境要有的git nvm docker certbot

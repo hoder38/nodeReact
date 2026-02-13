@@ -51,6 +51,12 @@ export function init() {
         client.setKeepAlive(true, 10000);
     });
     client.on('end', () => console.log('disconnected from server'));
+    client.on('close', () => {
+        console.log(`reconnect in 10 seconds`);
+        setTimeout(() => {
+            init(); // 遞迴呼叫重新連線
+        }, 10000);
+    });
 }
 
 function sendWs(data, adultonly, auth) {

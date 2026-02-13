@@ -9,8 +9,6 @@ RUN pip install yt-dlp
 ENV YOUTUBE_DL_SKIP_PYTHON_CHECK=1
 RUN npm ci --legacy-peer-deps
 
-COPY ./. .
-
 RUN npm run postinstall
 
 EXPOSE 8084

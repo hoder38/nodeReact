@@ -20,7 +20,7 @@ export default {
     GOOGLE_DB_BACKUP_FOLDER: '0B9NIKf1grMo6fjExWUU1MHB6QW5ySVNLdS1yTm1nLXJ3SjE5czdHXzE4eVZWMFZtdUpOLTQ',
     NAS_TMP: '/mnt/tmp',
     NAS_PREFIX: '/mnt/storage',
-    BACKUP_PATH: '/mnt/mongodb/backup',
+    BACKUP_PATH: '/data/db/backup',
     //NAS_TMP: '/home/pipipi/mnt/tmp',
     //NAS_PREFIX: '/home/pipipi/mnt/storage',
     //BACKUP_PATH: '/home/pipipi/mnt/backup',
