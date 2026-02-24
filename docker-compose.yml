@@ -42,6 +42,7 @@ services:
       - "8080:8080" # Map host 8080 to Nginx container 8080
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /mnt/storage:/mnt/storage:ro
     restart: unless-stopped
 
   reactnode-file-server:

@@ -291,5 +291,15 @@ ffmpeg
 還沒做
 外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt
 0 0 * * * certbot renew --deploy-hook "docker exec <nginx容器名稱> nginx -s reload"
+services:
+  web:
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # 單個檔案最大 10MB
+        max-file: "3"     # 最多保留 3 個舊檔
+請謹慎使用程式碼。
+查詢檔案路徑： 執行 docker inspect --format='{{.LogPath}}' <容器ID> 即可找到該固定檔案的絕對位置。
+
 
 新環境要有的git nvm docker certbot

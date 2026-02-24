@@ -13,36 +13,72 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
     useUnifiedTopology: true,
 }, (err, client) => {
     if (err) {
-        return handleError(err, 'DB connect');
-    }
-    if (!client) {
-        return handleError(new HoError('No client connected'), 'DB connect');
-    }
-    const db = client.db(DB_NAME(ENV_TYPE));
-    if (!db) {
-        return handleError(new HoError('No db connected'), 'DB connect');
-    }
-    mongo = db;
-    console.log('database connected');
-    db.collection('user', (err, collection) => {
-        if (err) {
-            return handleError(err, 'DB connect');
-        }
-        collection.countDocuments((err, count) => {
+        MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}`, {
+            poolSize: 10,
+            useUnifiedTopology: true,
+        }, (err, client) => {
             if (err) {
                 return handleError(err, 'DB connect');
             }
-            console.log(count);
-            if (count === 0) {
-                collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
+            if (!client) {
+                return handleError(new HoError('No client connected'), 'DB connect');
+            }
+            const db = client.db(DB_NAME(ENV_TYPE));
+            if (!db) {
+                return handleError(new HoError('No db connected'), 'DB connect');
+            }
+            mongo = db;
+            console.log('database connected');
+            db.collection('user', (err, collection) => {
+                if (err) {
+                    return handleError(err, 'DB connect');
+                }
+                collection.countDocuments((err, count) => {
                     if (err) {
                         return handleError(err, 'DB connect');
                     }
-                    console.log(user);
+                    console.log(count);
+                    if (count === 0) {
+                        collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
+                            if (err) {
+                                return handleError(err, 'DB connect');
+                            }
+                            console.log(user);
+                        });
+                    }
                 });
-            }
+            });
         });
-    });
+    } else {
+        if (!client) {
+            return handleError(new HoError('No client connected'), 'DB connect');
+        }
+        const db = client.db(DB_NAME(ENV_TYPE));
+        if (!db) {
+            return handleError(new HoError('No db connected'), 'DB connect');
+        }
+        mongo = db;
+        console.log('database connected');
+        db.collection('user', (err, collection) => {
+            if (err) {
+                return handleError(err, 'DB connect');
+            }
+            collection.countDocuments((err, count) => {
+                if (err) {
+                    return handleError(err, 'DB connect');
+                }
+                console.log(count);
+                if (count === 0) {
+                    collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
+                        if (err) {
+                            return handleError(err, 'DB connect');
+                        }
+                        console.log(user);
+                    });
+                }
+            });
+        });
+    }
 });
 
 let collections = []
