@@ -4,12 +4,13 @@ services:
       context: .
       dockerfile: redis.Dockerfile
     container_name: redis
+    env_file: .env
     volumes:
       - /mnt/redis-docker:/data
-    command: redis-server /etc/redis/redis.conf
+    command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "pipipi", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${SESS_PWD}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,14 +20,15 @@ services:
       context: .
       dockerfile: mongodb.Dockerfile
     container_name: mongodb
+    env_file: .env
     volumes:
       - /mnt/mongodb-docker:/data/db
     command: mongod --config /etc/mongo/mongod.conf
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: mydb
-      MONGO_INITDB_ROOT_PASSWORD: pipipi
-      MONGO_INITDB_DATABASE: mydb
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PWD}
+      MONGO_INITDB_DATABASE: ${DB_USERNAME}
     healthcheck:
       test: test $$(echo "db.version()" | mongo --port 27017 --quiet)
       interval: 5s
@@ -50,6 +52,7 @@ services:
       context: .
       dockerfile: reactnode-file-server.Dockerfile
     container_name: reactnode-file-server
+    env_file: .env
     expose:
       - "8083"
       - "8084" # Expose internally for Nginx to access
@@ -70,6 +73,7 @@ services:
       context: .
       dockerfile: reactnode-server.Dockerfile
     container_name: reactnode-server
+    env_file: .env
     expose:
       - "8082" # Expose internally for Nginx to access
     volumes:
