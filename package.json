@@ -4,8 +4,9 @@
   "description": "es6",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\"",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "build": "webpack --config config/webpack.release.config.cjs",
+    "dev-test": "docker exec -w /app reactnode-server npm run test",
     "dev-build": "docker exec -w /app reactnode-server npm run build",
     "dev-back": "docker compose down; docker compose up -d --build",
     "dev-code": "docker compose restart reactnode-file-server reactnode-server",
@@ -76,6 +77,9 @@
     "emial": "hoder3388@gmail.com"
   },
   "devDependencies": {
-    "patch-package": "^8.0.1"
+    "babel-jest": "^27.5.1",
+    "jest": "^27.5.1",
+    "patch-package": "^8.0.1",
+    "supertest": "^7.2.2"
   }
 }
