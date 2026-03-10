@@ -7,6 +7,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "build": "webpack --config config/webpack.release.config.cjs",
     "dev-test": "docker exec -w /app reactnode-server npm run test",
+    "dev-test-python": "docker exec -w /app reactnode-server python3 src/back/util/myuzip.test.py",
     "dev-build": "docker exec -w /app reactnode-server npm run build",
     "dev-back": "docker compose down; docker compose up -d --build",
     "dev-code": "docker compose restart reactnode-file-server reactnode-server",

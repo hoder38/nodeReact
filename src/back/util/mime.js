@@ -166,6 +166,8 @@ export const isZip = name => {
                 return 'zip';
             } else if (name.match(/7z\.001$/)) {
                 return '7z';
+            } else {
+                return false;
             }
         } else {
             return extName;

@@ -42,7 +42,7 @@ The backend is split into two primary services to separate concerns and handle l
 ### 2.2 External Integrations
 The system integrates with a wide array of third-party APIs:
 - **Finance:** Bitfinex (Exchange), Yahoo Finance (Stock Data), Shioaji (Taiwan Stocks), TD Ameritrade/Schwab (US Stocks).
-- **Media:** YouTube (via `youtube-dl-exec`), Bilibili, DM5 (Comics), OpenSubtitles.
+- **Media:** YouTube (via `youtube-dl-exec`), OpenSubtitles.
 - **Storage/Cloud:** Google Drive API.
 - **Communication:** Discord.js (Bot integration).
 - **Protocols:** Torrent (DHT/Peer-to-peer streaming).

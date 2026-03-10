@@ -305,3 +305,5 @@ services:
 新環境要有的git nvm docker certbot
 
 連線db要用docker exec -it mongodb mongo
+
+myuzip.py沒有測試密碼加密
