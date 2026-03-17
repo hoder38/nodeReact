@@ -45,7 +45,7 @@ router.post(`/${STORAGEDB}/add`, function (req, res, next) {
     StorageTagTool.addBookmark(name, req.user, req.session).then(result => {
         const parentList = StorageTagTool.searchTags(req.session).getArray();
         if (parentList.cur.length <= 0) {
-            return handleError(new HoError('empty parent list!!!'));
+            return handleError(new HoError('empty parent list!!!'), next);
         }
         return newBookmarkItem(name, req.user, req.session, parentList.cur, parentList.exactly).then(([bid, bname, select, option]) => res.json(Object.assign(result, bid ? {
             bid,
@@ -218,11 +218,14 @@ router.post(`/${STORAGEDB}/subscript/:id`, function(req, res, next) {
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
-    const bpath = req.body.path.map(p => {
-        if (!isValidString(p, 'name')) {
+    const bpath = [];
+    for (let p of req.body.path) {
+        const validP = isValidString(p, 'name');
+        if (!validP) {
             return handleError(new HoError('path name is not vaild'), next);
         }
-    });
+        bpath.push(validP);
+    }
     const bexactly = req.body.exactly.map(e => e ? true : false);
     StorageTagTool.addBookmark(name, req.user, req.session, bpath, bexactly).then(result => newBookmarkItem(name, req.user, req.session, bpath, bexactly).then(([bid, bname, select, option]) => {
         StorageTagTool.setLatest(id, req.session).then(() => Mongo('update', STORAGEDB, {_id: id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
