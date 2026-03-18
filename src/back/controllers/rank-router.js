@@ -2,7 +2,7 @@ import { RANKDB } from '../constants.js'
 import Express from 'express'
 import TagTool from '../models/tag-tool.js'
 import RankTool from '../models/rank-tool.js'
-import { checkLogin, getRankItem, handleError, checkAdmin } from '../util/utility.js'
+import { checkLogin, getRankItem, handleError, checkAdmin, HoError } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();

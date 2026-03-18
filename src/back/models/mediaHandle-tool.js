@@ -242,7 +242,7 @@ export default {
             const pdfPath = `${filePath}_pdf`;
             console.log(pdfPath);
             deleteFolderRecursive(pdfPath);
-            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`pdftk ${comPath} burst output ${pdfPath}/%03d.pdf`, (err, output) => err ? reject(err) : resolve(output)))).then(() => {
+            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`qpdf ${comPath} --split-pages=1 -- ${pdfPath}/%03d.pdf`, (err, output) => err ? reject(err) : resolve(output)))).then(() => {
                 let number = 0;
                 FsReaddirSync(pdfPath).forEach((file,index) => number++);
                 return completeMedia(fileID, 10, mediaType['fileIndex'], number);
@@ -273,7 +273,7 @@ export default {
                 } else if (FsExistsSync(`${filePath}_7z_c`)) {
                     zipPath = `${filePath}_7z_c`;
                 }
-                const cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar x ${zipPath} ${tempPath}  -p123` : (mediaType['ext'] === '7z') ? `7za x ${zipPath} -o${tempPath}  -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${zipPath} ${tempPath} '123'`;
+                const cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `7za x ${zipPath} -o${tempPath}  -p123` : (mediaType['ext'] === '7z') ? `7za x ${zipPath} -o${tempPath}  -p123` : `${PathJoin(__dirname, 'util/myuzip.py')} ${zipPath} ${tempPath} '123'`;
                 console.log(cmdline);
                 return new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output))).then(output => {
                     let zip_arr = [];
@@ -319,7 +319,7 @@ export default {
                 });
             });
         } else if (mediaType['type'] === 'zip') {
-            let cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `unrar v -v ${filePath}` : (mediaType['ext'] === '7z') ? `7za l ${filePath}` : `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}`;
+            let cmdline = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? `7za l ${filePath}` : (mediaType['ext'] === '7z') ? `7za l ${filePath}` : `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}`;
             const zip_type = (mediaType['ext'] === 'rar' || mediaType['ext'] === 'cbr') ? 2 : (mediaType['ext'] === '7z') ? 3 : 1;
             let is_processed = false;
             let append = '';

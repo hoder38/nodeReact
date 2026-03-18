@@ -420,7 +420,7 @@ router.put('/delTag/:tag', function(req, res, next) {
 router.put('/recover/:uid', function(req, res, next) {
     console.log('storage recover file');
     if (!checkAdmin(1, req.user)) {
-        console.log(user);
+        console.log(req.user);
         return handleError(new HoError('permission denied'), next);
     }
     const id = isValidString(req.params.uid, 'uid');
@@ -429,10 +429,10 @@ router.put('/recover/:uid', function(req, res, next) {
     }
     Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length === 0) {
-            return handleError(new HoError('file can not be fund!!!'));
+            return handleError(new HoError('file can not be found!!!'), next);
         }
         if (items[0].recycle !== 1) {
-            return handleError(new HoError('recycle file first!!!'));
+            return handleError(new HoError('recycle file first!!!'), next);
         }
         return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {recycle: 0}}).then(item2 => {
             sendWs({
@@ -503,11 +503,11 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
         if (playlist && obj) {
             //if (!obj.match(/^(you_|\d+(\.\d+)?$)/)) {
             if (!obj.match(/^(\d+(\.\d+)?$)/)) {
-                return handleError(new HoError('external is not vaild'));
+                return handleError(new HoError('external is not vaild'), next);
             }
             obj = isValidString(obj, 'name');
             if (!obj) {
-                return handleError(new HoError('external is not vaild'));
+                return handleError(new HoError('external is not vaild'), next);
             }
             const pageToken = req.params.pageToken ? isValidString(req.params.pageToken, 'name') : false;
             return Redis('hmset', `record: ${req.user._id}`, {[id.toString()]: pageToken ? `${obj}>>${pageToken}` : obj});
@@ -540,7 +540,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
         }
         const ret_rest = (obj, is_end, total, obj_arr=null, pageN=null, pageP=null, pageToken=null, is_new=false) => {
             if (total < 1) {
-                return handleError(new HoError('playlist is empty'));
+                return handleError(new HoError('playlist is empty'), next);
             }
             const new_rest = is_new => is_new ? Redis('hmset', `record: ${req.user._id}`, {[id.toString()]: pageToken ? `${obj.id}>>${pageToken}` : obj.id}) : Promise.resolve();
             return new_rest(is_new).then(() => obj.id ? setTag(obj.id).then(item1 => Object.assign({playlist: Object.assign({
@@ -564,7 +564,7 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             } else */if (playlist === 2) {
                 return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items1 => {
                     if (items1.length < 1) {
-                        return handleError(new HoError('cannot find external'));
+                        return handleError(new HoError('cannot find external'), next);
                     }
                     return External.getSingleId(items1[0].owner, decodeURIComponent(items1[0].url), recordTime, rPageToken, req.params.back).then(([obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new]) => ret_rest(obj, is_end, total, obj_arr, pageN, pageP, pageToken, is_new));
                 });
@@ -660,7 +660,7 @@ router.get('/torrent/query/:id', function (req, res,next) {
     }
     Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
         if (items.length < 1 || items[0].status !== 9) {
-            return handleError(new HoError('playlist can not be fund!!!'));
+            return handleError(new HoError('playlist can not be found!!!'), next);
         }
         return Redis('hget', `record: ${req.user._id}`, items[0]._id.toString()).then(item => {
             StorageTagTool.setLatest(items[0]._id, req.session).then(() => Mongo('update', STORAGEDB, {_id: items[0]._id}, {$inc: {count: 1}})).catch(err => handleError(err, 'Set latest'));
@@ -700,12 +700,12 @@ router.put('/zipPassword/:uid', function (req, res, next){
         status: 9,
     }, {limit: 1}).then(items => {
         if (items.length < 1) {
-            return handleError(new HoError('zip can not be fund!!!'));
+            return handleError(new HoError('zip can not be found!!!'), next);
         }
         return Mongo('update', STORAGEDB, {
             _id: id,
             status: 9,
-        }, {$set: {pwd}}).then(item => res.json({apiOk: true}));
+        }, {$set: {pwd}}).then(item => res.json({apiOK: true}));
     }).catch(err => handleError(err, next));
 });
 

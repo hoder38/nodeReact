@@ -8,6 +8,10 @@ import sendWs from '../util/sendWs.js'
 const router = Express.Router();
 const StockTagTool = TagTool(STOCKDB);
 
+router.use(function(req, res, next) {
+    checkLogin(req, res, next);
+});
+
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
     console.log('stock');
     StockTagTool.tagQuery(Number(req.params.page), req.params.name, req.params.exactly === 'true' ? true : false, Number(req.params.index), req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
@@ -239,10 +243,6 @@ router.get('/getTotal', function(req, res,next) {
 router.put('/updateTotal/:real(1|0)?', function(req, res,next) {
     console.log('stock update total');
     StockTool.updateStockTotal(req.user, req.body.info, (req.params.real === '1') ? true : false).then(result => res.json(result)).catch(err => handleError(err, next));
-});
-
-router.use(function(req, res, next) {
-    checkLogin(req, res, next);
 });
 
 export default router

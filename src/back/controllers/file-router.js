@@ -156,7 +156,7 @@ router.delete('/del/:uid/:recycle', function(req, res, next) {
                             return (recycle < 4) ? recur_backup(recycle) : Promise.resolve();
                         }
                     }
-                    return FsExistsSync(`${bufferPath}_complete`) ? googleBackup(req.user, items[0]._id, items[0].playList[index], bufferPath, items[0].tags, recycle, '_complete').then(() => rest2) : rest2();
+                    return FsExistsSync(`${bufferPath}_complete`) ? googleBackup(req.user, items[0]._id, items[0].playList[index], bufferPath, items[0].tags, recycle, '_complete').then(() => rest2()) : rest2();
                 }
             } else {
                 return googleBackup(req.user, items[0]._id, items[0].name, filePath, items[0].tags, recycle).then(() => {

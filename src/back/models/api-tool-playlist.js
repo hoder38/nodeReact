@@ -430,7 +430,7 @@ const startZip = (user, index, id, owner, name, pwd, zip_type) => Mongo('update'
         const regName = name.replace(/"/g, '\\"');
         let cmdline = `${PathJoin(__dirname, 'util/myuzip.py')} ${filePath}_zip ${realPath}  "${regName}"${pwd ? ` '${pwd}'` : " '123'"}`;
         if (zip_type === 2) {
-            cmdline = `unrar x ${filePath}.1.rar ${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
+            cmdline = `7za x ${filePath}.1.rar -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
         } else if (zip_type === 3) {
             cmdline = `7za x ${filePath}_7z -o${realPath} "${regName}"${pwd ? ` -p${pwd}` : ' -p123'}`;
         } else if (zip_type === 4) {

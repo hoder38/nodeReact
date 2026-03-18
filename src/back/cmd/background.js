@@ -1,6 +1,6 @@
 import { ENV_TYPE, DEVICE_PATH } from '../../../ver.js'
 import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER, BACKUP_PATH } from '../config.js'
-import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAl, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR, MAX_RETRY } from '../constants.js'
+import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAL, EXTERNAL_INTERVAL, DOC_INTERVAL, /*STOCK_INTERVAL, */STOCKDB, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR, MAX_RETRY } from '../constants.js'
 import Child_process from 'child_process'
 import Mongo from '../models/mongo-tool.js'
 import StockTool, { getStockListV2, getSingleAnnual, stockStatus } from '../models/stock-tool.js'
@@ -78,13 +78,13 @@ export const checkMedia = () => {
     if (CHECK_MEDIA(ENV_TYPE)) {
         const loopHandleMedia = () => {
             const now = Math.round(new Date().getTime() / 1000);
-            if (!currentCheckMedia || currentCheckMedia < (now - MEDIA_INTERVAl * (MAX_RETRY + 2))) {
+            if (!currentCheckMedia || currentCheckMedia < (now - MEDIA_INTERVAL * (MAX_RETRY + 2))) {
                 currentCheckMedia = now;
                 console.log('loopCheckMedia');
                 console.log(new Date().toLocaleString());
                 PlaylistApi('playlist kick').then(() => MediaHandleTool.checkMedia()).catch(err => bgError(err, 'Loop checkMedia')).then(() => currentCheckMedia = 0);
             }
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAl * 1000)).then(() => loopHandleMedia());
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), MEDIA_INTERVAL * 1000)).then(() => loopHandleMedia());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 420000)).then(() => loopHandleMedia());
     }

@@ -178,15 +178,15 @@ const resetTotal = (type, se) => {
     }
     switch(type) {
         case 'newmid':
-        return Mongo('updateMany', TOTALDB, Object.assign(find, {newMid: {$exists: true}}), {$set: {newMid: []}}).then(count => {
+        return Mongo('updateMany', TOTALDB, {...find, newMid: {$exists: true}}, {$set: {newMid: []}}).then(count => {
             console.log(count);
-            return Mongo('find', TOTALDB, Object.assign(find, {newMid: {$exists: true}})).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+            return Mongo('find', TOTALDB, {...find, newMid: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
         });
         break;
         case 'profit':
-        return Mongo('updateMany', TOTALDB, Object.assign(find, {profit: {$exists: true}}), {$set: {profit: 0}}).then(count => {
+        return Mongo('updateMany', TOTALDB, {...find, profit: {$exists: true}}, {$set: {profit: 0}}).then(count => {
             console.log(count);
-            return Mongo('find', TOTALDB, Object.assign(find, {profit: {$exists: true}})).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
+            return Mongo('find', TOTALDB, {...find, profit: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset profit'));
         });
         break;
         default:

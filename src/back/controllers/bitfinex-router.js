@@ -20,7 +20,7 @@ router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
 
 router.get('/single/:sortName(name|mtime|count)/:sortType(desc|asc)/:uid/:user?', function(req, res, next) {
     console.log('BitfinexTool single');
-    res.json(BitfinexTool.query(0, req.params.name, req.params.sortName, req.params.sortType, req.user, req.session, Number(req.params.uid)));
+    res.json(BitfinexTool.query(0, null, req.params.sortName, req.params.sortType, req.user, req.session, Number(req.params.uid)));
 });
 
 router.get('/parent', function(req, res, next){

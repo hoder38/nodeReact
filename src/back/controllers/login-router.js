@@ -14,27 +14,27 @@ Passport.use(new Strategy(function(username, password, done){
     console.log('login');
     const validUsername = isValidString(username, 'name');
     if (!validUsername) {
-        return handleError(new HoError('username is not vaild', {code: 401}), done);
+        return handleError(new HoError('username is not valid', {code: 401}), done);
     }
     const validPassword = isValidString(password, 'passwd');
     let validVerify = false;
     if (!validPassword) {
         validVerify = isValidString(password, 'verify');
         if (!validVerify) {
-            return handleError(new HoError('passwd is not vaild', {code: 401}));
+            return handleError(new HoError('passwd is not valid', {code: 401}), done);
         }
     }
     Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
         if (users.length < 1) {
-            return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+            return handleError(new HoError('Incorrect username or password', {code: 401}), done)
         }
         if (validPassword && createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
-            return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+            return handleError(new HoError('Incorrect username or password', {code: 401}), done)
         }
         if (validVerify) {
             return Mongo('deleteMany', VERIFYDB, {utime: {$lt: Math.round(new Date().getTime() / 1000) - 185}}).then(item => Mongo('find', VERIFYDB, {uid: users[0]._id}, {limit: 1}).then(info => {
                 if (info.length < 1 || validVerify !== info[0].verify) {
-                    return handleError(new HoError('Incorrect username or password', {cdoe: 401}))
+                    return handleError(new HoError('Incorrect username or password', {code: 401}), done)
                 }
                 done(null, users[0])
             }));
@@ -80,7 +80,7 @@ export default function(url=null) {
         })
     })
     router.all('/api*', function(req, res, next) {
-        return handleError(new HoError('Unkonwn api'), next)
+        return handleError(new HoError('Unknown api'), next)
     })
     return router
 }
