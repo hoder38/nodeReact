@@ -9,7 +9,7 @@ const { dirname: PathDirname } = pathModule;
 import Mkdirp from 'mkdirp'
 import ReadTorrent from 'read-torrent'
 import Redis from '../models/redis-tool.js'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import MediaHandleTool, { handleMediaError } from '../models/mediaHandle-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
@@ -594,7 +594,7 @@ router.post('/upload/file', function(req, res, next) {
                             select: setArr,
                             option: supplyTag(setArr, optArr),
                             other: [],
-                        })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                        })).catch(handleMediaError(res, item[0]['_id'], mediaType['fileIndex']));
                     });
                 });
             });

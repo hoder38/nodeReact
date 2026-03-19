@@ -2,7 +2,7 @@ import { STORAGEDB, NOISE_TIME } from '../constants.js'
 import Express from 'express'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink } = fsModule;
-import MediaHandleTool, { errorMedia, completeMedia } from '../models/mediaHandle-tool.js'
+import MediaHandleTool, { handleMediaError, completeMedia } from '../models/mediaHandle-tool.js'
 import { googleBackup } from '../models/api-tool-google.js'
 import Mongo from '../models/mongo-tool.js'
 import TagTool from '../models/tag-tool.js'
@@ -192,7 +192,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
             const filePath = getFileLocation(items[0].owner, items[0]._id);
             if (items[0].mediaType.type) {
                 const rest = () => items[0].mediaType.key ? (!items[0].mediaType.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(items[0].mediaType, filePath, items[0]._id, req.user, items[0].mediaType.key) : MediaHandleTool.handleMedia(items[0].mediaType, filePath, items[0]._id, items[0].mediaType.key, req.user) : MediaHandleTool.handleMediaUpload(items[0].mediaType, filePath, items[0]._id, req.user);
-                return rest().catch(err => handleError(err, errorMedia, items[0]['_id'], items[0].mediaType['fileIndex'])).then(() => res.json({apiOK: true}));
+                return rest().then(() => res.json({apiOK: true})).catch(handleMediaError(res, items[0]['_id'], items[0].mediaType['fileIndex']));
             } else if (req.params.index) {
                 if (req.params.index === 'v') {
                     for (let i in items[0]['playList']) {
@@ -216,7 +216,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                     return handleError(new HoError('cannot find media'));
                 }
                 const rest = () => items[0].mediaType[fileIndex].key ? (!items[0].mediaType[fileIndex].complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(items[0].mediaType[fileIndex], filePath, items[0]._id, req.user, items[0].mediaType[fileIndex].key) : MediaHandleTool.handleMedia(items[0].mediaType[fileIndex], filePath, items[0]._id, items[0].mediaType[fileIndex].key, req.user) : MediaHandleTool.handleMediaUpload(items[0].mediaType[fileIndex], filePath, items[0]._id, req.user);
-                return rest().catch(err => handleError(err, errorMedia, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex'])).then(() => res.json({apiOK: true}));
+                return rest().then(() => res.json({apiOK: true})).catch(handleMediaError(res, items[0]['_id'], items[0].mediaType[fileIndex]['fileIndex']));
             } else {
                 let handleItems = [];
                 for (let i in items[0].mediaType) {
@@ -227,7 +227,7 @@ router.get('/media/:action(act|del)/:uid/:index(\\d+|v)?', function(req, res, ne
                 if (handleItems.length < 1) {
                     return handleError(new HoError('need complete first'));
                 }
-                return Promise.all(handleItems.map(m => m.key ? (!m.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user, m.key) : MediaHandleTool.handleMedia(m, filePath, items[0]._id, m.key, req.user).catch(err => handleError(err, errorMedia, items[0]['_id'], m['fileIndex'])) : MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user).catch(err => handleError(err, errorMedia, items[0]['_id'], m['fileIndex'])))).then(() => res.json({apiOK: true}));
+                return Promise.all(handleItems.map(m => m.key ? (!m.complete && new Date().getTime()/1000 - items[0].utime > NOISE_TIME) ? MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user, m.key) : MediaHandleTool.handleMedia(m, filePath, items[0]._id, m.key, req.user) : MediaHandleTool.handleMediaUpload(m, filePath, items[0]._id, req.user))).then(() => res.json({apiOK: true})).catch(handleMediaError(res, items[0]['_id'], null));
             }
             case 'del':
             if (items[0].mediaType.type) {

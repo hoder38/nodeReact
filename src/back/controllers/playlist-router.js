@@ -8,7 +8,7 @@ const { basename: PathBasename, dirname: PathDirname } = pathModule;
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink, createReadStream: FsCreateReadStream, createWriteStream: FsCreateWriteStream, statSync: FsStatSync } = fsModule;
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
+import MediaHandleTool, { handleMediaError } from '../models/mediaHandle-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import { checkLogin, isValidString, handleError, HoError, getFileLocation, checkAdmin, toValidName } from '../util/utility.js'
@@ -101,7 +101,7 @@ router.put('/join', function(req, res, next){
             return recur_copy(2).then(() => MediaHandleTool.handleMediaUpload(mediaType, filePath1, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
                 name: order_items[1].name,
-            })).catch(err => handleError(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
+            })).catch(handleMediaError(res, order_items[1]._id, mediaType['fileIndex'])));
         } else {
             //cat
             const ext = zip_type === 3 ? '_7z' : '_zip';
@@ -126,7 +126,7 @@ router.put('/join', function(req, res, next){
             return unlinkC().then(() => new Promise((resolve, reject) => Child_process.exec(cmdline, (err, output) => err ? reject(err) : resolve(output)))).then(output => MediaHandleTool.handleMediaUpload(mediaType, filePath, order_items[1]._id, req.user).then(() => res.json({
                 id: order_items[1]._id,
                 name: order_items[1].name,
-            })).catch(err => handleError(err, errorMedia, order_items[1]._id, mediaType['fileIndex'])));
+            })).catch(handleMediaError(res, order_items[1]._id, mediaType['fileIndex'])));
         }
     }).catch(err => handleError(err, next));
 });
@@ -239,7 +239,7 @@ router.post('/copy/:uid/:index(\\d+)', function(req, res, next) {
                             select: setArr,
                             option: supplyTag(setArr, optArr),
                             other: [],
-                        })).catch(err => handleError(err, errorMedia, item[0]['_id'], mediaType['fileIndex']));
+                        })).catch(handleMediaError(res, item[0]['_id'], mediaType['fileIndex']));
                     });
                 });
             });

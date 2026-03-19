@@ -80,6 +80,8 @@ filterBitfinex();
 usseInit();
 twseInit();
 
+// Reject URLs containing backslashes to prevent path confusion attacks
+app.use((req, res, next) => /\\|%5c/i.test(req.originalUrl) ? res.status(400).json({ error: 'Invalid URL' }) : next());
 app.use(BodyParserUrlencoded({ extended: true }))
 app.use(BodyParserJson({ extended: true }))
 app.use(ExpressSession(SessionStore(ExpressSession).config))

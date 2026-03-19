@@ -1,7 +1,7 @@
 module.exports = {
   testEnvironment: 'node',
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
-  },
+  transform: {},
   moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
+  testMatch: ['**/__tests__/**/*.test.js'],
+  // ESM support — tests use dynamic import() with jest.unstable_mockModule
 };

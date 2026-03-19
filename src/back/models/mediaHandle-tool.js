@@ -762,6 +762,13 @@ export const errorMedia = (err, fileID, fileIndex) => (err.name === 'HoError' &&
     status: 9,
 } : {'mediaType.timeout': true}}).then(() => handleError(err)) : Mongo('update', STORAGEDB, {_id: fileID}, {$set: (typeof fileIndex === 'number') ? {[`mediaType.${fileIndex}.err`]: err} : {'mediaType.err': err}}).then(() => handleError(err));
 
+export const handleMediaError = (res, fileID, fileIndex) => (err) => {
+    errorMedia(err, fileID, fileIndex).catch(() => {});
+    if (!res.headersSent) {
+        res.status(500).json({ error: 'media processing failed' });
+    }
+};
+
 const getHd = height => height >= 2160 ? 2160 : height >= 1440 ? 1440 : height >= 1080 ? 1080 : height >= 720 ? 720 : height >= 480 ? 480 : height >= 360 ? 360 : height >= 240 ? 240 : 0;
 
 const getTimeTag = (time, opt) => {

@@ -351,7 +351,7 @@ export const SRT2VTT = (filePath, ext) => new Promise((resolve, reject) => FsRea
 })).then(() => FsUnlinkSync(`${filePath}.sub`)));
 
 export const bufferToString = (buffer, big5=false) => {
-    const charset = jsCharDet(buffer);
+    const charset = jsCharDet.detect(buffer);
     if (charset) {
         try {
             return buffer.toString(big5 ? 'big5' : charset.encoding);
