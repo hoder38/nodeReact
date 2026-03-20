@@ -281,9 +281,9 @@ Build Info: {
 }
 p7zip-full
 ffmpeg
+megatools
 pdftk改為qpdf "${comPath}" --split-pages=1 -- "${pdfPath}/%03d.pdf"
 unrar 改為用7z
-拿掉megatools
 
 還沒做
 外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt

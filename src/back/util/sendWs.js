@@ -51,6 +51,7 @@ export function init() {
         client.setKeepAlive(true, 10000);
     });
     client.on('end', () => console.log('disconnected from server'));
+    client.on('error', err => handleError(err, 'TCP client'));
     client.on('close', () => {
         console.log(`reconnect in 10 seconds`);
         setTimeout(() => {
@@ -60,13 +61,12 @@ export function init() {
 }
 
 function sendWs(data, adultonly, auth) {
-    if (wsServer) {
-        data.level = (auth && adultonly) ? 2 : adultonly ? 1 : 0;
-        const sendData = JSON.stringify(data);
-        wsServer.clients.forEach(function each(client) {
-            client.send(sendData);
-        });
-    }
+    if (!wsServer || !data) return;
+    data.level = (auth && adultonly) ? 2 : adultonly ? 1 : 0;
+    const sendData = JSON.stringify(data);
+    wsServer.clients.forEach(function each(client) {
+        client.send(sendData);
+    });
 }
 
 export default (data, adultonly, auth, ds=false) => {

@@ -36,7 +36,7 @@ export const extType = name => {
             ext: extName,
         };
     } else if (ZIP_EXT.includes(extName)) {
-        if (name.match(/\.book\.(zip|7z|rar)$/)) {
+        if (name.match(/\.book\.(zip|7z|rar)$/i)) {
             return {
                 type: 'zipbook',
                 ext: extName,
@@ -48,12 +48,12 @@ export const extType = name => {
             };
         } else {
             if (extName === '001') {
-                if (name.match(/\.zip\.001$/)) {
+                if (name.match(/\.zip\.001$/i)) {
                     return {
                         type: 'zip',
                         ext: 'zip',
                     };
-                } else if (name.match(/\.7z\.001$/)) {
+                } else if (name.match(/\.7z\.001$/i)) {
                     return {
                         type: 'zip',
                         ext: '7z',
@@ -162,9 +162,9 @@ export const isZip = name => {
     }
     if (ZIP_EXT.includes(extName)) {
         if (extName === '001') {
-            if (name.match(/zip\.001$/)) {
+            if (name.match(/zip\.001$/i)) {
                 return 'zip';
-            } else if (name.match(/7z\.001$/)) {
+            } else if (name.match(/7z\.001$/i)) {
                 return '7z';
             } else {
                 return false;
@@ -186,7 +186,7 @@ export const isZipbook = name => {
         return false;
     }
     if (ZIP_EXT.includes(extName)) {
-        return (name.match(/\.book\.(zip|7z|rar)$/) || extName === 'cbr' || extName === 'cbz') ? extName : false;
+        return (name.match(/\.book\.(zip|7z|rar)$/i) || extName === 'cbr' || extName === 'cbz') ? extName : false;
     } else {
         return false;
     }
@@ -234,7 +234,7 @@ export const isKindle = name => {
     } else {
         return false;
     }
-    return KINDLE_EXT.includes(extName) ? extName : extName.match(/^azw\d$/) ? extName : false;
+    return KINDLE_EXT.includes(extName) ? extName : (extName.match(/^azw\d$/) ? extName : false);
 }
 
 export const isCSV = name => {

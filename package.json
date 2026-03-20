@@ -4,10 +4,9 @@
   "description": "es6",
   "private": true,
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit && python3 -m pytest src/back/util/myuzip_test.py src/back/util/twse_test.py -v",
     "build": "webpack --config config/webpack.release.config.cjs",
     "dev-test": "docker exec -w /app reactnode-server npm run test",
-    "dev-test-python": "docker exec -w /app reactnode-server python3 src/back/util/myuzip.test.py",
     "dev-build": "docker exec -w /app reactnode-server npm run build",
     "dev-back": "docker compose down; docker compose up -d --build",
     "dev-code": "docker compose restart reactnode-file-server reactnode-server",
