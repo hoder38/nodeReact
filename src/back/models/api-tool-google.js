@@ -343,7 +343,7 @@ function youtubeAPI(method, data) {
                     video_id = new Set(data.id_arr);
                 }
                 if (data.pl_arr) {
-                    playlist_id = new Set(data.pl_arr[i]);
+                    playlist_id = new Set(data.pl_arr);
                 }
                 metadata.items.forEach(i => {
                     if (i.id) {
@@ -516,20 +516,15 @@ function listFile(data) {
     if (!data['folderId']) {
         return handleError(new HoError('list parameter lost!!!'));
     }
-    if (data['max']) {
-        max = data['max'];
-    }
-    let index = 0;
-    const proc = index => new Promise((resolve, reject) => googleapis.drive({
+    const proc = (index = 0) => new Promise((resolve, reject) => googleapis.drive({
         version: 'v2',
         auth: oauth2Client,
     }).files.list({
         q: `'${data['folderId']}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'`,
         maxResults: data['max'] ? data['max'] : DRIVE_LIMIT,
-    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.data.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc()), OATH_WAITING * 1000)) : handleError(err));
-    return proc();
+    }, (err, metadata) => (err && err.code !== 'ECONNRESET') ? reject(err) : resolve(metadata))).then(metadata => metadata.data.items).catch(err => (err.code == '401') ? (++index > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(proc(index)), OATH_WAITING * 1000)) : handleError(err));
+    return proc(0);
 }
-
 function create(data) {
     if (!data['name'] || !data['parent']) {
         return handleError(new HoError('create parameter lost!!!'));
@@ -889,7 +884,7 @@ export function googleDownloadSubtitle(url, filePath) {
         const renameSub = (sub, lang, sub_ext) => {
             if (sub_ext) {
                 FsRenameSync(`${sub_location}/${sub}`, `${filePath}${lang}.${sub_ext}`);
-                return (sub_ext === 'vtt') ? Promise.resolve() : SRT2VTT(`${filePath}}${lang}`, sub_ext);
+                return (sub_ext === 'vtt') ? Promise.resolve() : SRT2VTT(`${filePath}${lang}`, sub_ext);
             } else {
                 return Promise.resolve();
             }

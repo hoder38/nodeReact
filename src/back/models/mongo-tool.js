@@ -81,7 +81,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
     }
 });
 
-let collections = []
+let collections = {}
 
 export const objectID = (id=null) => id === null ? new ObjectId() : new ObjectId(id)
 
