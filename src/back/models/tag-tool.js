@@ -656,11 +656,7 @@ export default function process(collection) {
                     }));
                 });
             } else if (tagType.type === 3) {
-                return {
-                    id: items[0]._id,
-                    adultonly: items[0].adultonly,
-                    tag: tagType.name,
-                };
+                return {};
             } else if (tagType.type === 1) {
                 return Mongo('find', collection, {_id: id}, {limit: 1}).then(items => {
                     if (items.length < 1) {
@@ -882,7 +878,7 @@ export default function process(collection) {
                         tags: search[collection].tags.slice(0, search[collection].index),
                         exactly: search[collection].exactly,
                         bookmark: search[collection].bookmark,
-                        sortName: getStorageSortName(sortName),
+                        sortName: getSortName(sortName),
                         sortType: sortType,
                     };
                 },
