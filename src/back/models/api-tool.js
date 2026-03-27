@@ -19,6 +19,23 @@ let api_pool = [];
 let api_duration = 0;
 let api_lock = false;
 
+// Test helpers — expose internal state for white-box testing
+export function _resetState() {
+    api_ing = 0;
+    api_pool = [];
+    api_duration = 0;
+    api_lock = false;
+}
+export function _getState() {
+    return { api_ing, api_pool: [...api_pool], api_duration, api_lock };
+}
+export function _setState(overrides) {
+    if ('api_ing' in overrides) api_ing = overrides.api_ing;
+    if ('api_pool' in overrides) api_pool = overrides.api_pool;
+    if ('api_duration' in overrides) api_duration = overrides.api_duration;
+    if ('api_lock' in overrides) api_lock = overrides.api_lock;
+}
+
 const setLock = () => {
     console.log(api_lock);
     return api_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock()), 500)) : Promise.resolve(api_lock = true);
