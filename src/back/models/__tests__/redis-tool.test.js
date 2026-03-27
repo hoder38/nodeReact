@@ -37,6 +37,16 @@ const mockClient = {
 const mockCreateClient = jest.fn(() => mockClient);
 
 // Mock Redis module
+// --- node-fetch (prevents test pollution from api-tool.js retry logic) ---
+jest.unstable_mockModule('node-fetch', () => ({
+  default: jest.fn(() => Promise.resolve({
+    ok: true,
+    buffer: jest.fn().mockResolvedValue(Buffer.from('')),
+    headers: { get: jest.fn(() => null) },
+    body: { pipe: jest.fn().mockReturnThis(), on: jest.fn() },
+  })),
+}));
+
 jest.unstable_mockModule('redis', () => ({
     default: { createClient: mockCreateClient },
 }));

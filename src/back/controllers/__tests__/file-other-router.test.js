@@ -58,6 +58,16 @@ const mockCreateReadStream = jest.fn(() => makeStreamMock());
 const mockCreateWriteStream = jest.fn(() => ({ on: jest.fn(), write: jest.fn(), end: jest.fn() }));
 const mockStatSync = jest.fn(() => ({ size: 1000 }));
 
+// --- node-fetch (prevents test pollution from api-tool.js retry logic) ---
+jest.unstable_mockModule('node-fetch', () => ({
+  default: jest.fn(() => Promise.resolve({
+    ok: true,
+    buffer: jest.fn().mockResolvedValue(Buffer.from('')),
+    headers: { get: jest.fn(() => null) },
+    body: { pipe: jest.fn().mockReturnThis(), on: jest.fn() },
+  })),
+}));
+
 jest.unstable_mockModule('fs', () => ({
   default: {
     existsSync: mockExistsSync,

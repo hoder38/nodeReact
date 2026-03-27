@@ -16,6 +16,16 @@ import { jest, describe, test, expect, beforeAll } from '@jest/globals';
 
 // --- fs: avoid reading real SSL cert files ---
 const mockReadFileSync = jest.fn(() => Buffer.from('mock-cert-data'));
+// --- node-fetch (prevents test pollution from api-tool.js retry logic) ---
+jest.unstable_mockModule('node-fetch', () => ({
+  default: jest.fn(() => Promise.resolve({
+    ok: true,
+    buffer: jest.fn().mockResolvedValue(Buffer.from('')),
+    headers: { get: jest.fn(() => null) },
+    body: { pipe: jest.fn().mockReturnThis(), on: jest.fn() },
+  })),
+}));
+
 jest.unstable_mockModule('fs', () => ({
   default: {
     readFileSync: mockReadFileSync,

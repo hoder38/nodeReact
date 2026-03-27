@@ -38,10 +38,27 @@ jest.unstable_mockModule('../../constants.js', () => ({
     MAX_RETRY: mockMaxRetry,
 }));
 
-// Mock node-fetch
-mockFetch = jest.fn();
+// Mock node-fetch — use a wrapper so Fetch() ALWAYS returns a Promise,
+// even after jest.clearAllMocks() resets mockFetch to return undefined.
+// This prevents dangling retry timers (api-tool.js line 178) from crashing
+// with "Cannot read property 'then' of undefined" in later test files.
+const safeFetchResponse = () => ({
+    buffer: jest.fn().mockResolvedValue(Buffer.from('')),
+    headers: { get: jest.fn(() => null) },
+    body: { pipe: jest.fn().mockReturnThis(), on: jest.fn() },
+});
+mockFetch = jest.fn(() => Promise.resolve(safeFetchResponse()));
+const fetchWrapper = (...args) => {
+    try {
+        const result = mockFetch(...args);
+        if (result && typeof result.then === 'function') return result;
+        return Promise.resolve(safeFetchResponse());
+    } catch (e) {
+        return Promise.resolve(safeFetchResponse());
+    }
+};
 jest.unstable_mockModule('node-fetch', () => ({
-    default: mockFetch,
+    default: fetchWrapper,
 }));
 
 // Mock querystring
@@ -113,6 +130,7 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
     HoError: mockHoError,
     big5Encode: mockBig5Encode,
     bufferToString: mockBufferToString,
+    isEmptyObject: (obj) => obj && Object.keys(obj).length === 0 && obj.constructor === Object,
 }));
 
 // Mock sendWs.js
@@ -128,6 +146,8 @@ describe('api-tool.js', () => {
     beforeEach(async () => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.clearAllMocks();
+        // Restore safe default after clearAllMocks (which resets to jest.fn → undefined)
+        mockFetch.mockImplementation(() => Promise.resolve(safeFetchResponse()));
         jest.resetModules();
         
         // Reset module state by re-importing
@@ -144,6 +164,9 @@ describe('api-tool.js', () => {
 
     afterEach(() => {
         consoleSpy.mockRestore();
+        // Restore safe Fetch default so lingering retry timers from download()
+        // won't crash — they reference the same mockFetch variable
+        mockFetch.mockImplementation(() => Promise.resolve(safeFetchResponse()));
     });
 
     // ═══════════════════════════════════════════════════════════════════
@@ -443,25 +466,43 @@ describe('api-tool.js', () => {
             expect(mockUtf8Encode).toHaveBeenCalledWith('https://example.com/文件.txt');
         });
 
-        test('should handle empty POST body', async () => {
+        test('should handle empty POST body (isEmptyObject skips stringify)', async () => {
             const mockBody = Buffer.from('test');
             mockFetch.mockResolvedValue({
                 buffer: jest.fn().mockResolvedValue(mockBody),
                 headers: { get: jest.fn() },
             });
 
-            mockQStringify.mockReturnValue('');
-
             await Api('url', 'https://example.com', {
                 post: {},
             });
 
-            expect(mockQStringify).toHaveBeenCalledWith({});
-            // Empty string '' !== null is true, so Content-Length IS set to 0
-            // This is a known quirk: empty POST sends Content-Length: 0
-            const callHeaders = mockFetch.mock.calls[0][1].headers;
-            expect(callHeaders['Content-Length']).toBe(0);
-            expect(callHeaders['Content-Type']).toBe('application/x-www-form-urlencoded');
+            // isEmptyObject({}) returns true, so post is skipped entirely
+            expect(mockQStringify).not.toHaveBeenCalled();
+            // No POST headers or method should be set
+            const callOpts = mockFetch.mock.calls[0][1];
+            expect(callOpts.method).toBeUndefined();
+            expect(callOpts.headers['Content-Type']).toBeUndefined();
+            expect(callOpts.headers['Content-Length']).toBeUndefined();
+        });
+
+        test('should still stringify non-empty POST body', async () => {
+            const mockBody = Buffer.from('test');
+            mockFetch.mockResolvedValue({
+                buffer: jest.fn().mockResolvedValue(mockBody),
+                headers: { get: jest.fn() },
+            });
+
+            mockQStringify.mockReturnValue('key=value');
+
+            await Api('url', 'https://example.com', {
+                post: { key: 'value' },
+            });
+
+            expect(mockQStringify).toHaveBeenCalledWith({ key: 'value' });
+            const callOpts = mockFetch.mock.calls[0][1];
+            expect(callOpts.method).toBe('POST');
+            expect(callOpts.headers['Content-Type']).toBe('application/x-www-form-urlencoded');
         });
 
         test('should handle URL with various pathnames', async () => {

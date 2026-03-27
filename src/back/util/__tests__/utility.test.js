@@ -108,7 +108,7 @@ let isValidString, toValidName, userPWCheck, checkAdmin, HoError,
     getStorageItem, getPasswordItem, getStockItem, getFitnessItem,
     getRankItem, getFileLocation, deleteFolderRecursive, SRT2VTT,
     bufferToString, getJson, torrent2Magnet, sortList, completeZero,
-    findTag, convertTimestampToDate, addPre;
+    findTag, convertTimestampToDate, addPre, isEmptyObject;
 
 let consoleSpy;
 let cryptoModule;
@@ -144,6 +144,7 @@ beforeEach(async () => {
     findTag = mod.findTag;
     convertTimestampToDate = mod.convertTimestampToDate;
     addPre = mod.addPre;
+    isEmptyObject = mod.isEmptyObject;
 
     cryptoModule = await import('crypto');
 });
@@ -1373,5 +1374,37 @@ describe('addPre', () => {
     });
     test('relative URL → prepend pre/', () => {
         expect(addPre('path/to', 'http://base')).toBe('http://base/path/to');
+    });
+});
+
+// =====================================================================
+// isEmptyObject
+// =====================================================================
+describe('isEmptyObject', () => {
+    test('empty object returns true', () => {
+        expect(isEmptyObject({})).toBe(true);
+    });
+    test('non-empty object returns false', () => {
+        expect(isEmptyObject({ a: 1 })).toBe(false);
+    });
+    test('null returns falsy', () => {
+        expect(isEmptyObject(null)).toBeFalsy();
+    });
+    test('undefined returns falsy', () => {
+        expect(isEmptyObject(undefined)).toBeFalsy();
+    });
+    test('array returns false (wrong constructor)', () => {
+        expect(isEmptyObject([])).toBe(false);
+    });
+    test('string returns falsy', () => {
+        expect(isEmptyObject('')).toBeFalsy();
+    });
+    test('number returns falsy', () => {
+        expect(isEmptyObject(0)).toBeFalsy();
+    });
+    test('object with inherited properties returns true (only own keys)', () => {
+        const proto = { inherited: true };
+        const obj = Object.create(proto);
+        expect(isEmptyObject(obj)).toBe(true);
     });
 });

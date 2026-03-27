@@ -20,6 +20,16 @@ import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 // =====================================================================
 // MOCK SETUP — must be before any await import()
 // =====================================================================
+// --- node-fetch (prevents test pollution from api-tool.js retry logic) ---
+jest.unstable_mockModule('node-fetch', () => ({
+  default: jest.fn(() => Promise.resolve({
+    ok: true,
+    buffer: jest.fn().mockResolvedValue(Buffer.from('')),
+    headers: { get: jest.fn(() => null) },
+    body: { pipe: jest.fn().mockReturnThis(), on: jest.fn() },
+  })),
+}));
+
 jest.unstable_mockModule('fs', () => ({
   default: {
     readFileSync: jest.fn(() => Buffer.from('')),
