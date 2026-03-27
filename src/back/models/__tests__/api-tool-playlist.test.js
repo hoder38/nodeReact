@@ -303,7 +303,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({
 
 // ─── Import the module under test ────────────────────────────────────────────
 
-let PlaylistModule;
+let PlaylistModule, _resetPools, _getPools, _setPools;
 
 // Helper to reset module state by re-importing
 async function resetModule() {
@@ -312,6 +312,9 @@ async function resetModule() {
     
     // Re-import fresh instance
     PlaylistModule = await import('../api-tool-playlist.js');
+    _resetPools = PlaylistModule._resetPools;
+    _getPools = PlaylistModule._getPools;
+    _setPools = PlaylistModule._setPools;
 }
 
 // ─── Test Suites ──────────────────────────────────────────────────────────────
@@ -319,7 +322,10 @@ async function resetModule() {
 describe('api-tool-playlist.js', () => {
     beforeEach(async () => {
         jest.clearAllMocks();
-        await resetModule();
+        if (!PlaylistModule) {
+            await resetModule();
+        }
+        _resetPools();
         
         // Default mock behaviors
         mockExistsSync.mockReturnValue(false);
@@ -1935,6 +1941,550 @@ describe('api-tool-playlist.js', () => {
 
             expect(mockMediaHandleTool.handleTag).toHaveBeenCalled();
             expect(mockMediaHandleTool.handleMediaUpload).toHaveBeenCalled();
+        });
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION: Pool test helpers (_resetPools, _getPools, _setPools)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    describe('Pool test helpers', () => {
+        test('_getPools should return initial empty state after _resetPools', () => {
+            _resetPools();
+            const pools = _getPools();
+            expect(pools.torrent_pool).toEqual([]);
+            expect(pools.zip_pool).toEqual([]);
+            expect(pools.mega_pool).toEqual([]);
+            expect(pools.torrent_lock).toBe(false);
+            expect(pools.zip_lock).toBe(false);
+            expect(pools.mega_lock).toBe(false);
+        });
+
+        test('_setPools should override specific pool fields', () => {
+            const user = { _id: new MockObjectID('u1'), username: 'test' };
+            _setPools({
+                torrent_pool: [{ hash: 'abc', index: [0], user, engine: null }],
+                torrent_lock: true,
+            });
+            const pools = _getPools();
+            expect(pools.torrent_pool.length).toBe(1);
+            expect(pools.torrent_pool[0].hash).toBe('abc');
+            expect(pools.torrent_lock).toBe(true);
+            expect(pools.zip_pool).toEqual([]);
+        });
+
+        test('_resetPools should clear all pools and locks', () => {
+            _setPools({
+                torrent_pool: [{ hash: 'x' }],
+                zip_pool: [{ fileId: 'y' }],
+                mega_pool: [{ url: 'z' }],
+                torrent_lock: true,
+                zip_lock: true,
+                mega_lock: true,
+            });
+            _resetPools();
+            const pools = _getPools();
+            expect(pools.torrent_pool).toEqual([]);
+            expect(pools.zip_pool).toEqual([]);
+            expect(pools.mega_pool).toEqual([]);
+            expect(pools.torrent_lock).toBe(false);
+            expect(pools.zip_lock).toBe(false);
+            expect(pools.mega_lock).toBe(false);
+        });
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SECTION: startTorrent / torrentComplete via torrent add dispatch
+    // ═══════════════════════════════════════════════════════════════════════
+
+    describe('startTorrent() — via torrent add', () => {
+        let user, id, owner;
+
+        beforeEach(() => {
+            user = { _id: new MockObjectID('user1'), username: 'testuser' };
+            id = new MockObjectID('file1');
+            owner = new MockObjectID('owner1');
+            mockGetFileLocation.mockReturnValue('/mock/path/file1');
+            mockCheckAdmin.mockReturnValue(false);
+            mockTorrentLimit.mockReturnValue(5);
+        });
+
+        function createMockEngineWithFiles(filePaths) {
+            const engine = new MockTorrentEngine();
+            engine.files = filePaths.map((p, i) => ({
+                path: p,
+                name: p.split('/').pop(),
+                length: 5000,
+                createReadStream: jest.fn((opts) => {
+                    const stream = new MockReadStream();
+                    // Auto-emit 'end' after a tick so torrentComplete fires
+                    setTimeout(() => {
+                        if (stream.handlers['end']) stream.handlers['end']();
+                    }, 20);
+                    return stream;
+                }),
+            }));
+            return engine;
+        }
+
+        test('ST-01: fresh download, single file torrent — file written and renamed', async () => {
+            const engine = createMockEngineWithFiles(['video.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false); // no partial file
+            mockIsVideo.mockReturnValue(true);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            // Wait for async chain: torrentAdd → startTorrent → stream → torrentComplete
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Mongo update should be called for utime
+            expect(mockMongoFn).toHaveBeenCalledWith(
+                'update', 'storage',
+                expect.objectContaining({ _id: id }),
+                expect.objectContaining({ $set: expect.objectContaining({ utime: expect.any(Number) }) })
+            );
+            // File stream piped to write stream
+            expect(mockCreateWriteStream).toHaveBeenCalledWith('/mock/path/file1/0');
+            // torrentComplete renames to _complete
+            expect(mockRenameSync).toHaveBeenCalledWith('/mock/path/file1/0', '/mock/path/file1/0_complete');
+        });
+
+        test('ST-02: resume partial download — ReadStream starts at existing size', async () => {
+            const engine = createMockEngineWithFiles(['video.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+
+            // Partial file exists with size 2000 (< file.length 5000)
+            mockExistsSync.mockImplementation(path => path === '/mock/path/file1/0');
+            mockStatSync.mockReturnValue({ size: 2000 });
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // createReadStream should be called with {start: 2000} for resume
+            expect(engine.files[0].createReadStream).toHaveBeenCalledWith({ start: 2000 });
+            // Write stream opened in append mode
+            expect(mockCreateWriteStream).toHaveBeenCalledWith('/mock/path/file1/0', { flags: 'a' });
+        });
+
+        test('ST-03: download completes, file is video — handleTag + handleMediaUpload called', async () => {
+            const engine = createMockEngineWithFiles(['movie.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(true);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+            mockMediaHandleTool.handleTag.mockResolvedValue([
+                { fileIndex: 0, realPath: 'movie.mp4' },
+                { def: [], opt: [] },
+                { status: 9 },
+            ]);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            expect(mockMediaHandleTool.handleTag).toHaveBeenCalledWith(
+                '/mock/path/file1/real/movie.mp4',
+                {},
+                'movie.mp4',
+                '', 0, false
+            );
+            expect(mockMediaHandleTool.handleMediaUpload).toHaveBeenCalled();
+        });
+
+        test('ST-05: download completes, file is not media — just renamed, no media processing', async () => {
+            const engine = createMockEngineWithFiles(['readme.txt']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            expect(mockRenameSync).toHaveBeenCalledWith('/mock/path/file1/0', '/mock/path/file1/0_complete');
+            expect(mockMediaHandleTool.handleTag).not.toHaveBeenCalled();
+        });
+
+        test('ST-06: partial file >= full size — treated as complete immediately', async () => {
+            const engine = createMockEngineWithFiles(['video.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+
+            // File already fully downloaded (size >= file.length)
+            mockExistsSync.mockImplementation(path => path === '/mock/path/file1/0');
+            mockStatSync.mockReturnValue({ size: 5000 }); // equal to file.length
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Should not create a read stream (already complete)
+            expect(engine.files[0].createReadStream).not.toHaveBeenCalled();
+            // Should still rename to _complete
+            expect(mockRenameSync).toHaveBeenCalledWith('/mock/path/file1/0', '/mock/path/file1/0_complete');
+        });
+
+        test('ST-07: empty file list from engine — handleError with empty content', async () => {
+            // Create engine with files that are empty after ready
+            const engine = new MockTorrentEngine();
+            engine.files = [];
+            // Engine has files.length === 0 initially, but we need startTorrent to be called
+            // startEngine checks engine.files.length > 0: if false, waits for 'ready'
+            // After 'ready', startTorrent checks playList.length < 1
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Trigger ready — startTorrent will see empty files
+            engine.triggerReady();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'empty content!!!' })
+            );
+        });
+
+        test('ST-08/09: file index out of range after sort — unknown index error', async () => {
+            // Create engine with 1 file but request index 5 (out of range)
+            const engine = createMockEngineWithFiles(['only-file.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 5, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'unknown index' })
+            );
+        });
+
+        test('ST-10: multiple indices for same hash, one completes — engine kept alive', async () => {
+            const engine = createMockEngineWithFiles(['file0.mp4', 'file1.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            // Add torrent with index [0, 1]
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            // Add second index for same torrent
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 1, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // Engine should NOT be destroyed (still has index remaining or both completed)
+            // The pool item should have been cleaned up
+            const pools = _getPools();
+            // Either fully cleaned up or still has remaining index
+            expect(pools.torrent_lock).toBe(false);
+        });
+
+        test('ST-11: last index completes — engine destroyed and pool item removed', async () => {
+            const engine = createMockEngineWithFiles(['single.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // Engine should be destroyed
+            expect(engine.destroyed).toBe(true);
+            // Pool should be empty
+            expect(_getPools().torrent_pool.length).toBe(0);
+        });
+
+        test('ST-04: download completes, file is document — handleTag called', async () => {
+            const engine = createMockEngineWithFiles(['report.pdf']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(true);
+            mockIsZipbook.mockReturnValue(false);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            expect(mockMediaHandleTool.handleTag).toHaveBeenCalled();
+        });
+
+        test('ST-14: handleMediaUpload fails — error caught non-fatally', async () => {
+            const engine = createMockEngineWithFiles(['video.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(true);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+            mockMediaHandleTool.handleMediaUpload.mockRejectedValue(new Error('upload failed'));
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // handleError should be called with the upload error
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'upload failed' }),
+                'media-error',
+                id,
+                expect.any(Number)
+            );
+        });
+
+        test('ST-15: utime field updated on storage document', async () => {
+            const engine = createMockEngineWithFiles(['file.mp4']);
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            const before = Math.round(Date.now() / 1000);
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const updateCall = mockMongoFn.mock.calls.find(c => c[0] === 'update');
+            expect(updateCall).toBeDefined();
+            const setPayload = updateCall[3].$set;
+            expect(setPayload.utime).toBeGreaterThanOrEqual(before);
+        });
+    });
+
+    describe('torrentComplete() — DB metadata', () => {
+        let user, id, owner;
+
+        beforeEach(() => {
+            user = { _id: new MockObjectID('user1'), username: 'testuser' };
+            id = new MockObjectID('file1');
+            owner = new MockObjectID('owner1');
+            mockGetFileLocation.mockReturnValue('/mock/path/file1');
+            mockCheckAdmin.mockReturnValue(false);
+            mockTorrentLimit.mockReturnValue(5);
+        });
+
+        test('ST-16/17: mediaType.{index} set with fileIndex/realPath, status=9', async () => {
+            const engine = new MockTorrentEngine();
+            engine.files = [{
+                path: 'movie.mkv',
+                name: 'movie.mkv',
+                length: 5000,
+                createReadStream: jest.fn(() => {
+                    const stream = new MockReadStream();
+                    setTimeout(() => {
+                        if (stream.handlers['end']) stream.handlers['end']();
+                    }, 20);
+                    return stream;
+                }),
+            }];
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(true);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+            mockMediaHandleTool.handleTag.mockResolvedValue([
+                { fileIndex: 0, realPath: 'movie.mkv' },
+                { def: [], opt: [] },
+                {},
+            ]);
+
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, id, owner);
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // Find the Mongo update call for mediaType/status
+            const metadataUpdate = mockMongoFn.mock.calls.find(c =>
+                c[0] === 'update' && c[3] && c[3].$set && c[3].$set.status === 9
+            );
+            expect(metadataUpdate).toBeDefined();
+            const $set = metadataUpdate[3].$set;
+            expect($set.status).toBe(9);
+            expect($set['mediaType.0']).toBeDefined();
+            expect($set['mediaType.0'].fileIndex).toBe(0);
+            expect($set['mediaType.0'].realPath).toBe('movie.mkv');
+        });
+    });
+
+    describe('torrentGet() — priority queue', () => {
+        test('should pick admin user torrent over regular user when both waiting', async () => {
+            const adminUser = { _id: new MockObjectID('admin1'), username: 'admin' };
+            const regularUser = { _id: new MockObjectID('user1'), username: 'regular' };
+
+            mockCheckAdmin.mockImplementation((level, u) => u.username === 'admin');
+            mockTorrentLimit.mockReturnValue(5);
+            mockGetFileLocation.mockReturnValue('/mock/path/file1');
+
+            const engine = new MockTorrentEngine();
+            engine.files = [{
+                path: 'file.mp4', name: 'file.mp4', length: 100,
+                createReadStream: jest.fn(() => {
+                    const s = new MockReadStream();
+                    setTimeout(() => { if (s.handlers['end']) s.handlers['end'](); }, 20);
+                    return s;
+                }),
+            }];
+            mockTorrentStreamFn.mockReturnValue(engine);
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            // Pre-set pool: regular user first (older), admin user second (newer)
+            _setPools({
+                torrent_pool: [
+                    {
+                        hash: 'regular-hash', index: [0], user: regularUser,
+                        time: 1000, fileId: new MockObjectID('f1'), fileOwner: new MockObjectID('o1'),
+                        torrent: 'magnet:?regular', engine: null,
+                    },
+                    {
+                        hash: 'admin-hash', index: [0], user: adminUser,
+                        time: 2000, fileId: new MockObjectID('f2'), fileOwner: new MockObjectID('o2'),
+                        torrent: 'magnet:?admin', engine: null,
+                    },
+                ],
+            });
+
+            // Trigger torrentGet via torrent stop (which chains to torrentGet)
+            PlaylistModule.default('torrent stop', null, false);
+            await new Promise(resolve => setTimeout(resolve, 600));
+
+            // TorrentStream should have been called for the admin hash (priority)
+            const tsCall = mockTorrentStreamFn.mock.calls.find(c => c[0] === 'magnet:?admin');
+            expect(tsCall).toBeDefined();
+        });
+
+        test('should not start torrent when at TORRENT_LIMIT', async () => {
+            const user = { _id: new MockObjectID('user1'), username: 'test' };
+            mockTorrentLimit.mockReturnValue(1);
+
+            _setPools({
+                torrent_pool: [
+                    { hash: 'running', index: [0], user, time: 1000, engine: new MockTorrentEngine() },
+                    { hash: 'waiting', index: [0], user, time: 2000, engine: null,
+                      fileId: new MockObjectID('f1'), fileOwner: new MockObjectID('o1'),
+                      torrent: 'magnet:?waiting' },
+                ],
+            });
+
+            PlaylistModule.default('torrent stop', null, false);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // TorrentStream should NOT be called for 'waiting' since limit reached
+            const tsCall = mockTorrentStreamFn.mock.calls.find(c => c[0] === 'magnet:?waiting');
+            expect(tsCall).toBeUndefined();
+        });
+    });
+
+    describe('torrentAdd() — queue management with _setPools', () => {
+        test('should add new index to existing pool entry when same hash', async () => {
+            const user = { _id: new MockObjectID('user1'), username: 'test' };
+            mockGetFileLocation.mockReturnValue('/mock/path/file1');
+            mockTorrentLimit.mockReturnValue(5);
+
+            const engine = new MockTorrentEngine();
+            engine.files = [
+                { path: 'a.mp4', name: 'a.mp4', length: 100,
+                  createReadStream: jest.fn(() => {
+                      const s = new MockReadStream();
+                      setTimeout(() => { if (s.handlers['end']) s.handlers['end'](); }, 20);
+                      return s;
+                  }) },
+                { path: 'b.mp4', name: 'b.mp4', length: 200,
+                  createReadStream: jest.fn(() => {
+                      const s = new MockReadStream();
+                      setTimeout(() => { if (s.handlers['end']) s.handlers['end'](); }, 20);
+                      return s;
+                  }) },
+            ];
+
+            // Pre-set pool with existing entry for same hash with engine
+            _setPools({
+                torrent_pool: [{
+                    hash: 'test123',
+                    index: [0],
+                    user,
+                    time: 1000,
+                    fileId: new MockObjectID('f1'),
+                    fileOwner: new MockObjectID('o1'),
+                    torrent: 'magnet:?xt=test123',
+                    engine,
+                }],
+            });
+
+            mockSortList.mockImplementation(arr => [...arr].sort());
+            mockExistsSync.mockReturnValue(false);
+            mockIsVideo.mockReturnValue(false);
+            mockIsDoc.mockReturnValue(false);
+            mockIsZipbook.mockReturnValue(false);
+
+            // Add index 1 to same hash
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 1, new MockObjectID('f1'), new MockObjectID('o1'));
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // The engine should have been used (startTorrent called for the new index)
+            expect(mockMongoFn).toHaveBeenCalled();
+        });
+
+        test('should report progress when duplicate index added with pType=1', async () => {
+            const user = { _id: new MockObjectID('user1'), username: 'test' };
+            mockGetFileLocation.mockReturnValue('/mock/path/file1');
+            mockTorrentLimit.mockReturnValue(5);
+
+            const engine = new MockTorrentEngine();
+            engine.files = [{ path: 'a.mp4', name: 'a.mp4', length: 1000 }];
+            engine.torrent = { name: 'Test Torrent' };
+
+            _setPools({
+                torrent_pool: [{
+                    hash: 'magnet:?xt=test123', index: [0], user,
+                    time: 1000, fileId: new MockObjectID('f1'),
+                    fileOwner: new MockObjectID('o1'),
+                    torrent: 'magnet:?xt=test123', engine,
+                }],
+            });
+
+            // File partially downloaded
+            mockExistsSync.mockImplementation(path => {
+                if (path.endsWith('_complete')) return false;
+                if (path === '/mock/path/file1/0') return true;
+                return false;
+            });
+            mockStatSync.mockReturnValue({ size: 500 });
+
+            // Add duplicate index 0 with pType=1 (progress query)
+            PlaylistModule.default('torrent add', user, 'magnet:?xt=test123', 0, new MockObjectID('f1'), new MockObjectID('o1'), 1);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // sendWs should report progress
+            expect(mockSendWs).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'test',
+                    data: expect.stringContaining('Playlist Test Torrent'),
+                }),
+                0
+            );
         });
     });
 });

@@ -24,6 +24,34 @@ let torrent_lock = false;
 let zip_lock = false;
 let mega_lock = false;
 
+// Test helpers — expose pool state for white-box testing without jest.resetModules()
+export function _resetPools() {
+    torrent_pool = [];
+    zip_pool = [];
+    mega_pool = [];
+    torrent_lock = false;
+    zip_lock = false;
+    mega_lock = false;
+}
+export function _getPools() {
+    return {
+        torrent_pool: torrent_pool.map(p => ({ ...p })),
+        zip_pool: zip_pool.map(p => ({ ...p })),
+        mega_pool: mega_pool.map(p => ({ ...p })),
+        torrent_lock,
+        zip_lock,
+        mega_lock,
+    };
+}
+export function _setPools(overrides) {
+    if ('torrent_pool' in overrides) torrent_pool = overrides.torrent_pool;
+    if ('zip_pool' in overrides) zip_pool = overrides.zip_pool;
+    if ('mega_pool' in overrides) mega_pool = overrides.mega_pool;
+    if ('torrent_lock' in overrides) torrent_lock = overrides.torrent_lock;
+    if ('zip_lock' in overrides) zip_lock = overrides.zip_lock;
+    if ('mega_lock' in overrides) mega_lock = overrides.mega_lock;
+}
+
 const setLock = type => {
     const tryAcquire = () => {
         switch (type) {
