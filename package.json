@@ -23,7 +23,7 @@
     "@babel/runtime": "^7.12.5",
     "ass-to-vtt": "^1.2.0",
     "babel-loader": "^8.2.2",
-    "bitfinex-api-node": "^4.0.16",
+    "bitfinex-api-node": "^8.0.0",
     "body-parser": "^1.19.0",
     "chart.js": "^2.9.4",
     "connect-multiparty": "^2.2.0",
