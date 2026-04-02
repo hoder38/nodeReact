@@ -13,6 +13,25 @@ let order = [];
 let position = [];
 let fakeOrder = [];
 
+// Test helpers — expose state for white-box testing without jest.resetModules()
+export function _resetState() {
+    updateTime = {book: 0, trade: 0};
+    available = 0;
+    order = [];
+    position = [];
+    fakeOrder = [];
+}
+export function _getState() {
+    return { updateTime: {...updateTime}, available, order: [...order], position: [...position], fakeOrder: [...fakeOrder] };
+}
+export function _setState(overrides) {
+    if ('updateTime' in overrides) updateTime = overrides.updateTime;
+    if ('available' in overrides) available = overrides.available;
+    if ('order' in overrides) order = overrides.order;
+    if ('position' in overrides) position = overrides.position;
+    if ('fakeOrder' in overrides) fakeOrder = overrides.fakeOrder;
+}
+
 export const twseShioajiInit = () => {
     const initialBook = (force = false) => {
         const now = Math.round(new Date().getTime() / 1000);

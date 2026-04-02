@@ -620,6 +620,12 @@ describe('api-tool-google.js', () => {
             mockFetch.mockResolvedValue({ ok: true, headers: { get: jest.fn(() => null) }, body: { pipe: jest.fn() } });
             await api('download', dlData()); await WAIT();
         });
+        test('timeout after MAX_RETRY', async () => {
+            mockFetch.mockRejectedValue(new Error('net'));
+            const errhandle = jest.fn();
+            await api('download', dlData({ _retryDelay: () => 0, errhandle })); await WAIT(500);
+            expect(mockHandleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'timeout' }), errhandle);
+        });
     });
 
     // 9. sendMail/sendName
@@ -710,8 +716,13 @@ describe('api-tool-google.js', () => {
         });
         test('height below threshold → not selected', async () => {
             mockYoutubeDl.mockResolvedValue({ formats: [{ ext: 'mp4', vcodec: 'h264', acodec: 'aac', height: 100, width: 200, format_id: '1' }] });
-            mockHandleError.mockImplementation((e, t) => { if (t) return; return Promise.reject(e); });
             await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720 }); await WAIT(1500);
+        });
+        test('timeout after MAX_RETRY', async () => {
+            mockYoutubeDl.mockRejectedValue(new Error('cdn fail'));
+            const errhandle = jest.fn();
+            await api('download media', { user: { username: 'u' }, key: 'k', filePath: '/f', hd: 720, _retryDelay: () => 0, errhandle }); await WAIT(500);
+            expect(mockHandleError).toHaveBeenCalledWith(expect.objectContaining({ message: 'timeout' }), errhandle);
         });
     });
 

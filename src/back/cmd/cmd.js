@@ -18,19 +18,6 @@ process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
 const sendList = RANDOM_EMAIL;
 
-function cmdUpdateDrive(drive_batch=DRIVE_LIMIT, singleUser=null) {
-    drive_batch = isNaN(drive_batch) ? DRIVE_LIMIT : Number(drive_batch);
-    console.log(drive_batch);
-    console.log('cmdUpdateDrive');
-    console.log(new Date().toLocaleString());
-    const username = isValidString(singleUser, 'name');
-    if (!username) {
-        return handleError(new HoError('user name not valid!!!'));
-    }
-    const isSingle = () => Mongo('find', USERDB, Object.assign({auto: {$exists: true}}, singleUser ? {username} : {}));
-    return isSingle().then(userlist => userDrive(userlist, 0, drive_batch));
-}
-
 export const dbDump = (collection, backupDate=null) => {
     if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
         return handleError(new HoError('Collection not find'));
@@ -93,7 +80,6 @@ const randomSend = (action, joiner=null) => {
         case 'list':
         console.log(sendList);
         return Promise.resolve();
-        break;
         case 'edit':
         if (!joiner) {
             return handleError(new HoError('Joiner unknown!!!'));
@@ -182,13 +168,11 @@ const resetTotal = (type, se) => {
             console.log(count);
             return Mongo('find', TOTALDB, {...find, newMid: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset new mid'));
         });
-        break;
         case 'profit':
         return Mongo('updateMany', TOTALDB, {...find, profit: {$exists: true}}, {$set: {profit: 0}}).then(count => {
             console.log(count);
             return Mongo('find', TOTALDB, {...find, profit: {$exists: true}}).then(items => console.log(items)).catch(err => handleError(err, 'Reset profit'));
         });
-        break;
         default:
         return handleError(new HoError('Reset type unknown!!!'));
     }

@@ -423,6 +423,13 @@ describe('user-router.js', () => {
       expect(res.status).toBe(403);
     });
 
+    test('non-admin cannot edit unHit', async () => {
+      const res = await request(app).put('/act')
+        .set('x-test-user', u(REGULAR))
+        .send({ userPW: TEST_PW, unHit: '10' });
+      expect(res.status).toBe(403);
+    });
+
     test('DB error on update returns 500', async () => {
       mockMongo.mockRejectedValueOnce(new Error('update fail'));
       const res = await request(app).put(`/act/${REGULAR._id}`)
@@ -439,6 +446,135 @@ describe('user-router.js', () => {
         .send({ userPW: TEST_PW, newPwd: 'Pass123', conPwd: 'Pass123' });
       expect(res.status).toBe(200);
       expect(res.body.apiOK).toBe(true);
+    });
+
+    // --- Additional coverage: validation branches ---
+
+    test('admin rejects auto with non-URL value (line 71)', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, auto: 'plaintext' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('auto');
+    });
+
+    test('rejects kindle with non-email format (line 83)', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, kindle: 'noatsign' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('kindle');
+    });
+
+    test('admin sets desc successfully', async () => {
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, desc: 'new description' });
+      expect(res.status).toBe(200);
+      expect(res.body.desc).toBeTruthy();
+    });
+
+    test('admin rejects invalid desc value', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, desc: "bad'desc" });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('desc');
+    });
+
+    test('admin sets perm on another user successfully', async () => {
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, perm: '3' });
+      expect(res.status).toBe(200);
+      expect(res.body.perm).toBe(3);
+    });
+
+    test('admin rejects invalid perm value', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, perm: 'abc' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('perm');
+    });
+
+    test('admin sets unDay successfully', async () => {
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, unDay: '7' });
+      expect(res.status).toBe(200);
+      expect(res.body.unDay).toBe(7);
+    });
+
+    test('admin rejects invalid unDay', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, unDay: 'abc' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('unactive day');
+    });
+
+    test('admin sets unHit successfully', async () => {
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, unHit: '10' });
+      expect(res.status).toBe(200);
+      expect(res.body.unHit).toBe(10);
+    });
+
+    test('admin rejects invalid unHit', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, unHit: 'abc' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('unactive hit');
+    });
+
+    test('rejects invalid newPwd format (too short)', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, newPwd: 'x', conPwd: 'x' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('new passwd');
+    });
+
+    test('rejects invalid conPwd format', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, newPwd: 'Pass123', conPwd: 'x' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('con passwd');
+    });
+
+    test('admin with invalid uid format in URL', async () => {
+      const res = await request(app).put('/act/baduid')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, newPwd: 'Pass123', conPwd: 'Pass123' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('uid');
+    });
+
+    test('rejects name with invalid characters', async () => {
+      const res = await request(app).put(`/act/${REGULAR._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: '***' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('name');
+    });
+
+    test('admin changes own name → ret includes owner', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      mockMongo.mockResolvedValueOnce({}); // update
+      const res = await request(app).put(`/act/${ADMIN._id}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: 'newadmin' });
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('newadmin');
+      expect(res.body.owner).toBe('newadmin');
     });
   });
 
@@ -521,6 +657,46 @@ describe('user-router.js', () => {
         .send({ userPW: TEST_PW, name: 'n', newPwd: 'Pass123', conPwd: 'Pass123', desc: 'x', perm: '3' });
       expect(res.status).toBe(500);
     });
+
+    test('rejects invalid userPW format in POST', async () => {
+      const res = await request(app).post('/act')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: 'x', name: 'n', newPwd: 'Pass123', conPwd: 'Pass123', desc: 'test', perm: '3' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('passwd');
+    });
+
+    test('POST rejects invalid newPwd inside promise', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      const res = await request(app).post('/act')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: 'validn', newPwd: 'x', conPwd: 'x', desc: 'test', perm: '3' });
+      expect(res.status).not.toBe(200);
+    });
+
+    test('POST rejects invalid conPwd inside promise', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      const res = await request(app).post('/act')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: 'validn', newPwd: 'Pass123', conPwd: 'x', desc: 'test', perm: '3' });
+      expect(res.status).not.toBe(200);
+    });
+
+    test('POST rejects invalid desc inside promise', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      const res = await request(app).post('/act')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: 'validn', newPwd: 'Pass123', conPwd: 'Pass123', desc: "bad'desc", perm: '3' });
+      expect(res.status).not.toBe(200);
+    });
+
+    test('POST rejects invalid perm inside promise', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      const res = await request(app).post('/act')
+        .set('x-test-user', u(ADMIN))
+        .send({ userPW: TEST_PW, name: 'validn', newPwd: 'Pass123', conPwd: 'Pass123', desc: 'valid', perm: 'abc' });
+      expect(res.status).not.toBe(200);
+    });
   });
 
   // ---------------------------------------------------------------
@@ -575,6 +751,13 @@ describe('user-router.js', () => {
       const res = await request(app).put(`/del/${USER2._id}`)
         .set('x-test-user', u(ADMIN)).send({ userPW: TEST_PW });
       expect(res.status).toBe(500);
+    });
+
+    test('rejects invalid userPW format in delete', async () => {
+      const res = await request(app).put(`/del/${USER2._id}`)
+        .set('x-test-user', u(ADMIN)).send({ userPW: 'x' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('passwd');
     });
   });
 

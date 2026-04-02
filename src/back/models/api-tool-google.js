@@ -585,7 +585,7 @@ function download(data) {
             console.log(data['url']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), index * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), (data['_retryDelay'] ? data['_retryDelay'](index) : index * 1000)));
     });
     return proc();
 }
@@ -685,7 +685,7 @@ function downloadMedia(data) {
             console.log(data['key']);
             return handleError(new HoError('timeout'), data['errhandle']);
         }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), Math.pow(2, index) * 40 * 1000));
+        return new Promise((resolve, reject) => setTimeout(() => resolve(proc()), (data['_retryDelay'] ? data['_retryDelay'](index) : Math.pow(2, index) * 40 * 1000)));
     });
     return proc();
 }

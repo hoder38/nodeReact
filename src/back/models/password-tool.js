@@ -306,8 +306,8 @@ export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(ite
                 newPrePass = dec.substr(0, dec.length - 4);
             }
             if (newPass || newPrePass) {
-                newPass = encrypt(newPass);
-                newPrePass = encrypt(newPrePass);
+                newPass = newPass ? encrypt(newPass) : items[index].password;
+                newPrePass = newPrePass ? encrypt(newPrePass) : items[index].prePassword;
                 return Mongo('update', PASSWORDDB, {_id: items[index]._id}, {$set: {
                     password: newPass,
                     prePassword: newPrePass,

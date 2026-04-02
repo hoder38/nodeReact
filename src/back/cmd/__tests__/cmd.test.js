@@ -817,6 +817,39 @@ describe('cmd.js', () => {
       await runCmd('randomsend foo');
       // handleError with 'Action unknown!!!'
     });
+
+    // Cover line 121: sendList.length < 3 → handleError
+    test('send with fewer than 3 participants → error', async () => {
+      // After prior tests, sendList has [Alice, Bob, Charlie, Diana, Eve]
+      // Remove until fewer than 3 remain
+      await runCmd('randomsend edit Alice');
+      await runCmd('randomsend edit Bob');
+      await runCmd('randomsend edit Charlie');
+      // Now sendList = [Diana, Eve] (2 entries)
+      jest.clearAllMocks();
+      await runCmd('randomsend send');
+      await flushPromises();
+      expect(mockSendPresentName).not.toHaveBeenCalled();
+    });
+
+    // Cover lines 157-158: out of limit (shuffle fails testArr 100 times)
+    test('send → "out of limit" when shuffle always produces identity', async () => {
+      // Add entries back to get >= 3
+      await runCmd('randomsend edit Alpha:alpha@test.com');
+      // Now sendList = [Diana, Eve, Alpha] (3 entries)
+      const originalRandom = Math.random;
+      // Math.random() = 0.99 → shuffle always produces identity [0,1,2]
+      // testArr fails immediately (arr[0]===0) → 100 iterations exhausted
+      Math.random = () => 0.99;
+      const consoleSpy = jest.spyOn(console, 'log');
+      jest.clearAllMocks();
+      await runCmd('randomsend send');
+      await flushPromises();
+      expect(consoleSpy).toHaveBeenCalledWith('out of limit');
+      expect(mockSendPresentName).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+      Math.random = originalRandom;
+    });
   });
 
   // =================================================================
@@ -974,6 +1007,37 @@ describe('cmd.js', () => {
 
     test('NODE_TLS_REJECT_UNAUTHORIZED is set to "0"', () => {
       expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBe('0');
+    });
+  });
+
+  // =================================================================
+  // uncaughtException handler (lines 203-208)
+  // =================================================================
+  describe('uncaughtException handler', () => {
+    const getUncaughtHandler = () => {
+      const listeners = process.listeners('uncaughtException');
+      // cmd.js registers the last handler
+      return listeners[listeners.length - 1];
+    };
+
+    test('logs error name, message, and stack trace', () => {
+      const consoleSpy = jest.spyOn(console, 'log');
+      const handler = getUncaughtHandler();
+      const err = new Error('test crash');
+      handler(err);
+      expect(consoleSpy).toHaveBeenCalledWith('Threw Exception: Error test crash');
+      expect(consoleSpy).toHaveBeenCalledWith(err.stack);
+      consoleSpy.mockRestore();
+    });
+
+    test('logs error without stack when err.stack is falsy', () => {
+      const consoleSpy = jest.spyOn(console, 'log');
+      const handler = getUncaughtHandler();
+      handler({ name: 'CustomError', message: 'no stack' });
+      expect(consoleSpy).toHaveBeenCalledWith('Threw Exception: CustomError no stack');
+      // Only one log call (no stack logged)
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      consoleSpy.mockRestore();
     });
   });
 });
