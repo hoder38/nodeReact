@@ -26,6 +26,25 @@ let api_pool = [];
 let api_duration = 0;
 let api_lock = false;
 
+// Test helpers — expose internal state for white-box testing
+export function _resetState() {
+    tokens = {};
+    api_ing = 0;
+    api_pool = [];
+    api_duration = 0;
+    api_lock = false;
+}
+export function _getState() {
+    return { tokens: { ...tokens }, api_ing, api_pool: [...api_pool], api_duration, api_lock };
+}
+export function _setState(overrides) {
+    if ('tokens' in overrides) tokens = overrides.tokens;
+    if ('api_ing' in overrides) api_ing = overrides.api_ing;
+    if ('api_pool' in overrides) api_pool = overrides.api_pool;
+    if ('api_duration' in overrides) api_duration = overrides.api_duration;
+    if ('api_lock' in overrides) api_lock = overrides.api_lock;
+}
+
 const setLock = () => {
     console.log(api_lock);
     return api_lock ? new Promise((resolve, reject) => setTimeout(() => resolve(setLock()), 500)) : Promise.resolve(api_lock = true);
@@ -158,9 +177,6 @@ function get(rest=null) {
 function expire(name, data) {
     console.log(`expire google ${api_ing} ${api_pool.length}`);
     return setLock().then(go => {
-        if (!go) {
-            return Promise.resolve();
-        }
         api_pool.push({
             name,
             data,
@@ -651,7 +667,7 @@ function downloadMedia(data) {
             format: media_id,
             output: savePath,
             writeThumbnail: true
-        })).then(() => {
+        }).then(() => {
             const clearPath = () => savePath === data['filePath'] ? Promise.resolve() : new Promise((resolve, reject) => FsUnlink(data['filePath'], err => err ? reject(err) : resolve())).then(() => FsRenameSync(savePath, data['filePath']));
             return clearPath().then(() => {
                 if (FsExistsSync(`${savePath}.jpg`)) {
@@ -661,7 +677,7 @@ function downloadMedia(data) {
                     return () => new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => data['rest'](currentHeight)).catch(err => data['errhandle'](err));
                 }
             });
-        });
+        }));
     }).catch(err => {
         console.log(index);
         handleError(err, 'Youtubedl Fetch');
@@ -1024,12 +1040,7 @@ export function autoDoc(userlist, index, type, date=null) {
             }
             return recur_download(0);
         });
-        return download_ext_doc(0, DOC_TYPE[type]).then(() => {
-            index++;
-            if (index < userlist.length) {
-                autoDoc(userlist, index, type, date);
-            }
-        });
+        return download_ext_doc(0, DOC_TYPE[type]);
     //});
 }
 
