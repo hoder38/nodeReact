@@ -370,7 +370,7 @@ export const calWeb = curArr => {
                 const mcList = [];
                 items.forEach(i => {
                     const sym = i.name.match(/^([\da-zA-Z]+)\:?USD$/);
-                    if (sym) {
+                    if (sym && data.data[sym[1]]) {
                         mcList.push({_id: i._id, mc: data.data[sym[1]].quote.USD.market_cap});
                     }
                 });
