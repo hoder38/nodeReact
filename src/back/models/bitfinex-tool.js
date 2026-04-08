@@ -369,8 +369,8 @@ export const calWeb = curArr => {
             const recurUser = uIndex => (uIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[uIndex]._id, sType: 1, type: FUSD_SYM}).then(items => {
                 const mcList = [];
                 items.forEach(i => {
-                    const sym = i.name.match(/^([\da-zA-Z]+)\:?USD$/);
-                    if (sym) {
+                    const sym = i.name.match(/^([\da-zA-Z]+)\:?USD$/);   
+		    if (sym && data.data[sym[1]]) {
                         mcList.push({_id: i._id, mc: data.data[sym[1]].quote.USD.market_cap});
                     }
                 });
