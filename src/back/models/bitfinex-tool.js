@@ -357,8 +357,8 @@ export const calWeb = curArr => {
     });
     //return recurPrice(0).then(() => recurType(0));
     const coinList = SUPPORT_COIN.map(v => v.replace('f', '')).join(',');
-    console.log(coin_list);
-    return recurType(0).then(() => Fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${coin_list}&convert=USD`, {
+    console.log(coinList);
+    return recurType(0).then(() => Fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${coinList}&convert=USD`, {
         method: 'GET',
         headers: {
             'X-CMC_PRO_API_KEY': '7e49886e256b4612b431fb7915dafc1b',
