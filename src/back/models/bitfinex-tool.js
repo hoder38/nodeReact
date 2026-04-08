@@ -356,37 +356,21 @@ export const calWeb = curArr => {
         });
     });
     //return recurPrice(0).then(() => recurType(0));
-    return recurType(0).then(() => Api('url', 'https://www.slickcharts.com/currency').then(raw_data => {
-        const coinMC = [];
-        const coinName = [];
-        let con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid mt-4 maxWidth')[0];
-        if (!con) {
-            con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid maxWidth')[0];
-            if (!con) {
-                con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid  maxWidth')[0];
-                if (!con) {
-                    con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid mt-4 maxWidth')[0];
-                    if (!con) {
-                        con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid maxWidth')[0];
-                        if (!con) {
-                            con = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div')[0], 'div', 'container-fluid  maxWidth')[0];
-                        }
-                    }
-                }
-            }
-        }
-        const row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
-        findTag(findTag(findTag(findTag(findTag(findTag(row, 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(tr => {
-            coinName.push(findTag(findTag(findTag(tr, 'td')[1], 'a')[0])[0].match(/\(([\da-zA-Z]+)\)/)[1]);
-            coinMC.push(Number(findTag(findTag(tr, 'td')[2])[0].replace(/,/g, '')));
-        });
+    const coinList = SUPPORT_COIN.map(v => v.replace('f', '')).join(',');
+    console.log(coin_list);
+    return recurType(0).then(() => Fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${coin_list}&convert=USD`, {
+        method: 'GET',
+        headers: {
+            'X-CMC_PRO_API_KEY': '7e49886e256b4612b431fb7915dafc1b',
+            'Accept': 'application/json'}
+        }).then(res => res.json()).then(data => {
         return Mongo('find', USERDB, {bitfinex: {$exists: true}}).then(userlist => {
             const recurUser = uIndex => (uIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[uIndex]._id, sType: 1, type: FUSD_SYM}).then(items => {
                 const mcList = [];
                 items.forEach(i => {
-                    const cn = coinName.indexOf(i.name.match(/^([\da-zA-Z]+)\:?USD$/)[1]);
-                    if (cn !== -1) {
-                        mcList.push({_id: i._id, mc: coinMC[cn]});
+                    const sym = i.name.match(/^([\da-zA-Z]+)\:?USD$/);
+                    if (sym) {
+                        mcList.push({_id: i._id, mc: data.data[sym[1]].quote.USD.market_cap});
                     }
                 });
                 mcList.sort((a, b) => {
