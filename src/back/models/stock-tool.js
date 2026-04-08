@@ -6886,7 +6886,7 @@ export const getStockListV2 = (type, year, month) => {
         });
         break;
         case 'usse':
-        const list = ['dowjones', 'nasdaq100', 'sp500'];
+        const list = ['Dow_Jones_Industrial_Average', 'Nasdaq-100', 'List_of_S%26P_500_companies'];
         const stock_list = [];
         const recur_get = index => {
             if (index >= list.length) {
@@ -6894,31 +6894,48 @@ export const getStockListV2 = (type, year, month) => {
                 console.log(stock_list);
                 return stock_list;
             } else {
-                return Api('url', `https://www.slickcharts.com/${list[index]}`).then(raw_data => {
-                    let con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid mt-4 maxWidth')[0];
-                    if (!con) {
-                        con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid maxWidth')[0];
-                        if (!con) {
-                            con = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'container-fluid  maxWidth')[0];
+                return Api('url', `https://en.wikipedia.org/wiki/${list[index]}`).then(raw_data => {
+                    findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'mw-page-container')[0], 'div', 'mw-page-container-inner')[0], 'div', 'mw-content-container')[0], 'main', 'content')[0], 'div', 'bodyContent')[0], 'div', 'mw-content-text')[0], 'div', 'mw-content-ltr mw-parser-output')[0], 'table', 'constituents')[0], 'tbody')[0], 'tr').forEach(t => {
+                        let name = null;
+                        let sIndex = null;
+                        if (list[index] === 'Dow_Jones_Industrial_Average') {
+                            const a = findTag(findTag(t, 'th')[0], 'a')[0];
+                            if (a) {
+                                name = toValidName(findTag(a)[0]).replace('&amp;', '&').replace('&#x27;', "'");
+                                sIndex = findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0].replace('.', '-');
+                            }
+                        } else {
+                            const d = findTag(t, 'td')[0];
+                            if (d) {
+                                const a = findTag(findTag(t, 'td')[1], 'a')[0];
+                                if (a) {
+                                    name = findTag(a)[0].replace('&amp;', '&').replace('&#x27;', "'");
+                                } else {
+                                    name = findTag(findTag(t, 'td')[1])[0].replace('&amp;', '&').replace('&#x27;', "'");
+                                }
+                                const a1 = findTag(d, 'a')[0];
+                                if (a1) {
+                                    sIndex = findTag(a1)[0].replace('.', '-');
+                                } else {
+                                    sIndex = findTag(d)[0].replace('.', '-');
+                                }
+                            }
                         }
-                    }
-                    let row = findTag(con, 'div', 'row')[2] ? findTag(con, 'div', 'row')[2] : findTag(con, 'div', 'row')[1];
-                    findTag(findTag(findTag(findTag(findTag(findTag(row, 'div')[0], 'div')[0], 'div')[0], 'table')[0], 'tbody')[0], 'tr').forEach(t => {
-                        if (findTag(t, 'td')[2]) {
+                        if (name && sIndex) {
                             const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
                             const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                             let is_exit = false;
                             for (let i = 0; i < stock_list.length; i++) {
                                 if (stock_list[i].index === sIndex) {
                                     is_exit = true;
-                                    stock_list[i].tag.push(list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500');
+                                    stock_list[i].tag.push(list[index] === 'Dow_Jones_Industrial_Average' ? 'dow jones' : list[index] === 'Nasdaq-100' ? 'nasdaq 100' : 's&p 500');
                                     break;
                                 }
                             }
                             if (!is_exit && sIndex !== 'ETFC' && sIndex !== 'MRP-W' && sIndex.length <= 6) {
                                 stock_list.push({
                                     index: sIndex,
-                                    tag: [name, list[index] === 'dowjones' ? 'dow jones' : list[index] === 'nasdaq100' ? 'nasdaq 100' : 's&p 500'],
+                                    tag: [name, list[index] === 'Dow_Jones_Industrial_Average' ? 'dow jones' : list[index] === 'Nasdaq-100' ? 'nasdaq 100' : 's&p 500'],
                                     type: 'usse',
                                 });
                             }
