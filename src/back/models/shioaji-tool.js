@@ -12,6 +12,7 @@ let available = 0;
 let order = [];
 let position = [];
 let fakeOrder = [];
+let _TWSE_MARKET_TIME = TWSE_MARKET_TIME;
 
 // Test helpers — expose state for white-box testing without jest.resetModules()
 export function _resetState() {
@@ -20,6 +21,7 @@ export function _resetState() {
     order = [];
     position = [];
     fakeOrder = [];
+    _TWSE_MARKET_TIME = TWSE_MARKET_TIME;
 }
 export function _getState() {
     return { updateTime: {...updateTime}, available, order: [...order], position: [...position], fakeOrder: [...fakeOrder] };
@@ -30,10 +32,11 @@ export function _setState(overrides) {
     if ('order' in overrides) order = overrides.order;
     if ('position' in overrides) position = overrides.position;
     if ('fakeOrder' in overrides) fakeOrder = overrides.fakeOrder;
+    if ('marketTime' in overrides) _TWSE_MARKET_TIME = overrides.marketTime;
 }
 
-export const twseShioajiInit = () => {
-    const initialBook = (force = false) => {
+export const twseShioajiInit = (force = false) => {
+    const initialBook = () => {
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
@@ -269,12 +272,12 @@ export const twseShioajiInit = () => {
             console.log('twse time');
             //避開交易時間
             const hour = new Date().getHours();
-            if (TWSE_MARKET_TIME[0] > TWSE_MARKET_TIME[1]) {
-                if (hour >= TWSE_MARKET_TIME[0] || hour < TWSE_MARKET_TIME[1]) {
+            if (_TWSE_MARKET_TIME[0] > _TWSE_MARKET_TIME[1]) {
+                if (hour >= _TWSE_MARKET_TIME[0] || hour < _TWSE_MARKET_TIME[1]) {
                     updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                     return Promise.resolve();
                 }
-            } else if (hour >= TWSE_MARKET_TIME[0] && hour < TWSE_MARKET_TIME[1]) {
+            } else if (hour >= _TWSE_MARKET_TIME[0] && hour < _TWSE_MARKET_TIME[1]) {
                 updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
                 return Promise.resolve();
             }

@@ -348,6 +348,26 @@ describe('shioaji-tool.js', () => {
       expect(s.updateTime.book).not.toBe(0); // book was set before the error
     });
 
+    test('Python error with force=true — trade is decremented on error', async () => {
+      _setState({ updateTime: { book: 0, trade: 5 } });
+      mockExec.mockImplementation((cmd, cb) => cb(new Error('python crash')));
+
+      await expect(twseShioajiInit(true)).rejects.toThrow('Shioaji python error!!!');
+
+      // force=true => updateTime.trade decremented: 5 -> 4
+      expect(_getState().updateTime.trade).toBe(4);
+    });
+
+    test('Python error with force=true and trade < 1 — trade floors at 0', async () => {
+      _setState({ updateTime: { book: 0, trade: 0 } });
+      mockExec.mockImplementation((cmd, cb) => cb(new Error('python crash')));
+
+      await expect(twseShioajiInit(true)).rejects.toThrow('Shioaji python error!!!');
+
+      // force=true, trade was 0 (< 1) => floors at 0
+      expect(_getState().updateTime.trade).toBe(0);
+    });
+
     test('uses real credentials when simulation=false (via twseShioajiInit)', async () => {
       const output = buildPythonOutput();
       mockExec.mockImplementation((cmd, cb) => cb(null, output));
@@ -1521,6 +1541,48 @@ describe('shioaji-tool.js', () => {
       global.Date = origDate;
 
       // hour=14: 14>=9 && 14<14 is false => outside market => proceeds
+      expect(mockMongo).toHaveBeenCalledWith('find', 'total', { setype: 'twse', sType: { $exists: false } });
+    });
+
+    test('market hours — overnight range [22,6], hour within ban window — trade decremented', async () => {
+      // Set overnight market time: trading is banned from 22:00 to 06:00
+      _setState({ marketTime: [22, 6] });
+      setupPhase2(2);
+      const origDate = global.Date;
+      const mockDate = class extends origDate {
+        getHours() { return 23; } // 23 >= 22 => within overnight ban
+      };
+      global.Date = mockDate;
+      mockGetSuggestionData.mockReturnValue({});
+
+      await twseShioajiInit();
+
+      global.Date = origDate;
+      _setState({ marketTime: [9, 14] }); // restore
+
+      // hour=23 >= 22 || 23 < 6 => within overnight ban => decrement (3 -> 2)
+      expect(_getState().updateTime.trade).toBe(2);
+      expect(mockMongo).not.toHaveBeenCalled();
+    });
+
+    test('market hours — overnight range [22,6], hour outside ban window — proceeds to trade eval', async () => {
+      // Outside overnight ban (e.g., 10:00 is not >= 22 and not < 6)
+      _setState({ marketTime: [22, 6] });
+      setupPhase2(2);
+      const origDate = global.Date;
+      const mockDate = class extends origDate {
+        getHours() { return 10; } // 10 < 22 && 10 >= 6 => outside ban
+      };
+      global.Date = mockDate;
+      mockGetSuggestionData.mockReturnValue({});
+      mockMongo.mockResolvedValue([]);
+
+      await twseShioajiInit();
+
+      global.Date = origDate;
+      _setState({ marketTime: [9, 14] }); // restore
+
+      // hour=10 is NOT in ban window => proceeds to Mongo find
       expect(mockMongo).toHaveBeenCalledWith('find', 'total', { setype: 'twse', sType: { $exists: false } });
     });
 
