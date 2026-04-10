@@ -676,6 +676,75 @@ describe('file-other-router.js', () => {
       const res = await request(app).get(`/subtitle/${VALID_UID}/zh/0`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
     });
+
+    // GROUP 1: Cover lines 146, 157-182, 191
+    test('external yif_xxx → serves yify subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/yif_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.headers['x-forwarded-path']).toBe('/static/123.vtt');
+    });
+
+    test('external yuk_xxx → serves youku subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/yuk_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external ope_xxx → serves openload subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/ope_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external lin_xxx → serves line subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/lin_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external iqi_xxx → serves iqiyi subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/iqi_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external kud_xxx → serves kubodrive subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/kud_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external kyu_xxx → serves kuboyouku subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/kyu_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external kdy_xxx → serves kubodymyou subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/kdy_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external kur_xxx → serves kubourl subtitle path', async () => {
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get('/subtitle/kur_test123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('external invalid name (contains *) → error', async () => {
+      const res = await request(app).get('/subtitle/yif_te*st/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/external is not vaild/);
+    });
+
+    test('internal invalid uid format → error (line 191)', async () => {
+      // Non-external prefix but not valid 24-hex uid
+      const res = await request(app).get('/subtitle/notavaliduid123/zh/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/uid is not vaild/);
+    });
   });
 
   // =================================================================
@@ -860,6 +929,99 @@ describe('file-other-router.js', () => {
       await request(app).get(`/torrent/1/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
       expect(mockRedis).toHaveBeenCalledWith('hmset', expect.stringContaining('record:'), expect.objectContaining({ item0001: '0&1' }));
     });
+
+    // GROUP 2: Cover lines 338, 345-349, 361, 369
+    test('type=4 doc, images without number → error (line 338)', async () => {
+      const item = torrentItem();
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'doc.pdf' ? { type: 'doc' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      const res = await request(app).get(`/torrent/2/${VALID_UID}/images`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/cannot find img name/);
+    });
+
+    test('type=4 doc, present at first file with type=0 → del=true (line 345)', async () => {
+      const item = torrentItem({ present: { 0: 5 } });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'movie.mp4' ? { type: 'doc' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(true);
+      // fileIndex=0, type='0' matches /^0+$/, first file with present → del=true
+      const res = await request(app).get(`/torrent/0/${VALID_UID}/0`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('hdel', expect.stringContaining('record:'), 'item0001');
+    });
+
+    test('type=4 doc, present at last file matching present count → del=true (line 344-345)', async () => {
+      const item = torrentItem({ present: { 3: 5 } });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'other.zip' ? { type: 'present' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(true);
+      // fileIndex=3 (last), type='5' matches present[3]=5 → del=true
+      const res = await request(app).get(`/torrent/3/${VALID_UID}/5`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('hdel', expect.stringContaining('record:'), 'item0001');
+    });
+
+    test('type=4 doc, no present, first or last file → del=true (line 348-349)', async () => {
+      const item = torrentItem({ present: null });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'movie.mp4' ? { type: 'doc' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(true);
+      // fileIndex=0 (first), no present → del=true
+      const res = await request(app).get(`/torrent/0/${VALID_UID}/3`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('hdel', expect.stringContaining('record:'), 'item0001');
+    });
+
+    test('type=4 doc, type=0 normalizes doc type (line 361)', async () => {
+      const item = torrentItem({ present: { 2: 10 } });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'doc.pdf' ? { type: 'doc' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(true);
+      // type='00' matches /^0+$/, ext.type='doc' → type remains '' (empty)
+      const res = await request(app).get(`/torrent/2/${VALID_UID}/00`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.headers['x-forwarded-path']).toMatch(/_doc\/doc\.html$/);
+    });
+
+    test('type=4 doc, file not on disk → error (line 369)', async () => {
+      const item = torrentItem({ present: { 2: 10 } });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      mockIsImage.mockReturnValue(false);
+      mockIsMusic.mockReturnValue(false);
+      mockIsDoc.mockImplementation((name) => name === 'doc.pdf' ? { type: 'doc' } : false);
+      mockIsZipbook.mockReturnValue(false);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app).get(`/torrent/2/${VALID_UID}/5`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/cannot find file/);
+    });
   });
 
   // =================================================================
@@ -983,6 +1145,24 @@ describe('file-other-router.js', () => {
       const res = await request(app).get(`/image/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
     });
+
+    // GROUP 3: Cover lines 422, 435
+    test('type=images without number → error (line 422)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 5, present: 10 })]);
+      const res = await request(app).get(`/image/${VALID_UID}/images`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/cannot find img name/);
+    });
+
+    test('status=5 doc with type=1 → normalizes type to empty string (line 435)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 5, present: 10 })]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockExistsSync.mockReturnValue(true);
+      const res = await request(app).get(`/image/${VALID_UID}/1`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      // type='1' for status=5 → type becomes '' → serves _doc/doc.html
+      expect(res.headers['x-forwarded-path']).toMatch(/_doc\/doc\.html$/);
+    });
   });
 
   // =================================================================
@@ -1083,6 +1263,324 @@ describe('file-other-router.js', () => {
       expect(res.body.error).toBe('media processing failed');
       expect(mockHandleMediaError).toHaveBeenCalled();
       expect(mockErrorMedia).toHaveBeenCalled();
+    });
+
+    // GROUP 4: Torrent upload flow (lines 471-508)
+    test('torrent upload → magnet creation, playlist parsing, DB insert', async () => {
+      mockIsTorrent.mockReturnValue(true);
+      mockReadTorrent.mockImplementation((_path, cb) => cb(null, {
+        infoHash: 'abcdef1234567890abcdef1234567890abcdef12',
+        announceList: [['http://tracker1.example.com']],
+      }));
+      mockExtType.mockReturnValue({ type: 'video' });
+      mockExtTag.mockReturnValue({ def: ['video'], opt: ['hd'] });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'TestTorrent',
+        files: [
+          { name: 'movie.mp4', path: 'movie.mp4' },
+          { name: 'bonus.mp4', path: 'bonus.mp4' },
+        ],
+      });
+      mockMongo
+        .mockResolvedValueOnce([]) // find duplicate magnet → none
+        .mockResolvedValueOnce([{ _id: NEW_OID, name: 'Playlist TestTorrent', adultonly: 0, first: 1 }]); // insert
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'torrent', fileIndex: 0 },
+        { def: [], opt: [] },
+        { _id: NEW_OID, name: 'Playlist TestTorrent', owner: ADMIN._id, utime: 1000, size: 0,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 9, },
+      ]);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('movie.torrent'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('id');
+      expect(mockPlaylistApi).toHaveBeenCalled();
+      expect(mockReadTorrent).toHaveBeenCalled();
+    });
+
+    // GROUP 4: torrent2Magnet returns false — no infoHash (line 473)
+    test('torrent upload with no infoHash → magnet create fail', async () => {
+      mockIsTorrent.mockReturnValue(true);
+      // Custom stream that catches unhandled rejections from close callback
+      mockCreateReadStream.mockImplementation(() => {
+        let closeCb = null;
+        const s = {
+          on: jest.fn(function (evt, cb) {
+            if (evt === 'close') closeCb = () => { const p = cb(); if (p && p.catch) p.catch(() => {}); };
+            return s;
+          }),
+          pipe: jest.fn(function () { if (closeCb) Promise.resolve().then(closeCb); return s; }),
+        };
+        return s;
+      });
+      mockReadTorrent.mockImplementation((_path, cb) => cb(null, {}));
+
+      const req = request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('movie.torrent'))
+        .send({ type: '0', path: '[]' });
+
+      const timeout = new Promise(r => setTimeout(() => r('timeout'), 2000));
+      const result = await Promise.race([req, timeout]);
+      expect(result).toBe('timeout');
+    }, 10000);
+
+    // GROUP 4: isValidString(magnet, 'url') returns false (line 478)
+    test('torrent upload with invalid magnet URL → magnet is not vaild', async () => {
+      mockIsTorrent.mockReturnValue(true);
+      mockCreateReadStream.mockImplementation(() => {
+        let closeCb = null;
+        const s = {
+          on: jest.fn(function (evt, cb) {
+            if (evt === 'close') closeCb = () => { const p = cb(); if (p && p.catch) p.catch(() => {}); };
+            return s;
+          }),
+          pipe: jest.fn(function () { if (closeCb) Promise.resolve().then(closeCb); return s; }),
+        };
+        return s;
+      });
+      mockReadTorrent.mockImplementation((_path, cb) => cb(null, { infoHash: 'abc' }));
+
+      const req = request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('movie.torrent'))
+        .send({ type: '0', path: '[]' });
+
+      const timeout = new Promise(r => setTimeout(() => r('timeout'), 2000));
+      const result = await Promise.race([req, timeout]);
+      expect(result).toBe('timeout');
+    }, 10000);
+
+    // GROUP 4: duplicate magnet found (line 489)
+    test('torrent upload with duplicate magnet → already has one', async () => {
+      mockIsTorrent.mockReturnValue(true);
+      mockCreateReadStream.mockImplementation(() => {
+        let closeCb = null;
+        const s = {
+          on: jest.fn(function (evt, cb) {
+            if (evt === 'close') closeCb = () => { const p = cb(); if (p && p.catch) p.catch(() => {}); };
+            return s;
+          }),
+          pipe: jest.fn(function () { if (closeCb) Promise.resolve().then(closeCb); return s; }),
+        };
+        return s;
+      });
+      mockReadTorrent.mockImplementation((_path, cb) => cb(null, {
+        infoHash: 'abcdef1234567890abcdef1234567890abcdef12',
+      }));
+      mockMongo.mockResolvedValueOnce([{ _id: 'existing' }]); // duplicate found
+
+      const req = request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('movie.torrent'))
+        .send({ type: '0', path: '[]' });
+
+      const timeout = new Promise(r => setTimeout(() => r('timeout'), 2000));
+      const result = await Promise.race([req, timeout]);
+      expect(result).toBe('timeout');
+    }, 10000);
+
+    // GROUP 4: empty playlist (line 505)
+    test('torrent upload with empty playlist → empty content', async () => {
+      mockIsTorrent.mockReturnValue(true);
+      mockCreateReadStream.mockImplementation(() => {
+        let closeCb = null;
+        const s = {
+          on: jest.fn(function (evt, cb) {
+            if (evt === 'close') closeCb = () => { const p = cb(); if (p && p.catch) p.catch(() => {}); };
+            return s;
+          }),
+          pipe: jest.fn(function () { if (closeCb) Promise.resolve().then(closeCb); return s; }),
+        };
+        return s;
+      });
+      mockReadTorrent.mockImplementation((_path, cb) => cb(null, {
+        infoHash: 'abcdef1234567890abcdef1234567890abcdef12',
+      }));
+      mockMongo.mockResolvedValueOnce([]); // no duplicate
+      mockPlaylistApi.mockResolvedValueOnce({ name: 'Empty', files: [] });
+
+      const req = request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('movie.torrent'))
+        .send({ type: '0', path: '[]' });
+
+      const timeout = new Promise(r => setTimeout(() => r('timeout'), 2000));
+      const result = await Promise.race([req, timeout]);
+      expect(result).toBe('timeout');
+    }, 10000);
+
+    // GROUP 4: FsUnlink error during cleanup (lines 518-519)
+    test('FsUnlink error during upload cleanup → still resolves', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockUnlink.mockImplementation((_p, cb) => cb(new Error('unlink fail')));
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: [], opt: [] },
+        { _id: NEW_OID, name: 'photo', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'photo', adultonly: 0, first: 1 }]);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+    });
+
+    // GROUP 4: Filename matching default tag → addPost (line 525)
+    test('filename is default tag → addPost appends "1"', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockIsDefaultTag.mockImplementation((s) => {
+        if (s === 'defaultname') return { index: 5 };
+        return false;
+      });
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: [], opt: [] },
+        { _id: NEW_OID, name: 'defaultname1', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'defaultname1', adultonly: 0, first: 1 }]);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('defaultname'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+      expect(mockAddPost).toHaveBeenCalledWith('defaultname', '1');
+    });
+
+    // GROUP 5: Invalid JSON in req.body.path (line 544)
+    test('invalid JSON in body.path → json parse error', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: [], opt: [] },
+        { _id: NEW_OID, name: 'photo', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '{bad json' });
+
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/json parse error/);
+    });
+
+    // GROUP 5: File with adult-only default tag at index 0 (lines 557-558)
+    test('tag is default with index=0 → sets adultonly=1', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      // Return defaultTag with index=0 for a specific tag
+      mockIsDefaultTag.mockImplementation((s) => {
+        if (s === 'adultword') return { index: 0 };
+        return false;
+      });
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: ['adultword'], opt: [] },
+        { _id: NEW_OID, name: 'photo', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'photo', adultonly: 1, first: 1 }]);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+    });
+
+    // GROUP 5: Optional tag filtering — not default, not in setArr (line 564)
+    test('optional tags filtered: skip defaults and duplicates', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockIsDefaultTag.mockImplementation((s) => {
+        if (s === 'badtag') return { index: 5 };
+        return false;
+      });
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: ['image'], opt: ['badtag', 'image', 'uniqueopt'] },
+        { _id: NEW_OID, name: 'photo', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'photo', adultonly: 0, first: 1 }]);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+      // uniqueopt should be in option, badtag (default) and image (dup) should be filtered
+      expect(res.body.option).toContain('uniqueopt');
+      expect(res.body.option).not.toContain('badtag');
+    });
+
+    // GROUP 5: Relative tags processing (lines 584-587)
+    test('relative tags added to optArr, deduplicated and defaults filtered', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockIsDefaultTag.mockReturnValue(false);
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'image', fileIndex: 0 },
+        { def: ['image'], opt: [] },
+        { _id: NEW_OID, name: 'photo', owner: ADMIN._id, utime: 1000, size: 1000,
+          count: 0, first: 1, recycle: 0, adultonly: 0, untag: 1, status: 0, },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'photo', adultonly: 0, first: 1 }]);
+      mockGetRelativeTag.mockResolvedValueOnce(['rel1', 'rel2', 'rel3', 'rel4', 'rel5', 'rel6']);
+      mockHandleMediaUpload.mockResolvedValueOnce({});
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(200);
+      // First 5 relative tags should be in option
+      expect(res.body.option).toContain('rel1');
+      expect(res.body.option).toContain('rel5');
+      expect(res.body.option).not.toContain('rel6');
+    });
+
+    // GROUP 5: Catch handler for the upload promise chain (line 601)
+    test('handleTag rejection → catch handler returns error', async () => {
+      mockIsTorrent.mockReturnValue(false);
+      mockHandleTag.mockRejectedValueOnce(new Error('tag processing failed'));
+
+      const res = await request(app)
+        .post('/upload/file')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('photo.jpg'))
+        .send({ type: '0', path: '[]' });
+
+      expect(res.status).toBe(500);
     });
   });
 
@@ -1198,6 +1696,198 @@ describe('file-other-router.js', () => {
         .send({ lang: '"zh"' });
       expect(res.status).toBe(200);
       expect(mockRenameSync).toHaveBeenCalledWith(expect.stringMatching(/\.srt$/), expect.stringMatching(/\.srt1$/));
+    });
+
+    // GROUP 6: External source switch cases (lines 652-677)
+    test('external bil_xxx → saves to bilibili path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/bil_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external yuk_xxx → saves to youku path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/yuk_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external ope_xxx → saves to openload path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/ope_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external lin_xxx → saves to line path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/lin_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external iqi_xxx → saves to iqiyi path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/iqi_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external kud_xxx → saves to kubodrive path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/kud_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external kyu_xxx → saves to kuboyouku path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/kyu_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external kdy_xxx → saves to kubodymyou path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/kdy_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    test('external kur_xxx → saves to kubourl path', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post('/upload/subtitle/kur_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    // GROUP 6: Invalid external id (line 681)
+    test('external invalid name → error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      const res = await request(app)
+        .post('/upload/subtitle/yuk_te*st')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/external is not vaild/);
+    });
+
+    // GROUP 6: Invalid JSON in req.body.lang for external (line 686)
+    test('external invalid JSON lang → json parse error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      const res = await request(app)
+        .post('/upload/subtitle/you_test123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '{bad' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/json parse error/);
+    });
+
+    // GROUP 6: Invalid storage uid (line 692)
+    test('internal invalid uid → error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      const res = await request(app)
+        .post('/upload/subtitle/notavaliduid123')
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/uid is not vaild/);
+    });
+
+    // GROUP 6: File not found in DB (line 696)
+    test('internal file not found → error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockMongo.mockResolvedValueOnce([]);
+      const res = await request(app)
+        .post(`/upload/subtitle/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/file not exist/);
+    });
+
+    // GROUP 6: Playlist status=9 — find first video (lines 710-713)
+    test('internal status=9 without index → finds first video in playlist', async () => {
+      mockIsSub.mockReturnValue('srt');
+      const item = makeItem({ status: 9, playList: ['doc.pdf', 'movie.mp4'], thumb: null });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockImplementation((name) => name === 'movie.mp4');
+      mockExistsSync.mockReturnValue(false);
+      const res = await request(app)
+        .post(`/upload/subtitle/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(200);
+    });
+
+    // GROUP 6: Selected index is not a video (line 718)
+    test('internal status=9, selected index not video → error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      const item = makeItem({ status: 9, playList: ['doc.pdf', 'movie.mp4'], thumb: null });
+      mockMongo.mockResolvedValueOnce([item]);
+      mockIsVideo.mockReturnValue(false);
+      const res = await request(app)
+        .post(`/upload/subtitle/${VALID_UID}/0`)
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: '"zh"' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/file type error/);
+    });
+
+    // GROUP 6: Invalid JSON in req.body.lang for internal path (line 724)
+    test('internal invalid JSON lang → json parse error', async () => {
+      mockIsSub.mockReturnValue('srt');
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3, thumb: null })]);
+      const res = await request(app)
+        .post(`/upload/subtitle/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .set('x-test-file', fileInfo('sub.srt', 500))
+        .send({ lang: 'notjson{' });
+      expect(res.status).toBe(400);
+      expect(res.text).toMatch(/json parse error/);
     });
   });
 

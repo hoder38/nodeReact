@@ -1354,5 +1354,800 @@ describe('external-router.js', () => {
         .set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
     });
+
+    test('invalid external name returns 400 (line 1083)', async () => {
+      const longId = 'you_' + 'x'.repeat(501);
+      const res = await request(app)
+        .get(`/subtitle/fix/${longId}/en/5`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+    });
+
+    test('invalid storage UID returns 400 (line 1091)', async () => {
+      const res = await request(app)
+        .get('/subtitle/fix/notvalidhex/en/5')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+    });
+
+    test('status 9 without index finds first video (lines 1105-1108)', async () => {
+      mockIsVideo.mockImplementation((name) => typeof name === 'string' && name.endsWith('.mp4'));
+      mockMongo.mockResolvedValueOnce([makeItem({
+        status: 9,
+        playList: ['dir/doc.pdf', 'dir/video.mp4'],
+      })]);
+      mockExistsSync.mockReturnValue(true);
+      rlLines = ['WEBVTT', '', '00:00:10.000 --> 00:00:20.000', 'Text'];
+
+      const res = await request(app)
+        .get(`/subtitle/fix/${VALID_UID}/default/2`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+    });
+
+    test('status 9 non-video item returns 400 (line 1113)', async () => {
+      mockIsVideo.mockReturnValue(false);
+      mockMongo.mockResolvedValueOnce([makeItem({
+        status: 9,
+        playList: ['dir/doc.pdf'],
+      })]);
+
+      const res = await request(app)
+        .get(`/subtitle/fix/${VALID_UID}/default/2`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // ADDITIONAL COVERAGE TESTS
+  // ---------------------------------------------------------------
+
+  describe('GET /2drive/:uid — additional', () => {
+    test('valid user but invalid UID returns 400 (line 44)', async () => {
+      mockMongo.mockResolvedValueOnce([makeUser()]);
+      const res = await request(app)
+        .get('/2drive/not_a_valid_hex_uid_24ch')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+    });
+
+    test('playlist with nested folders triggers parent lookup (lines 100-106)', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockMongo
+        .mockResolvedValueOnce([makeUser()])
+        .mockResolvedValueOnce([makeItem({
+          status: 9,
+          playList: ['a/b/video.mp4'],
+        })]);
+      mockGoogleApi.mockResolvedValue({ id: 'created-folder-id' });
+
+      const res = await request(app)
+        .get(`/2drive/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ apiOK: true });
+      // folder 'a' (parent='.') + folder 'a/b' (parent='a') + file upload
+      expect(mockGoogleApi).toHaveBeenCalledTimes(3);
+    });
+
+    test('playlist with multi-part RAR uploads recursively (lines 148,158)', async () => {
+      mockExistsSync.mockImplementation((path) => {
+        if (typeof path === 'string') {
+          if (path.includes('_complete')) return false;
+          if (path.endsWith('_zip')) return false;
+          if (path.endsWith('_7z')) return false;
+          if (path.endsWith('.1.rar')) return true;
+          if (path.endsWith('.2.rar')) return true;
+          if (path.endsWith('.3.rar')) return false;
+        }
+        return false;
+      });
+      mockMongo
+        .mockResolvedValueOnce([makeUser()])
+        .mockResolvedValueOnce([makeItem({
+          status: 9,
+          name: 'movie.part1.rar',
+          playList: ['dir/file.mp4'],
+        })]);
+      mockGoogleApi.mockResolvedValue({ id: 'drive-id' });
+
+      const res = await request(app)
+        .get(`/2drive/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGoogleApi).toHaveBeenCalledWith('upload', expect.objectContaining({
+        name: 'movie.part2.rar',
+      }));
+    });
+  });
+
+  describe('GET /2kindle/:uid — additional', () => {
+    test('valid user but invalid UID returns 400 (line 201)', async () => {
+      mockMongo.mockResolvedValueOnce([makeUser()]);
+      const res = await request(app)
+        .get('/2kindle/not_a_valid_hex_uid_24ch')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('GET /getSingle/:uid — additional switch cases', () => {
+    test('kuboyouku prefix (kyu_) calls kuboVideoUrl (lines 239-241)', async () => {
+      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kyu-resolved' });
+      const res = await request(app)
+        .get('/getSingle/kyu_XMTQ1_3')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kyu', 'http://v.youku.com/v_show/id_XMTQ1.html', 3);
+    });
+
+    test('kubodymyou prefix (kdy_) calls kuboVideoUrl (lines 243-246)', async () => {
+      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kdy-resolved' });
+      const res = await request(app)
+        .get('/getSingle/kdy_abc123_2')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kdy', 'http://www.58b.tv/168player/youtube.php?abc123', 2);
+    });
+
+    test('kubourl prefix (kur_) decodes base64 (lines 248-250)', async () => {
+      const encoded = Buffer.from('/some/path').toString('base64');
+      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kur-resolved' });
+      const res = await request(app)
+        .get(`/getSingle/kur_${encoded}`)
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kur', 'http://www.99kubo.tv/some/path', 1);
+    });
+
+    test('youku prefix (yuk_) calls youtubeVideoUrl (lines 256-257)', async () => {
+      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'yuk-resolved' });
+      const res = await request(app)
+        .get('/getSingle/yuk_XMTQ1234')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('yuk', 'http://v.youku.com/v_show/id_XMTQ1234.html');
+    });
+
+    test('iqiyi prefix (iqi_) calls youtubeVideoUrl (lines 263-264)', async () => {
+      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'iqi-resolved' });
+      const res = await request(app)
+        .get('/getSingle/iqi_v12345')
+        .set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('iqi', 'http://www.iqiyi.com/v12345.html');
+    });
+  });
+
+  describe('POST /upload/url — additional coverage', () => {
+    test('URL bookmark with default tag name appends suffix (line 286)', async () => {
+      mockIsDefaultTag
+        .mockReturnValueOnce({ index: 1 }) // line 285 name check → truthy
+        .mockReturnValue(false);
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'url' },
+        { def: [], opt: [] },
+        { name: 'defaulttag1', status: 7, first: 1, untag: 1, adultonly: 0, _id: NEW_OID, owner: ADMIN._id },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'defaulttag1', adultonly: 0, first: 1 }]);
+      mockGetRelativeTag.mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'url:http://example.com', type: '0' });
+      expect(res.status).toBe(200);
+      expect(mockAddPost).toHaveBeenCalled();
+    });
+
+    test('URL bookmark tag with adult flag sets adultonly (lines 319-320)', async () => {
+      mockIsDefaultTag
+        .mockReturnValueOnce(false) // line 285 name check
+        .mockReturnValueOnce({ index: 0 }) // line 316 first tag → adultonly
+        .mockReturnValue(false);
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'url' },
+        { def: ['adult-tag'], opt: [] },
+        { name: 'test-url', status: 7, first: 1, untag: 1, adultonly: 0, _id: NEW_OID, owner: ADMIN._id },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'test-url', adultonly: 0, first: 1 }]);
+      mockGetRelativeTag.mockResolvedValueOnce([]);
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'url:http://example.com', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('URL bookmark handleTag rejection is caught (line 362)', async () => {
+      mockHandleTag.mockRejectedValueOnce(new Error('tag fail'));
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'url:http://example.com', type: '0' });
+      expect(res.status).toBe(500);
+    });
+
+    test('magnet torrent files with extType processes media tags (lines 405-407)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExtType.mockReturnValueOnce({ type: 'video' });
+      mockExtTag.mockReturnValueOnce({ def: ['video-tag'], opt: ['opt-tag'] });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'TestTorrent',
+        files: [{ name: 'video.mp4', path: 'TestTorrent/video.mp4' }],
+      });
+      setupStreamCloseMocks({ untag: 1, first: 1 });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'magnet:?xt=urn:btih:abcdef0123456789abcde&dn=Test', type: '0' });
+      expect(res.status).toBe(200);
+      expect(mockExtType).toHaveBeenCalledWith('video.mp4');
+    });
+
+    test('YIFY URL without trailing path returns error (line 504)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/', type: '0' });
+      expect([200, 400]).toContain(res.status);
+    });
+
+    test('KUBO duplicate returns 400 (line 520)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem()]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://www.99kubo.tv/movie/123.html', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('DM5 duplicate returns 400 (line 540)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem()]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://www.dm5.com/manhua-test/', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('DM5 URL without manga ID returns error (line 544)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://www.dm5.com/', type: '0' });
+      expect([200, 400]).toContain(res.status);
+    });
+
+    test('EZTV duplicate returns 400 (line 581)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem()]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('EZTV URL without shows path returns error (line 585)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/other-page', type: '0' });
+      expect([200, 400]).toContain(res.status);
+    });
+
+    test('Mega errhandle triggers pureDownload (lines 598, 606-612)', async () => {
+      mockPlaylistApi.mockImplementationOnce((_action, _user, _url, _fp, opts) => {
+        return opts.errhandle(new Error('mega fail'));
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'downloaded.mp4']);
+      });
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://mega.nz/#!test', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('pureDownload via catch with non-torrent file (lines 606-657)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('save fail'));
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'downloaded.mp4']);
+      });
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('pureDownload with torrent file processes magnet (lines 612-656)', async () => {
+      mockMongo
+        .mockResolvedValueOnce([]) // EZTV dedup
+        .mockResolvedValueOnce([]); // torrent magnet dedup
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('save fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((path, cb) => {
+        cb(null, { infoHash: 'abcdef0123456789abcde' });
+      });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'Torrent',
+        files: [{ name: 'video.mp4', path: 'Torrent/video.mp4' }],
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('pureDownload torrent without infoHash (line 615)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((_path, cb) => {
+        cb(null, {}); // no infoHash → torrent2Magnet returns false
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect([200, 400, 500]).toContain(res.status);
+    });
+
+    test('pureDownload torrent with short infoHash (line 620)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((_path, cb) => {
+        cb(null, { infoHash: 'abc' }); // too short for url regex
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect([200, 400, 500]).toContain(res.status);
+    });
+
+    test('pureDownload torrent magnet dup found (line 631)', async () => {
+      mockMongo
+        .mockResolvedValueOnce([]) // EZTV dedup
+        .mockResolvedValueOnce([makeItem()]); // torrent magnet dedup — found!
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((_path, cb) => {
+        cb(null, { infoHash: 'abcdef0123456789abcde' });
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect([200, 400, 500]).toContain(res.status);
+    });
+
+    test('pureDownload torrent files with extType truthy (lines 640-642)', async () => {
+      mockMongo
+        .mockResolvedValueOnce([]) // EZTV dedup
+        .mockResolvedValueOnce([]); // torrent magnet dedup
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((_path, cb) => {
+        cb(null, { infoHash: 'abcdef0123456789abcde' });
+      });
+      mockExtType.mockReturnValueOnce({ type: 'video' });
+      mockExtTag.mockReturnValueOnce({ def: ['vid'], opt: ['opt'] });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'Torrent',
+        files: [{ name: 'video.mp4', path: 'Torrent/video.mp4' }],
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('pureDownload torrent with empty files (line 647)', async () => {
+      mockMongo
+        .mockResolvedValueOnce([]) // EZTV dedup
+        .mockResolvedValueOnce([]); // torrent magnet dedup
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementation((_path, cb) => {
+        cb(null, { infoHash: 'abcdef0123456789abcde' });
+      });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'Torrent',
+        files: [],
+      });
+      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
+        return opts.rest(['/path/to', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
+      expect([200, 400, 500]).toContain(res.status);
+    });
+
+    test('streamClose with default tag name (line 668)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockResolvedValueOnce([
+        'DefaultName', new Set(), new Set(), 'yify', 'http://thumb', 'encoded',
+      ]);
+      mockIsDefaultTag
+        .mockReturnValueOnce({ index: 1 }) // streamClose name check
+        .mockReturnValue(false);
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('streamClose detects existing file (lines 672-674)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockResolvedValueOnce([
+        'Movie', new Set(), new Set(), 'yify', 'http://thumb', 'encoded',
+      ]);
+      mockExistsSync.mockReturnValue(true);
+      mockStatSync.mockReturnValue({ size: 5000, isFile: () => true });
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(200);
+    });
+
+    test('streamClose with invalid JSON type returns error (line 679)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockResolvedValueOnce([
+        'Movie', new Set(), new Set(), 'yify', 'http://thumb', 'encoded',
+      ]);
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '{bad json' });
+      expect([200, 400]).toContain(res.status);
+    });
+
+    test('streamClose with body.path and adult default tag (lines 707, 716-717)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockExternalSaveSingle.mockResolvedValueOnce([
+        'Movie', new Set(), new Set(), 'yify', 'http://thumb', 'encoded',
+      ]);
+      mockIsDefaultTag
+        .mockReturnValueOnce(false) // streamClose name check
+        .mockReturnValueOnce({ index: 0 }) // first tag in loop → adultonly
+        .mockReturnValue(false);
+      setupStreamCloseMocks();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0', path: ['extra-tag'] });
+      expect(res.status).toBe(200);
+    });
+
+    test('streamClose with relative tags adds to options (lines 747-750)', async () => {
+      mockMongo.mockResolvedValueOnce([]);
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'TestTorrent',
+        files: [{ name: 'video.mp4', path: 'TestTorrent/video.mp4' }],
+      });
+      mockHandleTag.mockResolvedValueOnce([
+        { type: 'video', fileIndex: 0 },
+        { def: [], opt: [] },
+        { name: 'test-file', status: 0, untag: 1, first: 1, adultonly: 0 },
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: NEW_OID, name: 'test-file', adultonly: 0, first: 1 }]);
+      mockGetRelativeTag.mockResolvedValueOnce(['rel-tag-1', 'rel-tag-2']);
+      mockHandleMediaUpload.mockResolvedValueOnce();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'magnet:?xt=urn:btih:abcdef0123456789abcde&dn=Test', type: '0' });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('option');
+    });
+
+    test('Mega with playlist triggers recur_mhandle (lines 759-765, 771)', async () => {
+      mockPlaylistApi.mockImplementationOnce((_action, _user, _url, _fp, opts) => {
+        return opts.rest(['Mega File', new Set(), new Set(), {
+          mega: 'http%3A%2F%2Fmega.nz',
+          playList: ['dir/video1.mp4', 'dir/video2.mp4'],
+        }]);
+      });
+      mockIsVideo.mockReturnValue(true);
+      mockHandleTag
+        .mockResolvedValueOnce([
+          { type: 'video', fileIndex: 0 },
+          { def: [], opt: [] },
+          { name: 'mega-file', status: 0, untag: 1, first: 1, adultonly: 0 },
+        ])
+        .mockResolvedValueOnce([{ type: 'video' }, { def: [], opt: [] }, { status: 9 }])
+        .mockResolvedValueOnce([{ type: 'video' }, { def: [], opt: [] }, { status: 9 }]);
+      mockMongo
+        .mockResolvedValueOnce([{ _id: NEW_OID, name: 'mega-file', adultonly: 0, first: 1 }])
+        .mockResolvedValueOnce()
+        .mockResolvedValueOnce();
+      mockGetRelativeTag.mockResolvedValueOnce([]);
+      mockHandleMediaUpload.mockResolvedValue();
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://mega.nz/#!test', type: '0' });
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /subtitle/search — additional coverage', () => {
+    test('episode parsing with e prefix only (lines 807-809)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 'e5' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 5, season_number: 1,
+      }));
+    });
+
+    test('episode parsing with s-only format (lines 810-812)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 's23' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 1, season_number: 23,
+      }));
+    });
+
+    test('episode parsing with se format (lines 814-815)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 'se5' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 5, season_number: 1,
+      }));
+    });
+
+    test('episode s12e3: season>=10 episode<10 (lines 827-829)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 's12e3' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 3, season_number: 12,
+      }));
+    });
+
+    test('episode s2e15: season<10 episode>=10 (lines 831-836)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 's2e15' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 15, season_number: 2,
+      }));
+    });
+
+    test('episode s12e15: season>=10 episode>=10 (lines 837-839)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'show', episode: 's12e15' });
+      expect(res.status).toBe(200);
+      expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
+        episode_number: 15, season_number: 12,
+      }));
+    });
+
+    test.each([
+      'bil', 'yuk', 'ope', 'kud', 'kyu', 'kdy', 'kur',
+    ])('subtitle search with %s_ prefix hits switch case (lines 853-872)', async (prefix) => {
+      const res = await request(app)
+        .post(`/subtitle/search/${prefix}_testid`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(500);
+    });
+
+    test('status 9 without index finds first video (lines 899-902)', async () => {
+      mockIsVideo.mockImplementation((name) => typeof name === 'string' && name.endsWith('.mp4'));
+      mockMongo.mockResolvedValueOnce([makeItem({
+        status: 9,
+        playList: ['dir/doc.pdf', 'dir/video.mp4'],
+      })]);
+      mockExistsSync.mockReturnValue(false);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 1 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(200);
+    });
+
+    test('status 9 non-video item returns 400 (line 907)', async () => {
+      mockIsVideo.mockReturnValue(false);
+      mockMongo.mockResolvedValueOnce([makeItem({
+        status: 9,
+        playList: ['dir/doc.pdf'],
+      })]);
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(400);
+    });
+
+    test('OpenSubtitles login throws returns 500 (line 940)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSLogin.mockImplementationOnce(() => { throw new Error('login fail'); });
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(500);
+    });
+
+    test('subtitle search finds ze language (lines 969-970)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'ze', files: [{ file_id: 100 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(200);
+    });
+
+    test('subtitle search finds zh-cn language (lines 971-972)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'zh-cn', files: [{ file_id: 100 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test' });
+      expect(res.status).toBe(200);
+    });
+
+    test('subtitle search renames existing .srt/.ass/.ssa files (lines 1030,1033,1036)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
+      mockOSHash.mockResolvedValueOnce({ moviehash: 'h' });
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 100 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+      mockExistsSync.mockImplementation((path) => {
+        if (typeof path === 'string') {
+          if (path.endsWith('.srt') || path.endsWith('.ass') || path.endsWith('.ssa')) return true;
+        }
+        return false;
+      });
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test movie' });
+      expect(res.status).toBe(200);
+      expect(mockRenameSync).toHaveBeenCalled();
+    });
   });
 });

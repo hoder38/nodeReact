@@ -585,7 +585,7 @@ export default {
             let adultonly = 0;
             if (checkAdmin(2 ,user)) {
                 for (let i in dirpath) {
-                    if (isDefaultTag(normalize(i)).index === 0) {
+                    if (isDefaultTag(normalize(dirpath[i])).index === 0) {
                         adultonly = 1;
                         break;
                     }
@@ -659,6 +659,11 @@ export default {
                 this.singleDrive(metadatalist, index, user, folderId, uploaded, handling, dirpath);
             }
         }
+        const errDrive = (err, key, folderId) => GoogleApi('move parent', {
+            fileId: key,
+            rmFolderId: handling,
+            addFolderId: folderId,
+        }).then(() => handleError(err));
         return mkFolder(PathDirname(filePath)).then(() => handleFile()).then(() => handleNext()).catch(err => {
             handleError(err, 'Single Drive');
             return handleNext();
@@ -708,6 +713,8 @@ export default {
                                             _id: timeoutItems[index].item.owner,
                                             perm: 1,
                                         }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                    } else {
+                                        return Promise.resolve();
                                     }
                                 } else {
                                     return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMedia(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, timeoutItems[index].mediaType.key, {
@@ -782,9 +789,3 @@ const getTimeTag = (time, opt) => {
         return opt.splice(0, 2);
     }
 }
-
-const errDrive = (err, key, folderId) => GoogleApi('move parent', {
-    fileId: key,
-    rmFolderId: handling,
-    addFolderId: folderId,
-}).then(() => handleError(err));
