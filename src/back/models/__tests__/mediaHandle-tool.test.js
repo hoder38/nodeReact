@@ -1790,7 +1790,7 @@ describe('checkMedia', () => {
     handleMediaSpy.mockRestore();
   });
 
-  test('single mediaType with timeout + key + realPath but NO _complete → crashes (production bug)', async () => {
+  test('single mediaType with timeout + key + realPath but NO _complete → skips gracefully', async () => {
     const item = {
       _id: 'fid1',
       owner: 'user1',
@@ -1799,9 +1799,8 @@ describe('checkMedia', () => {
     mockExistsSync.mockReturnValue(false); // _complete does not exist
     mockMongo.mockResolvedValueOnce([item]);
 
-    // PRODUCTION BUG: single_check returns undefined when _complete doesn't exist
-    // line 732: undefined.then() → TypeError
-    await expect(MediaHandleTool.checkMedia()).rejects.toThrow(TypeError);
+    // Bug fixed: returns Promise.resolve() instead of undefined when _complete absent
+    await expect(MediaHandleTool.checkMedia()).resolves.toBeUndefined();
   });
 
   test('single mediaType with timeout, NO key (no realPath) → handleMediaUpload', async () => {
@@ -1842,7 +1841,7 @@ describe('checkMedia', () => {
     uploadSpy.mockRestore();
   });
 
-  test('single mediaType with timeout, NO key + realPath but NO _complete → crashes (production bug)', async () => {
+  test('single mediaType with timeout, NO key + realPath but NO _complete → skips gracefully', async () => {
     const item = {
       _id: 'fid1',
       owner: 'user1',
@@ -1851,9 +1850,8 @@ describe('checkMedia', () => {
     mockExistsSync.mockReturnValue(false);
     mockMongo.mockResolvedValueOnce([item]);
 
-    // PRODUCTION BUG: single_check returns undefined when _complete doesn't exist
-    // line 732: undefined.then() → TypeError
-    await expect(MediaHandleTool.checkMedia()).rejects.toThrow(TypeError);
+    // Bug fixed: returns Promise.resolve() instead of undefined when _complete absent
+    await expect(MediaHandleTool.checkMedia()).resolves.toBeUndefined();
   });
 
   test('multi-mediaType — iterates sub-entries, detects timeout', async () => {
@@ -2300,7 +2298,7 @@ describe('checkMedia — indexed mediaType paths (lines 710, 716, 723, 729)', ()
     uploadSpy.mockRestore();
   });
 
-  test('multi-mediaType key + realPath but NO _complete → crashes (production bug)', async () => {
+  test('multi-mediaType key + realPath but NO _complete → skips gracefully', async () => {
     const item = {
       _id: 'fid1',
       owner: 'user1',
@@ -2311,10 +2309,10 @@ describe('checkMedia — indexed mediaType paths (lines 710, 716, 723, 729)', ()
     mockExistsSync.mockReturnValue(false);
     mockMongo.mockResolvedValueOnce([item]);
 
-    await expect(MediaHandleTool.checkMedia()).rejects.toThrow(TypeError);
+    await expect(MediaHandleTool.checkMedia()).resolves.toBeUndefined();
   });
 
-  test('multi-mediaType NO key + realPath but NO _complete → crashes (production bug)', async () => {
+  test('multi-mediaType NO key + realPath but NO _complete → skips gracefully', async () => {
     const item = {
       _id: 'fid1',
       owner: 'user1',
@@ -2325,7 +2323,7 @@ describe('checkMedia — indexed mediaType paths (lines 710, 716, 723, 729)', ()
     mockExistsSync.mockReturnValue(false);
     mockMongo.mockResolvedValueOnce([item]);
 
-    await expect(MediaHandleTool.checkMedia()).rejects.toThrow(TypeError);
+    await expect(MediaHandleTool.checkMedia()).resolves.toBeUndefined();
   });
 
   test('multi-mediaType key + realPath → handleMedia rejects → catch fires (line 710)', async () => {

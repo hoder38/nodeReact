@@ -10,7 +10,7 @@ import readline from 'readline'
 const { createInterface } = readline;
 import ReadTorrent from 'read-torrent'
 import OpenSubtitleRest from 'opensubtitles.com'
-import OpenSubtitle from 'opensubtitles-api'
+//import OpenSubtitle from 'opensubtitles-api'
 import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
@@ -620,9 +620,6 @@ router.post('/upload/url', function(req, res, next) {
                             return handleError(new HoError('magnet is not vaild'), next);
                         }
                         const shortTorrent = magnet.match(/^magnet:[^&]+/);
-                        if (!shortTorrent) {
-                            return handleError(new HoError('magnet create fail'), next);
-                        }
                         return new Promise((resolve, reject) => FsUnlink(filePath, err => err ? reject(err) : resolve())).then(() => Mkdirp(filePath)).then(() => Mongo('find', STORAGEDB, {magnet: {
                             $regex: shortTorrent[0].match(/[^:]+$/)[0],
                             $options: 'i',
@@ -911,23 +908,24 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                         filePath = `${filePath}_complete`;
                     }
                     fileName = items[0]['playList'][fileIndex].substr(items[0]['playList'][fileIndex].indexOf('/') + 1);
-                    size = FsStatSync(filePath).size;
+                    //size = FsStatSync(filePath).size;
                 }
-                return [items[0]._id, filePath, fileName, size];
+                return [items[0]._id, filePath, fileName/*, size*/];
             }) : handleError(new HoError('uid is not vaild'), next);
         }
     }
     getId().then(([id, filePath, fileName, size]) => {
         if (fileName) {
-            const OpenSubtitlesHash = new OpenSubtitle('UserAgent');
+            /*const OpenSubtitlesHash = new OpenSubtitle('UserAgent');
             return OpenSubtitlesHash.hash(filePath).then(infos => {
                 console.log(infos);
                 return [id, filePath, fileName, size, infos.moviehash];
-            });
+            });*/
+            return [id, filePath, fileName];
         } else {
             return [id, filePath];
         }
-    }).then(([id, filePath, fileName, size, moviehash]) => {
+    }).then(([id, filePath, fileName/*, size, moviehash*/]) => {
         const folderPath = PathDirname(filePath);
         const mkfolder = () => FsExistsSync(folderPath) ? Promise.resolve() : Mkdirp(folderPath);
         const getZh = sub_url => sub_url ? SUB2VTT(sub_url, filePath, false) : Promise.resolve();

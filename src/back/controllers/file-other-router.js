@@ -478,9 +478,6 @@ router.post('/upload/file', function(req, res, next) {
                     return handleError(new HoError('magnet is not vaild'));
                 }
                 const shortTorrent = magnet.match(/^magnet:[^&]+/);
-                if (!shortTorrent) {
-                    return handleError(new HoError('magnet create fail'));
-                }
                 return new Promise((resolve2, reject2) => FsUnlink(filePath, err => err ? reject2(err) : resolve2())).then(() => Mkdirp(filePath)).then(() => Mongo('find', STORAGEDB, {magnet: {
                     $regex: shortTorrent[0].match(/[^:]+$/)[0],
                     $options: 'i',

@@ -162,13 +162,34 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({
   default: mockSendWs,
 }));
 
+// Full OPTION_TAG matching real structure: [...MEDIA_LIST_CH, ...GENRE_LIST_CH, ...GAME_LIST_CH, ...MUSIC_LIST, ...ADULT_LIST]
+const FULL_OPTION_TAG = [
+  '圖片', '相片', '漫畫', '圖片集', '影片', '電影', '動畫', '電視劇',   // 0-7
+  '音頻', '歌曲', '音樂', '有聲書', '文件', '書籍', '小說',             // 8-14
+  '簡報', '試算表', '程式碼', '網頁', '網址', '論壇', '維基',           // 15-21
+  '壓縮檔', '播放列表',                                                  // 22-23
+  'g24', 'g25', 'g26', 'g27', 'g28', 'g29', 'g30', 'g31',              // 24-31
+  'g32', 'g33', 'g34', 'g35', 'g36', 'g37', 'g38', 'g39',              // 32-39
+  'g40', 'g41', 'g42', 'g43',                                            // 40-43
+  'ga44', 'ga45', 'ga46', 'ga47', 'ga48', 'ga49', 'ga50',               // 44-50
+  'm51', 'm52', 'm53', 'm54', 'm55', 'm56', 'm57', 'm58', 'm59',       // 51-59
+  'm60', 'm61', 'm62', 'm63', 'm64', 'm65', 'm66', 'm67', 'm68',       // 60-68
+  'm69', 'm70', 'm71',                                                    // 69-71
+  'a72', 'a73',                                                            // 72-73
+];
+
+const mockIsDoc = jest.fn(() => false);
+const mockIsImage = jest.fn(() => false);
+const mockIsMusic = jest.fn(() => false);
+const mockIsVideo = jest.fn(() => false);
+const mockIsZipbook = jest.fn(() => false);
 jest.unstable_mockModule('../../util/mime.js', () => ({
-  getOptionTag: jest.fn(() => []),
-  isImage: jest.fn(() => false),
-  isMusic: jest.fn(() => false),
-  isVideo: jest.fn(() => false),
-  isDoc: jest.fn(() => false),
-  isZipbook: jest.fn(() => false),
+  getOptionTag: jest.fn(() => FULL_OPTION_TAG),
+  isImage: mockIsImage,
+  isMusic: mockIsMusic,
+  isVideo: mockIsVideo,
+  isDoc: mockIsDoc,
+  isZipbook: mockIsZipbook,
 }));
 
 // =====================================================================
@@ -374,6 +395,12 @@ describe('storage-router.js', () => {
       await request(app).get('/getSingle/name/desc/2/tag').set('x-test-user', u(ADMIN));
       expect(mockResetArray).not.toHaveBeenCalled();
     });
+
+    test('tagQuery error returns 500', async () => {
+      mockTagQuery.mockRejectedValueOnce(new Error('fail'));
+      const res = await request(app).get('/getSingle/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
   });
 
   // ---------------------------------------------------------------
@@ -409,6 +436,413 @@ describe('storage-router.js', () => {
       mockRedis.mockRejectedValueOnce(new Error('redis fail'));
       const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(500);
+    });
+
+    // --- Branch coverage for selectRandom choose values ---
+    // N=74 (FULL_OPTION_TAG length). All Redis hgetall returns {} → weights all 1.
+    // selectRandom(count) return choose=X: Math.random = (X+0.5)/N
+    // selectRandom(count, arr) return arr[idx]: Math.random = (idx+0.5)/arr.length
+    // selectRandom([w1,w2,...]) return idx: compute accm_list, Math.random = (accm[idx]-0.5)/sum
+    const N = 74;
+
+    test('choose=0: push 2 random tags (lines 72-74)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(0.5 / N)        // choose=0
+        .mockReturnValueOnce(0.5 / 2)        // [1,2] → 1
+        .mockReturnValueOnce(0.5 / 20);      // genre → 24
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=1: pic type (lines 77-78)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(1.5 / N)        // choose=1
+        .mockReturnValueOnce(0.5 / 20);      // genre → 24
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=3: pic book (lines 81-83)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(3.5 / N)        // choose=3
+        .mockReturnValueOnce(0.5 / 2)        // [1,2] → 1
+        .mockReturnValueOnce(0.5 / 20);      // genre → 24
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=4: video (lines 86-87) + 電影 post-processing (lines 165-167)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(4.5 / N)        // choose=4
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5 (電影)
+        .mockReturnValueOnce(0.5 / 20)       // genre → 24
+        .mockReturnValueOnce(0.5 / 14);      // selectRandom([11,1,1,1]) → 0 (not yify)
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=4 + 電影 + yify movie (lines 168-170)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(4.5 / N)        // choose=4
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5 (電影)
+        .mockReturnValueOnce(0.5 / 20)       // genre → 24
+        .mockReturnValueOnce(13.5 / 14);     // selectRandom([11,1,1,1]) → 3 (yify)
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockSetArray).toHaveBeenCalledWith('', expect.arrayContaining(['yify movie', 'no local']), expect.any(Array));
+      spy.mockRestore();
+    });
+
+    test('choose=4 + 動畫 post-processing (lines 175-176)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(4.5 / N)        // choose=4
+        .mockReturnValueOnce(1.5 / 3)        // [5,6,7] → 6 (動畫)
+        .mockReturnValueOnce(0.5 / 20)       // genre
+        .mockReturnValueOnce(0.5 / 11);      // selectRandom([9,1,1]) → 0
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=4 + 電視劇 post-processing (lines 181-182)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(4.5 / N)        // choose=4
+        .mockReturnValueOnce(2.5 / 3)        // [5,6,7] → 7 (電視劇)
+        .mockReturnValueOnce(0.5 / 20)       // genre
+        .mockReturnValueOnce(0.5);           // selectRandom([10]) → 0
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=6 mtype=6: video type+cate (lines 90-92,96)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(6.5 / N)        // choose=6
+        .mockReturnValueOnce(1.5 / 3)        // [5,6,7] → 6 (mtype=6)
+        .mockReturnValueOnce(0.5 / 20)       // genre
+        .mockReturnValueOnce(0.5 / 11);      // post-proc: 動畫 → selectRandom([9,1,1])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=6 mtype!=6: video type+cate else (lines 93-94)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(6.5 / N)        // choose=6
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5 (mtype=5)
+        .mockReturnValueOnce(0.5 / 14);      // post-proc: 電影 → selectRandom([11,1,1,1]) → 0
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=5: video type (lines 99-100)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(5.5 / N)        // choose=5
+        .mockReturnValueOnce(0.5 / 20)       // genre
+        .mockReturnValueOnce(0.5 / 14);      // post-proc: 電影 → selectRandom([11,1,1,1]) → 0
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=8: audio (lines 103-104) + 音頻 post-processing (line 195)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(8.5 / N)        // choose=8
+        .mockReturnValueOnce(0.5 / 3)        // [9,10,11] → 9
+        .mockReturnValueOnce(0.5 / 21)       // music_genre → 51
+        .mockReturnValueOnce(0.5);           // post-proc: 音頻 → selectRandom([6]) → 0
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=10 mtype=4: audio type+video cate (lines 107-110,114)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(10.5 / N)       // choose=10
+        .mockReturnValueOnce(0.5 / 2)        // [4,8] → 4 (mtype=4)
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5
+        .mockReturnValueOnce(0.5 / 20)       // genre
+        .mockReturnValueOnce(0.5 / 14);      // post-proc: 電影 → selectRandom([11,1,1,1])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=10 mtype=8: audio type+music (lines 111-112)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(10.5 / N)       // choose=10
+        .mockReturnValueOnce(1.5 / 2)        // [4,8] → 8 (mtype=8)
+        .mockReturnValueOnce(0.5 / 21)       // music_genre → 51
+        .mockReturnValueOnce(0.5);           // post-proc: 音頻 → selectRandom([6])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=9: audio type (lines 117-118)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(9.5 / N)        // choose=9
+        .mockReturnValueOnce(0.5 / 21)       // music_genre → 51
+        .mockReturnValueOnce(0.5);           // post-proc: 音頻 → selectRandom([6])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=12: doc (lines 121-122)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(12.5 / N)       // choose=12
+        .mockReturnValueOnce(0.5 / 4)        // [13,14,17,18] → 13
+        .mockReturnValueOnce(0.5 / 20);      // genre
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=13: doc type (lines 125-126)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(13.5 / N)       // choose=13
+        .mockReturnValueOnce(0.5 / 20);      // genre
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=15: pre no-op', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(15.5 / N);      // choose=15
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=16: sheet no-op', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(16.5 / N);      // choose=16
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=19: url (line 133)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(19.5 / N)       // choose=19
+        .mockReturnValueOnce(0.5 / 2);       // [20,21] → 20
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=20: url type (line 136)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(20.5 / N);      // choose=20
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=22: zip (line 139)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(22.5 / N);      // choose=22
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=23: zip type (line 142)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(23.5 / N);      // choose=23
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=24 mtype>23: game genre (lines 145-147)', async () => {
+      // game_genre = [0,4,12,24,25,42,44,45,46,47,48,49,50] (13 elements)
+      // To return 24 (index 3): (3+0.5)/13
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(24.5 / N)       // choose=24
+        .mockReturnValueOnce(3.5 / 13);      // game_genre → 24 (mtype>23)
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=24 mtype=0: game with pic type (lines 148-150)', async () => {
+      // game_genre index 0 → mtype=0 → OPTION_TAG[2]='漫畫'
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(24.5 / N)       // choose=24
+        .mockReturnValueOnce(0.5 / 13);      // game_genre → 0 (mtype=0)
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=24 mtype=4: game with video type (line 149 mtype===4 branch)', async () => {
+      // game_genre index 1 → mtype=4
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(24.5 / N)       // choose=24
+        .mockReturnValueOnce(1.5 / 13)       // game_genre → 4 (mtype=4)
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5
+        .mockReturnValueOnce(0.5 / 14);      // post-proc: selectRandom([11,1,1,1])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=24 mtype=12: game with doc type (line 149 else branch)', async () => {
+      // game_genre index 2 → mtype=12
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(24.5 / N)       // choose=24
+        .mockReturnValueOnce(2.5 / 13)       // game_genre → 12 (mtype=12)
+        .mockReturnValueOnce(0.5 / 2);       // [13,14] → 13
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=26: genre tags (lines 153-155)', async () => {
+      // choose=26 → choose>23 && choose<44, mtype from [0,4,12]
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(26.5 / N)       // choose=26
+        .mockReturnValueOnce(1.5 / 3)        // [0,4,12] → 4 (mtype=4)
+        .mockReturnValueOnce(0.5 / 3)        // [5,6,7] → 5
+        .mockReturnValueOnce(0.5 / 14);      // post-proc: 電影
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=44: game (line 157)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(44.5 / N);      // choose=44
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=51: audio music (lines 159-160)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(51.5 / N)       // choose=51
+        .mockReturnValueOnce(0.5 / 3)        // [9,10,11] → 9
+        .mockReturnValueOnce(0.5);           // post-proc: 音頻 → selectRandom([6])
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=72: else branch / 18+ (line 162)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(72.5 / N);      // choose=72
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('choose=0 + 漫畫 + dm5 comic (lines 189-192)', async () => {
+      // choose=0, second sr returns 2 → OPTION_TAG[2]='漫畫'
+      // post-proc: 圖片+漫畫 → selectRandom([4,1])→1 (dm5)
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(0.5 / N)        // choose=0
+        .mockReturnValueOnce(1.5 / 2)        // [1,2] → 2 (漫畫)
+        .mockReturnValueOnce(0.5 / 20)       // genre → 24
+        .mockReturnValueOnce(4.5 / 5)        // selectRandom([4,1]) → 1 (dm5)
+        .mockReturnValueOnce(0.5 / 11);      // selectRandom(count,[24,25,27,...]) → 24
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockSetArray).toHaveBeenCalledWith('', expect.arrayContaining(['dm5 comic', 'no local']), expect.any(Array));
+      spy.mockRestore();
+    });
+
+    test('choose=0 + 漫畫 + mtype=0 (line 190 not dm5)', async () => {
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(0.5 / N)        // choose=0
+        .mockReturnValueOnce(1.5 / 2)        // [1,2] → 2 (漫畫)
+        .mockReturnValueOnce(0.5 / 20)       // genre → 24
+        .mockReturnValueOnce(0.5 / 5);       // selectRandom([4,1]) → 0 (not dm5)
+      mockRedis.mockResolvedValueOnce({});
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
+    });
+
+    test('Redis hgetall with matching tags builds count_list (lines 56-63)', async () => {
+      // Return items where key matches an OPTION_TAG element
+      mockRedis.mockResolvedValueOnce({ '圖片': '3', '影片': '2' });
+      const spy = jest.spyOn(Math, 'random')
+        .mockReturnValueOnce(15.5 / N);      // choose=15 (no-op)
+      mockTagQuery.mockResolvedValueOnce({ items: [], parentList: [], latest: null, bookmark: null, mediaHadle: 0 });
+      const res = await request(app).get('/getRandom/name/desc/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      spy.mockRestore();
     });
   });
 
@@ -940,6 +1374,21 @@ describe('storage-router.js', () => {
       const res = await request(app).get('/media/more/abc/0').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(404);
     });
+
+    test('Mongo error in type=2 query returns 500 (line 651)', async () => {
+      mockSaveSql.mockReturnValueOnce({ nosql: {}, options: {}, select: {}, parentList: ['p1'] });
+      mockMongo.mockRejectedValueOnce(new Error('mongo fail'));
+      const res = await request(app).get('/media/more/2/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
+
+    test('type=2 returns parentList from saveSql (line 650)', async () => {
+      mockSaveSql.mockReturnValueOnce({ nosql: {}, options: {}, select: {}, parentList: ['parent1'] });
+      mockMongo.mockResolvedValueOnce([sampleStorageItem()]);
+      const res = await request(app).get('/media/more/2/0').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.parentList).toEqual(['parent1']);
+    });
   });
 
   // ---------------------------------------------------------------
@@ -1003,6 +1452,31 @@ describe('storage-router.js', () => {
       mockMongo.mockRejectedValueOnce(new Error('fail'));
       const res = await request(app).get(`/torrent/query/${VALID_UID}`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(500);
+    });
+
+    test('isDoc truthy: sets type=2 and doc value (lines 674-675)', async () => {
+      mockIsDoc.mockReturnValueOnce(false)            // movie.mp4 → false
+        .mockReturnValueOnce({ type: 'present' })     // slides.pptx → present → doc=1
+        .mockReturnValueOnce({ type: 'pdf' })         // doc.pdf → pdf → doc=3
+        .mockReturnValueOnce({ type: 'word' });       // doc.docx → other → doc=2
+      mockMongo.mockResolvedValueOnce([{
+        _id: { toString: () => VALID_UID },
+        status: 9,
+        tags: [],
+        playList: ['movie.mp4', 'slides.pptx', 'doc.pdf', 'doc.docx'],
+        present: [null, 'pdata', null, null],
+      }]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockSetLatest.mockResolvedValueOnce({});
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).get(`/torrent/query/${VALID_UID}`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.list[1].type).toBe(2);
+      expect(res.body.list[1].doc).toBe(1);
+      expect(res.body.list[1].present).toBe('pdata');
+      expect(res.body.list[2].type).toBe(2);
+      expect(res.body.list[2].doc).toBe(3);
+      expect(res.body.list[3].doc).toBe(2);
     });
   });
 
@@ -1140,5 +1614,239 @@ describe('storage-router.js', () => {
       const res = await request(app).get(`/media/setTime/${VALID_UID}/video`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(500);
     });
+
+    // --- Additional setTime branch coverage ---
+    // Nested describe to reset mock return-value queues left by prior tests
+    // (jest.clearAllMocks does NOT clear mockReturnValueOnce queues)
+    describe('playlist branches', () => {
+      beforeEach(() => {
+        mockMongo.mockReset();
+        mockRedis.mockReset();
+        mockGetSingleId.mockReset();
+        mockSetLatest.mockReset();
+        mockSetLatest.mockResolvedValue({});
+        mockSaveSql.mockReset();
+        mockIsDoc.mockReset();
+        mockIsDoc.mockReturnValue(false);
+      });
+
+    test('yif_ prefix: playlist=4, yify URL (lines 471-473, 577-579)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'yif_12345', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Movie1' }, false, 3]);
+      mockSetLatest.mockResolvedValueOnce({});
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).get('/media/setTime/yif_12345/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('yify', expect.stringContaining('yts.ag'), 1);
+      expect(res.body.playlist).toBeDefined();
+      expect(res.body.playlist.total).toBe(3);
+    });
+
+    test('mad_ prefix: playlist=5, dm5 URL (lines 474-476, 580-582)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'mad_ch12345', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Ch1' }, false, 10]);
+      mockSetLatest.mockResolvedValueOnce({});
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).get('/media/setTime/mad_ch12345/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('dm5', expect.stringContaining('dm5.com/ch12345'), 1);
+    });
+
+    test('bbl_ prefix with av: playlist=6, bilibili video URL (lines 477-479, 583-585)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'bbl_av12345', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1]);
+      mockSetLatest.mockResolvedValueOnce({});
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).get('/media/setTime/bbl_av12345/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('bilibili', 'http://www.bilibili.com/video/av12345/', 1);
+    });
+
+    test('bbl_ prefix without av: bilibili bangumi URL (line 584 else)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'bbl_ep12345', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1]);
+      mockSetLatest.mockResolvedValueOnce({});
+      mockMongo.mockResolvedValueOnce({});
+      const res = await request(app).get('/media/setTime/bbl_ep12345/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('bilibili', 'http://www.bilibili.com/bangumi/i/ep12345/', 1);
+    });
+
+    test('external prefix with invalid name returns 400 (line 483)', async () => {
+      // A name matching the prefix regex but failing isValidString 'name' validation
+      // The 'name' regex rejects: \ / | * ? " < > :
+      const res = await request(app).get('/media/setTime/yif_bad*name/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('youtube is not vaild');
+    });
+
+    test('uid with obj=external: playlist=2, obj=null (lines 492-494, 565-569)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Ep1' }, false, 5, null, null, null, null, false]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.playlist).toBeDefined();
+      expect(res.body.playlist.total).toBe(5);
+      expect(mockGetSingleId).toHaveBeenCalledWith('kubo', 'http://example.com', 1, null, undefined);
+    });
+
+    test('uid with obj=number: playlist=2, first() stores record (lines 505-513)', async () => {
+      mockRedis.mockResolvedValueOnce('OK');
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Ep1' }, false, 1, null, null, null, null, false]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/42`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('hmset', expect.stringContaining('record:'), expect.objectContaining({ [VALID_UID]: '42' }));
+    });
+
+    test('uid with obj=number + pageToken: stores obj>>pageToken (line 513)', async () => {
+      mockRedis.mockResolvedValueOnce('OK');
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1, null, null, null, null, false]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/42/mytoken`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('hmset', expect.stringContaining('record:'), expect.objectContaining({ [VALID_UID]: '42>>mytoken' }));
+    });
+
+    test('OPTION_TAG matching tag triggers hincrby (lines 522-523)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: ['影片', '電影', 'other'] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockRedis).toHaveBeenCalledWith('multi', expect.arrayContaining([
+        ['hincrby', expect.stringContaining('tag:'), '影片', 1],
+        ['hincrby', expect.stringContaining('tag:'), '電影', 1],
+      ]));
+    });
+
+    test('record with >> separator parses recordTime and rPageToken (lines 535-536)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce('55>>nextpage');
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1, null, null, null, null, false]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('yify', expect.any(String), '55', 'nextpage', undefined);
+    });
+
+    test('playlist=2 external not found returns error (line 567)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('cannot find external');
+    });
+
+    test('empty playlist (total < 1) returns error (line 543)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'kub_empty', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 0]);
+      const res = await request(app).get('/media/setTime/kub_empty/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('playlist is empty');
+    });
+
+    test('ret_rest with obj.id calls setTag again (line 546)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'kub_abc', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([
+        { id: VALID_UID, name: 'Ep1' }, false, 5,
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce('10');
+      const res = await request(app).get('/media/setTime/kub_abc/video').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.playlist.obj.id).toBe(VALID_UID);
+      expect(res.body.time).toBe('10');
+    });
+
+    test('ret_rest with is_new=true stores record via Redis hmset (line 545)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([
+        { id: VALID_UID, name: 'Ep1' }, false, 5,
+        ['item1', 'item2'], 'pageN', 'pageP', 'tok123', true,
+      ]);
+      // new_rest(true): Redis hmset
+      mockRedis.mockResolvedValueOnce('OK');
+      // setTag(obj.id)
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.playlist.obj_arr).toEqual(['item1', 'item2']);
+      expect(res.body.playlist.pageN).toBe('pageN');
+      expect(res.body.playlist.pageP).toBe('pageP');
+      expect(res.body.playlist.pageToken).toBe('tok123');
+    });
+
+    test('first() with invalid obj format returns error (line 506)', async () => {
+      // kub_ prefix: playlist=3. obj='badobj' doesn't match digit pattern
+      const res = await request(app).get('/media/setTime/kub_abc/video/badobj').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('external is not vaild');
+    });
+
+    test('first() with obj passing digit regex but failing name validation (line 510)', async () => {
+      // 501-char digit string passes /^\d+$/ but fails isValidString 'name' (>500 chars)
+      const longDigit = '1'.repeat(501);
+      const res = await request(app).get(`/media/setTime/kub_abc/video/${longDigit}`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('external is not vaild');
+    });
+
+    test('playlist=2 with back parameter (line 569)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockGetSingleId.mockResolvedValueOnce([{ id: null }, true, 5, null, null, null, null, false]);
+      const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external/tok/back`).set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(mockGetSingleId).toHaveBeenCalledWith('kubo', expect.any(String), 1, null, 'back');
+    });
+
+    test('type=music with playlist: no time in response (line 555)', async () => {
+      mockMongo.mockResolvedValueOnce([{ _id: 'kub_mus', tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce(null);
+      mockGetSingleId.mockResolvedValueOnce([
+        { id: VALID_UID, name: 'Song1' }, false, 3,
+      ]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
+      mockRedis.mockResolvedValueOnce([]);
+      mockRedis.mockResolvedValueOnce('99');
+      const res = await request(app).get('/media/setTime/kub_mus/music').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(200);
+      expect(res.body.time).toBeUndefined();
+    });
+    }); // end nested describe('playlist branches')
   });
 });

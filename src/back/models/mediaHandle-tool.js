@@ -195,7 +195,6 @@ export default {
                         handleRest(first);
                         return Promise.resolve([mediaType, mediaTag, DBdata]);
                     }
-                    break;
                     case 'image':
                     case 'doc':
                     case 'rawdoc':
@@ -728,6 +727,8 @@ export default {
                                         _id: timeoutItems[index].item.owner,
                                         perm: 1,
                                     }).catch(err => handleError(err, errorMedia, timeoutItems[index].item._id, timeoutItems[index].mediaType['fileIndex'])));
+                                } else {
+                                    return Promise.resolve();
                                 }
                             } else {
                                 return Mongo('update', STORAGEDB, {_id: timeoutItems[index].item._id}, {$set: {'mediaType.timeout': false}}).then(item => this.handleMediaUpload(timeoutItems[index].mediaType, filePath, timeoutItems[index].item._id, {
