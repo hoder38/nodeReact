@@ -6922,8 +6922,6 @@ export const getStockListV2 = (type, year, month) => {
                             }
                         }
                         if (name && sIndex) {
-                            const sIndex = findTag(findTag(findTag(t, 'td')[2], 'a')[0])[0].replace('.', '-');
-                            const name = toValidName(findTag(findTag(findTag(t, 'td')[1], 'a')[0])[0]).replace('&amp;', '&').replace('&#x27;', "'");
                             let is_exit = false;
                             for (let i = 0; i < stock_list.length; i++) {
                                 if (stock_list[i].index === sIndex) {
