@@ -1289,8 +1289,8 @@ function getPasswordQuerySql(user, tagList, exactly) {
                 nosql['important'] = 1;
                 is_important = true;
             } else if (index.index === 31) {
-                if (index.index[1] === '') {
-                    skip = Number(index.index[1]);
+                if (index[1] === '') {
+                    skip = Number(index[1]);
                 }
                 continue;
             } else if (index) {
@@ -1362,20 +1362,20 @@ function getStockQuerySql(user, tagList, exactly) {
                 nosql['important'] = 1;
                 is_important = true;
             } else if (index.index === 31) {
-                if (index.index[1] === '') {
-                    skip = Number(index.index[1]);
-                /*} else if (index.index[1] === 'profit') {
-                    nosql['profitIndex'] = {$gte: Number(index.index[1])};
-                } else if (index.index[1] === 'safety') {
-                    nosql['safetyIndex'] = {$gte: Number(index.index[1])};
-                } else if (index.index[1] === 'manag') {
-                    nosql['managementIndex'] = {$gte: Number(index.index[1])};*/
-                } else if (index.index[1] === 'profit') {
-                    nosql['per'] = {$gte: Number(index.index[1])};
-                } else if (index.index[1] === 'safety') {
-                    nosql['pdr'] = {$gte: Number(index.index[1])};
-                } else if (index.index[1] === 'manag') {
-                    nosql['pbr'] = {$gte: Number(index.index[1])};
+                if (index[1] === '') {
+                    skip = Number(index[1]);
+                /*} else if (index[1] === 'profit') {
+                    nosql['profitIndex'] = {$gte: Number(index[1])};
+                } else if (index[1] === 'safety') {
+                    nosql['safetyIndex'] = {$gte: Number(index[1])};
+                } else if (index[1] === 'manag') {
+                    nosql['managementIndex'] = {$gte: Number(index[1])};*/
+                } else if (index[1] === 'profit') {
+                    nosql['per'] = {$gte: Number(index[1])};
+                } else if (index[1] === 'safety') {
+                    nosql['pdr'] = {$gte: Number(index[1])};
+                } else if (index[1] === 'manag') {
+                    nosql['pbr'] = {$gte: Number(index[1])};
                 }
                 continue;
             } else if (index) {
