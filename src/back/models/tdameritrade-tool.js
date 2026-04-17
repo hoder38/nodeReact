@@ -205,7 +205,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                 console.log('fakeOrder td');
                 console.log(fakeOrder);
                 fakeOrder.forEach(o => {
-                    if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price <= o.price) {
+                    if (!o.done && o.type === 'buy' && usseSuggestion[o.symbol] && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price <= o.price) {
                         o.done = true;
                         console.log('fake order close');
                         if (!result['securitiesAccount']['orderStrategies']) {
@@ -220,7 +220,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                             symbol: o.symbol,
                             type: 'BUY',
                         });
-                    } else if (!o.done && o.type === 'sell' && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price >= o.price) {
+                    } else if (!o.done && o.type === 'sell' && usseSuggestion[o.symbol] && usseSuggestion[o.symbol].price && usseSuggestion[o.symbol].price >= o.price) {
                         o.done = true;
                         console.log('fake order close');
                         if (!result['securitiesAccount']['orderStrategies']) {
