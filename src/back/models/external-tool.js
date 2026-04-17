@@ -2092,26 +2092,7 @@ export default {
                     if (items.length < 1) {
                         return handleError(new HoError('cannot find lovetv url'));
                     }
-                    const nextLove = (index, dramaIndex, list) => {
-                        for (let i of list) {
-                            if (i.name === items[0].name) {
-                                const validUrl = isValidString(i.url, 'url');
-                                if (!validUrl) {
-                                    return handleError(new HoError('url is not vaild'));
-                                }
-                                return Mongo('update', STORAGEDB, {_id: items[0]._id}, {$set: {url: validUrl}}).then(item => {
-                                    url = i.url;
-                                    return lovetvGetlist();
-                                });
-                            }
-                        }
-                        dramaIndex++;
-                        if (dramaIndex < dramaList.length) {
-                            return recur_loveList(dramaIndex, nextLove);
-                        }
-                        return handleError(new HoError('cannot find lovetv'));
-                    }
-                    return recur_loveList(0, nextLove);
+                    return handleError(new HoError('cannot find lovetv'));
                 }) : [list, is_end];
             });
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
@@ -2268,10 +2249,11 @@ export default {
                             return [getEzList(tr), is_end];
                         } else {
                             console.log('too much');
-                            const name = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'head')[0], 'title')[0])[0].match(/^(.*) Torrent Download/)[1];
-                            if (!name) {
+                            const nameMatch = findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'head')[0], 'title')[0])[0].match(/^(.*) Torrent Download/);
+                            if (!nameMatch) {
                                 return handleError(new HoError('unknown name!!!'));
                             }
+                            const name = nameMatch[1];
                             return Api('url', `https://eztv.re/search/${name}`, {referer: 'https://eztv.re/'}).then(raw_data => {
                                 const tr1 = findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'header_holder')[0], 'table', 'forum_header_border')[2], 'tr', 'forum_header_border');
                                 const trLength1 = tr1.length;
@@ -2287,10 +2269,11 @@ export default {
             }
             return Redis('hgetall', `url: ${encodeURIComponent(url)}`).then(item => {
                 const sendList = (raw_list, is_end, etime) => {
-                    const choose = raw_list[index - 1].slice();
-                    if (!choose) {
+                    const raw = raw_list[index - 1];
+                    if (!raw) {
                         return handleError(new HoError('cannot find external index'));
                     }
+                    const choose = raw.slice();
                     const chooseMag = choose.splice(choose.length - 1, 1)[0];
                     let ret_obj = {
                         index: index,
@@ -3160,11 +3143,6 @@ export const youtubeVideoUrl = (id, url) => {
                         ret_obj['video'].splice(0, 0, i.url.replace(/^https:/i, 'http:'));
                     }
                 });
-            } else if (id === 'lin') {
-                ret_obj['iframe'] = [`//tv.line.me/embed/${url.match(/[^\/]+$/)[0]}?isAutoPlay=true`];
-            } else if (id === 'iqi') {
-                const iqiId = url.match(/([^\/]+)\.html$/)[1].split('-');
-                ret_obj['embed'] = [`//player.video.qiyi.com/${iqiId[0]}/0/0/${iqiId[1]}.swf-albumId=${iqiId[2]}-tvId=${iqiId[3]}-isPurchase=0-cnId=2`];
             } else {
                 if (Array.isArray(ret_info)) {
                     ret_info.forEach(i => {
