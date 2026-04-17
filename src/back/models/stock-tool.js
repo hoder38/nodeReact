@@ -111,7 +111,7 @@ const getStockPrice = (type='twse', index, previous = false) => {
             return price[0];
         }).catch(err => {
             console.log(count);
-            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
+            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
         });
         return real();
         case 'usse':
@@ -207,7 +207,7 @@ const getBasicStockData = (type, index) => {
             return result;
         }).catch(err => {
             console.log(count);
-            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
         });
         return real();
         case 'usse':
@@ -227,7 +227,7 @@ const getBasicStockData = (type, index) => {
             });
         }).catch(err => {
             console.log(`${index} ${count}`);
-            return (++count > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), 60000));
+            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), 60000));
         });
         return real1();
         default:
@@ -280,7 +280,23 @@ const getParameterV2 = (data, type, text = null) => {
     });
 }
 
+let _statusDelay = 3000;
+export const _setStatusDelay = n => { _statusDelay = n; };
+let _maxRetry = MAX_RETRY;
+export const _setMaxRetry = n => { _maxRetry = n; };
+
 export default {
+    _resetFlags: function() {
+        stockFiltering = false;
+        stockIntervaling = false;
+        stockPredicting = false;
+        stringSent = 0;
+        suggestionData.twse = {};
+        suggestionData.usse = {};
+    },
+    _getFlags: function() {
+        return { stockFiltering, stockIntervaling, stockPredicting, stringSent };
+    },
     getSingleStockV2: function(type, obj, stage=0, back=false) {
         const date = new Date();
         const index = obj.index;
@@ -3039,7 +3055,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         previous: item.previous,
                     } : {})});
                 });
-            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), 3000)))
+            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), _statusDelay)))
             //}).then(() => recur_price(index + 1));
         }
     }
@@ -4726,7 +4742,7 @@ const getUsStock = (index, stat = ['price'], single = false) => {
         return Promise.resolve(ret);
     }).catch(err => {
         console.log(`${index} ${count}`);
-        return (single || (++count > MAX_RETRY)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+        return (single || (++count > _maxRetry)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
     });
     return real();
 }
