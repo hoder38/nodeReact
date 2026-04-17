@@ -64,11 +64,11 @@ jest.unstable_mockModule('../../constants.js', () => ({
 // ---------------------------------------------------------------------------
 // Import module after mocks
 // ---------------------------------------------------------------------------
-let generateAuthUrl, getToken, usseTDInit, getUssePosition, getUsseOrder, resetTD;
+let generateAuthUrl, getToken, usseTDInit, getUssePosition, getUsseOrder, resetTD, _resetTokens;
 
 beforeAll(async () => {
     const mod = await import('../tdameritrade-tool.js');
-    ({ generateAuthUrl, getToken, usseTDInit, getUssePosition, getUsseOrder, resetTD } = mod);
+    ({ generateAuthUrl, getToken, usseTDInit, getUssePosition, getUsseOrder, resetTD, _resetTokens } = mod);
 });
 
 let consoleSpy;
@@ -374,29 +374,55 @@ describe('usseTDInit', () => {
     // 5.1 checkOauth cold start — tokens missing from memory
     // ------------------------------------------------------------------
     describe('checkOauth cold start', () => {
-        // We need tokens to be missing access_token or expiry_date.
-        // After prior getToken tests, tokens IS populated.
-        // To test cold start, we'd need to clear tokens.
-        // Since we can't clear tokens directly, we test this path by
-        // ensuring getToken is exercised (which checkOauth delegates to).
-        // The checkOauth "load from DB" path requires tokens.access_token
-        // or tokens.expiry_date to be falsy. After getToken tests, they're set.
-        // We'll document this as a state limitation and test what we can.
-
-        test('checkOauth with populated tokens → getToken called (no-op)', async () => {
-            // tokens has far-future expiry → getToken is no-op
-            // initWs: encryptedId is still null → fetches accountNumbers
-            setupFetch();
-            mockMongo.mockResolvedValue([]);
+        test('tokens missing → load from DB then getToken', async () => {
+            _resetTokens();
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') {
+                    return Promise.resolve([dbToken()]);
+                }
+                return Promise.resolve([]);
+            });
+            mockFetch.mockImplementation((url, opts) => {
+                if (url.includes('/token')) return Promise.resolve(jsonRes(stdToken()));
+                if (url.includes('/accountNumbers')) return Promise.resolve(jsonRes([{ hashValue: 'enc123' }]));
+                if (url.includes('fields=positions')) return Promise.resolve(jsonRes(stdAccount()));
+                if (url.includes('/orders')) return Promise.resolve(jsonRes([]));
+                return Promise.resolve(jsonRes({}));
+            });
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();
+            expect(consoleSpy).toHaveBeenCalledWith('td first');
+            // tokens and encryptedId are now set for subsequent tests
+        });
 
-            // encryptedId should now be set
-            expect(mockFetch).toHaveBeenCalledWith(
-                'https://api.schwabapi.com/trader/v1/accounts/accountNumbers',
-                expect.any(Object)
-            );
+        test('tokens missing → DB empty → handleError', async () => {
+            _resetTokens();
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') return Promise.resolve([]);
+                return Promise.resolve([]);
+            });
+            mockFetch.mockResolvedValue(jsonRes({}));
+            mockGetSuggestionData.mockReturnValue({});
+
+            await expect(usseTDInit()).rejects.toThrow('can not find token');
+
+            // Recovery: re-establish tokens and encryptedId for subsequent tests
+            _resetTokens();
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') return Promise.resolve([dbToken()]);
+                return Promise.resolve([]);
+            });
+            mockFetch.mockImplementation((url) => {
+                if (url.includes('/token')) return Promise.resolve(jsonRes(stdToken()));
+                if (url.includes('/accountNumbers')) return Promise.resolve(jsonRes([{ hashValue: 'enc123' }]));
+                if (url.includes('fields=positions')) return Promise.resolve(jsonRes(stdAccount()));
+                if (url.includes('/orders')) return Promise.resolve(jsonRes([]));
+                return Promise.resolve(jsonRes({}));
+            });
+            mockGetSuggestionData.mockReturnValue({});
+            resetTD();
+            await usseTDInit(); // sets tokens + encryptedId + updateTime.book
         });
     });
 
@@ -405,21 +431,66 @@ describe('usseTDInit', () => {
     // ------------------------------------------------------------------
     describe('initWs', () => {
         test('encryptedId already set → skips fetch', async () => {
-            // After previous test, encryptedId = 'enc123'
+            // encryptedId is set from prior checkOauth tests
             setupFetch();
             mockMongo.mockResolvedValue([]);
             mockGetSuggestionData.mockReturnValue({});
-            resetTD(); // reset book so initialBook runs
+            resetTD();
 
-            const fetchCalls = mockFetch.mock.calls.length;
             await usseTDInit();
-            // Should NOT call accountNumbers
             const accountCalls = mockFetch.mock.calls.filter(c => c[0].includes('/accountNumbers'));
             expect(accountCalls).toHaveLength(0);
         });
 
-        // initWs error paths require encryptedId=null, which we can't reset.
-        // Tested indirectly via first usseTDInit call above.
+        test('initWs: result.message → handleError', async () => {
+            _resetTokens();
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') return Promise.resolve([dbToken()]);
+                return Promise.resolve([]);
+            });
+            mockFetch.mockImplementation((url) => {
+                if (url.includes('/token')) return Promise.resolve(jsonRes(stdToken()));
+                if (url.includes('/accountNumbers')) return Promise.resolve(jsonRes({ message: 'unauthorized' }));
+                return Promise.resolve(jsonRes({}));
+            });
+            mockGetSuggestionData.mockReturnValue({});
+
+            await expect(usseTDInit()).rejects.toThrow('unauthorized');
+        });
+
+        test('initWs: no result[0] → handleError (No account)', async () => {
+            _resetTokens();
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') return Promise.resolve([dbToken()]);
+                return Promise.resolve([]);
+            });
+            mockFetch.mockImplementation((url) => {
+                if (url.includes('/token')) return Promise.resolve(jsonRes(stdToken()));
+                if (url.includes('/accountNumbers')) return Promise.resolve(jsonRes([]));
+                return Promise.resolve(jsonRes({}));
+            });
+            mockGetSuggestionData.mockReturnValue({});
+
+            await expect(usseTDInit()).rejects.toThrow('No account');
+        });
+
+        test('initWs: recovery state after error tests', async () => {
+            // Re-establish tokens, encryptedId and updateTime.book for subsequent tests
+            mockMongo.mockImplementation((op, coll) => {
+                if (op === 'find' && coll === 'accessToken') return Promise.resolve([dbToken()]);
+                return Promise.resolve([]);
+            });
+            mockFetch.mockImplementation((url) => {
+                if (url.includes('/token')) return Promise.resolve(jsonRes(stdToken()));
+                if (url.includes('/accountNumbers')) return Promise.resolve(jsonRes([{ hashValue: 'enc123' }]));
+                if (url.includes('fields=positions')) return Promise.resolve(jsonRes(stdAccount()));
+                if (url.includes('/orders')) return Promise.resolve(jsonRes([]));
+                return Promise.resolve(jsonRes({}));
+            });
+            mockGetSuggestionData.mockReturnValue({});
+            resetTD();
+            await usseTDInit();
+        });
     });
 
     // ------------------------------------------------------------------
@@ -427,8 +498,9 @@ describe('usseTDInit', () => {
     // ------------------------------------------------------------------
     describe('initialBook', () => {
         test('throttled → skips (TD no new)', async () => {
-            // Don't call resetTD — updateTime.book was just set
+            // updateTime.book was just set by recovery test; same-second call throttles
             setupFetch();
+            mockMongo.mockResolvedValue([]);
             mockGetSuggestionData.mockReturnValue({});
 
             await usseTDInit();

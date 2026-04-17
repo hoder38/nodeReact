@@ -91,9 +91,6 @@ const checkOauth = () => (!tokens.access_token || !tokens.expiry_date) ? Mongo('
 }).then(() => getToken()) : getToken();
 
 const cancelTDOrder = id => {
-    if (!encryptedId) {
-        return handleError(new HoError('TD cannot cancel order!!!'));
-    }
     return checkOauth().then(() => Fetch(`https://api.schwabapi.com/trader/v1/accounts/${encryptedId}/orders/${id}`, {headers: {Authorization: `Bearer ${tokens.access_token}`}, method: 'DELETE'}).then(res => {
         if (!res.ok) {
             updateTime['trade'] = updateTime['trade'] < 1 ? 0 : updateTime['trade'] - 1;
@@ -106,9 +103,6 @@ const cancelTDOrder = id => {
 }
 
 const submitTDOrder = (id, price, count) => {
-    if (!encryptedId) {
-        return handleError(new HoError('TD cannot cancel order!!!'));
-    }
     if (id === 'BRK-B') {
         id = 'BRK/B';
     }
@@ -162,9 +156,6 @@ export const usseTDInit = () => checkOauth().then(() => {
         }
     }
     const initialBook = (force = false) => {
-        if (!encryptedId) {
-            return handleError(new HoError('TD cannot be inital book!!!'));
-        }
         const now = Math.round(new Date().getTime() / 1000);
         if (force || (now - updateTime['book']) > UPDATE_ORDER) {
             updateTime['book'] = now;
@@ -812,4 +803,9 @@ export const resetTD = (update=false) => {
     updateTime = {};
     updateTime['book'] = 0;
     updateTime['trade'] = trade_count;
+}
+
+export const _resetTokens = () => {
+    tokens = {};
+    encryptedId = null;
 }
