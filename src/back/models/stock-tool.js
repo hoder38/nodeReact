@@ -138,7 +138,6 @@ const getStockPrice = (type='twse', index, previous = false) => {
                 }
             });
         //}
-        break;
         default:
         return handleError(new HoError('stock type unknown!!!'));
     }
@@ -680,25 +679,11 @@ export default {
                     const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
                     return [(per > 0) ? per : 9999, (pdr > 0) ? pdr : 9999, (pbr > 0) ? pbr : 9999, items[0].index, start];
                 });
-                break;
                 case 'usse':
                 return [items[0].per, items[0].pdr, items[0].pbr, items[0].index, start];
                 default:
                 return handleError(new HoError('stock type unknown!!!'));
             }
-        });
-    },
-    getPredictPERWarp: function(id, session, is_latest=false) {
-        if (stockPredicting) {
-            return handleError(new HoError('there is another predict running'));
-        }
-        stockPredicting = true;
-        return this.getPredictPER(id, session, is_latest).then(([result, index]) => {
-            stockPredicting = false;
-            return [result, index];
-        }).catch(err => {
-            stockPredicting = false;
-            return handleError(err);
         });
     },
     testData: function() {
@@ -2162,7 +2147,6 @@ export default {
                                     }
                                     items.splice(i, 1);*/
                                 });
-                                break;
                             }
                         }
                     } else if (cmd[1] === 'clear') {
@@ -3150,7 +3134,6 @@ export const getStockListV2 = (type, year, month) => {
             console.log(stock_list);
             return stock_list;
         });
-        break;
         case 'usse':
         const list = ['Dow_Jones_Industrial_Average', 'Nasdaq-100', 'List_of_S%26P_500_companies'];
         const stock_list = [];
@@ -3218,14 +3201,6 @@ export const getStockListV2 = (type, year, month) => {
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(new Date().getTime() / 1000);
-    //const t1 = (pType|1) === pType ? true : false;
-    //const t2 = (pType|2) === pType ? true : false;
-    //const t3 = (pType|4) === pType ? true : false;
-    //const t4 = (pType|8) === pType ? true : false;
-    const t1 = false;
-    const t2 = false;
-    const t3 = false;
-    const t4 = false;
     //const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
@@ -3612,11 +3587,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy' && !previous.tprice) {
-                bCount = bCount * (2 + bAdd);
-            } else {
-                bCount = bCount * (1 + bAdd);
-            }
+            bCount = bCount * (1 + bAdd);
             //buy = Math.round(tmpB * 100) / 100;
             finalBuy();
             str += `Buy 3/4 ${buy} ( ${bCount} ) `;
@@ -3624,11 +3595,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy' && !previous.tprice) {
-                bCount = bCount * (2 + bAdd);
-            } else {
-                bCount = bCount * (1 + bAdd);
-            }
+            bCount = bCount * (1 + bAdd);
             finalBuy();
             str += `Buy 1/2 ${buy} ( ${bCount} ) `;
         } else if (bP > 4) {
@@ -3636,11 +3603,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             //type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            if (t2 && previous.type !== 'buy' && !previous.tprice) {
-                bCount = bCount * (2 + bAdd);
-            } else {
-                bCount = bCount * (1 + bAdd);
-            }
+            bCount = bCount * (1 + bAdd);
             finalBuy();
             str += `Buy 1/4 ${buy} ( ${bCount} ) `;
         } else {
@@ -3651,11 +3614,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 4 || pType === 3) {
                 bCount = bCount * 2;
             }*/
-            if (t1 && previous.type !== 'buy' && !previous.tprice) {
-                bCount = bCount * (2 + bAdd);
-            } else {
-                bCount = bCount * (1 + bAdd);
-            }
+            bCount = bCount * (1 + bAdd);
             finalBuy();
             str += `Buy ${buy} ( ${bCount} ) `;
         }
@@ -3689,11 +3648,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell' && !previous.tprice) {
-                sCount = sCount * (2 + sAdd);
-            } else {
-                sCount = sCount * (1 + sAdd);
-            }
+            sCount = sCount * (1 + sAdd);
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             finalSell();
@@ -3705,11 +3660,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell' && !previous.tprice) {
-                sCount = sCount * (2 + sAdd);
-            } else {
-                sCount = sCount * (1 + sAdd);
-            }
+            sCount = sCount * (1 + sAdd);
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
             finalSell();
@@ -3724,11 +3675,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 5 || pType === 4) {
                 sCount = sCount * 2;
             }*/
-            if (t3 && previous.type !== 'sell' && !previous.tprice) {
-                sCount = sCount * (2 + sAdd);
-            } else {
-                sCount = sCount * (1 + sAdd);
-            }
+            sCount = sCount * (1 + sAdd);
             finalSell();
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
@@ -3739,11 +3686,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             } else if (pType === 2 || pType === 4 || pType === 3) {
                 sCount = sCount * 2;
             }*/
-            if (t4 && previous.type !== 'sell' && !previous.tprice) {
-                sCount = sCount * (2 + sAdd);
-            } else {
-                sCount = sCount * (1 + sAdd);
-            }
+            sCount = sCount * (1 + sAdd);
             finalSell();
             str += `Sell ${sell} ( ${sCount} ) `;
         }
@@ -3904,7 +3847,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 if (his_arr[i].h) {
                     price = his_arr[i].h;
                 } else if (his_arr[i].l) {
-                    price = his_arr[i].list;
+                    price = his_arr[i].l;
                 } else if (privious.h) {
                     price = privious.h;
                 } else if (privious.l) {
@@ -4587,14 +4530,49 @@ const twseTicker = (price, large = true) => {
     }
 }
 
+export const parseMacrotrendsMarketCap = raw_data => {
+    let cap = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+    let m;
+    if (findTag(cap, 'p')[0]) {
+        m = findTag(findTag(findTag(cap, 'p')[0], 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+    } else {
+        m = findTag(findTag(cap, 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
+    }
+    if (!m) {
+        return 0;
+    }
+    const base = Number(m[1].replace(/,/g, ''));
+    const suffix = m[2] ? m[2].toLowerCase() : '';
+    switch (suffix) {
+        case 'k': return base * 1000;
+        case 'm': return base * 1000000;
+        case 'b': return base * 1000000000;
+        case 't': return base * 1000000000000;
+        default: return base;
+    }
+};
+
+export const parseMacrotrendsRatio = raw_data => {
+    let r = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
+    let m;
+    if (findTag(r, 'p')[0]) {
+        m = findTag(findTag(findTag(r, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
+    } else {
+        m = findTag(findTag(r, 'strong')[0])[0].match(/\d+\.?\d*/);
+    }
+    return m ? Number(m[0]) : 9999;
+};
+
 const getUsStock = (index, stat = ['price'], single = false) => {
     const ret = {};
     let count = 0;
-    if (!Array.isArray(stat) || stat.length < 1) {
-        console.log(`getUsStock stat error ${stat}`);
-        return Promise.resolve(ret);
-    }
     //Market Cap (intraday) Trailing P/E Price/Book (mrq)
+    const fetchPer = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/pe-ratio`).then(raw => { ret['per'] = parseMacrotrendsRatio(raw); });
+    const fetchPbr = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/price-book`).then(raw => { ret['pbr'] = parseMacrotrendsRatio(raw); });
+    const fetchEquity = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/net-worth`).then(raw => {
+        const marketCap = parseMacrotrendsMarketCap(raw);
+        ret['equity'] = (marketCap && ret['price']) ? marketCap / ret['price'] : 0;
+    });
     const real = () => yahooFinance.quote(index).then(result => {
         if (!result) {
             console.log(`getUsStock result ${index} empty`);
@@ -4608,125 +4586,27 @@ const getUsStock = (index, stat = ['price'], single = false) => {
             if (stat.indexOf('pdr') !== -1) {
                 ret['pdr'] = 9999;
             }
-            let marketCap = result['marketCap'];
+            const marketCap = result['marketCap'];
             if (!marketCap) {
-                    if (stat.indexOf('equity') !== -1) {
-                        if (index === 'BRK-B') {
-                            index = 'BRK.B';
-                        }
-                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/net-worth`).then(raw_data => {
-                            let marketCap = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                            if (findTag(marketCap, 'p')[0]) {
-                                marketCap = findTag(findTag(findTag(marketCap, 'p')[0], 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                            } else {
-                                marketCap = findTag(findTag(marketCap, 'strong')[0])[0].match(/^\$([\d\,]+\.?\d*)([a-zA-Z])?$/);
-                            }
-                            if (marketCap[2] === 'k' || marketCap[2] === 'K') {
-                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000;
-                            } else if (marketCap[2] === 'm' || marketCap[2] === 'M') {
-                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000;
-                            } else if (marketCap[2] === 'b' || marketCap[2] === 'B') {
-                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000;
-                            } else if (marketCap[2] === 't' || marketCap[2] === 'T') {
-                                marketCap = Number(marketCap[1].replace(/,/g, '')) * 1000000000000;
-                            } else {
-                                marketCap = Number(marketCap[1].replace(/,/g, ''));
-                            }
-                            ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
-                            if (marketCap) {
-                                ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
-                            } else {
-                                ret['equity'] = 0;
-                            }
-                            if (stat.indexOf('per') !== -1) {
-                                return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/pe-ratio`).then(raw_data => {
-                                    let per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                                    if (findTag(per, 'p')[0]) {
-                                        per = findTag(findTag(findTag(per, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
-                                    } else {
-                                        per = findTag(findTag(per, 'strong')[0])[0].match(/\d+\.?\d*/);
-                                    }
-                                    if (per) {
-                                        ret['per'] = Number(per[0]);
-                                    } else {
-                                        ret['per'] = 9999;
-                                    }
-                                    if (stat.indexOf('pbr') !== -1) {
-                                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
-                                            let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                                            if (findTag(pbr, 'p')[0]) {
-                                                pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
-                                            } else {
-                                                pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
-                                            }
-                                            if (pbr) {
-                                                ret['pbr'] = Number(pbr[0]);
-                                            } else {
-                                                ret['pbr'] = 9999;
-                                            }
-                                            return Promise.resolve(ret);
-                                        });
-                                    }
-                                    return Promise.resolve(ret);
-                                });
-                            }
-                            return Promise.resolve(ret);
-                        });
-                    } else if (stat.indexOf('per') !== -1) {
-                        if (index === 'BRK-B') {
-                            index = 'BRK.B';
-                        }
-                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/pe-ratio`).then(raw_data => {
-                            let per = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                            if (findTag(per, 'p')[0]) {
-                                per = findTag(findTag(findTag(per, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
-                            } else {
-                                per = findTag(findTag(per, 'strong')[0])[0].match(/\d+\.?\d*/);
-                            }
-                            if (per) {
-                                ret['per'] = Number(per[0]);
-                            } else {
-                                ret['per'] = 9999;
-                            }
-                            if (stat.indexOf('pbr') !== -1) {
-                                return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
-                                    let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                                    if (findTag(pbr, 'p')[0]) {
-                                        pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
-                                    } else {
-                                        pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
-                                    }
-                                    if (pbr) {
-                                        ret['pbr'] = Number(pbr[0]);
-                                    } else {
-                                        ret['pbr'] = 9999;
-                                    }
-                                    return Promise.resolve(ret);
-                                });
-                            }
-                            return Promise.resolve(ret);
-                        });
-                    } else if (stat.indexOf('pbr') !== -1) {
-                        if (index === 'BRK-B') {
-                            index = 'BRK.B';
-                        }
-                        return Api('url', `https://www.macrotrends.net/stocks/charts/${index}/${index}/price-book`).then(raw_data => {
-                            let pbr = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
-                            if (findTag(pbr, 'p')[0]) {
-                                pbr = findTag(findTag(findTag(pbr, 'p')[0], 'strong')[0])[0].match(/\d+\.?\d*/);
-                            } else {
-                                pbr = findTag(findTag(pbr, 'strong')[0])[0].match(/\d+\.?\d*/);
-                            }
-                            if (pbr) {
-                                ret['pbr'] = Number(pbr[0]);
-                            } else {
-                                ret['pbr'] = 9999;
-                            }
-                            return Promise.resolve(ret);
-                        });
-                    }
+                const wantEquity = stat.indexOf('equity') !== -1;
+                const wantPer = stat.indexOf('per') !== -1;
+                const wantPbr = stat.indexOf('pbr') !== -1;
+                if (!wantEquity && !wantPer && !wantPbr) {
                     return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
+                const idx = (index === 'BRK-B') ? 'BRK.B' : index;
+                let chain = Promise.resolve();
+                if (wantEquity) {
+                    chain = chain.then(() => fetchEquity(idx));
+                }
+                if (wantPer) {
+                    chain = chain.then(() => fetchPer(idx));
+                }
+                if (wantPbr) {
+                    chain = chain.then(() => fetchPbr(idx));
+                }
+                return chain.then(() => ret);
+            }
             if (stat.indexOf('equity') !== -1) {
                 ret['equity'] = ret['price'] ? marketCap / ret['price'] : 0;
             }

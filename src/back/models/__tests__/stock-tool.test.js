@@ -169,6 +169,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs })
 // ---------------------------------------------------------------------------
 let logArray, calStair, stockProcess, stockTest, getSuggestionData;
 let getStockListV2, stockStatus, getSingleAnnual;
+let parseMacrotrendsMarketCap, parseMacrotrendsRatio;
 let StockTool, setMaxRetry, setStatusDelay;
 
 beforeAll(async () => {
@@ -181,6 +182,8 @@ beforeAll(async () => {
     getStockListV2  = mod.getStockListV2;
     stockStatus     = mod.stockStatus;
     getSingleAnnual = mod.getSingleAnnual;
+    parseMacrotrendsMarketCap = mod.parseMacrotrendsMarketCap;
+    parseMacrotrendsRatio     = mod.parseMacrotrendsRatio;
     StockTool       = mod.default;
     setMaxRetry     = mod._setMaxRetry;
     setStatusDelay  = mod._setStatusDelay;
@@ -1171,18 +1174,6 @@ describe('warp guards', () => {
         StockTool.getIntervalWarp('id1', {});
         await expect(StockTool.getIntervalWarp('id1', {})).rejects.toMatchObject({ message: 'there is another inverval running' });
         StockTool._resetFlags();
-    });
-
-    test('getPredictPERWarp: already predicting → rejects "there is another predict running"', async () => {
-        // First call sets stockPredicting=true then throws synchronously (getPredictPER missing)
-        try { StockTool.getPredictPERWarp('id1', {}); } catch (e) {}
-        await expect(StockTool.getPredictPERWarp('id1', {})).rejects.toMatchObject({ message: 'there is another predict running' });
-        StockTool._resetFlags();
-    });
-
-    test('getPredictPERWarp BUG: this.getPredictPER is not defined → throws TypeError', () => {
-        // getPredictPER does NOT exist on the default export → synchronous TypeError
-        expect(() => StockTool.getPredictPERWarp('id1', {})).toThrow(/getPredictPER is not a function/);
     });
 
     test('stockFilterWarp: filter completes → returns count and resets flag', async () => {
@@ -6159,5 +6150,84 @@ describe('updateStockTotal insertion sort with multiple stocks', () => {
         const msftIdx = stockNames.indexOf('msft');
         const appleIdx = stockNames.indexOf('apple');
         expect(msftIdx).toBeLessThan(appleIdx);
+    });
+});
+
+
+// ===========================================================================
+// Pure parsers extracted from getUsStock — parseMacrotrendsMarketCap / parseMacrotrendsRatio
+// htmlparser2 is mocked; build the parsed-DOM tree directly with mkNode helpers.
+// Structure walked by findTag:
+//   html → body → div.main_content_container → div.sub_main_content_container
+//        → div.main_content → div[1] (the second div child) → span[0]
+//        → either <p><strong>$X</strong></p>  OR  <strong>$X</strong>
+// ===========================================================================
+const buildMacrotrendsDom = (innerText, useP = false) => {
+    const strong = mkNode('strong', '', [innerText]);
+    const inner = useP ? mkNode('p', '', [strong]) : strong;
+    const span = mkNode('span', '', [inner]);
+    const div2 = mkNode('div', '', [span]);
+    const div1 = mkNode('div', '', []);
+    const main = mkNode('div', 'main_content', [div1, div2]);
+    const sub = mkNode('div', 'sub_main_content_container', [main]);
+    const cont = mkNode('div', 'main_content_container', [sub]);
+    const body = mkNode('body', '', [cont]);
+    const html = mkNode('html', '', [body]);
+    return [html];
+};
+
+describe('parseMacrotrendsMarketCap', () => {
+    const cases = [
+        ['$2.5B', 2_500_000_000, 'B → 1e9'],
+        ['$1.0b', 1_000_000_000, 'b → 1e9'],
+        ['$500M', 500_000_000,   'M → 1e6'],
+        ['$3.14m', 3_140_000,    'm → 1e6'],
+        ['$25K', 25_000,         'K → 1e3'],
+        ['$10k', 10_000,         'k → 1e3'],
+        ['$1T', 1_000_000_000_000, 'T → 1e12'],
+        ['$2.5t', 2_500_000_000_000, 't → 1e12'],
+        ['$1234.5', 1234.5,      'no suffix → bare'],
+        ['$1,234,567', 1_234_567, 'comma-stripped'],
+    ];
+    cases.forEach(([txt, expected, desc]) => {
+        test(`strong-only: ${desc}`, () => {
+            mockParseDOM.mockReturnValue(buildMacrotrendsDom(txt, false));
+            expect(parseMacrotrendsMarketCap('<raw>')).toBe(expected);
+        });
+    });
+    test('p-wrapped strong (alt structure) returns ×1e6', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('$42M', true));
+        expect(parseMacrotrendsMarketCap('<raw>')).toBe(42_000_000);
+    });
+    test('non-matching content → returns 0', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('N/A', false));
+        expect(parseMacrotrendsMarketCap('<raw>')).toBe(0);
+    });
+    test('non-matching content (p-wrapped) → returns 0', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('N/A', true));
+        expect(parseMacrotrendsMarketCap('<raw>')).toBe(0);
+    });
+});
+
+describe('parseMacrotrendsRatio', () => {
+    test('plain integer (strong-only)', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('25', false));
+        expect(parseMacrotrendsRatio('<raw>')).toBe(25);
+    });
+    test('decimal value (strong-only)', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('12.34', false));
+        expect(parseMacrotrendsRatio('<raw>')).toBe(12.34);
+    });
+    test('p-wrapped strong → returns Number', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('7.5', true));
+        expect(parseMacrotrendsRatio('<raw>')).toBe(7.5);
+    });
+    test('non-numeric content → 9999 sentinel', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('N/A', false));
+        expect(parseMacrotrendsRatio('<raw>')).toBe(9999);
+    });
+    test('non-numeric content (p-wrapped) → 9999 sentinel', () => {
+        mockParseDOM.mockReturnValue(buildMacrotrendsDom('N/A', true));
+        expect(parseMacrotrendsRatio('<raw>')).toBe(9999);
     });
 });
