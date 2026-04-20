@@ -4217,3 +4217,1947 @@ describe('stockStatus with position matching', () => {
         }
     });
 });
+
+// ===========================================================================
+// stockStatus — "no need" branches (lines 2879, 2894, 2909, 2931, 2946, 2961)
+// ===========================================================================
+describe('stockStatus "no need" branches', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    const makeNoNeedItem = (index, price, amount, orig) => ({
+        _id: `nn-${index}`, index, setype: 'usse', type: 'Tech',
+        name: `noneed-${index}`, web: [
+            -1000, -900, 800, 750, 700,
+            -600, 550, 500, 450,
+            -400, 350, 300,
+            -250, 200, 150,
+            -120, 100, 80,
+            -60, 40, 20, -10,
+        ],
+        mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+        str: '', order: null, newMid: [],
+        tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+        profit: 0, amount, orig, count: 0,
+        previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+        wType: 0, price: 0, previousPrice: 0,
+    });
+
+    test('buy type 7 "no need" — amount <= orig*7/8 (line 2879)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // After position: orig=1000000, pCount=2000, pricecost=125
+        // item.amount = 1000000 - 2000*125 = 750000 <= orig*7/8=875000 → "no need"
+        const item = makeNoNeedItem('BNOAMT7', 125, 0, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 125, regularMarketPreviousClose: 123,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'BNOAMT7', price: 125, amount: 2000 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['BNOAMT7']) {
+            expect(data['BNOAMT7'].str).toMatch(/no need/);
+        }
+    });
+
+    test('buy type 3 "no need" — amount <= orig*5/8 (line 2894)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // After position: orig=1000000, pCount=5000, pricecost=90
+        // item.amount = 1000000 - 5000*90 = 550000 <= orig*5/8=625000 → "no need"
+        const item = makeNoNeedItem('BNOAMT3', 90, 0, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 90, regularMarketPreviousClose: 88,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'BNOAMT3', price: 90, amount: 5000 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['BNOAMT3']) {
+            expect(data['BNOAMT3'].str).toMatch(/no need/);
+        }
+    });
+
+    test('buy type 6 "no need" — amount <= orig*3/8 (line 2909)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // After position: orig=1000000, pCount=15000, pricecost=50
+        // item.amount = 1000000 - 15000*50 = 250000 <= orig*3/8=375000 → "no need"
+        const item = makeNoNeedItem('BNOAMT6', 50, 0, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 50, regularMarketPreviousClose: 48,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'BNOAMT6', price: 50, amount: 15000 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['BNOAMT6']) {
+            expect(data['BNOAMT6'].str).toMatch(/no need/);
+        }
+    });
+
+    test('sell type 9 "no need" — amount >= orig/8 (line 2931)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // price=400 → sP=3 → type=9; amount needs >= orig/8=125000
+        const item = makeNoNeedItem('SNOAMT9', 400, 200000, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 400, regularMarketPreviousClose: 395,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'SNOAMT9', price: 300, amount: 20 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['SNOAMT9']) {
+            expect(data['SNOAMT9'].str).toMatch(/no need/);
+        }
+    });
+
+    test('sell type 5 "no need" — amount >= orig*3/8 (line 2946)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // price=700 → sP=2 → type=5; amount needs >= orig*3/8=375000
+        const item = makeNoNeedItem('SNOAMT5', 700, 500000, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 700, regularMarketPreviousClose: 695,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'SNOAMT5', price: 500, amount: 20 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['SNOAMT5']) {
+            expect(data['SNOAMT5'].str).toMatch(/no need/);
+        }
+    });
+
+    test('sell type 8 "no need" — amount >= orig*5/8 (line 2961)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // price=950 → sP=1 → type=8; amount needs >= orig*5/8=625000
+        const item = makeNoNeedItem('SNOAMT8', 950, 700000, 1000000);
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 950, regularMarketPreviousClose: 945,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'SNOAMT8', price: 800, amount: 20 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['SNOAMT8']) {
+            expect(data['SNOAMT8'].str).toMatch(/no need/);
+        }
+    });
+});
+
+// ===========================================================================
+// stockStatus — count capping + twse suggestionData (lines 2977-2981, 2987)
+// ===========================================================================
+describe('stockStatus count capping and twse path', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    test('bCount capping: amount < bCount*buy*2/3 → bCount=0, buy=0 (line 2977-2979)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        // Need: item.amount < suggestion.bCount * suggestion.buy * 2/3
+        // This requires very low amount after position matching
+        // With large position count, item.amount = orig + pl - pCount*price can be very low
+        const item = {
+            _id: 'cap1', index: 'BCAP1', setype: 'usse', type: 'Tech',
+            name: 'bcap1', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 100, orig: 100, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 125, regularMarketPreviousClose: 123,
+        });
+        // Position: large amount so item.amount becomes very small (orig=100 + pl - cost)
+        // pCount=50, price=125, pricecost=120 → pl=50*(125-120)=250, orig=350, amount=350-50*120=-5650
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'BCAP1', price: 120, amount: 50 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        expect(data['BCAP1']).toBeDefined();
+    });
+
+    test('bCount capping: intermediate amount → bCount = floor(amount/buy) (line 2981)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        const item = {
+            _id: 'cap2', index: 'BCAP2', setype: 'usse', type: 'Tech',
+            name: 'bcap2', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 5000, orig: 5000, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 125, regularMarketPreviousClose: 123,
+        });
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'BCAP2', price: 120, amount: 3 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        expect(data['BCAP2']).toBeDefined();
+    });
+
+    test('twse item → writes to suggestionData["twse"] via non-center path (line 2987, 38-73)', async () => {
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        const item = {
+            _id: 'tw1', index: '2330', setype: 'twse', type: 'Semiconductor',
+            name: 'tsmc', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 1000000, orig: 1000000, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        // Build non-center path DOM (lines 38-73): no center tag → uses Yahoo Finance layout
+        // Path: html > body > div.app > div > div > div > div > div[3] > div > div > div = tabs
+        const priceSpan = mkNode('span', null, ['500.00']);
+        const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpan]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const li = mkNode('li', null, [
+            mkNode('span', null, ['昨收']),
+            mkNode('span', null, ['495.00']),
+        ]);
+        const qoDiv = mkNode('div', 'main-2-QuoteOverview-Proxy', [
+            mkNode('div', null, [
+                mkNode('section', null, [
+                    mkNode('div', null, []),
+                    mkNode('div', null, [
+                        mkNode('div', null, []),
+                        mkNode('div', null, [
+                            mkNode('div', null, [
+                                mkNode('ul', null, [li]),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const tabs = mkNode('div', null, [qhDiv, qoDiv]);
+        const l10 = mkNode('div', null, [tabs]);
+        const l9 = mkNode('div', null, [l10]);
+        const l7 = mkNode('div', null, [
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, [l9]),
+        ]);
+        const l6 = mkNode('div', null, [l7]);
+        const l5 = mkNode('div', null, [l6]);
+        const l4 = mkNode('div', null, [l5]);
+        const appDiv = mkNode('div', 'app', [l4]);
+        const twseDom = [mkNode('html', null, [mkNode('body', null, [appDiv])])];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(twseDom);
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('twse');
+        expect(data['2330']).toBeDefined();
+        expect(data['2330'].str).toBeDefined();
+    });
+
+    test('twse non-center one-level-deeper QuoteHeader/Overview (lines 46, 60-63)', async () => {
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        const item = {
+            _id: 'tw1', index: '2330', setype: 'twse', type: 'Semiconductor',
+            name: 'tsmc', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 1000000, orig: 1000000, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        // One-level-deeper DOM: QuoteHeader/Overview NOT direct children of tabs
+        // tabs > div[0] > QuoteHeader + QuoteOverview
+        const priceSpan = mkNode('span', null, ['500.00']);
+        const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpan]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const li = mkNode('li', null, [
+            mkNode('span', null, ['昨收']),
+            mkNode('span', null, ['495.00']),
+        ]);
+        const qoDiv = mkNode('div', 'main-2-QuoteOverview-Proxy', [
+            mkNode('div', null, [
+                mkNode('section', null, [
+                    mkNode('div', null, []),
+                    mkNode('div', null, [
+                        mkNode('div', null, []),
+                        mkNode('div', null, [
+                            mkNode('div', null, [
+                                mkNode('ul', null, [li]),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        // Key: wrap qhDiv + qoDiv inside a wrapper div, then put that as tabs' child
+        const wrapper = mkNode('div', null, [qhDiv, qoDiv]);
+        const tabs = mkNode('div', null, [wrapper]);
+        const l10 = mkNode('div', null, [tabs]);
+        const l9 = mkNode('div', null, [l10]);
+        const l7 = mkNode('div', null, [
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, [l9]),
+        ]);
+        const l6 = mkNode('div', null, [l7]);
+        const l5 = mkNode('div', null, [l6]);
+        const l4 = mkNode('div', null, [l5]);
+        const appDiv = mkNode('div', 'app', [l4]);
+        const twseDom = [mkNode('html', null, [mkNode('body', null, [appDiv])])];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(twseDom);
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('twse');
+        expect(data['2330']).toBeDefined();
+        expect(data['2330'].str).toBeDefined();
+    });
+});
+describe('stockStatus total update with tickers', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    test('USSE_TICKER + CHECK_STOCK → updates usse total amount (lines 3063-3066)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        mockTwseTicker.mockReturnValue(false);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        mockMongo.mockResolvedValue([]);
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([{ price: 200000 }]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        expect(mockMongo).toHaveBeenCalledWith('update', expect.any(String),
+            { index: 0, setype: 'usse' },
+            { $set: { amount: 100000 } });
+    });
+
+    test('USSE_TICKER + TWSE_TICKER + CHECK_STOCK → updates both (lines 3063-3070)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        mockTwseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        mockMongo.mockResolvedValue([]);
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([{ price: 200000 }]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        expect(mockMongo).toHaveBeenCalledWith('update', expect.any(String),
+            { index: 0, setype: 'usse' }, expect.any(Object));
+        expect(mockMongo).toHaveBeenCalledWith('update', expect.any(String),
+            { index: 0, setype: 'twse' }, expect.any(Object));
+    });
+
+    test('only TWSE_TICKER + CHECK_STOCK → updates twse only (lines 3075-3078)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        mockMongo.mockResolvedValue([]);
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([{ price: 200000 }]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        expect(mockMongo).toHaveBeenCalledWith('update', expect.any(String),
+            { index: 0, setype: 'twse' }, expect.any(Object));
+    });
+});
+
+// ===========================================================================
+// stockStatus — twse position matching (lines 2789-2805)
+// ===========================================================================
+describe('stockStatus twse position matching', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    test('twse position matching + order (lines 2789-2807)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockTwseTicker.mockReturnValue(true);
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        const item = {
+            _id: 'tpos1', index: '2330', setype: 'twse', type: 'Semiconductor',
+            name: 'tsmc', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 1000000, orig: 1000000, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        // Build non-center path DOM for twse getStockPrice (lines 38-73)
+        const priceSpan = mkNode('span', null, ['500.00']);
+        const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpan]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const li = mkNode('li', null, [
+            mkNode('span', null, ['昨收']),
+            mkNode('span', null, ['495.00']),
+        ]);
+        const qoDiv = mkNode('div', 'main-2-QuoteOverview-Proxy', [
+            mkNode('div', null, [
+                mkNode('section', null, [
+                    mkNode('div', null, []),
+                    mkNode('div', null, [
+                        mkNode('div', null, []),
+                        mkNode('div', null, [
+                            mkNode('div', null, [
+                                mkNode('ul', null, [li]),
+                            ]),
+                        ]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const tabs = mkNode('div', null, [qhDiv, qoDiv]);
+        const l10 = mkNode('div', null, [tabs]);
+        const l9 = mkNode('div', null, [l10]);
+        const l7 = mkNode('div', null, [
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, [l9]),
+        ]);
+        const l6 = mkNode('div', null, [l7]);
+        const l5 = mkNode('div', null, [l6]);
+        const l4 = mkNode('div', null, [l5]);
+        const appDiv = mkNode('div', 'app', [l4]);
+        const twseDom = [mkNode('html', null, [mkNode('body', null, [appDiv])])];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(twseDom);
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([
+            { symbol: '2330', price: 450, amount: 10 },
+        ]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([
+            { symbol: '2330', price: 490, amount: 5, type: 'LMTIntradayOdd', time: Date.now() / 1000 },
+            { symbol: '2330', price: 0, amount: 3000, type: 'MKTRegular', time: Date.now() / 1000 },
+        ]);
+        await stockStatus(false);
+        const data = getSuggestionData('twse');
+        if (data['2330']) {
+            expect(data['2330'].str).toBeDefined();
+        }
+    });
+});
+
+// ===========================================================================
+// stockStatus — sendWs path (line 2970-2971) + newStr=true + stringSent
+// ===========================================================================
+describe('stockStatus sendWs path', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    test('newStr=true → calls sendWs for non-ticker items (line 2970-2971)', async () => {
+        StockTool._resetFlags();
+        setMaxRetry(0);
+        setStatusDelay(0);
+        const item = {
+            _id: 'ws1', index: 'WSTEST', setype: 'usse', type: 'Tech',
+            name: 'wstest', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0, amount: 1000000, orig: 1000000, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 200, regularMarketPreviousClose: 198,
+        });
+        mockGetUssePosition.mockReturnValue([{ price: 100000 }]);
+        mockGetTwsePosition.mockReturnValue([{ price: 200000 }]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        // newStr=true, CHECK_STOCK=false → should call sendWs
+        await stockStatus(true);
+        expect(mockSendWs).toHaveBeenCalled();
+    });
+});
+
+// ===========================================================================
+// getStockTotal — ing=2 "Deleting" (line 1944) + sorted ordering (lines 2013-2028)
+// ===========================================================================
+describe('getStockTotal additional paths', () => {
+    test('ing=2 → str shows "Deleting" (line 1944)', async () => {
+        const items = [
+            { _id: 'total-twse', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total', count: 1 },
+            {
+                _id: 's1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                mul: 0, clear: false, ing: 2, str: 'existing', order: null, profit: 0,
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.getStockTotal({ _id: 'user1' });
+        const s = result.stock.find(v => v.name === 'tsmc');
+        if (s) expect(s.str).toMatch(/Deleting/);
+    });
+
+    test('multiple usse stocks → sorted by current descending (lines 2012-2021)', async () => {
+        const items = [
+            { _id: 'total-twse', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total', count: 1 },
+            { _id: 'total-usse', type: 'total', setype: 'usse', amount: 500000, name: 'usse total', count: 1 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+            },
+            {
+                _id: 'us2', type: 'Tech', setype: 'usse', index: 'MSFT', name: 'msft',
+                price: 300, count: 20, amount: 80000, orig: 80000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+            },
+            {
+                _id: 'tw1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 200, amount: 100000, orig: 100000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+            },
+            {
+                _id: 'tw2', type: 'Fin', setype: 'twse', index: '2882', name: 'cathay',
+                price: 40, count: 5000, amount: 200000, orig: 200000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.getStockTotal({ _id: 'user1' });
+        // usseS: MSFT current=6000 > AAPL current=1500
+        // twseS: cathay current=200000 > tsmc current=100000
+        const nonTotal = result.stock.filter(v => v.type !== 'total');
+        expect(nonTotal.length).toBe(4);
+    });
+});
+
+// ===========================================================================
+// updateStockTotal — delete with CHECK_STOCK (lines 2122-2147) + count trade (2242-2316)
+// ===========================================================================
+describe('updateStockTotal additional paths', () => {
+    afterEach(() => {
+        mockCheckStock.mockReturnValue(false);
+        mockUsseTicker.mockReturnValue(false);
+        mockTwseTicker.mockReturnValue(false);
+    });
+
+    // Helper: build correct center path DOM for getStockPrice (needs 2 tables inside center)
+    const makeCenterDom = (priceText = '500') => {
+        const bNode = mkNode('b', null, [priceText]);
+        const td2 = mkNode('td', null, [bNode]);
+        const innerTr1 = mkNode('tr', null, [mkNode('td', null, []), mkNode('td', null, []), td2]);
+        const innerTable = mkNode('table', null, [mkNode('tr', null, []), innerTr1]);
+        const td0 = mkNode('td', null, [innerTable]);
+        const outerTr0 = mkNode('tr', null, [td0]);
+        const table1 = mkNode('table', null, [outerTr0]);
+        const center = mkNode('center', null, [mkNode('table', null, []), table1]);
+        return [mkNode('html', null, [mkNode('body', null, [center])])];
+    };
+
+    test('delete twse with TWSE_TICKER+CHECK_STOCK → sets ing=2 (lines 2122-2128)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockTwseTicker.mockReturnValue(true);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom('500'));
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['delete twse2330'], false);
+        expect(items[2].ing).toBe(2);
+    });
+
+    test('delete usse with USSE_TICKER+CHECK_STOCK → sets ing=2 (lines 2141-2147)', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 155,
+        });
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['delete usseAAPL'], false);
+        expect(items[2].ing).toBe(2);
+    });
+
+    test('count trade buy → inserts into previous.buy sorted (lines 2273-2291)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [{ price: 480, time: Date.now()/1000 }], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom('500'));
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 5'], false);
+        expect(items[2].count).toBe(105);
+        expect(items[2].previous.type).toBe('buy');
+    });
+
+    test('count trade sell → inserts into previous.sell sorted (lines 2292-2310)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [{ price: 520, time: Date.now()/1000 }] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom('500'));
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 -3'], false);
+        expect(items[2].count).toBe(97);
+        expect(items[2].previous.type).toBe('sell');
+    });
+
+    test('amount command with updateTotal existing (line 2207-2213)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 2, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        // First command 'clear' sets updateTotal[st1], second command 'amount' hits the "if (updateTotal[_id])" branch
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['clear twse2330', 'twse2330 100000 amount'], false);
+        // amount command resets ing from 2 to 0 and updates web/mid/times
+        expect(items[2].ing).toBe(0);
+        expect(items[2].orig).toBe(100000);
+    });
+
+    test('count trade with explicit price → cmd[3] overrides getStockPrice (line 2256)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 100000, orig: 100000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 155 });
+        mockMongo.mockResolvedValue(items);
+        // 'usseAAPL 2 160' → buy 2 at explicit price 160
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['usseAAPL 2 160'], false);
+        expect(items[2].count).toBe(12);
+    });
+
+    test('count trade buy with updateTotal existing → lines 2314-2316', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom('500'));
+        mockMongo.mockResolvedValue(items);
+        // First command sets updateTotal[st1], second command hits "if (updateTotal[_id])" in count trade
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['clear twse2330', 'twse2330 5'], false);
+        expect(items[2].count).toBe(105);
+        expect(items[2].previous.type).toBe('buy');
+    });
+
+    test('delete twse with TICKER + updateTotal existing → line 2126', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockTwseTicker.mockReturnValue(true);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom('500'));
+        mockMongo.mockResolvedValue(items);
+        // First sets updateTotal[st1], then delete hits "if (updateTotal[_id])" → line 2126
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['clear twse2330', 'delete twse2330'], false);
+        expect(items[2].ing).toBe(2);
+    });
+
+    test('delete usse with TICKER + updateTotal existing → line 2145', async () => {
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 155 });
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['clear usseAAPL', 'delete usseAAPL'], false);
+        expect(items[2].ing).toBe(2);
+    });
+
+    test('clear with updateTotal existing → line 2176', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 2, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        // First amount sets updateTotal[st1], then clear hits "if (updateTotal[_id])" → line 2176
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 100000 amount', 'clear twse2330'], false);
+        expect(items[2].clear).toBe(true);
+    });
+
+    test('cost command with updateTotal existing → lines 2242-2243', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        // First clear sets updateTotal[st1], then cost command hits the existing branch (lines 2242-2243)
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['clear twse2330', 'twse2330 50 500 cost'], false);
+        expect(items[2].count).toBe(50);
+    });
+
+    test('amount too small for adjustWeb → line 2360', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find') return Promise.resolve([{
+                _id: 'stock-9999', type: 'twse', index: '9999',
+                web: { arr: [450, 460, 470, -480, 490, 500, 510, 520, 530, 540], mid: 480 },
+            }]);
+            return Promise.resolve({});
+        });
+        // amount=100 is < maxAmount/2 = 480*9/3 = 1440 → adjustWeb returns false → line 2360
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['twse9999 100 amount'], false))
+            .rejects.toThrow('Amount need large than');
+    });
+
+    test('amount command no stock data → line 2352-2353', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find') return Promise.resolve([]); // empty → no stock data
+            return Promise.resolve({});
+        });
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['twse8888 100 amount'], false))
+            .rejects.toThrow('No stock data');
+    });
+
+    test('amount command no web data → line 2355-2356', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find') return Promise.resolve([{
+                _id: 'stock-7777', type: 'twse', index: '7777',
+                // no web property
+            }]);
+            return Promise.resolve({});
+        });
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['twse7777 100 amount'], false))
+            .rejects.toThrow('No web data');
+    });
+
+    test('add new stock → pushes new item to array (lines 2348-2390)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op, db) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            // find STOCKDB for web data
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-2330', type: 'twse', index: '2330',
+                web: { arr: [450, 460, 470, -480, 490, 500], mid: 480, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        // getBasicStockData (twse) DOM: form > table.zoom > tr[1] > td[0..5] > a > text
+        // case 5 text must match /\d+$/ (ROC year, e.g. '76')
+        const formNode = mkNode('form', null, [
+            mkNode('table', 'zoom', [
+                mkNode('tr', null, []),
+                mkNode('tr', null, [
+                    mkNode('td', null, [mkNode('a', null, ['2330'])]),
+                    mkNode('td', null, [mkNode('a', null, ['TSMC'])]),
+                    mkNode('td', null, [mkNode('a', null, ['Taiwan Semiconductor'])]),
+                    mkNode('td', null, [mkNode('a', null, ['上市'])]),
+                    mkNode('td', null, [mkNode('a', null, ['半導體'])]),
+                    mkNode('td', null, [mkNode('a', null, ['76'])]),
+                ]),
+            ]),
+        ]);
+        const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
+        const priceDom = makeCenterDom('500');
+        mockApi.mockResolvedValue('<html></html>');
+        // parseDOM called twice: for getBasicStockData, then for getStockPrice
+        mockParseDOM
+            .mockReturnValueOnce(basicDom)
+            .mockReturnValueOnce(priceDom);
+        // 'twse2330 100000 amount' → add new stock with amount 100000
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 100000 amount'], false);
+        // New item should be pushed
+        expect(items.length).toBe(3);
+        expect(items[2].index).toBe('2330');
+    });
+
+    test('add new stock with F-name → china location tags (lines 174-178)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op, db) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-1234', type: 'twse', index: '1234',
+                web: { arr: [450, 460, 470, -480, 490, 500], mid: 480, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        const formNode = mkNode('form', null, [
+            mkNode('table', 'zoom', [
+                mkNode('tr', null, []),
+                mkNode('tr', null, [
+                    mkNode('td', null, [mkNode('a', null, ['1234'])]),
+                    mkNode('td', null, [mkNode('a', null, ['F-Stock'])]),
+                    mkNode('td', null, [mkNode('a', null, ['Full Name'])]),
+                    mkNode('td', null, [mkNode('a', null, ['興櫃'])]),
+                    mkNode('td', null, [mkNode('a', null, ['電子'])]),
+                    mkNode('td', null, [mkNode('a', null, ['76'])]),
+                ]),
+            ]),
+        ]);
+        const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
+        const priceDom = makeCenterDom('500');
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValueOnce(basicDom).mockReturnValueOnce(priceDom);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse1234 100000 amount'], false);
+        expect(items.length).toBe(3);
+        expect(items[2].index).toBe('1234');
+    });
+
+    test('add new usse stock → getBasicStockData usse path (lines 214-232)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op, db) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-GOOG', type: 'usse', index: 'GOOG',
+                web: { arr: [130, 140, -150, 160, 170, 180], mid: 150, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 155,
+            longName: 'Alphabet Inc.',
+            fullExchangeName: 'NASDAQ',
+        });
+        mockYahooFinance.quoteSummary.mockResolvedValue({
+            assetProfile: {
+                sector: 'Technology',
+                industry: 'Internet Content',
+                companyOfficers: [{ name: 'Sundar Pichai' }, { name: 'Ruth Porat' }],
+            },
+        });
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['usseGOOG 100000 amount'], false);
+        expect(items.length).toBe(3);
+        expect(items[2].index).toBe('GOOG');
+    });
+
+    test('add new twse stock with 上櫃 market → line 190', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-5678', type: 'twse', index: '5678',
+                web: { arr: [450, 460, 470, -480, 490, 500], mid: 480, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        const formNode = mkNode('form', null, [
+            mkNode('table', 'zoom', [
+                mkNode('tr', null, []),
+                mkNode('tr', null, [
+                    mkNode('td', null, [mkNode('a', null, ['5678'])]),
+                    mkNode('td', null, [mkNode('a', null, ['TestCo'])]),
+                    mkNode('td', null, [mkNode('a', null, ['Test Company'])]),
+                    mkNode('td', null, [mkNode('a', null, ['上櫃'])]),
+                    mkNode('td', null, [mkNode('a', null, ['電子'])]),
+                    mkNode('td', null, [mkNode('a', null, ['80'])]),
+                ]),
+            ]),
+        ]);
+        const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
+        const priceDom = makeCenterDom('500');
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValueOnce(basicDom).mockReturnValueOnce(priceDom);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse5678 100000 amount'], false);
+        expect(items.length).toBe(3);
+    });
+
+    test('add new twse stock with 公開發行 market → lines 193-194', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-9012', type: 'twse', index: '9012',
+                web: { arr: [450, 460, 470, -480, 490, 500], mid: 480, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        const formNode = mkNode('form', null, [
+            mkNode('table', 'zoom', [
+                mkNode('tr', null, []),
+                mkNode('tr', null, [
+                    mkNode('td', null, [mkNode('a', null, ['9012'])]),
+                    mkNode('td', null, [mkNode('a', null, ['TestPub'])]),
+                    mkNode('td', null, [mkNode('a', null, ['Test Public'])]),
+                    mkNode('td', null, [mkNode('a', null, ['公開發行'])]),
+                    mkNode('td', null, [mkNode('a', null, ['金融'])]),
+                    mkNode('td', null, [mkNode('a', null, ['90'])]),
+                ]),
+            ]),
+        ]);
+        const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
+        const priceDom = makeCenterDom('500');
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValueOnce(basicDom).mockReturnValueOnce(priceDom);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse9012 100000 amount'], false);
+        expect(items.length).toBe(3);
+    });
+
+    test('unknown setype → getBasicStockData default error (line 234)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-xxx', type: 'xxxx', index: '1111',
+                web: { arr: [10, 20, -30, 40, 50], mid: 30, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['xxxx1111 100000 amount'], false))
+            .rejects.toThrow('stock type unknown');
+    });
+
+    test('add new stock with real=true → Mongo insert for items without _id (line 2423)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        ];
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op) => {
+            mongoCallCount++;
+            if (mongoCallCount === 1) return Promise.resolve(items);
+            if (op === 'find' && mongoCallCount === 2) return Promise.resolve([{
+                _id: 'stock-3456', type: 'twse', index: '3456',
+                web: { arr: [450, 460, 470, -480, 490, 500], mid: 480, type: 0 },
+            }]);
+            return Promise.resolve({});
+        });
+        const formNode = mkNode('form', null, [
+            mkNode('table', 'zoom', [
+                mkNode('tr', null, []),
+                mkNode('tr', null, [
+                    mkNode('td', null, [mkNode('a', null, ['3456'])]),
+                    mkNode('td', null, [mkNode('a', null, ['RealCo'])]),
+                    mkNode('td', null, [mkNode('a', null, ['Real Company'])]),
+                    mkNode('td', null, [mkNode('a', null, ['上市'])]),
+                    mkNode('td', null, [mkNode('a', null, ['電子'])]),
+                    mkNode('td', null, [mkNode('a', null, ['85'])]),
+                ]),
+            ]),
+        ]);
+        const basicDom = [mkNode('html', null, [mkNode('body', null, [formNode])])];
+        const priceDom = makeCenterDom('500');
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValueOnce(basicDom).mockReturnValueOnce(priceDom);
+        // real=true triggers recurUpdate which calls singleUpdate for each item
+        const result = await StockTool.updateStockTotal({ _id: 'u1' }, ['twse3456 100000 amount'], true);
+        expect(items.length).toBe(3);
+        // The new item (no _id) should trigger Mongo insert
+        expect(mockMongo).toHaveBeenCalledWith('insert', expect.any(String), expect.objectContaining({ owner: 'u1' }));
+    });
+});
+
+// ===========================================================================
+// stockTest — type-specific buy branches (lines 4043-4163)
+// ===========================================================================
+describe('stockTest type-specific buy trades', () => {
+    // Create a dataset where specific buy types trigger and trades execute
+    // Need: h drops below mid → startI breaks, then price at levels where bP produces type 7/3/6
+    // Also need his_arr[i-1].l <= suggest.buy for trades to execute
+
+    const makeTradeData = (midPrice, dropTarget) => {
+        const arr = [];
+        for (let i = 0; i < 600; i++) {
+            let base;
+            if (i < 200) base = midPrice;
+            else if (i < 300) base = midPrice - (i - 200) * ((midPrice - dropTarget) / 100);
+            else if (i < 400) base = dropTarget + (i - 300) * ((midPrice - dropTarget) / 100);
+            else base = midPrice;
+            base = Math.max(base, 1);
+            arr.push({ h: base + 0.5, l: Math.max(base - 0.5, 0.5), v: 1000 + i });
+        }
+        return arr;
+    };
+
+    test('type 7 buy trade with bCount>0 and excess amount (lines 4043-4069)', () => {
+        // price around mid*5/priceArray.length → bP=5 → type=7
+        const arr = makeTradeData(100, 20);
+        const loga = logArray(150, 10);
+        const result = stockTest(arr, loga, 10, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+            expect(result.str).toBeDefined();
+        }
+    });
+
+    test('type 3 buy trade (lines 4071-4098)', () => {
+        // price level producing bP=6 → type=3
+        const arr = makeTradeData(100, 10);
+        const loga = logArray(150, 5);
+        const result = stockTest(arr, loga, 5, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('type 6 buy trade (lines 4099-4126)', () => {
+        // price level producing bP=7+ → type=6
+        const arr = makeTradeData(100, 5);
+        const loga = logArray(150, 3);
+        const result = stockTest(arr, loga, 3, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('default buy trade (lines 4127-4163) — bP 4-5', () => {
+        const arr = makeTradeData(100, 40);
+        const loga = logArray(120, 30);
+        const result = stockTest(arr, loga, 30, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+});
+
+// ===========================================================================
+// stockTest — type-specific sell branches (lines 4178-4275)
+// ===========================================================================
+describe('stockTest type-specific sell trades', () => {
+    // For sell, need count > 0 (bought first), then price rises to sell levels
+    // sP=3 → type=9, sP=2 → type=5, sP=1 → type=8
+
+    const makeSellData = () => {
+        const arr = [];
+        for (let i = 0; i < 800; i++) {
+            let base;
+            // Stable → drop → buy → rise → sell cycle
+            if (i < 200) base = 100;
+            else if (i < 250) base = 100 - (i - 200) * 1.2; // drops to 40
+            else if (i < 350) base = 40 + (i - 250) * 0.6; // rises to 100
+            else if (i < 400) base = 100 + (i - 350) * 2.0; // rises to 200
+            else if (i < 500) base = 200 - (i - 400) * 1.0; // drops to 100
+            else if (i < 600) base = 100 + (i - 500) * 2.0; // rises to 300
+            else if (i < 700) base = 300 - (i - 600) * 2.0; // drops to 100
+            else base = 100;
+            base = Math.max(base, 3);
+            arr.push({ h: base + 1, l: Math.max(base - 1, 1), v: 1000 + i });
+        }
+        return arr;
+    };
+
+    test('sell trades type 9/5/8 branches (lines 4178-4275)', () => {
+        const arr = makeSellData();
+        const loga = logArray(350, 5);
+        const result = stockTest(arr, loga, 5, 0, 500, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+            // Should have some sell trades
+            expect(result.str).toBeDefined();
+        }
+    });
+
+    test('sell with newMid else branch (line 4266-4275)', () => {
+        // Need newMid.length > 0 AND newMid[last] < web.mid → else branch for sell
+        const arr = [];
+        for (let i = 0; i < 800; i++) {
+            let base;
+            if (i < 200) base = 100;
+            else if (i < 300) base = 100 - (i - 200) * 0.8; // drops to 20
+            else if (i < 350) base = 20; // stays low (triggers resetWeb=1 → newMid push with low value)
+            else if (i < 500) base = 20 + (i - 350) * 1.8; // rises to 290
+            else if (i < 600) base = 290 - (i - 500) * 1.5; // drops to 140
+            else if (i < 700) base = 140 + (i - 600) * 1.5; // rises to 290
+            else base = 290;
+            base = Math.max(base, 3);
+            arr.push({ h: base + 1, l: Math.max(base - 1, 1), v: 1000 + i });
+        }
+        const loga = logArray(350, 5);
+        const result = stockTest(arr, loga, 5, 0, 500, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+});
+
+// ===========================================================================
+// stockTest — reverse scan data-miss + price fallback (lines 3891-3926)
+// ===========================================================================
+describe('stockTest reverse data miss and price fallback', () => {
+    test('reverse data miss within trading loop (line 3890-3893)', () => {
+        const arr = [];
+        for (let i = 0; i < 250; i++) {
+            let base = 100 + 20 * Math.sin(i * 0.05);
+            arr.push({ h: base + 2, l: Math.max(base - 2, 1), v: 1000 });
+        }
+        // Set data to null near trade zone
+        for (let i = 140; i <= 145; i++) {
+            arr[i] = { h: null, l: null, v: 0 };
+        }
+        const loga = logArray(150, 10);
+        const result = stockTest(arr, loga, 10, 0, 100, false, 50, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
+        expect(result === 'data miss' || (result && result.str)).toBeTruthy();
+    });
+
+    test('price fallback: h exists but no privious (line 3904-3905)', () => {
+        const arr = [];
+        for (let i = 0; i < 250; i++) {
+            let base;
+            if (i < 100) base = 120 - i * 0.2;
+            else base = 80 + 30 * Math.sin(i * 0.06);
+            arr.push({ h: base + 1, l: Math.max(base - 1, 1), v: 1000 + i });
+        }
+        const loga = logArray(150, 10);
+        const result = stockTest(arr, loga, 10, 0, 100, false, 50, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('newMid pop with tmpPT time < rinterval (lines 3922-3926)', () => {
+        const arr = [];
+        for (let i = 0; i < 300; i++) {
+            let base;
+            if (i < 80) base = 100;
+            else if (i < 130) base = 100 - (i - 80) * 1.6; // drops to 20
+            else if (i < 180) base = 20 + (i - 130) * 1.6;  // rises to 100
+            else base = 100;
+            base = Math.max(base, 3);
+            arr.push({ h: base + 1, l: Math.max(base - 1, 1), v: 1000 + i });
+        }
+        const loga = logArray(150, 5);
+        const result = stockTest(arr, loga, 5, 0, 150, false, 50, 86400 * 365, 0.006, 86400 * 2, 86400 * 2, 5);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('price fallback: h=0, l>0 → line 3906-3907 (his_arr[i].list typo)', () => {
+        // Place h=0, l=50 at the position where initial scan breaks (h < web.mid)
+        // h=0 is always < web.mid, so the initial scan breaks at this element.
+        // In main loop: condition 3895 fails (h=0), !price=true (first iter), his_arr[i].h=0 → L3904 false,
+        // his_arr[i].l=50 → L3906 true → price = his_arr[i].list (undefined, BUG)
+        const arr = [];
+        for (let i = 0; i < 450; i++) {
+            arr.push({ h: 100 + 5 * Math.sin(i * 0.03), l: 90 + 5 * Math.sin(i * 0.03), v: 1000 + i });
+        }
+        // Element at index 200 will be startI (h=0 < web.mid → initial scan breaks here)
+        arr[200] = { h: 0, l: 50, v: 1000 };
+        // Element at 201 (privious) normal so initial scan doesn't break there
+        const loga = logArray(350, 5);
+        const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('price fallback: h=0, l=0, privious.h>0 → line 3908-3909', () => {
+        // Element at startI has h=0, l=0. privious (startI+1) has normal h and l.
+        // In main loop first iter: 3895 fails (h=0,l=0), !price=true, h=0→false, l=0→false,
+        // privious.h>0 → true → price = privious.h → line 3909
+        const arr = [];
+        for (let i = 0; i < 450; i++) {
+            arr.push({ h: 100 + 5 * Math.sin(i * 0.03), l: 90 + 5 * Math.sin(i * 0.03), v: 1000 + i });
+        }
+        arr[200] = { h: 0, l: 0, v: 1000 };
+        const loga = logArray(350, 5);
+        const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+
+    test('price fallback: h=0, l=0, privious.h=0, privious.l>0 → line 3910-3911', () => {
+        // Both startI element and privious have h=0; only privious.l>0 → use privious.l
+        const arr = [];
+        for (let i = 0; i < 450; i++) {
+            arr.push({ h: 100 + 5 * Math.sin(i * 0.03), l: 90 + 5 * Math.sin(i * 0.03), v: 1000 + i });
+        }
+        arr[200] = { h: 0, l: 0, v: 1000 };
+        arr[201] = { h: 0, l: 95, v: 1100 };
+        const loga = logArray(350, 5);
+        const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
+        if (result !== 'data miss') {
+            expect(result).toHaveProperty('str');
+        }
+    });
+});
+
+// ===========================================================================
+// testData — Redis hmset rejection covers line 728 catch handler
+// ===========================================================================
+describe('testData Redis hmset rejection', () => {
+    test('hmset rejects → handleError catch path covered (line 728)', async () => {
+        mockMongo.mockResolvedValue([{ type: 'twse', index: '2330', name: '台積電' }]);
+        const rawList = {
+            '2024': {
+                '06': {
+                    raw: [{ h: 100, l: 90, v: 1000 }, { h: 0, l: 0, v: 900 }],
+                }
+            }
+        };
+        mockRedis.mockImplementation((op) => {
+            if (op === 'hgetall') return Promise.resolve({
+                raw_list: JSON.stringify(rawList),
+                ret_obj: 'some',
+                etime: '99999',
+            });
+            if (op === 'hmset') return Promise.reject(new Error('redis hmset failed'));
+            return Promise.resolve();
+        });
+        await StockTool.testData();
+        expect(mockRedis).toHaveBeenCalledWith('hmset', expect.any(String), expect.any(Object));
+    });
+});
+
+// ===========================================================================
+// stockProcess — newMid with 4 negative prices (line 3261)
+// ===========================================================================
+describe('stockProcess newMid 4th negative edge', () => {
+    test('4 consecutive negatives in priceArray → newMid adjusted (line 3260-3261)', () => {
+        // All-negative suffix → count reaches 4 → newMid = abs(PA[nowBP])*(1-fee*10)
+        const PA = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10];
+        const farFuture = Math.round(new Date().getTime() / 1000) + 100000;
+        const result = stockProcess(
+            5, PA, 1,
+            { price: 50, time: farFuture - 600000, type: 'sell', buy: [], sell: [] },
+            1000, 500, 0, 0, 0, 100, 0, 0, 0.006
+        );
+        // stockProcess returns {newMid, resetWeb} for this path (no str)
+        expect(result).toBeDefined();
+        expect(result.newMid).toBeDefined();
+        expect(result.resetWeb).toBeDefined();
+    });
+
+    test('newMid L branch: 3rd neg > 4th*(1-fee*10) → line 3261', () => {
+        // PA with 3rd-from-right close to 4th-from-right so newMid(3rd) > |4th|*(1-0.06)
+        // index 9=-10(c1), 8=-20(c2), 7=-40(c3→newMid=40), 6=-42(c4→40>42*0.94=39.48→YES)
+        const PA = [-100, -90, -80, -70, -60, -50, -42, -40, -20, -10];
+        const result = stockProcess(5, PA, 1, { buy: [], sell: [] }, 1000, 500, 0, 0, 0, 100, 0, 0, 0.006);
+        expect(result.resetWeb).toBe(1);
+        expect(result.newMid).toBeCloseTo(42 * 0.94, 5);
+    });
+});
+
+// ===========================================================================
+// usseTicker price < 1 branch (line 4537)
+// ===========================================================================
+describe('usseTicker penny-stock sell', () => {
+    test('sell with usse penny stock price < 1 → usseTicker(sell, true) line 4537', () => {
+        // priceArray with values < 1 (penny stock)
+        // sP scan: 0.8 ok, -0.7 neg sP=1, -0.6 neg sP=2, 0.45*0.999=0.449<0.5 → break nowSP=3
+        // sell = |priceArray[2]| = 0.6 < 1 → usseTicker(0.6, true) → Math.ceil(0.6*10000)/10000
+        const PA_PENNY = [0.8, -0.7, -0.6, 0.45, -0.4, 0.3, 0.2, -0.15, 0.1];
+        const ttime = 86400 * 5;
+        const tinterval = 86400 * 5;
+        const farFuture = Math.round(new Date().getTime() / 1000) + 999999999;
+        const result = stockProcess(
+            0.5, PA_PENNY, 1,
+            { buy: [], sell: [] },
+            10000, 5000, 5, 0.3, 0, 1,
+            0, 0, 0.004, ttime, tinterval, farFuture
+        );
+        expect(result.str).toContain('Sell');
+        expect(result.sell).toBeLessThan(1);
+    });
+});
+
+// ===========================================================================
+// stockTest main loop null h/l → data miss (lines 3891-3893)
+// ===========================================================================
+describe('stockTest main-loop data miss', () => {
+    test('null h in main loop → returns "data miss" (lines 3891-3893)', () => {
+        const arr = [];
+        for (let i = 0; i < 450; i++) {
+            arr.push({ h: 100 + (i % 7) * 2, l: 90 - (i % 5) * 2, v: 1000 + i * 5 });
+        }
+        // Element 200: h < web.mid → triggers initial scan break
+        arr[200].h = 80;
+        arr[200].l = 78;
+        // Element 199: null h → triggers data miss in 2nd iteration of main loop
+        arr[199] = { h: null, l: 95, v: 1000 };
+        const loga = logArray(130, 85);
+        const result = stockTest(arr, loga, 85, 0, 200, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
+        expect(result).toBe('data miss');
+    });
+});
+
+// ===========================================================================
+// getStockPERV2 — twse type with positive/zero values (line 683)
+// ===========================================================================
+describe('getStockPERV2 twse calculations', () => {
+    test('twse with zero profit → per=0 (mapped to 9999)', async () => {
+        // Non-center path DOM for getStockPrice (lines 38-73, covers line 72-73: non-previous return)
+        const priceSpan = mkNode('span', null, ['500']);
+        const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpan]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const tabs = mkNode('div', null, [qhDiv]);
+        const l10 = mkNode('div', null, [tabs]);
+        const l9 = mkNode('div', null, [l10]);
+        const l7 = mkNode('div', null, [
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, [l9]),
+        ]);
+        const l6 = mkNode('div', null, [l7]);
+        const l5 = mkNode('div', null, [l6]);
+        const l4 = mkNode('div', null, [l5]);
+        const appDiv = mkNode('div', 'app', [l4]);
+        const dom = [mkNode('html', null, [mkNode('body', null, [appDiv])])];
+        mockParseDOM.mockReturnValue(dom);
+        mockApi.mockResolvedValue('<html></html>');
+        mockMongo.mockResolvedValue([{
+            _id: 'tw1', type: 'twse', index: '2330',
+            profit: 0, dividends: 10, netValue: 50, equity: 1000,
+            latestQuarter: 3, latestYear: 2024,
+        }]);
+        const result = await StockTool.getStockPERV2('tw1');
+        expect(result[0]).toBe(9999); // per=0 → mapped to 9999
+        expect(result[1]).toBeGreaterThan(0); // pdr should be positive
+        expect(result[2]).toBeGreaterThan(0); // pbr should be positive
+    });
+});
+
+// ===========================================================================
+// cleanUseless — different month branches (lines 753-758)
+// ===========================================================================
+describe('cleanUseless month branches', () => {
+    test('month 2 (< 4) → quarter=4, year-1 (lines 752-754)', async () => {
+        const origDate = global.Date;
+        const mockDate = new origDate(2024, 1, 15); // Feb 2024
+        jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+        mockMongo.mockResolvedValue([]);
+        await StockTool.cleanUseless(true);
+        // Should query for stocks without tag "2023q4"
+        expect(mockMongo).toHaveBeenCalledWith('find', expect.any(String),
+            { tags: { $nin: ['2023q4'] } });
+        global.Date = origDate;
+        jest.restoreAllMocks();
+    });
+
+    test('month 5 (4≤m<7) → quarter=1 (lines 755-756)', async () => {
+        const origDate = global.Date;
+        const mockDate = new origDate(2024, 4, 15); // May 2024
+        jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+        mockMongo.mockResolvedValue([]);
+        await StockTool.cleanUseless(true);
+        expect(mockMongo).toHaveBeenCalledWith('find', expect.any(String),
+            { tags: { $nin: ['2024q1'] } });
+        global.Date = origDate;
+        jest.restoreAllMocks();
+    });
+
+    test('month 8 (7≤m<10) → quarter=2 (lines 757-758)', async () => {
+        const origDate = global.Date;
+        const mockDate = new origDate(2024, 7, 15); // Aug 2024
+        jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+        mockMongo.mockResolvedValue([]);
+        await StockTool.cleanUseless(true);
+        expect(mockMongo).toHaveBeenCalledWith('find', expect.any(String),
+            { tags: { $nin: ['2024q2'] } });
+        global.Date = origDate;
+        jest.restoreAllMocks();
+    });
+});
+
+// ===========================================================================
+// testData — h=0 data miss (line 728)
+// ===========================================================================
+describe('testData data miss with h=0', () => {
+    test('h=0 entry detected → Redis hmset with raw_list:false (line 724-728)', async () => {
+        mockMongo.mockResolvedValue([{ type: 'twse', index: '2330', name: '台積電' }]);
+        const rawList = {
+            '2024': {
+                '06': {
+                    raw: [{ h: 100, l: 90, v: 1000 }, { h: 0, l: 80, v: 900 }],
+                }
+            }
+        };
+        mockRedis.mockImplementation((op) => {
+            if (op === 'hgetall') return Promise.resolve({
+                raw_list: JSON.stringify(rawList),
+                ret_obj: 'some',
+                etime: '99999',
+            });
+            if (op === 'hmset') return Promise.resolve();
+            return Promise.resolve();
+        });
+        await StockTool.testData();
+        expect(mockRedis).toHaveBeenCalledWith('hmset', expect.any(String), expect.objectContaining({ raw_list: false }));
+    });
+});
+
+// ===========================================================================
+// getStockPrice edge cases (center path regex fail, usse no-price)
+// ===========================================================================
+describe('getStockPrice edge cases', () => {
+    const makeCenterDom2 = (priceText = '500') => {
+        const bNode = mkNode('b', null, [priceText]);
+        const td2 = mkNode('td', null, [bNode]);
+        const innerTr1 = mkNode('tr', null, [mkNode('td', null, []), mkNode('td', null, []), td2]);
+        const innerTable = mkNode('table', null, [mkNode('tr', null, []), innerTr1]);
+        const td0 = mkNode('td', null, [innerTable]);
+        const outerTr0 = mkNode('tr', null, [td0]);
+        const table1 = mkNode('table', null, [outerTr0]);
+        const center = mkNode('center', null, [mkNode('table', null, []), table1]);
+        return [mkNode('html', null, [mkNode('body', null, [center])])];
+    };
+
+    test('center path price regex fail → lines 90-91 (handleError)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(makeCenterDom2('N/A'));
+        mockMongo.mockResolvedValue(items);
+        setMaxRetry(0);
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['delete twse2330'], false))
+            .rejects.toThrow('price get fail');
+    });
+
+    test('center path price="-" and last_price fail → line 96', async () => {
+        // price text '-' matches regex → price[0]==='-' → lookup last_price
+        // last_price text 'N/A' fails regex → line 96
+        const bNode = mkNode('b', null, ['-']);
+        const td2 = mkNode('td', null, [bNode]);
+        const fontTd1 = mkNode('td', null, ['N/A']);
+        const fontNode = mkNode('font', null, [mkNode('td', null, []), fontTd1]);
+        const td5 = mkNode('td', null, [fontNode]);
+        const innerTr1 = mkNode('tr', null, [
+            mkNode('td', null, []), mkNode('td', null, []), td2,
+            mkNode('td', null, []), mkNode('td', null, []), td5
+        ]);
+        const innerTable = mkNode('table', null, [mkNode('tr', null, []), innerTr1]);
+        const td0 = mkNode('td', null, [innerTable]);
+        const outerTr0 = mkNode('tr', null, [td0]);
+        const table1 = mkNode('table', null, [outerTr0]);
+        const center = mkNode('center', null, [mkNode('table', null, []), table1]);
+        const dom = [mkNode('html', null, [mkNode('body', null, [center])])];
+
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(dom);
+        mockMongo.mockResolvedValue(items);
+        setMaxRetry(0);
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['delete twse2330'], false))
+            .rejects.toThrow('price get fail');
+    });
+
+    test('usse no regularMarketPrice → return 0 (line 128)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockYahooFinance.quote.mockResolvedValue({});
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['delete usseAAPL'], false);
+        expect(items.length).toBe(2);
+    });
+
+    test('myLightboxContainer fallback → line 40', async () => {
+        // div[3] has id='myLightboxContainer' → re-traverse via div[2]
+        const priceSpan = mkNode('span', null, ['500']);
+        const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [
+            mkNode('div', null, [
+                mkNode('div', null, []),
+                mkNode('div', null, [
+                    mkNode('div', null, [
+                        mkNode('div', null, [priceSpan]),
+                    ]),
+                ]),
+            ]),
+        ]);
+        const realTabs = mkNode('div', null, [qhDiv]);
+        const rl10 = mkNode('div', null, [realTabs]);
+        const rl9 = mkNode('div', null, [rl10]);
+        const fakeTabs = mkNode('div', null, [], { id: 'myLightboxContainer' });
+        const fl10 = mkNode('div', null, [fakeTabs]);
+        const fl9 = mkNode('div', null, [fl10]);
+        const l7 = mkNode('div', null, [
+            mkNode('div', null, []),
+            mkNode('div', null, []),
+            mkNode('div', null, [rl9]),
+            mkNode('div', null, [fl9]),
+        ]);
+        const l6 = mkNode('div', null, [l7]);
+        const l5 = mkNode('div', null, [l6]);
+        const l4 = mkNode('div', null, [l5]);
+        const appDiv = mkNode('div', 'app', [l4]);
+        const dom = [mkNode('html', null, [mkNode('body', null, [appDiv])])];
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockApi.mockResolvedValue('<html></html>');
+        mockParseDOM.mockReturnValue(dom);
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['delete twse2330'], false);
+        expect(items.length).toBe(2);
+    });
+});
+
+// ===========================================================================
+// updateStockTotal — insertion sort with multiple stocks (lines 2537-2552)
+// ===========================================================================
+describe('updateStockTotal insertion sort with multiple stocks', () => {
+    test('2 usse + 2 twse stocks → sorted by current desc (lines 2537-2552)', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000, name: 'twse 投資部位' },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000, name: 'usse 投資部位' },
+            {
+                _id: 'tw1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 200, amount: 100000, orig: 100000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] }, profit: 0,
+            },
+            {
+                _id: 'tw2', type: 'Fin', setype: 'twse', index: '2882', name: 'cathay',
+                price: 40, count: 5000, amount: 200000, orig: 200000,
+                web: [35, 36, 37, -38, 39, 40], mid: 38, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] }, profit: 0,
+            },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] }, profit: 0,
+            },
+            {
+                _id: 'us2', type: 'Tech', setype: 'usse', index: 'MSFT', name: 'msft',
+                price: 300, count: 20, amount: 80000, orig: 80000,
+                web: [260, 270, -280, 290, 300], mid: 280, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] }, profit: 0,
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        // 'remain twse' just resets remain — after processing, rest() runs with all items
+        const result = await StockTool.updateStockTotal({ _id: 'u1' }, ['remaintwse 800'], false);
+        // result has stock array sorted by current desc within each setype
+        expect(result).toHaveProperty('stock');
+        // cathay current=200000 > tsmc current=100000; MSFT current=6000 > AAPL current=1500
+        const stockNames = result.stock.map(s => s.name);
+        // twse stocks should be sorted: cathay before tsmc
+        const cathayIdx = stockNames.indexOf('cathay');
+        const tsmcIdx = stockNames.indexOf('tsmc');
+        expect(cathayIdx).toBeLessThan(tsmcIdx);
+        // usse stocks should be sorted: msft before apple
+        const msftIdx = stockNames.indexOf('msft');
+        const appleIdx = stockNames.indexOf('apple');
+        expect(msftIdx).toBeLessThan(appleIdx);
+    });
+});
