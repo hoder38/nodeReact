@@ -561,6 +561,463 @@ export const closeRestCredit = async (id, userRest) => {
     }
 };
 
+// ---------------------------------------------------------------------------
+// WS event handler factories (Phase C — extracted from setWsOffer for testability).
+// Each factory takes the per-user `id` (and where needed `curArr`/`uid`) and returns
+// the callback bound to module-scoped state (offer/credit/position/order/...). This
+// lets tests invoke handlers directly without going through setWsOffer's 2000-line
+// closure or the bfx-api-node-rest mock plumbing.
+// ---------------------------------------------------------------------------
+
+export const makeOnWalletUpdate = (id) => wallet => {
+    SUPPORT_COIN.forEach((t, i) => {
+        if (wallet.currency === t.substr(1)) {
+            if (wallet.type === 'funding') {
+                available[id][t] = {
+                    avail: wallet.balanceAvailable,
+                    time: Math.round(new Date().getTime() / 1000),
+                    total: wallet.balance,
+                };
+                sendWs({type: 'bitfinex', data: (i+1) * 10000, user: id});
+            } else if (wallet.type === 'margin') {
+                if (margin[id][t]) {
+                    margin[id][t]['avail'] = wallet.balanceAvailable;
+                    margin[id][t]['time'] = Math.round(new Date().getTime() / 1000);
+                    margin[id][t]['total'] = wallet.balance;
+                } else {
+                    margin[id][t] = {
+                        avail: wallet.balanceAvailable,
+                        time: Math.round(new Date().getTime() / 1000),
+                        total: wallet.balance,
+                    };
+                }
+                sendWs({type: 'bitfinex', data: (i+1) * 100, user: id});
+            }
+        }
+    });
+};
+
+export const makeOnFundingOfferUpdate = (id) => fo => {
+    if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
+    if (!offer[id][fo.symbol]) offer[id][fo.symbol] = [];
+    for (let j = 0; j < offer[id][fo.symbol].length; j++) {
+        if (offer[id][fo.symbol][j].id === fo.id) {
+            offer[id][fo.symbol][j].amount = fo.amount;
+            offer[id][fo.symbol][j].rate = fo.rate;
+            offer[id][fo.symbol][j].period = fo.period;
+            offer[id][fo.symbol][j].status = fo.status;
+            break;
+        }
+    }
+    const now = Math.round(new Date().getTime() / 1000);
+    if ((now - updateTime[id]['offer']) > UPDATE_ORDER) {
+        updateTime[id]['offer'] = now;
+        sendWs({type: 'bitfinex', data: -1, user: id});
+    }
+};
+
+export const makeOnFundingOfferNew = (id) => fo => {
+    if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
+    console.log(`${fo.symbol} ${id} offer new`);
+    if (!offer[id][fo.symbol]) offer[id][fo.symbol] = [];
+    let isExist = false;
+    for (let i = 0; i < offer[id][fo.symbol].length; i++) {
+        if (fo.id === offer[id][fo.symbol][i].id) {
+            offer[id][fo.symbol][i].time = Math.round(fo.mtsCreate / 1000);
+            offer[id][fo.symbol][i].status = fo.status;
+            isExist = true;
+            break;
+        }
+    }
+    if (!isExist) {
+        offer[id][fo.symbol].push({
+            id: fo.id,
+            time: Math.round(fo.mtsCreate / 1000),
+            amount: fo.amount,
+            rate: fo.rate,
+            period: fo.period,
+            status: fo.status,
+        });
+    }
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnFundingOfferClose = (id) => fo => {
+    if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
+    console.log(`${fo.symbol} ${id} offer close`);
+    if (offer[id][fo.symbol]) {
+        let is_exist = false;
+        for (let j = 0; j < offer[id][fo.symbol].length; j++) {
+            if (offer[id][fo.symbol][j].id === fo.id) {
+                offer[id][fo.symbol].splice(j, 1);
+                is_exist = true;
+                break;
+            }
+        }
+        if (!is_exist) deleteOffer.push(fo.id);
+    }
+};
+
+export const makeOnFundingCreditUpdate = (id) => fc => {
+    if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
+    if (!credit[id][fc.symbol]) credit[id][fc.symbol] = [];
+    for (let j = 0; j < credit[id][fc.symbol].length; j++) {
+        if (credit[id][fc.symbol][j].id === fc.id) {
+            credit[id][fc.symbol][j].time = Math.round(fc.mtsOpening / 1000);
+            credit[id][fc.symbol][j].amount = fc.amount;
+            credit[id][fc.symbol][j].rate = fc.rate;
+            credit[id][fc.symbol][j].period = fc.period;
+            credit[id][fc.symbol][j].pair = fc.positionPair;
+            credit[id][fc.symbol][j].status = fc.status;
+            credit[id][fc.symbol][j].side = fc.side;
+            break;
+        }
+    }
+    const now = Math.round(new Date().getTime() / 1000);
+    if ((now - updateTime[id]['credit']) > UPDATE_ORDER) {
+        updateTime[id]['credit'] = now;
+        sendWs({type: 'bitfinex', data: -1, user: id});
+    }
+};
+
+export const makeOnFundingCreditNew = (id) => fc => {
+    if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
+    if (!credit[id][fc.symbol]) credit[id][fc.symbol] = [];
+    credit[id][fc.symbol].push({
+        id: fc.id,
+        time: Math.round(fc.mtsOpening / 1000),
+        amount: fc.amount,
+        rate: fc.rate,
+        period: fc.period,
+        pair: fc.positionPair,
+        status: fc.status,
+        side: fc.side,
+    });
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnFundingCreditClose = (id) => fc => {
+    if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
+    if (credit[id][fc.symbol]) {
+        for (let j = 0; j < credit[id][fc.symbol].length; j++) {
+            if (credit[id][fc.symbol][j].id === fc.id) {
+                credit[id][fc.symbol].splice(j, 1);
+                break;
+            }
+        }
+    }
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnPositionUpdate = (id) => fc => {
+    const symbol = `f${fc.symbol.substr(-3)}`;
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    if (!position[id][symbol]) position[id][symbol] = [];
+    for (let j = 0; j < position[id][symbol].length; j++) {
+        if (position[id][symbol][j].id === fc.id) {
+            position[id][symbol][j].amount = fc.amount;
+            position[id][symbol][j].symbol = fc.symbol;
+            position[id][symbol][j].price = Math.round(fc.basePrice * 1000) / 1000;
+            if (fc.lp) {
+                position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
+            }
+            if (!fc.pl) {
+                console.log('pl is null');
+                console.log(fc);
+            } else {
+                position[id][symbol][j].pl = fc.pl;
+            }
+            break;
+        }
+    }
+    const now = Math.round(new Date().getTime() / 1000);
+    if ((now - updateTime[id]['position']) > UPDATE_ORDER) {
+        updateTime[id]['position'] = now;
+        sendWs({type: 'bitfinex', data: -1, user: id});
+    }
+};
+
+export const makeOnPositionNew = (id) => fc => {
+    console.log(fc);
+    const symbol = `f${fc.symbol.substr(-3)}`;
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    if (!position[id][symbol]) position[id][symbol] = [];
+    position[id][symbol].push({
+        id: fc.id,
+        time: Math.round(fc.mtsCreate / 1000),
+        amount: fc.amount,
+        symbol: fc.symbol,
+        price: Math.round(fc.basePrice * 1000) / 1000,
+        lp: Math.round(fc.liquidationPrice * 1000) / 1000,
+        pl: fc.pl,
+    });
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnPositionClose = (id, curArr, uid) => fc => {
+    const symbol = `f${fc.symbol.substr(-3)}`;
+    console.log(fc);
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    if (position[id][symbol]) {
+        for (let j = 0; j < position[id][symbol].length; j++) {
+            if (position[id][symbol][j].id === fc.id) {
+                const lastP = position[id][symbol].splice(j, 1);
+                console.log(lastP);
+                for (let i = 0; i < curArr.length; i++) {
+                    if (curArr[i].type === symbol && curArr[i].pair) {
+                        for (let k = 0; k < curArr[i].pair.length; k++) {
+                            if (curArr[i].pair[k].type === fc.symbol) {
+                                Mongo('find', TOTALDB, {owner: uid, sType: 1, index: fc.symbol}).then(items => {
+                                    console.log(items);
+                                    if (items.length < 1) {
+                                        return handleError(new HoError(`miss ${fc.symbol}`));
+                                    }
+                                    const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
+                                    console.log(profit);
+                                    margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
+                                    return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
+                                        console.log(result);
+                                    });
+                                }).catch(err => {
+                                    sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
+                                    handleError(err, `${id} Position close Error`);
+                                });
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnOrderUpdate = (id) => os => {
+    const symbol = `f${os.symbol.substr(-3)}`;
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    if (!order[id][symbol]) order[id][symbol] = [];
+    for (let j = 0; j < order[id][symbol].length; j++) {
+        if (order[id][symbol][j].id === os.id) {
+            order[id][symbol][j].time = Math.round(os.mtsCreate / 1000);
+            order[id][symbol][j].amount = os.amountOrig;
+            order[id][symbol][j].type = os.type;
+            order[id][symbol][j].symbol = os.symbol;
+            order[id][symbol][j].price = os.price;
+            order[id][symbol][j].flags = os.flags;
+            order[id][symbol][j].status = os.status;
+            break;
+        }
+    }
+    const now = Math.round(new Date().getTime() / 1000);
+    if ((now - updateTime[id]['order']) > UPDATE_ORDER) {
+        updateTime[id]['order'] = now;
+        sendWs({type: 'bitfinex', data: -1, user: id});
+    }
+};
+
+export const makeOnOrderNew = (id) => os => {
+    const symbol = `f${os.symbol.substr(-3)}`;
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    console.log(`${symbol} ${id} order new`);
+    console.log(os);
+    if (!order[id][symbol]) order[id][symbol] = [];
+    let isExist = false;
+    for (let i = 0; i < order[id][symbol].length; i++) {
+        if (os.id === order[id][symbol][i].id) {
+            order[id][symbol][i].time = Math.round(os.mtsCreate / 1000);
+            isExist = true;
+            break;
+        }
+    }
+    if (!isExist) {
+        order[id][symbol].push({
+            id: os.id,
+            time: Math.round(os.mtsCreate / 1000),
+            amount: os.amountOrig,
+            type: os.type,
+            symbol: os.symbol,
+            price: os.price,
+            flags: os.flags,
+            status: os.status,
+        });
+    }
+    sendWs({type: 'bitfinex', data: -1, user: id});
+};
+
+export const makeOnOrderClose = (id, curArr, uid) => os => {
+    const symbol = `f${os.symbol.substr(-3)}`;
+    if (SUPPORT_COIN.indexOf(symbol) === -1) return;
+    console.log(`${symbol} ${id} order close`);
+    console.log(os);
+    let is_exist = false;
+    if (order[id][symbol]) {
+        for (let j = 0; j < order[id][symbol].length; j++) {
+            if (order[id][symbol][j].id === os.id) {
+                console.log(`delete ${os.id}`);
+                is_exist = true;
+                order[id][symbol].splice(j, 1);
+                break;
+            }
+        }
+    }
+    if (!is_exist) {
+        const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+        if (amount !== 0) {
+            deleteOrder.push({
+                id: os.id,
+                amount,
+                price: os.price,
+                process: (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) ? true : false,
+            });
+        }
+    }
+    if ((Math.round(os.mtsCreate / 1000) + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && !os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
+        for (let i = 0; i < curArr.length; i++) {
+            if (curArr[i].type === symbol && curArr[i].pair) {
+                for (let j = 0; j < curArr[i].pair.length; j++) {
+                    if (curArr[i].pair[j].type === os.symbol) {
+                        console.log(`${os.symbol} order executed`);
+                        const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
+                        if (amount !== 0) {
+                            Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
+                                console.log(items);
+                                if (items.length < 1) {
+                                    return handleError(new HoError(`miss ${os.symbol}`));
+                                }
+                                return processOrderRest(amount, os.price, os.id, Math.round(os.mtsUpdate / 1000), items[0]);
+                            }).catch(err => {
+                                sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
+                                handleError(err, `${id} Total Updata Error`);
+                            });
+                        }
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+};
+
+// Phase A — initialBook extracted to module-level for direct testability.
+// Uses module-scoped state (offer/credit/order/position/available/margin/updateTime)
+// keyed by id; userRest is the per-user bfx-api-node-rest client.
+export const initialBookFn = (id, userRest) => {
+    const now = Math.round(new Date().getTime() / 1000);
+    if ((now - updateTime[id]['book']) > UPDATE_BOOK) {
+        updateTime[id]['book'] = now;
+        return userRest.wallets().then(wallet => {
+            wallet.forEach(w => {
+                const symbol = `f${w.currency}`;
+                if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                    if (w.type === 'funding') {
+                        available[id][symbol] = {
+                            avail: w.balanceAvailable,
+                            time: Math.round(new Date().getTime() / 1000),
+                            total: w.balance,
+                        };
+                    } else if (w.type === 'margin') {
+                        if (margin[id][symbol]) {
+                            margin[id][symbol]['avail'] = w.balanceAvailable;
+                            margin[id][symbol]['time'] = Math.round(new Date().getTime() / 1000);
+                            margin[id][symbol]['total'] = w.balance;
+                        } else {
+                            margin[id][symbol] = {
+                                avail: w.balanceAvailable,
+                                time: Math.round(new Date().getTime() / 1000),
+                                total: w.balance,
+                            };
+                        }
+                    }
+                }
+            });
+        }).then(() => userRest.fundingOffers('')).then(fos => {
+            const risk = {};
+            const temp = {};
+            fos.forEach(v => {
+                if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
+                    if (!temp[v.symbol]) {
+                        temp[v.symbol] = [];
+                        risk[v.symbol] = RISK_MAX;
+                    }
+                    temp[v.symbol].push({
+                        id: v.id,
+                        time: Math.round(v.mtsCreate / 1000),
+                        amount: v.amount,
+                        rate: v.rate,
+                        period: v.period,
+                        status: v.status,
+                        risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : 0,
+                    });
+                }
+            });
+            offer[id] = temp;
+        }).then(() => userRest.fundingCredits('')).then(fcs => {
+            const temp = {};
+            fcs.forEach(v => {
+                if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
+                    if (!temp[v.symbol]) temp[v.symbol] = [];
+                    temp[v.symbol].push({
+                        id: v.id,
+                        time: Math.round(v.mtsOpening / 1000),
+                        amount: v.amount,
+                        rate: v.rate,
+                        period: v.period,
+                        status: v.status,
+                        pair: v.positionPair,
+                        side: v.side,
+                    });
+                }
+            });
+            credit[id] = temp;
+        }).then(() => userRest.activeOrders()).then(os => {
+            const temp = {};
+            os.forEach(v => {
+                const symbol = `f${v.symbol.substr(-3)}`;
+                if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                    if (!temp[symbol]) temp[symbol] = [];
+                    temp[symbol].push({
+                        id: v.id,
+                        time: Math.round(v.mtsCreate / 1000),
+                        amount: v.amountOrig,
+                        symbol: v.symbol,
+                        type: v.type,
+                        price: v.price,
+                        flags: v.flags,
+                        status: v.status,
+                    });
+                }
+            });
+            order[id] = temp;
+        }).then(() => userRest.positions()).then(ps => {
+            const temp = {};
+            ps.forEach(v => {
+                const symbol = `f${v.symbol.substr(-3)}`;
+                if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                    if (!temp[symbol]) temp[symbol] = [];
+                    temp[symbol].push({
+                        id: v.id,
+                        time: Math.round(v.mtsCreate / 1000),
+                        price: Math.round(v.basePrice * 1000) / 1000,
+                        lp: Math.round(v.liquidationPrice * 1000) / 1000,
+                        amount: v.amount,
+                        symbol: v.symbol,
+                        pl: v.pl,
+                    });
+                }
+            });
+            position[id] = temp;
+            sendWs({type: 'bitfinex', data: -1, user: id});
+        });
+    } else {
+        console.log('no new');
+        return Promise.resolve();
+    }
+};
+
 export const setWsOffer = (id, curArr=[], uid) => {
     //檢查跟設定active
     curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.pair))) ? true : false);
@@ -642,406 +1099,19 @@ export const setWsOffer = (id, curArr=[], uid) => {
             console.log(`${id} authenticated`);
             userOk[id] = true;
         });
-        userWs[id].onWalletUpdate ({}, wallet => {
-            SUPPORT_COIN.forEach((t, i) => {
-                if (wallet.currency === t.substr(1)) {
-                    if (wallet.type === 'funding') {
-                        available[id][t] = {
-                            avail: wallet.balanceAvailable,
-                            time: Math.round(new Date().getTime() / 1000),
-                            total: wallet.balance,
-                        }
-                        sendWs({
-                            type: 'bitfinex',
-                            data: (i+1) * 10000,
-                            user: id,
-                        });
-                    } else if (wallet.type === 'margin') {
-                        if (margin[id][t]) {
-                            margin[id][t]['avail'] = wallet.balanceAvailable;
-                            margin[id][t]['time'] = Math.round(new Date().getTime() / 1000);
-                            margin[id][t]['total'] = wallet.balance;
-                        } else {
-                            margin[id][t] = {
-                                avail: wallet.balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: wallet.balance,
-                            }
-                        }
-                        sendWs({
-                            type: 'bitfinex',
-                            data: (i+1) * 100,
-                            user: id,
-                        });
-                    }
-                }
-            });
-        });
-        userWs[id].onFundingOfferUpdate({ }, fo => {
-            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                if (!offer[id][fo.symbol]) {
-                    offer[id][fo.symbol] = [];
-                }
-                for (let j = 0; j < offer[id][fo.symbol].length; j++) {
-                    if (offer[id][fo.symbol][j].id === fo.id) {
-                        //offer[id][fo.symbol][j].time = fo.mtsCreate;
-                        offer[id][fo.symbol][j].amount = fo.amount;
-                        offer[id][fo.symbol][j].rate = fo.rate;
-                        offer[id][fo.symbol][j].period = fo.period;
-                        offer[id][fo.symbol][j].status = fo.status;
-                        break;
-                    }
-                }
-                const now = Math.round(new Date().getTime() / 1000);
-                if ((now - updateTime[id]['offer']) > UPDATE_ORDER) {
-                    updateTime[id]['offer'] = now;
-                    sendWs({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id,
-                    });
-                }
-            }
-        });
-        userWs[id].onFundingOfferNew({ }, fo => {
-            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                console.log(`${fo.symbol} ${id} offer new`);
-                if (!offer[id][fo.symbol]) {
-                    offer[id][fo.symbol] = [];
-                }
-                let isExist = false;
-                for (let i = 0; i < offer[id][fo.symbol].length; i++) {
-                    if (fo.id === offer[id][fo.symbol][i].id) {
-                        offer[id][fo.symbol][i].time = Math.round(fo.mtsCreate / 1000);
-                        offer[id][fo.symbol][i].status = fo.status;
-                        isExist = true;
-                        break;
-                    }
-                }
-                if (!isExist) {
-                    offer[id][fo.symbol].push({
-                        id: fo.id,
-                        time: Math.round(fo.mtsCreate / 1000),
-                        amount: fo.amount,
-                        rate: fo.rate,
-                        period: fo.period,
-                        status: fo.status,
-                    });
-                }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onFundingOfferClose({ }, fo => {
-            if (SUPPORT_COIN.indexOf(fo.symbol) !== -1) {
-                console.log(`${fo.symbol} ${id} offer close`);
-                if (offer[id][fo.symbol]) {
-                    let is_exist = false;
-                    for (let j = 0; j < offer[id][fo.symbol].length; j++) {
-                        if (offer[id][fo.symbol][j].id === fo.id) {
-                            offer[id][fo.symbol].splice(j, 1);
-                            is_exist = true;
-                            break;
-                        }
-                    }
-                    if (!is_exist) {
-                        deleteOffer.push(fo.id);
-                    }
-                }
-            }
-        });
-        userWs[id].onFundingCreditUpdate({ }, fc => {
-            if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id][fc.symbol]) {
-                    credit[id][fc.symbol] = [];
-                }
-                for (let j = 0; j < credit[id][fc.symbol].length; j++) {
-                    if (credit[id][fc.symbol][j].id === fc.id) {
-                        credit[id][fc.symbol][j].time = Math.round(fc.mtsOpening / 1000);
-                        credit[id][fc.symbol][j].amount = fc.amount;
-                        credit[id][fc.symbol][j].rate = fc.rate;
-                        credit[id][fc.symbol][j].period = fc.period;
-                        credit[id][fc.symbol][j].pair = fc.positionPair;
-                        credit[id][fc.symbol][j].status = fc.status;
-                        credit[id][fc.symbol][j].side = fc.side;
-                        break;
-                    }
-                }
-                const now = Math.round(new Date().getTime() / 1000);
-                if ((now - updateTime[id]['credit']) > UPDATE_ORDER) {
-                    updateTime[id]['credit'] = now;
-                    sendWs({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id,
-                    });
-                }
-            }
-        });
-        userWs[id].onFundingCreditNew({ }, fc => {
-            if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (!credit[id][fc.symbol]) {
-                    credit[id][fc.symbol] = [];
-                }
-                credit[id][fc.symbol].push({
-                    id: fc.id,
-                    time: Math.round(fc.mtsOpening / 1000),
-                    amount: fc.amount,
-                    rate: fc.rate,
-                    period: fc.period,
-                    pair: fc.positionPair,
-                    status: fc.status,
-                    side: fc.side,
-                });
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onFundingCreditClose({ }, fc => {
-            if (SUPPORT_COIN.indexOf(fc.symbol) !== -1) {
-                if (credit[id][fc.symbol]) {
-                    for (let j = 0; j < credit[id][fc.symbol].length; j++) {
-                        if (credit[id][fc.symbol][j].id === fc.id) {
-                            credit[id][fc.symbol].splice(j, 1);
-                            break;
-                        }
-                    }
-                }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onPositionUpdate({ }, fc => {
-            const symbol = `f${fc.symbol.substr(-3)}`;
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id][symbol]) {
-                    position[id][symbol] = [];
-                }
-                for (let j = 0; j < position[id][symbol].length; j++) {
-                    if (position[id][symbol][j].id === fc.id) {
-                        //position[id][symbol][j].time = Math.round(fc.mtsCreate / 1000);
-                        position[id][symbol][j].amount = fc.amount;
-                        position[id][symbol][j].symbol = fc.symbol;
-                        position[id][symbol][j].price = Math.round(fc.basePrice * 1000) / 1000;
-                        if (fc.lp) {
-                            position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
-                        }
-                        if (!fc.pl) {
-                            console.log('pl is null');
-                            console.log(fc);
-                        } else {
-                            position[id][symbol][j].pl = fc.pl;
-                        }
-                        break;
-                    }
-                }
-                const now = Math.round(new Date().getTime() / 1000);
-                if ((now - updateTime[id]['position']) > UPDATE_ORDER) {
-                    updateTime[id]['position'] = now;
-                    sendWs({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id,
-                    });
-                }
-            }
-        });
-        userWs[id].onPositionNew({ }, fc => {
-            console.log(fc);
-            const symbol = `f${fc.symbol.substr(-3)}`;
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!position[id][symbol]) {
-                    position[id][symbol] = [];
-                }
-                position[id][symbol].push({
-                    id: fc.id,
-                    time: Math.round(fc.mtsCreate / 1000),
-                    amount: fc.amount,
-                    symbol: fc.symbol,
-                    price: Math.round(fc.basePrice * 1000) / 1000,
-                    lp: Math.round(fc.liquidationPrice * 1000) / 1000,
-                    pl: fc.pl,
-                });
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onPositionClose({ }, fc => {
-            const symbol = `f${fc.symbol.substr(-3)}`;
-            console.log(fc);
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (position[id][symbol]) {
-                    for (let j = 0; j < position[id][symbol].length; j++) {
-                        if (position[id][symbol][j].id === fc.id) {
-                            const lastP = position[id][symbol].splice(j, 1);
-                            console.log(lastP);
-                            for (let i = 0; i < curArr.length; i++) {
-                                if (curArr[i].type === symbol && curArr[i].pair) {
-                                    for (let k = 0; k < curArr[i].pair.length; k++) {
-                                        if (curArr[i].pair[k].type === fc.symbol) {
-                                            Mongo('find', TOTALDB, {owner: uid, sType: 1, index: fc.symbol}).then(items => {
-                                                console.log(items);
-                                                if (items.length < 1) {
-                                                    return handleError(new HoError(`miss ${fc.symbol}`));
-                                                }
-                                                const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
-                                                console.log(profit);
-                                                margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
-                                                return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
-                                                    console.log(result);
-                                                });
-                                            }).catch(err => {
-                                                sendWs(`${id} Position close Error: ${err.message||err.msg}`, 0, 0, true);
-                                                handleError(err, `${id} Position close Error`);
-                                            });
-                                            break;
-                                        }
-                                    }
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onOrderUpdate({}, os => {
-            const symbol = `f${os.symbol.substr(-3)}`;
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                if (!order[id][symbol]) {
-                    order[id][symbol] = [];
-                }
-                for (let j = 0; j < order[id][symbol].length; j++) {
-                    if (order[id][symbol][j].id === os.id) {
-                        order[id][symbol][j].time = Math.round(os.mtsCreate / 1000);
-                        order[id][symbol][j].amount = os.amountOrig;
-                        order[id][symbol][j].type = os.type;
-                        order[id][symbol][j].symbol = os.symbol;
-                        order[id][symbol][j].price = os.price;
-                        order[id][symbol][j].flags = os.flags;
-                        order[id][symbol][j].status = os.status;
-                        break;
-                    }
-                }
-                const now = Math.round(new Date().getTime() / 1000);
-                if ((now - updateTime[id]['order']) > UPDATE_ORDER) {
-                    updateTime[id]['order'] = now;
-                    sendWs({
-                        type: 'bitfinex',
-                        data: -1,
-                        user: id,
-                    });
-                }
-            }
-        });
-        userWs[id].onOrderNew({}, os => {
-            const symbol = `f${os.symbol.substr(-3)}`;
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                console.log(`${symbol} ${id} order new`);
-                console.log(os);
-                if (!order[id][symbol]) {
-                    order[id][symbol] = [];
-                }
-                let isExist = false;
-                for (let i = 0; i < order[id][symbol].length; i++) {
-                    if (os.id === order[id][symbol][i].id) {
-                        order[id][symbol][i].time = Math.round(os.mtsCreate / 1000);
-                        isExist = true;
-                        break;
-                    }
-                }
-                if (!isExist) {
-                    order[id][symbol].push({
-                        id: os.id,
-                        time: Math.round(os.mtsCreate / 1000),
-                        amount: os.amountOrig,
-                        type: os.type,
-                        symbol: os.symbol,
-                        price: os.price,
-                        flags: os.flags,
-                        status: os.status,
-                    });
-                }
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            }
-        });
-        userWs[id].onOrderClose({}, os => {
-            const symbol = `f${os.symbol.substr(-3)}`;
-            if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                console.log(`${symbol} ${id} order close`);
-                console.log(os);
-                let is_exist = false;
-                if (order[id][symbol]) {
-                    for (let j = 0; j < order[id][symbol].length; j++) {
-                        if (order[id][symbol][j].id === os.id) {
-                            console.log(`delete ${os.id}`);
-                            is_exist = true;
-                            order[id][symbol].splice(j, 1);
-                            break;
-                        }
-                    }
-                }
-                if (!is_exist) {
-                    const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
-                    if (amount !== 0) {
-                        deleteOrder.push({
-                            id: os.id,
-                            amount,
-                            price: os.price,
-                            process: (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE')) ? true : false,
-                        });
-                    }
-                }
-                if ((Math.round(os.mtsCreate / 1000) + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && !os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
-                    for (let i = 0; i < curArr.length; i++) {
-                        if (curArr[i].type === symbol && curArr[i].pair) {
-                            for (let j = 0; j < curArr[i].pair.length; j++) {
-                                if (curArr[i].pair[j].type === os.symbol) {
-                                    console.log(`${os.symbol} order executed`);
-                                    const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
-                                    if (amount !== 0) {
-                                        Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
-                                            console.log(items);
-                                            if (items.length < 1) {
-                                                return handleError(new HoError(`miss ${os.symbol}`));
-                                            }
-                                            return processOrderRest(amount, os.price, os.id, Math.round(os.mtsUpdate / 1000), items[0]);
-                                        }).catch(err => {
-                                            sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                            handleError(err, `${id} Total Updata Error`);
-                                        });
-                                    }
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-        });
+        userWs[id].onWalletUpdate({}, makeOnWalletUpdate(id));
+        userWs[id].onFundingOfferUpdate({}, makeOnFundingOfferUpdate(id));
+        userWs[id].onFundingOfferNew({}, makeOnFundingOfferNew(id));
+        userWs[id].onFundingOfferClose({}, makeOnFundingOfferClose(id));
+        userWs[id].onFundingCreditUpdate({}, makeOnFundingCreditUpdate(id));
+        userWs[id].onFundingCreditNew({}, makeOnFundingCreditNew(id));
+        userWs[id].onFundingCreditClose({}, makeOnFundingCreditClose(id));
+        userWs[id].onPositionUpdate({}, makeOnPositionUpdate(id));
+        userWs[id].onPositionNew({}, makeOnPositionNew(id));
+        userWs[id].onPositionClose({}, makeOnPositionClose(id, curArr, uid));
+        userWs[id].onOrderUpdate({}, makeOnOrderUpdate(id));
+        userWs[id].onOrderNew({}, makeOnOrderNew(id));
+        userWs[id].onOrderClose({}, makeOnOrderClose(id, curArr, uid));
         userWs[id].open();
     } else if (!userWs[id].isOpen()) {
         console.log('reconnect ws');
@@ -1084,128 +1154,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         userWs[id].reconnect();
     }
 
-    const initialBook = () => {
-        const now = Math.round(new Date().getTime() / 1000);
-        if ((now - updateTime[id]['book']) > UPDATE_BOOK) {
-            updateTime[id]['book'] = now;
-            return userRest.wallets().then(wallet => {
-                wallet.forEach(w => {
-                    const symbol = `f${w.currency}`;
-                    if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                        if (w.type === 'funding') {
-                            available[id][symbol] = {
-                                avail: w.balanceAvailable,
-                                time: Math.round(new Date().getTime() / 1000),
-                                total: w.balance,
-                            }
-                        } else if (w.type === 'margin') {
-                            if (margin[id][symbol]) {
-                                margin[id][symbol]['avail'] = w.balanceAvailable;
-                                margin[id][symbol]['time'] = Math.round(new Date().getTime() / 1000);
-                                margin[id][symbol]['total'] = w.balance;
-                            } else {
-                                margin[id][symbol] = {
-                                    avail: w.balanceAvailable,
-                                    time: Math.round(new Date().getTime() / 1000),
-                                    total: w.balance,
-                                }
-                            }
-                        }
-                    }
-                });
-            }).then(() => userRest.fundingOffers('')).then(fos => {
-                const risk = {};
-                const temp = {};
-                fos.forEach(v => {
-                    if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
-                        if (!temp[v.symbol]) {
-                            temp[v.symbol] = [];
-                            risk[v.symbol] = RISK_MAX;
-                        }
-                        temp[v.symbol].push({
-                            id: v.id,
-                            time: Math.round(v.mtsCreate / 1000),
-                            amount: v.amount,
-                            rate: v.rate,
-                            period: v.period,
-                            status: v.status,
-                            risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : 0,
-                        })
-                    }
-                });
-                offer[id] = temp;
-            }).then(() => userRest.fundingCredits('')).then(fcs => {
-                const temp = {};
-                fcs.forEach(v => {
-                    if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
-                        if (!temp[v.symbol]) {
-                            temp[v.symbol] = [];
-                        }
-                        temp[v.symbol].push({
-                            id: v.id,
-                            time: Math.round(v.mtsOpening / 1000),
-                            amount: v.amount,
-                            rate: v.rate,
-                            period: v.period,
-                            status: v.status,
-                            pair: v.positionPair,
-                            side: v.side,
-                        });
-                    }
-                });
-                credit[id] = temp;
-            }).then(() => userRest.activeOrders()).then(os => {
-                const temp = {};
-                os.forEach(v => {
-                    const symbol = `f${v.symbol.substr(-3)}`;
-                    if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                        if (!temp[symbol]) {
-                            temp[symbol] = [];
-                        }
-                        temp[symbol].push({
-                            id: v.id,
-                            time: Math.round(v.mtsCreate / 1000),
-                            amount: v.amountOrig,
-                            symbol: v.symbol,
-                            type: v.type,
-                            price: v.price,
-                            flags: v.flags,
-                            status: v.status,
-                        });
-                    }
-                });
-                order[id] = temp;
-            }).then(() => userRest.positions()).then(ps => {
-                const temp = {};
-                ps.forEach(v => {
-                    const symbol = `f${v.symbol.substr(-3)}`;
-                    if (SUPPORT_COIN.indexOf(symbol) !== -1) {
-                        if (!temp[symbol]) {
-                            temp[symbol] = [];
-                        }
-                        temp[symbol].push({
-                            id: v.id,
-                            time: Math.round(v.mtsCreate / 1000),
-                            price: Math.round(v.basePrice * 1000) / 1000,
-                            lp: Math.round(v.liquidationPrice * 1000) / 1000,
-                            amount: v.amount,
-                            symbol: v.symbol,
-                            pl: v.pl,
-                        });
-                    }
-                });
-                position[id] = temp;
-                sendWs({
-                    type: 'bitfinex',
-                    data: -1,
-                    user: id,
-                });
-            });
-        } else {
-            console.log('no new');
-            return Promise.resolve();
-        }
-    }
+    const initialBook = () => initialBookFn(id, userRest);
 
     // checkRisk extracted to module-level (above, exported)
 

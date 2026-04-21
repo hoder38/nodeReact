@@ -169,6 +169,11 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
 let calRate, calWeb, setWsOffer, resetBFX, defaultExport;
 let processOrderRest, checkRisk, closeRestCreditFn;
 let _resetState, _setState, _getState;
+let initialBookFn;
+let makeOnWalletUpdate, makeOnFundingOfferUpdate, makeOnFundingOfferNew, makeOnFundingOfferClose;
+let makeOnFundingCreditUpdate, makeOnFundingCreditNew, makeOnFundingCreditClose;
+let makeOnPositionUpdate, makeOnPositionNew, makeOnPositionClose;
+let makeOnOrderUpdate, makeOnOrderNew, makeOnOrderClose;
 
 beforeAll(async () => {
     const mod = await import('../bitfinex-tool.js');
@@ -183,6 +188,20 @@ beforeAll(async () => {
     _resetState = mod._resetState;
     _setState = mod._setState;
     _getState = mod._getState;
+    initialBookFn = mod.initialBookFn;
+    makeOnWalletUpdate = mod.makeOnWalletUpdate;
+    makeOnFundingOfferUpdate = mod.makeOnFundingOfferUpdate;
+    makeOnFundingOfferNew = mod.makeOnFundingOfferNew;
+    makeOnFundingOfferClose = mod.makeOnFundingOfferClose;
+    makeOnFundingCreditUpdate = mod.makeOnFundingCreditUpdate;
+    makeOnFundingCreditNew = mod.makeOnFundingCreditNew;
+    makeOnFundingCreditClose = mod.makeOnFundingCreditClose;
+    makeOnPositionUpdate = mod.makeOnPositionUpdate;
+    makeOnPositionNew = mod.makeOnPositionNew;
+    makeOnPositionClose = mod.makeOnPositionClose;
+    makeOnOrderUpdate = mod.makeOnOrderUpdate;
+    makeOnOrderNew = mod.makeOnOrderNew;
+    makeOnOrderClose = mod.makeOnOrderClose;
 });
 
 // Top-level: swallow late async rejections from setWsOffer's fire-and-forget chains
@@ -1815,5 +1834,219 @@ describe('setWsOffer flow — singleTrade entry branches', () => {
             interval: 60, loss_stop: 5, low_point: 5,
         }], 'userT3').catch(() => {});
         expect(mockRest.wallets).toHaveBeenCalled();
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// Phase C — Direct unit tests for extracted WS handler factories
+// (no setWsOffer needed; seeded state via _setState)
+// ════════════════════════════════════════════════════════════
+describe('Phase C — extracted WS handler factories', () => {
+    const seedFor = (id) => {
+        _setState({
+            available: { [id]: {} },
+            margin: { [id]: {} },
+            offer: { [id]: {} },
+            credit: { [id]: {} },
+            position: { [id]: {} },
+            order: { [id]: {} },
+            updateTime: { [id]: { book: 0, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+            deleteOffer: [],
+            deleteOrder: [],
+        });
+    };
+
+    test('makeOnWalletUpdate funding → seeds available[]', () => {
+        const id = 'fA';
+        seedFor(id);
+        makeOnWalletUpdate(id)({ currency: 'USD', type: 'funding', balanceAvailable: 500, balance: 1000 });
+        expect(_getState().available[id].fUSD.avail).toBe(500);
+    });
+
+    test('makeOnWalletUpdate margin (new) → seeds margin[]', () => {
+        const id = 'fB';
+        seedFor(id);
+        makeOnWalletUpdate(id)({ currency: 'USD', type: 'margin', balanceAvailable: 200, balance: 400 });
+        expect(_getState().margin[id].fUSD.avail).toBe(200);
+    });
+
+    test('makeOnWalletUpdate margin (existing) → updates fields', () => {
+        const id = 'fC';
+        seedFor(id);
+        const fn = makeOnWalletUpdate(id);
+        fn({ currency: 'USD', type: 'margin', balanceAvailable: 100, balance: 100 });
+        fn({ currency: 'USD', type: 'margin', balanceAvailable: 999, balance: 1000 });
+        expect(_getState().margin[id].fUSD.avail).toBe(999);
+    });
+
+    test('makeOnWalletUpdate unsupported currency → ignored', () => {
+        const id = 'fD';
+        seedFor(id);
+        makeOnWalletUpdate(id)({ currency: 'XXX', type: 'funding', balanceAvailable: 1, balance: 1 });
+        expect(_getState().available[id]).toEqual({});
+    });
+
+    test('makeOnFundingOfferUpdate matching id updates fields and triggers sendWs after UPDATE_ORDER', () => {
+        const id = 'oU1';
+        seedFor(id);
+        _getState().offer[id].fUSD = [{ id: 1, amount: 10, rate: 0.001, period: 2, status: 'A' }];
+        makeOnFundingOfferUpdate(id)({ symbol: 'fUSD', id: 1, amount: 99, rate: 0.005, period: 4, status: 'B' });
+        expect(_getState().offer[id].fUSD[0].amount).toBe(99);
+    });
+
+    test('makeOnFundingOfferUpdate unsupported symbol → ignored', () => {
+        const id = 'oU2';
+        seedFor(id);
+        expect(() => makeOnFundingOfferUpdate(id)({ symbol: 'fXYZ', id: 1 })).not.toThrow();
+    });
+
+    test('makeOnFundingOfferNew creates entry when not exist', () => {
+        const id = 'oN1';
+        seedFor(id);
+        makeOnFundingOfferNew(id)({ symbol: 'fUSD', id: 100, mtsCreate: 1000, amount: 10, rate: 0.01, period: 2, status: 'ACTIVE' });
+        expect(_getState().offer[id].fUSD.length).toBe(1);
+    });
+
+    test('makeOnFundingOfferNew updates time/status when id exists', () => {
+        const id = 'oN2';
+        seedFor(id);
+        const fn = makeOnFundingOfferNew(id);
+        fn({ symbol: 'fUSD', id: 200, mtsCreate: 1000, amount: 10, rate: 0.01, period: 2, status: 'ACTIVE' });
+        fn({ symbol: 'fUSD', id: 200, mtsCreate: 5000, amount: 10, rate: 0.01, period: 2, status: 'PARTIALLY' });
+        expect(_getState().offer[id].fUSD[0].status).toBe('PARTIALLY');
+    });
+
+    test('makeOnFundingOfferClose splices entry; missing id pushes to deleteOffer', () => {
+        const id = 'oC1';
+        seedFor(id);
+        _getState().offer[id].fUSD = [{ id: 7 }];
+        makeOnFundingOfferClose(id)({ symbol: 'fUSD', id: 7 });
+        expect(_getState().offer[id].fUSD.length).toBe(0);
+        makeOnFundingOfferClose(id)({ symbol: 'fUSD', id: 999 });
+        expect(_getState().deleteOffer).toContain(999);
+    });
+
+    test('makeOnFundingCreditNew/Update/Close happy paths', () => {
+        const id = 'cAll';
+        seedFor(id);
+        makeOnFundingCreditNew(id)({ symbol: 'fUSD', id: 1, mtsOpening: 1000, amount: 10, rate: 0.01, period: 2, positionPair: 'p', status: 'A', side: 1 });
+        expect(_getState().credit[id].fUSD.length).toBe(1);
+        makeOnFundingCreditUpdate(id)({ symbol: 'fUSD', id: 1, mtsOpening: 2000, amount: 99, rate: 0.02, period: 4, positionPair: 'p', status: 'B', side: 1 });
+        expect(_getState().credit[id].fUSD[0].amount).toBe(99);
+        makeOnFundingCreditClose(id)({ symbol: 'fUSD', id: 1 });
+        expect(_getState().credit[id].fUSD.length).toBe(0);
+    });
+
+    test('makeOnPositionNew/Update/Close happy paths', () => {
+        const id = 'pAll';
+        seedFor(id);
+        makeOnPositionNew(id)({ id: 1, symbol: 'tBTCUSD', mtsCreate: 1000, amount: 1, basePrice: 50000.123, liquidationPrice: 30000, pl: 5 });
+        expect(_getState().position[id].fUSD.length).toBe(1);
+        makeOnPositionUpdate(id)({ id: 1, symbol: 'tBTCUSD', amount: 2, basePrice: 51000, lp: true, liquidationPrice: 31000, pl: 10 });
+        expect(_getState().position[id].fUSD[0].amount).toBe(2);
+        makeOnPositionClose(id, [], 'uX')({ id: 1, symbol: 'tBTCUSD' });
+        expect(_getState().position[id].fUSD.length).toBe(0);
+    });
+
+    test('makeOnPositionUpdate with pl=null → logs and does not set pl', () => {
+        const id = 'pNull';
+        seedFor(id);
+        _getState().position[id].fUSD = [{ id: 2, pl: 99 }];
+        makeOnPositionUpdate(id)({ id: 2, symbol: 'tBTCUSD', amount: 0, basePrice: 1, pl: null });
+        expect(_getState().position[id].fUSD[0].pl).toBe(99); // unchanged when pl falsy
+    });
+
+    test('makeOnOrderNew adds, second new updates time, makeOnOrderUpdate updates', () => {
+        const id = 'orAll';
+        seedFor(id);
+        const sample = { id: 9, symbol: 'tBTCUSD', mtsCreate: 1000, amountOrig: 1, type: 'EXCHANGE LIMIT', price: 50000, flags: 0, status: 'ACTIVE' };
+        makeOnOrderNew(id)(sample);
+        makeOnOrderNew(id)(sample);
+        expect(_getState().order[id].fUSD.length).toBe(1);
+        makeOnOrderUpdate(id)({ ...sample, mtsCreate: 2000, amountOrig: 5, status: 'PARTIAL' });
+        expect(_getState().order[id].fUSD[0].amount).toBe(5);
+    });
+
+    test('makeOnOrderClose splices entry; missing pushes deleteOrder', () => {
+        const id = 'orC';
+        seedFor(id);
+        _getState().order[id].fUSD = [{ id: 11 }];
+        makeOnOrderClose(id, [], 'u')({ id: 11, symbol: 'tBTCUSD', amountOrig: 1, amount: 0, price: 50000, type: 'LIMIT', status: 'CANCELED', mtsCreate: 1, mtsUpdate: 1 });
+        expect(_getState().order[id].fUSD.length).toBe(0);
+        makeOnOrderClose(id, [], 'u')({ id: 99, symbol: 'tBTCUSD', amountOrig: 1, amount: 0, price: 50000, type: 'LIMIT', status: 'EXECUTED', mtsCreate: 1, mtsUpdate: 1 });
+        expect(_getState().deleteOrder.length).toBeGreaterThan(0);
+    });
+
+    test('makeOnOrderClose unsupported symbol → ignored', () => {
+        const id = 'orX';
+        seedFor(id);
+        expect(() => makeOnOrderClose(id, [], 'u')({ symbol: 'tFOO123', id: 1, amountOrig: 0, amount: 0, price: 0, type: 'L', status: '', mtsCreate: 1, mtsUpdate: 1 })).not.toThrow();
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// Phase A — initialBookFn extracted unit tests
+// ════════════════════════════════════════════════════════════
+describe('Phase A — initialBookFn', () => {
+    const seedFor = (id) => {
+        _setState({
+            available: { [id]: {} },
+            margin: { [id]: {} },
+            offer: { [id]: {} },
+            credit: { [id]: {} },
+            position: { [id]: {} },
+            order: { [id]: {} },
+            updateTime: { [id]: { book: 0, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+        });
+    };
+
+    test('returns Promise.resolve() when book recently updated', async () => {
+        const id = 'ibA';
+        seedFor(id);
+        _getState().updateTime[id].book = Math.round(Date.now() / 1000); // very recent
+        const result = await initialBookFn(id, mockRest);
+        expect(result).toBeUndefined();
+    });
+
+    test('runs full sequence and populates state from rest mocks', async () => {
+        const id = 'ibB';
+        seedFor(id);
+        mockRest.wallets.mockResolvedValueOnce([
+            { currency: 'USD', type: 'funding', balanceAvailable: 100, balance: 200 },
+            { currency: 'USD', type: 'margin', balanceAvailable: 50, balance: 100 },
+            { currency: 'XXX', type: 'funding', balanceAvailable: 1, balance: 1 }, // unsupported
+        ]);
+        mockRest.fundingOffers.mockResolvedValueOnce([
+            { symbol: 'fUSD', id: 1, mtsCreate: 1000, amount: 10, rate: 0.01, period: 2, status: 'A' },
+            { symbol: 'fXYZ', id: 2, mtsCreate: 1000, amount: 0, rate: 0, period: 0, status: 'X' }, // unsupported
+        ]);
+        mockRest.fundingCredits.mockResolvedValueOnce([
+            { symbol: 'fUSD', id: 5, mtsOpening: 2000, amount: 50, rate: 0.02, period: 4, status: 'A', positionPair: 'P', side: 1 },
+        ]);
+        mockRest.activeOrders.mockResolvedValueOnce([
+            { id: 7, symbol: 'tBTCUSD', mtsCreate: 1000, amountOrig: 1, type: 'L', price: 50000, flags: 0, status: 'A' },
+        ]);
+        mockRest.positions.mockResolvedValueOnce([
+            { id: 9, symbol: 'tBTCUSD', mtsCreate: 1000, basePrice: 50000.123, liquidationPrice: 30000.456, amount: 1, pl: 1 },
+        ]);
+        await initialBookFn(id, mockRest);
+        const s = _getState();
+        expect(s.available[id].fUSD.avail).toBe(100);
+        expect(s.margin[id].fUSD.avail).toBe(50);
+        expect(s.offer[id].fUSD.length).toBe(1);
+        expect(s.credit[id].fUSD.length).toBe(1);
+        expect(s.order[id].fUSD.length).toBe(1);
+        expect(s.position[id].fUSD.length).toBe(1);
+    });
+
+    test('updates existing margin entry instead of replacing', async () => {
+        const id = 'ibC';
+        seedFor(id);
+        _getState().margin[id].fUSD = { avail: 1, time: 1, total: 1 };
+        mockRest.wallets.mockResolvedValueOnce([
+            { currency: 'USD', type: 'margin', balanceAvailable: 999, balance: 1000 },
+        ]);
+        await initialBookFn(id, mockRest);
+        expect(_getState().margin[id].fUSD.avail).toBe(999);
     });
 });
