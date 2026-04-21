@@ -28,7 +28,7 @@ const suggestionData = {
 }
 let stringSent = 0;
 
-const getStockPrice = (type='twse', index, previous = false) => {
+export const getStockPrice = (type='twse', index, previous = false) => {
     switch(type) {
         case 'twse':
         let count = 0;
@@ -143,7 +143,7 @@ const getStockPrice = (type='twse', index, previous = false) => {
     }
 }
 
-const getBasicStockData = (type, index) => {
+export const getBasicStockData = (type, index) => {
     let count = 0;
     switch(type) {
         case 'twse':
@@ -234,7 +234,7 @@ const getBasicStockData = (type, index) => {
     }
 }
 
-const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
+export const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
     let tags = new Set();
     indexTag.forEach(v => tags.add(v));
     tags.add(type).add(basic.stock_index).add(basic.stock_full).add(basic.stock_market);
@@ -265,7 +265,7 @@ const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, inde
     return [basic.stock_name[0], valid_tags];
 });
 
-const getParameterV2 = (data, type, text = null) => {
+export const getParameterV2 = (data, type, text = null) => {
     const matchProfit = data.match(new RegExp('\\>' + type + '\\<\\/td\\>([\\s\\S]+?)\\<\\/tr\\>'));
     if (!matchProfit) {
         return false;
@@ -283,6 +283,8 @@ let _statusDelay = 3000;
 export const _setStatusDelay = n => { _statusDelay = n; };
 let _maxRetry = MAX_RETRY;
 export const _setMaxRetry = n => { _maxRetry = n; };
+let _twseDelay = 5000;
+export const _setTwseDelay = n => { _twseDelay = n; };
 
 export default {
     _resetFlags: function() {
@@ -981,94 +983,12 @@ export default {
                         })
                     }
                     const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${new Date().getTime()}`).then(raw_data => {
-                        let high = [];
-                        let low = [];
-                        let vol = [];
-                        if (raw_data.length > 200) {
-                            const year_str = year - 1911;
-                            const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
-                            if (data_list && data_list.length > 0) {
-                                let tmp_index = -1;
-                                let tmp_number = '';
-                                for (let i of data_list) {
-                                    let tmp_list_1 = [];
-                                    const tmp_list = i.split(',');
-                                    for (let j in tmp_list) {
-                                        if (tmp_list[j].match(/^".*"$/)) {
-                                            tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
-                                        } else if (tmp_list[j].match(/^"/)) {
-                                            tmp_index = j;
-                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                        } else if (tmp_list[j].match(/"$/)) {
-                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                            for (let k = +tmp_index; k <= j; k++) {
-                                                tmp_number = `${tmp_number}${tmp_list[k]}`;
-                                            }
-                                            tmp_list_1.push(tmp_number);
-                                            tmp_index = -1;
-                                            tmp_number = '';
-                                        } else {
-                                            if (tmp_index === -1) {
-                                                tmp_list_1.push(tmp_list[j]);
-                                            }
-                                        }
-                                    }
-                                    if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
-                                        high.push(Number(tmp_list_1[4]));
-                                        low.push(Number(tmp_list_1[5]));
-                                        vol.push(Number(tmp_list_1[8]));
-                                    }
-                                }
-                            }
-                            return [2, {high, low, vol}];
-                        } else {
-                            return [2, {high, low, vol}, true];
-                        }
+                        const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
+                        return isStop ? [2, {high, low, vol}, true] : [2, {high, low, vol}];
                     });
-                    const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), 5000)).then(() => Api('url', `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
-                        let high = [];
-                        let low = [];
-                        let vol = [];
-                        if (raw_data.length > 200) {
-                            const year_str = year - 1911;
-                            const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
-                            if (data_list && data_list.length > 0) {
-                                let tmp_index = -1;
-                                let tmp_number = '';
-                                for (let i of data_list) {
-                                    let tmp_list_1 = [];
-                                    const tmp_list = i.split(',');
-                                    for (let j in tmp_list) {
-                                        if (tmp_list[j].match(/^".*"$/)) {
-                                            tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
-                                        } else if (tmp_list[j].match(/^"/)) {
-                                            tmp_index = j;
-                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                        } else if (tmp_list[j].match(/"$/)) {
-                                            tmp_list[j] = tmp_list[j].replace(/"/g, '');
-                                            for (let k = +tmp_index; k <= j; k++) {
-                                                tmp_number = `${tmp_number}${tmp_list[k]}`;
-                                            }
-                                            tmp_list_1.push(tmp_number);
-                                            tmp_index = -1;
-                                            tmp_number = '';
-                                        } else {
-                                            if (tmp_index === -1) {
-                                                tmp_list_1.push(tmp_list[j]);
-                                            }
-                                        }
-                                    }
-                                    if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
-                                        high.push(Number(tmp_list_1[4]));
-                                        low.push(Number(tmp_list_1[5]));
-                                        vol.push(Number(tmp_list_1[8]));
-                                    }
-                                }
-                            }
-                            return [3, {high, low, vol}];
-                        } else {
-                            return [3, {high, low, vol}, true];
-                        }
+                    const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), _twseDelay)).then(() => Api('url', `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
+                        const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
+                        return isStop ? [3, {high, low, vol}, true] : [3, {high, low, vol}];
                     }));
                     const recur_mi = (type, index) => {
                         const getList = () => {
@@ -1566,7 +1486,7 @@ export default {
                 if (web) {
                     sendWs({
                         type: user.username,
-                        data: `Filter ${option.name}: ${result.items[iIndex].index} Error`,
+                        data: `Filter ${option.name}: ${result.items[index].index} Error`,
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
@@ -1680,7 +1600,7 @@ export default {
                 if (web) {
                     sendWs({
                         type: user.username,
-                        data: `Filter ${option.name}: ${filterList[iIndex].index} Error`,
+                        data: `Filter ${option.name}: ${filterList[index].index} Error`,
                     }, 0);
                 }
                 handleError(err, 'Stock filter');
@@ -2621,6 +2541,51 @@ export default {
         });
     },
 }
+
+export const parseStockCsv = (raw_data, year, month_str) => {
+    const high = [];
+    const low = [];
+    const vol = [];
+    if (raw_data.length <= 200) {
+        return { high, low, vol, isStop: true };
+    }
+    const year_str = year - 1911;
+    const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
+    if (data_list && data_list.length > 0) {
+        let tmp_index = -1;
+        let tmp_number = '';
+        for (let i of data_list) {
+            let tmp_list_1 = [];
+            const tmp_list = i.split(',');
+            for (let j in tmp_list) {
+                if (tmp_list[j].match(/^".*"$/)) {
+                    tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
+                } else if (tmp_list[j].match(/^"/)) {
+                    tmp_index = j;
+                    tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                } else if (tmp_list[j].match(/"$/)) {
+                    tmp_list[j] = tmp_list[j].replace(/"/g, '');
+                    for (let k = +tmp_index; k <= j; k++) {
+                        tmp_number = `${tmp_number}${tmp_list[k]}`;
+                    }
+                    tmp_list_1.push(tmp_number);
+                    tmp_index = -1;
+                    tmp_number = '';
+                } else {
+                    if (tmp_index === -1) {
+                        tmp_list_1.push(tmp_list[j]);
+                    }
+                }
+            }
+            if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
+                high.push(Number(tmp_list_1[4]));
+                low.push(Number(tmp_list_1[5]));
+                vol.push(Number(tmp_list_1[8]));
+            }
+        }
+    }
+    return { high, low, vol, isStop: false };
+};
 
 const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
     const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
@@ -4563,7 +4528,7 @@ export const parseMacrotrendsRatio = raw_data => {
     return m ? Number(m[0]) : 9999;
 };
 
-const getUsStock = (index, stat = ['price'], single = false) => {
+export const getUsStock = (index, stat = ['price'], single = false) => {
     const ret = {};
     let count = 0;
     //Market Cap (intraday) Trailing P/E Price/Book (mrq)
