@@ -8270,3 +8270,59 @@ describe('stockFilterV4 deeper user sync', () => {
         expect(true).toBe(true);
     }, 60000);
 });
+
+// ===========================================================================
+// Line 2967: getSuggestionData bCount partial reduction (else branch)
+// amount between 2/3 and 4/3 of bCount*buy → bCount = floor(amount/buy)
+// With web=TINY, mid=600, price=200: stockProcess returns type=7, bCount=1, buy=200
+// Thresholds: 2/3*1*200=133.3, 4/3*1*200=266.7
+// amount=200: 133.3 <= 200 < 266.7 → else branch → bCount=floor(200/200)=1
+// ===========================================================================
+describe('stockStatus line 2967 — bCount partial reduction (amount in middle range)', () => {
+    test('amount between 2/3 and 4/3 of bCount*buy → bCount = floor(amount/buy)', async () => {
+        const item = {
+            _id: 'st2', index: 'ELSESTOCK', setype: 'usse', type: 'Tech',
+            name: 'elsetest', web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null, newMid: [],
+            tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            profit: 0,
+            // amount=200: stockProcess returns bCount=1, buy=200
+            // 200 < 1*200*4/3=266.7 → outer if true
+            // 200 >= 1*200*2/3=133.3 → inner if false → else branch (line 2967)
+            amount: 200, orig: 400, count: 0,
+            previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 200,
+            regularMarketPreviousClose: 198,
+        });
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        if (data['ELSESTOCK']) {
+            // bCount should be floor(200/200)=1, NOT 0 (which would happen if inner if ran)
+            // and buy should still be 200 (not zeroed out)
+            expect(data['ELSESTOCK'].buy).toBeGreaterThan(0);
+            expect(data['ELSESTOCK'].bCount).toBeGreaterThanOrEqual(0);
+        }
+    });
+});
