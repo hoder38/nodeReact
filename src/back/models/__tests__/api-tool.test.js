@@ -32,7 +32,8 @@ jest.unstable_mockModule('../../config.js', () => ({
 
 // Mock constants.js
 mockApiExpire = 86400;
-mockMaxRetry = 10;
+mockMaxRetry = 0;  // Default 0 to prevent retry timers leaking past test completion.
+                   // Tests that need retry behaviour bump this + jest.resetModules().
 jest.unstable_mockModule('../../constants.js', () => ({
     API_EXPIRE: mockApiExpire,
     MAX_RETRY: mockMaxRetry,

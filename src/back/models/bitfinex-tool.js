@@ -13,8 +13,8 @@ import { handleError, HoError, isValidString, findTag } from '../util/utility.js
 import sendWs from '../util/sendWs.js'
 
 //system
-const bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
-const rest = bfx.rest(2, { transform: true });
+let bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
+let rest = bfx.rest(2, { transform: true });
 let finalRate = {};
 let maxRange = {};
 let currentRate = {};
@@ -39,6 +39,65 @@ let credit = {};
 const closeCredit = {};
 let ledger = {};
 let position = {};
+
+// ── Test seams (underscore-prefixed: not part of public API) ──
+// These exist solely to enable unit testing without networked Bitfinex calls.
+export const _setSystemBfx = (newBfx) => {
+    bfx = newBfx;
+    rest = newBfx.rest(2, { transform: true });
+};
+export const _getSystemRest = () => rest;
+export const _resetState = () => {
+    finalRate = {};
+    maxRange = {};
+    currentRate = {};
+    priceData = {};
+    userWs = {};
+    userOk = {};
+    updateTime = {};
+    extremRate = {};
+    available = {};
+    margin = {};
+    offer = {};
+    order = {};
+    deleteOffer.length = 0;
+    deleteOrder.length = 0;
+    Object.keys(fakeOrder).forEach(k => delete fakeOrder[k]);
+    credit = {};
+    Object.keys(closeCredit).forEach(k => delete closeCredit[k]);
+    ledger = {};
+    position = {};
+};
+export const _getState = () => ({
+    finalRate, maxRange, currentRate, priceData,
+    userWs, userOk, updateTime, extremRate,
+    available, margin, offer, order,
+    deleteOffer, deleteOrder, fakeOrder,
+    credit, closeCredit, ledger, position,
+});
+export const _setState = (partial) => {
+    if (partial.priceData) priceData = { ...priceData, ...partial.priceData };
+    if (partial.currentRate) currentRate = { ...currentRate, ...partial.currentRate };
+    if (partial.finalRate) finalRate = { ...finalRate, ...partial.finalRate };
+    if (partial.maxRange) maxRange = { ...maxRange, ...partial.maxRange };
+    if (partial.updateTime) updateTime = { ...updateTime, ...partial.updateTime };
+    if (partial.userWs) userWs = { ...userWs, ...partial.userWs };
+    if (partial.userOk) userOk = { ...userOk, ...partial.userOk };
+    if (partial.available) available = { ...available, ...partial.available };
+    if (partial.margin) margin = { ...margin, ...partial.margin };
+    if (partial.offer) offer = { ...offer, ...partial.offer };
+    if (partial.order) order = { ...order, ...partial.order };
+    if (partial.credit) credit = { ...credit, ...partial.credit };
+    if (partial.position) position = { ...position, ...partial.position };
+    if (partial.ledger) ledger = { ...ledger, ...partial.ledger };
+    if (partial.extremRate) extremRate = { ...extremRate, ...partial.extremRate };
+    if (partial.closeCredit) {
+        Object.keys(partial.closeCredit).forEach(k => { closeCredit[k] = partial.closeCredit[k]; });
+    }
+    if (partial.fakeOrder) {
+        Object.keys(partial.fakeOrder).forEach(k => { fakeOrder[k] = partial.fakeOrder[k]; });
+    }
+};
 
 //wallet history
 //credit history
@@ -402,6 +461,115 @@ export const calWeb = curArr => {
     }));
 }
 
+// ── Pure module-level helpers (extracted from setWsOffer for testability) ──
+//
+// processOrderRest: updates an item's previous-trade ledger and persists to Mongo.
+// Pure with respect to closures (only uses Mongo, TOTALDB, RANGE_BITFINEX_INTERVAL).
+export const processOrderRest = (amount, price, oid, time, item, fake) => {
+    const tradeType = amount > 0 ? 'buy' : 'sell';
+    if (tradeType === 'buy') {
+        let is_insert = false;
+        for (let k = 0; k < item.previous.buy.length; k++) {
+            if (item.previous.buy[k].price === price && (oid && item.previous.buy[k].id === oid)) {
+                console.log('order duplicate');
+                return Promise.resolve();
+            } else if (price < item.previous.buy[k].price) {
+                item.previous.buy.splice(k, 0, {price, time, id: oid});
+                is_insert = true;
+                break;
+            }
+        }
+        if (!is_insert) {
+            item.previous.buy.push({price, time, id: oid});
+        }
+        if (fake) {
+            item.previous = {
+                price,
+                tprice: item.previous.tprice ? 0 : item.previous.price,
+                time: item.previous.time,
+                type: 'buy',
+                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                sell: item.previous.sell,
+            }
+        } else {
+            item.previous = {
+                price,
+                time,
+                type: 'buy',
+                buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                sell: item.previous.sell,
+            }
+        }
+    } else if (tradeType === 'sell') {
+        let is_insert = false;
+        for (let k = 0; k < item.previous.sell.length; k++) {
+            if (item.previous.sell[k].price === price && (oid && item.previous.sell[k].id === oid)) {
+                console.log('order duplicate');
+                return Promise.resolve();
+            } else if (price > item.previous.sell[k].price) {
+                item.previous.sell.splice(k, 0, {price, time, id: oid});
+                is_insert = true;
+                break;
+            }
+        }
+        if (!is_insert) {
+            item.previous.sell.push({price, time, id: oid});
+        }
+        if (fake) {
+            item.previous = {
+                price,
+                tprice: item.previous.tprice ? 0 : item.previous.price,
+                time: item.previous.time,
+                type: 'sell',
+                sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                buy: item.previous.buy,
+            }
+        } else {
+            item.previous = {
+                price,
+                time,
+                type: 'sell',
+                sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
+                buy: item.previous.buy,
+            }
+        }
+    }
+    return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
+        previous: item.previous,
+    }});
+};
+
+// checkRisk: pure helper — returns true if `risk` matches any entry's `.risk` in any of the passed arrays.
+export const checkRisk = (risk, ...arr) => {
+    if (risk < 1) {
+        return false;
+    }
+    for (let j of arr) {
+        for (let i of j) {
+            if (risk === i.risk) {
+                return true;
+            }
+        }
+    }
+    return false;
+};
+
+// closeRestCredit: pure helper that drains closeCredit[id] queue via userRest.closeFunding.
+// Module-level so it can be unit tested in isolation.
+export const closeRestCredit = (id, userRest) => {
+    if (closeCredit[id] && closeCredit[id].length > 0) {
+        console.log(closeCredit[id]);
+        const close_id = closeCredit[id].splice(0, closeCredit[id].length);
+        const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: Number(close_id[index])}).then(result => {
+            console.log(result);
+            return recur_close(index + 1);
+        });
+        return recur_close(0);
+    } else {
+        return Promise.resolve();
+    }
+};
+
 export const setWsOffer = (id, curArr=[], uid) => {
     //檢查跟設定active
     curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.pair))) ? true : false);
@@ -425,99 +593,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
-    const closeRestCredit = () => {
-        if (closeCredit[id] && closeCredit[id].length > 0) {
-            console.log(closeCredit[id]);
-            const close_id = closeCredit[id].splice(0, closeCredit[id].length);
-            const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: Number(close_id[index])}).then(result => {
-                console.log(result);
-                return recur_close(index + 1);
-            });
-            return recur_close(0);
-        } else {
-            return Promise.resolve();
-        }
-    }
-    const processOrderRest = (amount, price, oid, time, item, fake) => {
-        //const time = Math.round(new Date().getTime() / 1000);
-        const tradeType = amount > 0 ? 'buy' : 'sell';
-        if (tradeType === 'buy') {
-            let is_insert = false;
-            for (let k = 0; k < item.previous.buy.length; k++) {
-                if (item.previous.buy[k].price === price && (oid && item.previous.buy[k].id === oid)) {
-                    console.log('order duplicate');
-                    return Promise.resolve();
-                } else if (price < item.previous.buy[k].price) {
-                    item.previous.buy.splice(k, 0, {price, time, id: oid});
-                    is_insert = true;
-                    break;
-                }
-            }
-            if (!is_insert) {
-                item.previous.buy.push({price, time, id: oid});
-            }
-            if (fake) {
-                item.previous = {
-                    price,
-                    tprice: item.previous.tprice ? 0 : item.previous.price,
-                    time: item.previous.time,
-                    type: 'buy',
-                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                    sell: item.previous.sell,
-                    //real: false,
-                }
-            } else {
-                item.previous = {
-                    price,
-                    time,
-                    type: 'buy',
-                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                    sell: item.previous.sell,
-                    //real: true,
-                }
-            }
-        } else if (tradeType === 'sell') {
-            let is_insert = false;
-            for (let k = 0; k < item.previous.sell.length; k++) {
-                if (item.previous.sell[k].price === price && (oid && item.previous.sell[k].id === oid)) {
-                    console.log('order duplicate');
-                    return Promise.resolve();
-                } else if (price > item.previous.sell[k].price) {
-                    item.previous.sell.splice(k, 0, {price, time, id: oid});
-                    is_insert = true;
-                    break;
-                }
-            }
-            if (!is_insert) {
-                item.previous.sell.push({price, time, id: oid});
-            }
-            if (fake) {
-                item.previous = {
-                    price,
-                    tprice: item.previous.tprice ? 0 : item.previous.price,
-                    time: item.previous.time,
-                    type: 'sell',
-                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                    buy: item.previous.buy,
-                    //real: false,
-                }
-            } else {
-                item.previous = {
-                    price,
-                    time,
-                    type: 'sell',
-                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
-                    buy: item.previous.buy,
-                    //real: true,
-                }
-            }
-        }
-        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {
-            //amount: item.amount - price * amount,
-            //count: item.count ? item.count + amount : (amount > 0) ? amount : 0,
-            previous: item.previous,
-        }});
-    }
+    // closeRestCredit / processOrderRest extracted to module-level for testability;
+    // bind them to this user's id/userRest below.
+    const _closeRestCredit = () => closeRestCredit(id, userRest);
+    const _processOrderRest = processOrderRest;
     if (!userWs[id] || !userOk[id]) {
         console.log('initial ws');
         if (!updateTime[id]) {
@@ -1018,7 +1097,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
         const now = Math.round(new Date().getTime() / 1000);
         if ((now - updateTime[id]['book']) > UPDATE_BOOK) {
             updateTime[id]['book'] = now;
-            console.log(updateTime[id]['book']);
             return userRest.wallets().then(wallet => {
                 wallet.forEach(w => {
                     const symbol = `f${w.currency}`;
@@ -1138,19 +1216,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         }
     }
 
-    const checkRisk = (risk, ...arr) => {
-        if (risk < 1) {
-            return false;
-        }
-        for (let j of arr) {
-            for (let i of j) {
-                if (risk === i.risk) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+    // checkRisk extracted to module-level (above, exported)
 
     const singleLoan = current => {
         if (current.riskLimit > 0 && current.waitTime > 0 && current.amountLimit > 0) {
@@ -2487,7 +2553,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
         });
     }
     const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => singleTrade(curArr[index]).then(() => recurLoan(index + 1)))) : recurLoan(index + 1);
-    return initialBook().then(() => closeRestCredit()).then(() => recurLoan(0));
+    return initialBook().then(() => _closeRestCredit()).then(() => recurLoan(0));
 }
 
 export const resetBFX = (update=false) => {
