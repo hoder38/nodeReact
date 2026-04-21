@@ -8273,13 +8273,21 @@ describe('stockFilterV4 deeper user sync', () => {
 
 // ===========================================================================
 // Line 2967: getSuggestionData bCount partial reduction (else branch)
-// amount between 2/3 and 4/3 of bCount*buy → bCount = floor(amount/buy)
-// With web=TINY, mid=600, price=200: stockProcess returns type=7, bCount=1, buy=200
-// Thresholds: 2/3*1*200=133.3, 4/3*1*200=266.7
-// amount=200: 133.3 <= 200 < 266.7 → else branch → bCount=floor(200/200)=1
+// Strategy: inflate suggestion.buy via item.bquantity so that
+//   item.amount lands in [bCount*buy*2/3, bCount*buy*4/3) → else branch
+//
+// With TINY web (price=200 at index 13, bP=5 → type=7 path):
+//   stockProcess: buy = usseTicker(150, false) = 150, finalBuy: bCount=floor(1700/150/4)=2, type→0
+//   After bquantity=1000: suggestion.buy=1150, suggestion.bCount=2
+//   Line 2962: 1700 < 2*1150*4/3=3066.7 → TRUE (enter outer if)
+//   Line 2963: 1700 < 2*1150*2/3=1533.3 → FALSE → else branch (line 2967)
+//   Line 2967: suggestion.bCount = floor(1700/1150) = 1
+//
+//   Inner-if would set bCount=0 and buy=0; else leaves buy=1150, bCount=1
+//   → distinguishable by checking bCount===1 and buy>0
 // ===========================================================================
 describe('stockStatus line 2967 — bCount partial reduction (amount in middle range)', () => {
-    test('amount between 2/3 and 4/3 of bCount*buy → bCount = floor(amount/buy)', async () => {
+    test('bquantity inflates buy so amount falls in [2/3,4/3) window → else branch sets bCount=floor(amount/buy)', async () => {
         const item = {
             _id: 'st2', index: 'ELSESTOCK', setype: 'usse', type: 'Tech',
             name: 'elsetest', web: [
@@ -8294,10 +8302,12 @@ describe('stockStatus line 2967 — bCount partial reduction (amount in middle r
             str: '', order: null, newMid: [],
             tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
             profit: 0,
-            // amount=200: stockProcess returns bCount=1, buy=200
-            // 200 < 1*200*4/3=266.7 → outer if true
-            // 200 >= 1*200*2/3=133.3 → inner if false → else branch (line 2967)
-            amount: 200, orig: 400, count: 0,
+            // orig=1700: item.amount overridden to orig=1700 at line 2753
+            // bquantity=1000 inflates suggestion.buy from 150 → 1150
+            // bCount=2 (from finalBuy), so thresholds: 2/3*2*1150=1533, 4/3*2*1150=3067
+            // 1700 in [1533, 3067) → outer if true, inner if false → else (line 2967)
+            // else: bCount = floor(1700/1150) = 1, buy unchanged (1150)
+            amount: 1700, orig: 1700, count: 0, bquantity: 1000,
             previous: { price: 0, time: 0, type: '', buy: [], sell: [] },
             wType: 0, price: 0, previousPrice: 0,
         };
@@ -8318,11 +8328,10 @@ describe('stockStatus line 2967 — bCount partial reduction (amount in middle r
         mockGetTwseOrder.mockReturnValue([]);
         await stockStatus(false);
         const data = getSuggestionData('usse');
-        if (data['ELSESTOCK']) {
-            // bCount should be floor(200/200)=1, NOT 0 (which would happen if inner if ran)
-            // and buy should still be 200 (not zeroed out)
-            expect(data['ELSESTOCK'].buy).toBeGreaterThan(0);
-            expect(data['ELSESTOCK'].bCount).toBeGreaterThanOrEqual(0);
-        }
+        // Else branch ran → buy unchanged (>0), bCount = floor(1700/1150) = 1
+        // If inner-if had run instead, both would be 0
+        expect(data['ELSESTOCK']).toBeDefined();
+        expect(data['ELSESTOCK'].buy).toBeGreaterThan(0);
+        expect(data['ELSESTOCK'].bCount).toBe(1);
     });
 });
