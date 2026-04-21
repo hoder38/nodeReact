@@ -116,7 +116,7 @@ export const getStockPrice = (type='twse', index, previous = false) => {
         return real();
         case 'usse':
         /*const up = getUssePrice();
-        if (up[index] && ((new Date().getTime()/1000 - up[index].t) < 86400)) {
+        if (up[index] && ((_dateFactory().getTime()/1000 - up[index].t) < 86400)) {
             console.log(up[index]);
             return up[index].p;
         } else {*/
@@ -206,7 +206,7 @@ export const getBasicStockData = (type, index) => {
             return result;
         }).catch(err => {
             console.log(count);
-            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), _retryDelay));
         });
         return real();
         case 'usse':
@@ -226,7 +226,7 @@ export const getBasicStockData = (type, index) => {
             });
         }).catch(err => {
             console.log(`${index} ${count}`);
-            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), 60000));
+            return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), _retryDelay));
         });
         return real1();
         default:
@@ -285,6 +285,99 @@ let _maxRetry = MAX_RETRY;
 export const _setMaxRetry = n => { _maxRetry = n; };
 let _twseDelay = 5000;
 export const _setTwseDelay = n => { _twseDelay = n; };
+let _dateFactory = () => new Date();
+export const _setDateFactory = fn => { _dateFactory = fn || (() => new Date()); };
+let _retryDelay = 60000;
+export const _setRetryDelay = n => { _retryDelay = n; };
+let _overrunDelay = 20000;
+export const _setOverrunDelay = n => { _overrunDelay = n; };
+let _annualDelay = 5000;
+export const _setAnnualDelay = n => { _annualDelay = n; };
+
+export const findFirstParameter = (raw_data, codes, label) => {
+    for (const code of codes) {
+        const result = getParameterV2(raw_data, code, label);
+        if (result) return result[0];
+    }
+    return null;
+};
+
+export const findFirstParameterArray = (raw_data, codes, label) => {
+    for (const code of codes) {
+        const result = getParameterV2(raw_data, code, label);
+        if (result) return result;
+    }
+    return null;
+};
+
+export const findFirstParameterPairs = (raw_data, pairs) => {
+    for (const [code, label] of pairs) {
+        const result = getParameterV2(raw_data, code, label);
+        if (result) return result[0];
+    }
+    return null;
+};
+
+export const PROFIT_CODES = [7900, 6100, 61001, 62000, 61000];
+export const PROFIT_LABEL = '繼續營業單位稅前淨利（淨損）';
+export const EQUITY_CODES = [3100, 31100, 31000];
+export const EQUITY_LABEL = '股本合計';
+export const NETVALUE_PAIRS = [
+    ['3XXX', '權益總計'],
+    [30000, '權益總計'],
+    ['3XXXX', '權益總額'],
+    [39999, '權益總計'],
+    [39999, '權益總額'],
+    ['3XXX', '權益總額'],
+    ['3XXXX', '權益總計'],
+];
+
+export const BUY_THRESHOLDS = { 7: [7/8, 3/4], 3: [5/8, 1/2], 6: [3/8, 1/4] };
+export const SELL_THRESHOLDS = { 9: [1/8, 1/4], 5: [3/8, 1/2], 8: [5/8, 3/4] };
+
+export const executeBuy = (suggest, amount, maxAmount, count, fee) => {
+    let buyTrade = 0;
+    const origCount = count;
+    for (let j = 0; j < suggest.bCount; j++) {
+        if ((amount - suggest.buy) <= 0) break;
+        amount -= suggest.buy;
+        count++;
+        buyTrade++;
+    }
+    const t = BUY_THRESHOLDS[suggest.type];
+    if (t && amount > maxAmount * t[0]) {
+        let tmpAmount = amount - maxAmount * t[1];
+        while ((tmpAmount - suggest.buy) > 0) {
+            amount -= suggest.buy;
+            tmpAmount = amount - maxAmount * t[1];
+            count++;
+            buyTrade++;
+        }
+    }
+    return { amount, count, buyTrade, didBuy: count > origCount };
+};
+
+export const executeSell = (suggest, amount, maxAmount, count, fee) => {
+    let sellTrade = 0;
+    for (let j = 0; j < suggest.sCount; j++) {
+        amount += (suggest.sell * (1 - fee));
+        sellTrade++;
+        count--;
+        if (count <= 0) break;
+    }
+    const t = SELL_THRESHOLDS[suggest.type];
+    if (t && amount < maxAmount * t[0]) {
+        let tmpAmount = maxAmount * t[1] - amount;
+        while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
+            amount += (suggest.sell * (1 - fee));
+            tmpAmount = maxAmount * t[1] - amount;
+            sellTrade++;
+            count--;
+            if (count <= 0) break;
+        }
+    }
+    return { amount, count, sellTrade };
+};
 
 export default {
     _resetFlags: function() {
@@ -299,7 +392,7 @@ export default {
         return { stockFiltering, stockIntervaling, stockPredicting, stringSent };
     },
     getSingleStockV2: function(type, obj, stage=0, back=false) {
-        const date = new Date();
+        const date = _dateFactory();
         const index = obj.index;
         let updateyear = date.getFullYear();
         let updatequarter = 3;
@@ -442,80 +535,24 @@ export default {
                                 wait_count++;
                                 console.log('wait');
                                 console.log(wait_count);
-                                return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), 20000));
+                                return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), _overrunDelay));
                             }
                         } else {
                             wait_count = 0;
-                            let profitArr = getParameterV2(raw_data, 7900, '繼續營業單位稅前淨利（淨損）');
+                            let profitArr = findFirstParameterArray(raw_data, PROFIT_CODES, PROFIT_LABEL);
                             if (!profitArr) {
-                                profitArr = getParameterV2(raw_data, 6100, '繼續營業單位稅前淨利（淨損）');
-                                if (!profitArr) {
-                                    profitArr = getParameterV2(raw_data, 61001, '繼續營業單位稅前淨利（淨損）');
-                                    if (!profitArr) {
-                                        profitArr = getParameterV2(raw_data, 62000, '繼續營業單位稅前淨利（淨損）');
-                                        if (!profitArr) {
-                                            profitArr = getParameterV2(raw_data, 61000, '繼續營業單位稅前淨利（淨損）');
-                                            if (!profitArr) {
-                                                return handleError(new HoError('cannot find stock profit'));
-                                            }
-                                        }
-                                    }
-                                }
+                                return handleError(new HoError('cannot find stock profit'));
                             }
                             if (!equity) {
-                                equity = getParameterV2(raw_data, 3100, '股本合計');
+                                equity = findFirstParameter(raw_data, EQUITY_CODES, EQUITY_LABEL);
                                 if (!equity) {
-                                    equity = getParameterV2(raw_data, 31100, '股本合計');
-                                    if (!equity) {
-                                        equity = getParameterV2(raw_data, 31000, '股本合計');
-                                        if (!equity) {
-                                            return handleError(new HoError('cannot find stock equity'));
-                                        } else {
-                                            equity = equity[0];
-                                        }
-                                    } else {
-                                        equity = equity[0];
-                                    }
-                                } else {
-                                    equity = equity[0];
+                                    return handleError(new HoError('cannot find stock equity'));
                                 }
                             }
                             if (!netValue) {
-                                netValue = getParameterV2(raw_data, '3XXX', '權益總計');
+                                netValue = findFirstParameterPairs(raw_data, NETVALUE_PAIRS);
                                 if (!netValue) {
-                                    netValue = getParameterV2(raw_data, 30000, '權益總計');
-                                    if (!netValue) {
-                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總額');
-                                        if (!netValue) {
-                                            netValue = getParameterV2(raw_data, 39999, '權益總計');
-                                            if (!netValue) {
-                                                netValue = getParameterV2(raw_data, 39999, '權益總額');
-                                                if (!netValue) {
-                                                    netValue = getParameterV2(raw_data, '3XXX', '權益總額');
-                                                    if (!netValue) {
-                                                        netValue = getParameterV2(raw_data, '3XXXX', '權益總計');
-                                                        if (!netValue) {
-                                                            return handleError(new HoError('cannot find stock net value'));
-                                                        } else {
-                                                            netValue = netValue[0];
-                                                        }
-                                                    } else {
-                                                        netValue = netValue[0];
-                                                    }
-                                                } else {
-                                                    netValue = netValue[0];
-                                                }
-                                            } else {
-                                                netValue = netValue[0];
-                                            }
-                                        } else {
-                                            netValue = netValue[0];
-                                        }
-                                    } else {
-                                        netValue = netValue[0];
-                                    }
-                                } else {
-                                    netValue = netValue[0];
+                                    return handleError(new HoError('cannot find stock net value'));
                                 }
                             }
                             const matchDividends = getParameterV2(raw_data, 'C04500');
@@ -732,7 +769,7 @@ export default {
         });
     },
     cleanUseless: function(dryRun = true) {
-        const date = new Date();
+        const date = _dateFactory();
         let updateyear = date.getFullYear();
         let updatequarter = 3;
         const month = date.getMonth() + 1;
@@ -772,7 +809,7 @@ export default {
         });
     },
     getIntervalV2: function(id, session) {
-        const date = new Date();
+        const date = _dateFactory();
         let year = date.getFullYear();
         let month = date.getMonth() + 1;
         let day = date.getDate();
@@ -982,7 +1019,7 @@ export default {
                             });
                         })
                     }
-                    const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${new Date().getTime()}`).then(raw_data => {
+                    const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${_dateFactory().getTime()}`).then(raw_data => {
                         const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
                         return isStop ? [2, {high, low, vol}, true] : [2, {high, low, vol}];
                     });
@@ -1066,13 +1103,13 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
+                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
                                 raw_list: JSON.stringify(raw_list),
                                 ret_obj,
-                                etime: Math.round(new Date().getTime()/1000 + CACHE_EXPIRE),
+                                etime: Math.round(_dateFactory().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
                         }
                         return [ret_obj, items[0].index];
@@ -1421,13 +1458,13 @@ export default {
                         });
                         return getFinance();
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (new Date().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
+                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
                                 raw_list: JSON.stringify(raw_list),
                                 ret_obj,
-                                etime: Math.round(new Date().getTime()/1000 + CACHE_EXPIRE),
+                                etime: Math.round(_dateFactory().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
                         }
                         return [ret_obj, items[0].index];
@@ -1453,7 +1490,7 @@ export default {
         });
     },
     stockFilterV4: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
-        const date = new Date();
+        const date = _dateFactory();
         let updateyear = date.getFullYear();
         let updatequarter = 3;
         const month = date.getMonth() + 1;
@@ -2172,7 +2209,7 @@ export default {
                                             break;
                                         }
                                         items[i].amount -= new_cost;
-                                        const time = Math.round(new Date().getTime() / 1000);
+                                        const time = Math.round(_dateFactory().getTime() / 1000);
                                         const tradeType = (+cmd[2] > 0) ? 'buy' : 'sell';
                                         if (tradeType === 'buy') {
                                             let is_insert = false;
@@ -2635,7 +2672,7 @@ export const getSingleAnnual = (year, folder, index) => {
                 rest: () => {
                     cYear--;
                     if (cYear > year - 5) {
-                        return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
+                        return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), _annualDelay));
                     }
                 },
                 errhandle: err => handleError(err),
@@ -2643,7 +2680,7 @@ export const getSingleAnnual = (year, folder, index) => {
                 handleError(err, 'get annual');
                 cYear--;
                 if (cYear > year - 5) {
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), 5000));
+                    return new Promise((resolve, reject) => setTimeout(() => resolve(recur_annual(cYear, annual_folder)), _annualDelay));
                 }
             }));
         } else {
@@ -2689,8 +2726,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     console.log(twseOrder);
     const recur_price = index => {
         if (index >= items.length) {
-            if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
-                stringSent = new Date().getDay() + 1;
+            if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
+                stringSent = _dateFactory().getDay() + 1;
             }
             return Promise.resolve();
         } else {
@@ -2766,7 +2803,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     {
                         console.log(item.newMid[item.newMid.length - 1]);
                         item.newMid.pop();
-                        if (/*item.newMid.length === 0 && */Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
+                        if (/*item.newMid.length === 0 && */Math.round(_dateFactory().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
                             change_previous = true;
                             item.previous.price = item.tmpPT.price;
                             item.previous.time = item.tmpPT.time;
@@ -2916,7 +2953,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     console.log(suggestion.str);
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                     } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
-                    } else if (newStr && (!stringSent || stringSent !== new Date().getDay() + 1)) {
+                    } else if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
                         sendWs(`${item.name} ${suggestion.str}`, 0, 0, true);
                     }
                     if (item.count < suggestion.sCount * 4 / 3) {
@@ -3163,9 +3200,9 @@ export const getStockListV2 = (type, year, month) => {
     }
 }
 
-export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(new Date().getTime() / 1000)) => {
+export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
-    //const now = Math.round(new Date().getTime() / 1000);
+    //const now = Math.round(_dateFactory().getTime() / 1000);
     //const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
@@ -3670,7 +3707,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
 }
 
 export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = false, len = 200, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, sType = 0) => {
-    const now = Math.round(new Date().getTime() / 1000);
+    const now = Math.round(_dateFactory().getTime() / 1000);
     //let is_start = false;
     let count = 0;
     let privious = {};
@@ -3873,7 +3910,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             //console.log(price);
             //console.log(suggest);
             //console.log(suggest.str);
-            const newPrevious = (tradeType, tradePrice, time = Math.round(new Date().getTime() / 1000)) => {
+            const newPrevious = (tradeType, tradePrice, time = Math.round(_dateFactory().getTime() / 1000)) => {
                 if (tradeType === 'buy') {
                     let is_insert = false;
                     for (let k = 0; k < priviousTrade.buy.length; k++) {
@@ -3923,265 +3960,48 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             }
             if (newMid.length <= 0 || newMid[newMid.length - 1] <= web.mid) {
                 if (suggest.buy > 0) {
-                    /*if (suggest.type === 1) {
-                        amount += (his_arr[i - 1].l * count * (1 - TRADE_FEE));
-                        if (count > 0) {
-                            stopLoss++;
-                        }
-                        count = 0;
-                        priviousTrade = {
-                            price: his_arr[i - 1].l,
-                            time: now - (i * 86400) + 3600,
-                            type: 'sell',
-                        }
-                    }*/
-                    /*if (suggest.type === 2) {
-                        if (suggest.buy && (his_arr[i - 1].h <= suggest.buy)) {
-                            while ((amount - suggest.buy) > 0) {
-                                amount -= suggest.buy;
-                                count++;
-                                priviousTrade = {
-                                    price: suggest.buy,
-                                    time: now - (i * 86400) + 3600,
-                                    type: 'buy',
-                                }
-                                buyTrade++;
-                            }
-                        }
-                    } else*/ if (suggest.type === 7) {
-                        if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                            const origCount = count;
-                            if (suggest.bCount === 0 && suggest.buy) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                            for (let j = 0; j < suggest.bCount; j++) {
-                                if ((amount - suggest.buy) <= 0) {
-                                    break;
-                                } else {
-                                    amount -= suggest.buy;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (amount > maxAmount * 7 / 8) {
-                                let tmpAmount = amount - maxAmount * 3 / 4;
-                                while ((tmpAmount - suggest.buy) > 0) {
-                                    amount -= suggest.buy;
-                                    tmpAmount = amount - maxAmount * 3 / 4;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (count > origCount) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                        }
-                    } else if (suggest.type === 3) {
-                        if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                            if (suggest.bCount === 0 && suggest.buy) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                            const origCount = count;
-                            for (let j = 0; j < suggest.bCount; j++) {
-                                if ((amount - suggest.buy) <= 0) {
-                                    break;
-                                } else {
-                                    amount -= suggest.buy;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (amount > maxAmount * 5 / 8) {
-                                let tmpAmount = amount - maxAmount / 2;
-                                while ((tmpAmount - suggest.buy) > 0) {
-                                    amount -= suggest.buy;
-                                    tmpAmount = amount - maxAmount / 2;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (count > origCount) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                        }
-                    } else if (suggest.type === 6) {
-                        if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                            const origCount = count;
-                            if (suggest.bCount === 0 && suggest.buy) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                            for (let j = 0; j < suggest.bCount; j++) {
-                                if ((amount - suggest.buy) <= 0) {
-                                    break;
-                                } else {
-                                    amount -= suggest.buy;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (amount > maxAmount * 3 / 8) {
-                                let tmpAmount = amount - maxAmount / 4;
-                                while ((tmpAmount - suggest.buy) > 0) {
-                                    amount -= suggest.buy;
-                                    tmpAmount = amount - maxAmount / 4;
-                                    count++;
-                                    buyTrade++;
-                                }
-                            }
-                            if (count > origCount) {
-                                newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
-                            }
-                        }
-                    } else if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                        const origCount = count;
+                    if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
                         if (suggest.bCount === 0 && suggest.buy) {
                             newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
                         }
-                        for (let j = 0; j < suggest.bCount; j++) {
-                            if ((amount - suggest.buy) <= 0) {
-                                break;
-                            } else {
-                                amount -= suggest.buy;
-                                count++;
-                                buyTrade++;
-                            }
-                        }
-                        if (count > origCount) {
+                        const r = executeBuy(suggest, amount, maxAmount, count, fee);
+                        amount = r.amount;
+                        count = r.count;
+                        buyTrade += r.buyTrade;
+                        if (r.didBuy) {
                             newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
                         }
                     }
                 }
             } else if (suggest.buy && (his_arr[i - 1].l <= suggest.buy)) {
-                const origCount = count;
                 if (suggest.bCount === 0 && suggest.buy) {
                     newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
                 }
-                for (let j = 0; j < suggest.bCount; j++) {
-                    if ((amount - suggest.buy) <= 0) {
-                        break;
-                    } else {
-                        amount -= suggest.buy;
-                        count++;
-                        buyTrade++;
-                    }
-                }
-                if (count > origCount) {
+                const r = executeBuy({ ...suggest, type: 0 }, amount, maxAmount, count, fee);
+                amount = r.amount;
+                count = r.count;
+                buyTrade += r.buyTrade;
+                if (r.didBuy) {
                     newPrevious('buy', suggest.buy, now - (i * tinterval) + ttime / 6);
                 }
             }
 
             if (newMid.length <= 0 || newMid[newMid.length - 1] >= web.mid) {
                 if (suggest.sell > 0) {
-                    /*if (suggest.type === 4) {
-                        if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                            amount += (suggest.sell * count * (1 - TRADE_FEE));
-                            sellTrade = sellTrade + count;
-                            count = 0;
-                            priviousTrade = {
-                                price: suggest.sell,
-                                time: now - (i * 86400) + 3600,
-                                type: 'sell',
-                            }
-                        }
-                    } else */if (suggest.type === 9) {
-                        if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                            for (let j = 0; j < suggest.sCount; j++) {
-                                amount += (suggest.sell * (1 - fee));
-                                sellTrade++;
-                                count--;
-                                if (count <= 0) {
-                                    break;
-                                }
-                            }
-                            if (amount < maxAmount / 8) {
-                                let tmpAmount = maxAmount / 4 - amount;
-                                while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
-                                    amount += (suggest.sell * (1 - fee));
-                                    tmpAmount = maxAmount / 4 - amount;
-                                    sellTrade++;
-                                    count--;
-                                    if (count <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                            newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                            //console.log(priviousTrade.win);
-                        }
-                    } else if (suggest.type === 5) {
-                        if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                            for (let j = 0; j < suggest.sCount; j++) {
-                                amount += (suggest.sell * (1 - fee));
-                                sellTrade++;
-                                count--;
-                                if (count <= 0) {
-                                    break;
-                                }
-                            }
-                            if (amount < maxAmount * 3 / 8) {
-                                let tmpAmount = maxAmount / 2 - amount;
-                                while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
-                                    amount += (suggest.sell * (1 - fee));
-                                    tmpAmount = maxAmount / 2 - amount;
-                                    sellTrade++;
-                                    count--;
-                                    if (count <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                            newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                            //console.log(priviousTrade.win);
-                        }
-                    } else if (suggest.type === 8) {
-                        if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                            for (let j = 0; j < suggest.sCount; j++) {
-                                amount += (suggest.sell * (1 - fee));
-                                sellTrade++;
-                                count--;
-                                if (count <= 0) {
-                                    break;
-                                }
-                            }
-                            if (amount < maxAmount * 5 / 8) {
-                                let tmpAmount = maxAmount * 3 / 4 - amount;
-                                while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
-                                    amount += (suggest.sell * (1 - fee));
-                                    tmpAmount = maxAmount * 3 / 4 - amount;
-                                    sellTrade++;
-                                    count--;
-                                    if (count <= 0) {
-                                        break;
-                                    }
-                                }
-                            }
-                            newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                            //console.log(priviousTrade.win);
-                        }
-                    } else if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                        for (let j = 0; j < suggest.sCount; j++) {
-                            amount += (suggest.sell * (1 - fee));
-                            count--;
-                            sellTrade++;
-                            if (count <= 0) {
-                                break;
-                            }
-                        }
+                    if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
+                        const r = executeSell(suggest, amount, maxAmount, count, fee);
+                        amount = r.amount;
+                        count = r.count;
+                        sellTrade += r.sellTrade;
                         newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                        //console.log(priviousTrade.win);
                     }
                 }
             } else if ((count > 0) && suggest.sell && (his_arr[i - 1].h >= suggest.sell)) {
-                for (let j = 0; j < suggest.sCount; j++) {
-                    amount += (suggest.sell * (1 - fee));
-                    count--;
-                    sellTrade++;
-                    if (count <= 0) {
-                        break;
-                    }
-                }
+                const r = executeSell({ ...suggest, type: 0 }, amount, maxAmount, count, fee);
+                amount = r.amount;
+                count = r.count;
+                sellTrade += r.sellTrade;
                 newPrevious('sell', suggest.sell, now - (i * tinterval) + ttime / 6);
-                //console.log(priviousTrade.win);
             }
             //console.log(amount);
             //console.log(count);
@@ -4587,7 +4407,7 @@ export const getUsStock = (index, stat = ['price'], single = false) => {
         return Promise.resolve(ret);
     }).catch(err => {
         console.log(`${index} ${count}`);
-        return (single || (++count > _maxRetry)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), 60000));
+        return (single || (++count > _maxRetry)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), _retryDelay));
     });
     return real();
 }
