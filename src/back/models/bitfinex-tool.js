@@ -382,34 +382,28 @@ export const calWeb = curArr => {
                         mid: web.mid,
                     }).then(items => console.log(items));
                 } else {
-                    const recur_update = i => {
-                        if (i >= item.length) {
-                            return Promise.resolve();
-                        } else {
+                    const recur_update = async () => {
+                        for (let i = 0; i < item.length; i++) {
                             if (!item[i].owner) {
-                                return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
+                                const items = await Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
-                                }}).then(items => {
-                                    console.log(items);
-                                    return recur_update(i + 1);
-                                });
+                                }});
+                                console.log(items);
                             } else {
                                 const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-                                return Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
+                                const items = await Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
                                     times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
-                                }}).then(items => {
-                                    console.log(items);
-                                    return recur_update(i + 1);
-                                });
+                                }});
+                                console.log(items);
                             }
                         }
                     }
-                    return recur_update(0);
+                    return recur_update();
                 }
             });
             return updateWeb();
@@ -556,17 +550,14 @@ export const checkRisk = (risk, ...arr) => {
 
 // closeRestCredit: pure helper that drains closeCredit[id] queue via userRest.closeFunding.
 // Module-level so it can be unit tested in isolation.
-export const closeRestCredit = (id, userRest) => {
+export const closeRestCredit = async (id, userRest) => {
     if (closeCredit[id] && closeCredit[id].length > 0) {
         console.log(closeCredit[id]);
         const close_id = closeCredit[id].splice(0, closeCredit[id].length);
-        const recur_close = index => (index >= close_id.length) ? Promise.resolve() : userRest.closeFunding({id: Number(close_id[index])}).then(result => {
+        for (let i = 0; i < close_id.length; i++) {
+            const result = await userRest.closeFunding({id: Number(close_id[i])});
             console.log(result);
-            return recur_close(index + 1);
-        });
-        return recur_close(0);
-    } else {
-        return Promise.resolve();
+        }
     }
 };
 
@@ -1519,120 +1510,110 @@ export const setWsOffer = (id, curArr=[], uid) => {
             adjustOffer();
             newOffer(current.riskLimit);
             mergeOffer();
-            const cancelOffer = index => (index >= needDelete.length) ? Promise.resolve() : userRest.cancelFundingOffer(needDelete[index].id).catch(err => {
-                for (let j = 0; j < offer[id][current.type].length; j++) {
-                    if (needDelete[index].id === offer[id][current.type][j].id) {
-                        console.log(needDelete[index].id);
-                        offer[id][current.type].splice(j, 1);
-                        break;
+            const cancelOffer = async () => {
+                for (let index = 0; index < needDelete.length; index++) {
+                    try {
+                        await userRest.cancelFundingOffer(needDelete[index].id);
+                    } catch (err) {
+                        for (let j = 0; j < offer[id][current.type].length; j++) {
+                            if (needDelete[index].id === offer[id][current.type][j].id) {
+                                console.log(needDelete[index].id);
+                                offer[id][current.type].splice(j, 1);
+                                break;
+                            }
+                        }
+                        sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
+                        handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                }
+            };
+            const submitOffer = async () => {
+                for (let index = 0; index < finalNew.length; index++) {
+                    const kp = await calKeepCash();
+                    if (kp < finalNew[index].amount) {
+                        continue;
+                    }
+                    const finalfinalRate = ((currentRate[current.type].frr >= current.dynamic) || (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
+                    const DRT = getDR(finalfinalRate);
+                    console.log(DRT);
+                    const fo = new FundingOffer({
+                        symbol: current.type,
+                        amount: finalNew[index].amount,
+                        rate: finalfinalRate / BITFINEX_EXP,
+                        period: (DRT === false) ? 2 : DRT.day,
+                        type: 'LIMIT',
+                    }, userRest);
+                    console.log(finalNew[index].amount);
+                    console.log(keep_available);
+                    await fo.submit();
+                    await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                    let isExist = false;
+                    for (let i = 0; i < offer[id][current.type].length; i++) {
+                        if (fo.id === offer[id][current.type][i].id) {
+                            offer[id][current.type][i].risk = finalNew[index].risk;
+                            isExist = true;
+                            break;
+                        }
+                    }
+                    if (!isExist) {
+                        const isDelete = deleteOffer.indexOf(fo.id);
+                        if (isDelete === -1) {
+                            offer[id][current.type].push({
+                                id: fo.id,
+                                time: Math.round(new Date().getTime() / 1000),
+                                amount: fo.amount,
+                                rate: fo.rate,
+                                period: fo.period,
+                                risk: finalNew[index].risk,
+                            });
+                        } else {
+                            deleteOffer.splice(isDelete, 1);
+                        }
                     }
                 }
-                sendWs(`${id} ${needDelete[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
-                handleError(err, `${id} ${needDelete[index].id} cancelFundingOffer Error`);
-            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => cancelOffer(index + 1)));
-            const submitOffer = index => {
-                if (index >= finalNew.length) {
-                    if ((finalNew.length + needDelete.length) > 0) {
-                        sendWs({
-                            type: 'bitfinex',
-                            data: -1,
-                            user: id,
-                        });
-                    }
-                    return Promise.resolve();
-                } else {
-                    return calKeepCash().then(kp => {
-                        if (kp < finalNew[index].amount) {
-                            return Promise.resolve();
-                        }
-                        const finalfinalRate = ((currentRate[current.type].frr >= current.dynamic) || (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
-                        const DRT = getDR(finalfinalRate);
-                        console.log(DRT);
-                        const fo = new FundingOffer({
-                            symbol: current.type,
-                            amount: finalNew[index].amount,
-                            rate: finalfinalRate / BITFINEX_EXP,
-                            period: (DRT === false) ? 2 : DRT.day,
-                            type: 'LIMIT',
-                        }, userRest);
-                        console.log(finalNew[index].amount);
-                        console.log(keep_available);
-                        return fo.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => {
-                            let isExist = false;
-                            for (let i = 0; i < offer[id][current.type].length; i++) {
-                                if (fo.id === offer[id][current.type][i].id) {
-                                    offer[id][current.type][i].risk = finalNew[index].risk;
-                                    //console.log(`Offer ${offer[id][current.type][i].id} ${offer[id][current.type][i].risk}`);
-                                    isExist = true;
-                                    break;
-                                }
-                            }
-                            if (!isExist) {
-                                const isDelete = deleteOffer.indexOf(fo.id);
-                                if (isDelete === -1) {
-                                    offer[id][current.type].push({
-                                        id: fo.id,
-                                        time: Math.round(new Date().getTime() / 1000),
-                                        amount: fo.amount,
-                                        rate: fo.rate,
-                                        period: fo.period,
-                                        risk: finalNew[index].risk,
-                                    });
-                                } else {
-                                    deleteOffer.splice(isDelete, 1);
-                                }
-                            }
-                            return submitOffer(index + 1);
-                        }));
+                if ((finalNew.length + needDelete.length) > 0) {
+                    sendWs({
+                        type: 'bitfinex',
+                        data: -1,
+                        user: id,
                     });
                 }
-            }
+            };
             if (current.isTrade && fakeOrder[id][current.type]) {
                 console.log(`fakeOrder ${id} ${current.type}`);
                 console.log(fakeOrder[id][current.type]);
             }
-            const checkFakeOrder = index => {
-                if (current.isTrade && fakeOrder[id][current.type]) {
-                    if (index >= fakeOrder[id][current.type].length) {
-                        return Promise.resolve();
-                    } else {
-                        const o = fakeOrder[id][current.type][index];
-                        if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice <= o.price) {
-                            return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
-                                console.log('fake order close');
-                                console.log(items);
-                                if (items.length < 1) {
-                                    console.log(`miss ${o.symbol}`);
-                                    return checkFakeOrder(index + 1);
-                                }
-                                return processOrderRest(1, o.price, 0, o.time, items[0], true).then(() => {
-                                    o.done = true;
-                                    return checkFakeOrder(index + 1);
-                                });
-                            });
-                        } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice >= o.price) {
-                            return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol}).then(items => {
-                                console.log('fake order close');
-                                console.log(items);
-                                if (items.length < 1) {
-                                    console.log(`miss ${o.symbol}`);
-                                    return checkFakeOrder(index + 1);
-                                }
-                                return processOrderRest(-1, o.price, 0, o.time, items[0], true).then(() => {
-                                    o.done = true;
-                                    return checkFakeOrder(index + 1);
-                                });
-                            });
-                        } else {
-                            return checkFakeOrder(index + 1);
-                        }
-                    }
-                } else {
-                    return Promise.resolve();
+            const checkFakeOrder = async () => {
+                if (!(current.isTrade && fakeOrder[id][current.type])) {
+                    return;
                 }
-            }
-            //return Promise.resolve();
-            return cancelOffer(0).then(() => submitOffer(0).then(() => checkFakeOrder(0)));
+                for (let index = 0; index < fakeOrder[id][current.type].length; index++) {
+                    const o = fakeOrder[id][current.type][index];
+                    if (!o.done && o.type === 'buy' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice <= o.price) {
+                        const items = await Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol});
+                        console.log('fake order close');
+                        console.log(items);
+                        if (items.length < 1) {
+                            console.log(`miss ${o.symbol}`);
+                            continue;
+                        }
+                        await processOrderRest(1, o.price, 0, o.time, items[0], true);
+                        o.done = true;
+                    } else if (!o.done && o.type === 'sell' && +priceData[o.symbol].lastPrice && +priceData[o.symbol].lastPrice >= o.price) {
+                        const items = await Mongo('find', TOTALDB, {owner: uid, sType: 1, index: o.symbol});
+                        console.log('fake order close');
+                        console.log(items);
+                        if (items.length < 1) {
+                            console.log(`miss ${o.symbol}`);
+                            continue;
+                        }
+                        await processOrderRest(-1, o.price, 0, o.time, items[0], true);
+                        o.done = true;
+                    }
+                }
+            };
+            return cancelOffer().then(() => submitOffer()).then(() => checkFakeOrder());
         });
     }
 
@@ -1699,14 +1680,15 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         //close offer
                         if (offer[id][current.type]) {
                             const real_id = offer[id][current.type].filter(v => v.risk !== undefined);
-                            const real_delete = index => {
-                                let is_error = false;
-                                if ((index >= real_id.length) || availableMargin >= needTrans) {
-                                    return Promise.resolve(availableMargin);
-                                } else {
-                                    return userRest.cancelFundingOffer(real_id[index].id).catch(err => {
+                            const real_delete = async () => {
+                                for (let index = 0; index < real_id.length; index++) {
+                                    if (availableMargin >= needTrans) break;
+                                    let is_error = false;
+                                    try {
+                                        await userRest.cancelFundingOffer(real_id[index].id);
+                                    } catch (err) {
                                         is_error = true;
-                                        for (let j = 0; j < offer[id][current.type].length; i++) {
+                                        for (let j = 0; j < offer[id][current.type].length; j++) {
                                             if (real_id[index].id === offer[id][current.type][j].id) {
                                                 console.log(real_id[index].id);
                                                 offer[id][current.type].splice(j, 1);
@@ -1715,18 +1697,18 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                         }
                                         sendWs(`${id} ${real_id[index].id} cancelFundingOffer Error: ${err.message||err.msg}`, 0, 0, true);
                                         handleError(err, `${id} ${real_id[index].id} cancelFundingOffer Error`);
-                                    }).then(() => {
-                                        if (!is_error) {
-                                            availableMargin = availableMargin + real_id[index].amount;
-                                            if (availableMargin >= needTrans) {
-                                                availableMargin = needTrans;
-                                            }
+                                    }
+                                    if (!is_error) {
+                                        availableMargin = availableMargin + real_id[index].amount;
+                                        if (availableMargin >= needTrans) {
+                                            availableMargin = needTrans;
                                         }
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1));
-                                    });
+                                    }
+                                    await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
                                 }
-                            }
-                            return real_delete(0);
+                                return availableMargin;
+                            };
+                            return real_delete();
                         }
                     }
                     return Promise.resolve(availableMargin);
@@ -1767,29 +1749,28 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         if (order[id][current.type]) {
                             const real_id = order[id][current.type].filter(v => v.amount > 0 && !v.type.includes('EXCHANGE'));
                             console.log(real_id);
-                            const real_delete = index => {
-                                if ((index >= real_id.length) || (availableMargin <= needTrans && current.clear !== true)) {
-                                    if (availableMargin > 0) {
-                                        availableMargin = 0;
+                            const real_delete = async () => {
+                                for (let index = 0; index < real_id.length; index++) {
+                                    if (availableMargin <= needTrans && current.clear !== true) break;
+                                    if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
+                                        continue;
                                     }
-                                    return Promise.resolve(availableMargin);
+                                    await userRest.cancelOrder(real_id[index].id);
+                                    availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
+                                    if (availableMargin <= needTrans && current.clear !== true) {
+                                        availableMargin = needTrans;
+                                    }
+                                    await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
                                 }
-                                if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                    return real_delete(index + 1);
-                                } else {
-                                    return userRest.cancelOrder(real_id[index].id).then(() => {
-                                        availableMargin = availableMargin - real_id[index].amount * real_id[index].price;
-                                        if (availableMargin <= needTrans && current.clear !== true) {
-                                            availableMargin = needTrans;
-                                        }
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1))
-                                    });
+                                if (availableMargin > 0) {
+                                    availableMargin = 0;
                                 }
-                            }
+                                return availableMargin;
+                            };
                             let delOrderNumber = 0;
                             real_id.forEach(r => delOrderNumber = delOrderNumber - r.amount * r.price / SUPPORT_LEVERAGE[r.symbol]);
                             if ((availableMargin + delOrderNumber) < 0) {
-                                return real_delete(0);
+                                return real_delete();
                             } else {
                                 if (availableMargin > 0) {
                                     availableMargin = 0;
@@ -1849,33 +1830,25 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 return Promise.resolve();
             }
             //auto cancel credit
-            const closecredit_recur = index => {
-                if (credit[id][current.type]) {
-                    if (index >= credit[id][current.type].length) {
-                        return Promise.resolve();
-                    } else {
-                        if (credit[id][current.type][index].side !== 1) {
-                            //frr
-                            if (!credit[id][current.type][index].rate) {
-                                if (!closeCredit[id]) {
-                                    closeCredit[id] = [credit[id][current.type][index].id];
-                                } else {
-                                    closeCredit[id].push(credit[id][current.type][index].id);
-                                }
-                            } else if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) {
-                                if (!closeCredit[id]) {
-                                    closeCredit[id] = [credit[id][current.type][index].id];
-                                } else {
-                                    closeCredit[id].push(credit[id][current.type][index].id);
-                                }
+            const closecredit_recur = async () => {
+                if (!credit[id][current.type]) return;
+                for (let index = 0; index < credit[id][current.type].length; index++) {
+                    if (credit[id][current.type][index].side !== 1) {
+                        //frr
+                        if (!credit[id][current.type][index].rate) {
+                            if (!closeCredit[id]) {
+                                closeCredit[id] = [credit[id][current.type][index].id];
+                            } else {
+                                closeCredit[id].push(credit[id][current.type][index].id);
                             }
-                            return closecredit_recur(index + 1);
-                        } else {
-                            return closecredit_recur(index + 1);
+                        } else if (currentRate[current.type].frr > 0 && credit[id][current.type][index].rate * BITFINEX_EXP > currentRate[current.type].frr && credit[id][current.type][index].rate > current.miniRate / 100 * 2) {
+                            if (!closeCredit[id]) {
+                                closeCredit[id] = [credit[id][current.type][index].id];
+                            } else {
+                                closeCredit[id].push(credit[id][current.type][index].id);
+                            }
                         }
                     }
-                } else {
-                    return Promise.resolve();
                 }
             }
             updateTime[id]['trade'] = now;
@@ -1961,7 +1934,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return order_recur(oss.length - 1);
             });
-            return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur(0).then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
+            return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur().then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
                 const newOrder = [];
                 fakeOrder[id][current.type] = [];
                 const recur_status = index => {
@@ -2012,23 +1985,17 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             if (order[id][current.type]) {
                                 const real_id = order[id][current.type].filter(v => (v.symbol === item.index && !v.type.includes('EXCHANGE')));
                                 console.log(real_id);
-                                const real_delete = index => {
-                                    if (index >= real_id.length) {
-                                        return rest ? rest() : Promise.resolve();
+                                const real_delete = async () => {
+                                    for (let index = 0; index < real_id.length; index++) {
+                                        if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
+                                            continue;
+                                        }
+                                        await userRest.cancelOrder(real_id[index].id);
+                                        await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
                                     }
-                                    if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                        return real_delete(index + 1);
-                                        /*if ((real_id[index].time + ORDER_INTERVAL * 1.5) >= Math.round(new Date().getTime() / 1000)) {
-                                            console.log(`${real_id[index].symbol} order partially filled`);
-                                            return processOrderRest(real_id[index].amount, real_id[index].price, real_id[index].id, real_id[index]., item).then(() => real_delete(index + 1));
-                                        } else {
-                                            return real_delete(index + 1);
-                                        }*/
-                                    } else {
-                                        return userRest.cancelOrder(real_id[index].id).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => real_delete(index + 1)));
-                                    }
-                                }
-                                return real_delete(0);
+                                    return rest ? rest() : Promise.resolve();
+                                };
+                                return real_delete();
                             } else {
                                 order[id][current.type] = [];
                                 return rest ? rest() : Promise.resolve();
@@ -2552,22 +2519,28 @@ export const setWsOffer = (id, curArr=[], uid) => {
             });
         });
     }
-    const recurLoan = index => (index >= curArr.length) ? Promise.resolve() : (curArr[index] && SUPPORT_COIN.indexOf(curArr[index].type) !== -1) ? getLegder(curArr[index]).then(() => singleLoan(curArr[index]).then(() => singleTrade(curArr[index]).then(() => recurLoan(index + 1)))) : recurLoan(index + 1);
-    return initialBook().then(() => _closeRestCredit()).then(() => recurLoan(0));
+    const recurLoan = async () => {
+        for (let i = 0; i < curArr.length; i++) {
+            if (curArr[i] && SUPPORT_COIN.indexOf(curArr[i].type) !== -1) {
+                await getLegder(curArr[i]);
+                await singleLoan(curArr[i]);
+                await singleTrade(curArr[i]);
+            }
+        }
+    };
+    return initialBook().then(() => _closeRestCredit()).then(() => recurLoan());
 }
 
 export const resetBFX = (update=false) => {
     console.log('BFX reset');
-    const closeWs = index => {
-        if (index >= Object.keys(userWs).length) {
-            userWs = {};
-            userOk = {};
-            return Promise.resolve();
-        } else {
-            userWs[Object.keys(userWs)[index]].close();
-            return closeWs(index + 1);
+    const closeWs = async () => {
+        const keys = Object.keys(userWs);
+        for (let i = 0; i < keys.length; i++) {
+            userWs[keys[i]].close();
         }
-    }
+        userWs = {};
+        userOk = {};
+    };
     if (update) {
         for (let i in updateTime) {
             const trade_count = updateTime[i]['trade'];
@@ -2582,7 +2555,7 @@ export const resetBFX = (update=false) => {
         }
     } else {
         updateTime = {};
-        return closeWs(0);
+        return closeWs();
     }
 }
 
@@ -2869,67 +2842,64 @@ export default {
                                 item.push(data['pair'][i]);
                             }
                         }
-                        const recur_update = index => {
-                            if (index >= item.length) {
-                                if (userWs[userID]) {
-                                    userWs[userID].close();
-                                    userWs[userID] = null;
-                                    userOk[userID] = false;
-                                }
-                                return returnSupport(bitfinex);
-                            } else {
+                        const recur_update = async () => {
+                            for (let index = 0; index < item.length; index++) {
                                 if (item[index]._id) {
+                                    let updated = false;
                                     for (let i = 0; i < data['pair'].length; i++) {
                                         if (item[index].index === data['pair'][i].type) {
                                             if (item[index].ing === 2) {
                                                 item[index].ing = (position[userID] && position[userID][item[index].index]) ? 1 : 0;
                                             }
-                                            return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
+                                            const r = await Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {
                                                 times: Math.floor(item[index].times * data['pair'][i].amount / item[index].orig * 10000) / 10000,
                                                 //amount: item[index].amount + data['pair'][i].amount - item[index].orig,
                                                 orig: data['pair'][i].amount,
                                                 ing: item[index].ing,
-                                            }}).then(item => {
-                                                console.log(item);
-                                                return recur_update(index + 1);
-                                            });
+                                            }});
+                                            console.log(r);
+                                            updated = true;
+                                            break;
                                         }
                                     }
-                                    return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {ing: 2}}).then(result => {
+                                    if (!updated) {
+                                        const result = await Mongo('update', TOTALDB, {_id: item[index]._id}, {$set : {ing: 2}});
                                         console.log(result);
-                                        return recur_update(index + 1);
-                                    });
+                                    }
                                 } else {
-                                    return Mongo('find', TOTALDB, {index: item[index].type, sType: 1}).then(webitem => {
-                                        if (webitem.length < 1) {
-                                            return handleError(new HoError(`miss ${item[index].type} web`));
-                                        }
-                                        const maxAmount = webitem[0].mid * (webitem[0].web.length - 1) / 3 * 2;
-                                        return Mongo('insert', TOTALDB, {
-                                            owner: id,
-                                            index: item[index].type,
-                                            name: item[index].type.substr(1),
-                                            type: set.type,
-                                            sType: 1,
-                                            web: webitem[0].web,
-                                            wType: webitem[0].wType,
-                                            mid: webitem[0].mid,
-                                            times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
-                                            //amount: item[index].amount,
-                                            orig: item[index].amount,
-                                            previous: {buy: [], sell: []},
-                                            newMid: [],
-                                            ing: 0,
-                                            //count: 0,
-                                        }).then(item => {
-                                            console.log(item);
-                                            return recur_update(index + 1);
-                                        })
+                                    const webitem = await Mongo('find', TOTALDB, {index: item[index].type, sType: 1});
+                                    if (webitem.length < 1) {
+                                        return handleError(new HoError(`miss ${item[index].type} web`));
+                                    }
+                                    const maxAmount = webitem[0].mid * (webitem[0].web.length - 1) / 3 * 2;
+                                    const r = await Mongo('insert', TOTALDB, {
+                                        owner: id,
+                                        index: item[index].type,
+                                        name: item[index].type.substr(1),
+                                        type: set.type,
+                                        sType: 1,
+                                        web: webitem[0].web,
+                                        wType: webitem[0].wType,
+                                        mid: webitem[0].mid,
+                                        times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
+                                        //amount: item[index].amount,
+                                        orig: item[index].amount,
+                                        previous: {buy: [], sell: []},
+                                        newMid: [],
+                                        ing: 0,
+                                        //count: 0,
                                     });
+                                    console.log(r);
                                 }
                             }
+                            if (userWs[userID]) {
+                                userWs[userID].close();
+                                userWs[userID] = null;
+                                userOk[userID] = false;
+                            }
+                            return returnSupport(bitfinex);
                         }
-                        return recur_update(0);
+                        return recur_update();
                     } else {
                         if (userWs[userID]) {
                             userWs[userID].close();
