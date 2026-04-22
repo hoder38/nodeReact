@@ -415,3 +415,72 @@ Tests should fail loudly, not silently. Adopt:
 5. Delete the `process.on('unhandledRejection')` swallow in
    `bitfinex-tool.test.js` and re-enable the stub-skipped "low rate path"
    test — Phase B/C made this possible.
+
+---
+
+## Appendix: Section 1 Execution Status (2026-04-22)
+
+### 1.2 — Triage of files below 95% line coverage (full repo baseline)
+
+After Phase C+A landed (210 bitfinex tests), running `--coverage` against `src/back/**/*.js`:
+
+| File | Lines % | Status / Action |
+|---|---|---|
+| `back/cmd/googledrive.js` | 0% | **DEAD** (no inbound imports). Recommend deletion in a separate cleanup PR. |
+| `back/cmd/tdameritrade.js` | 0% | **DEAD** (cmd wrapper not imported). Recommend deletion. |
+| `back/controllers/fitness-router.js` | 0% | **DEAD** — `server.js` import is commented out. |
+| `back/controllers/rank-router.js` | 0% | **DEAD** — `server.js` import is commented out. |
+| `back/models/fitness-tool.js` | 0% | **DEAD** — only consumer is the dead `fitness-router.js`. |
+| `back/models/rank-tool.js` | 0% | **DEAD** — only consumer is the dead `rank-router.js`. |
+| `back/util/kubo.js` | 0% | **DEAD** — only commented import in `external-tool.js`. |
+| `back/controllers/lottery-router.js` | 0% | **ACTIVE** but untested (server.js + file-other-router.js import it). Add tests in next PR. |
+| `back/models/lottery-tool.js` | 0% | **ACTIVE** but untested. Add tests in next PR. |
+| `back/models/bitfinex-tool.js` | 56.33% | Needs **Phase A-2** (see 1.1 below). |
+| `back/controllers/bookmark-router.js` | 90.47% | Edge cases left (`isDefaultTag` channel branch, search-tags adultonly flag, error catches). |
+| `back/models/mongo-tool.js` | 90.62% | Uncovered = connect-time error branches (require ESM re-import gymnastics). |
+| `back/controllers/login-router.js` | 92.85% | Uncovered = `req.logIn()` callback. |
+| `back/controllers/parent-router.js` | 93.18% → **~98%** ✅ | Added 4 catch-error tests (2026-04-22). |
+
+### 1.2 — Quick wins shipped this PR
+- `parent-router.test.js`: +4 tests covering `.catch(err => handleError(err, next))` paths for `password/stock/fitness/rank /query` endpoints. Lifts parent-router from 93.18% → ~98%.
+
+### 1.2 — Recommended follow-up PR (small)
+1. **Delete dead modules** (≈ 7 files, ~1100 lines): `cmd/googledrive.js`, `cmd/tdameritrade.js`, `controllers/fitness-router.js`, `controllers/rank-router.js`, `models/fitness-tool.js`, `models/rank-tool.js`, `util/kubo.js`. Verify the commented imports in `server.js` and `external-tool.js` are intentional, then strip them. Will lift overall coverage by mechanical denominator reduction.
+2. **Test lottery-tool + lottery-router** (the only active 0% modules). Lottery is small (~482 lines combined) and has clear pure logic — straightforward unit tests.
+3. **bookmark-router edge tests**: cover `isDefaultTag.index === 30 / [1] === 'ch'` channel-bookmark path, and the `searchTags()` adultonly branch.
+4. **mongo-tool connect-error tests**: requires resetting `jest.resetModules()` between tests with different mock conditions for `MongoClient.connect` and `db.collection`.
+
+### 1.1 — `bitfinex-tool.js` 56% → 90%
+
+**What's done** (from previous PRs):
+- Phases B / C / A landed: 9 nested-promise → async/await conversions, 13 WS handler factories extracted as `makeOnXxx(id, ...)`, `initialBookFn(id, userRest)` extracted to module level.
+- 18 direct unit tests added against the extracted factories.
+- Coverage 54% → **56.33%**, tests 192 → **210**.
+
+**What's NOT done** (remaining ~34pp lift):
+- **Phase A-2** — extract `singleLoanFn(id, current, userRest, uid, deps)` (408 lines from inside `setWsOffer`) and `singleTradeFn(id, current, userRest, uid, deps)` (902 lines, includes `getAM`, `recur_status`, `recur_NewOrder`).
+
+**Why Phase A-2 is its own focused PR (not bundled here)**:
+- Each function depends on captured closure variables: `id`, `userRest`, `uid`, `curArr`, `_processOrderRest`, plus 5+ module-state references.
+- `singleTrade.getAM` has the pre-existing `i++`-instead-of-`j++` bug that should be fixed *with* a regression test in the same PR.
+- `recur_status`/`recur_NewOrder` need to be flattened to async/await *before* extraction or the table-driven tests won't be deterministic.
+- Risk profile justifies a single dedicated PR with focused review — not a multi-track change inside a coverage push.
+
+**Recommended Phase A-2 PR plan** (one engineer, ~2 days):
+1. Convert `recur_status` and `recur_NewOrder` to async/await for-loops (mirrors Phase B pattern). Run 4 113 tests — must stay green.
+2. Extract `singleLoanFn` to module level. Replace `singleLoan = current => singleLoanFn(id, current, userRest, deps)` inside `setWsOffer`. Run tests.
+3. Extract `singleTradeFn` similarly. Fix the `i++`/`j++` bug as a labelled commit with a new test that asserts cancel iterates through all candidates.
+4. Add table-driven tests:
+   - `singleLoanFn`: 12 cases parameterised over `(rate, MR, MR2, KAM, dynamicRate1/2)`.
+   - `singleTradeFn.getAM`: 8 cases over `(needTrans sign, availableMargin sign, current.clear, real_id has PARTIALLY)`.
+   - `recur_status`: 20+ cases over `(side, ing, web-position, profit delta, mid sign)`.
+   - `recur_NewOrder`: 10+ cases over `(orderType, sideFlag, current.allow, deletePending)`.
+5. Re-enable the stub-skipped "low rate path → MR>0 and rate < MR" test once fire-and-forget chains are gone.
+6. Remove `process.on('unhandledRejection', ()=>{})` swallow from `beforeEach`.
+
+**Projected outcome of Phase A-2**: lines 56% → **80-85%**; the remaining 5-10pp requires recorded-fixture replay against the real Bitfinex sandbox (out of scope for unit tests).
+
+### Final state after this PR
+- Full repo: **37 suites / 4 113 tests** all passing.
+- Repo-wide line coverage: **87.96%** (statements 86.65%, branches 79.13%, functions 81.98%).
+- See `doc/back/models/BITFINEX-TOOL-TESTABILITY.md` for the bitfinex-specific roadmap.

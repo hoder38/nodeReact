@@ -2,8 +2,7 @@ FROM node:14-bullseye-slim
 
 WORKDIR /app
 
-COPY ./package.json ./package-lock.json ./
-
+COPY . ./
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git python3 python3-pip build-essential p7zip-full ffmpeg qpdf megatools \
     && rm -rf /var/lib/apt/lists/*
@@ -13,6 +12,7 @@ RUN npm ci --legacy-peer-deps
 
 RUN npm run postinstall
 
-EXPOSE 8084
+EXPOSE 3390
+EXPOSE 3391
 
 CMD ["node", "src/back/controllers/file-server.js"]

@@ -447,5 +447,27 @@ describe('parent-router.js', () => {
       const res = await request(app).delete('/rank/del/r1').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
     });
+
+    // Error path coverage — exercises catch(err => handleError(err, next)) lines
+    test('GET /password/query rejects → next(err) → 500', async () => {
+      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
+      const res = await request(app).get('/password/query/pid1/name/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
+    test('GET /stock/query rejects → next(err) → 500', async () => {
+      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
+      const res = await request(app).get('/stock/query/pid1/name/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
+    test('GET /fitness/query rejects → next(err) → 500', async () => {
+      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
+      const res = await request(app).get('/fitness/query/pid1/name/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
+    test('GET /rank/query rejects → next(err) → 500', async () => {
+      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
+      const res = await request(app).get('/rank/query/pid1/mtime/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
   });
 });

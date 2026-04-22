@@ -12,8 +12,9 @@
     "dev-code": "docker compose restart reactnode-file-server reactnode-server",
     "dev-front": "docker exec -w /app reactnode-server ./node_modules/.bin/webpack --watch --config config/webpack.dev.config.cjs",
     "dev-stop": "docker compose down",
-    "release": "git pull; sudo service nginx-release restart; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop; sudo service release-nodejs-file.sh start; sleep 10; sudo service release-nodejs.sh start",
-    "release-stop": "sudo service nginx-release stop; sudo service release-nodejs-file.sh stop; sudo service release-nodejs.sh stop",
+    "release": "docker compose up -d",
+    "release-restart": "docker compose restart",
+    "release-stop": "docker compose down",
     "postinstall": "patch-package"
   },
   "type": "module",

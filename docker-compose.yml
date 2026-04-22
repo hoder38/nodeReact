@@ -3,12 +3,13 @@ services:
     build:
       context: .
       dockerfile: redis.Dockerfile
+    image: nodereact-redis:v1.0
     container_name: redis
     env_file: .env
     volumes:
       - /mnt/redis-docker:/data
     command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
-    restart: unless-stopped
+    restart: no
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${SESS_PWD}", "ping"]
       interval: 5s
@@ -19,12 +20,13 @@ services:
     build:
       context: .
       dockerfile: mongodb.Dockerfile
+    image: nodereact-mongodb:v1.0
     container_name: mongodb
     env_file: .env
     volumes:
       - /mnt/mongodb-docker:/data/db
     command: mongod --config /etc/mongo/mongod.conf
-    restart: unless-stopped
+    restart: no
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PWD}
@@ -39,23 +41,26 @@ services:
     build:
       context: .
       dockerfile: nginx.Dockerfile
+    image: nodereact-nginx:v1.0
     container_name: nginx-proxy
     ports:
-      - "8080:8080" # Map host 8080 to Nginx container 8080
+      - "8080:443" # Map host 8080 to Nginx container 8080
+      - "8081:80"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/storage:/mnt/storage:ro
-    restart: unless-stopped
+    restart: no
 
   reactnode-file-server:
     build:
       context: .
       dockerfile: reactnode-file-server.Dockerfile
+    image: reactnode-file-server:v1.0
     container_name: reactnode-file-server
     env_file: .env
     expose:
-      - "8083"
-      - "8084" # Expose internally for Nginx to access
+      - "3390"
+      - "3391" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
@@ -66,25 +71,26 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
 
   reactnode-server:
     build:
       context: .
       dockerfile: reactnode-server.Dockerfile
+    image: reactnode-server:v1.0
     container_name: reactnode-server
     env_file: .env
     expose:
-      - "8082" # Expose internally for Nginx to access
+      - "3389" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
-      - /mnt/storage:/mnt/storage
+      - /mnt/storage:/mnt/storage:ro
       - .:/app/
     depends_on:
       redis:
         condition: service_healthy
       mongodb:
         condition: service_healthy
-    restart: unless-stopped
+    restart: no
 
