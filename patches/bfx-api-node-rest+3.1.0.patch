@@ -6,7 +6,7 @@ diff --git a/node_modules/bfx-api-node-rest/lib/rest2.js b/node_modules/bfx-api-
 index 0a09a6e..e267184 100644
 --- a/node_modules/bfx-api-node-rest/lib/rest2.js
 +++ b/node_modules/bfx-api-node-rest/lib/rest2.js
-@@ -54,7 +54,7 @@ const API_URL = 'https://api.bitfinex.com'
+@@ -54,7 +54,7 @@
   */
  function _takeResNotify (data) {
    const notification = new Notification(data)
@@ -15,7 +15,7 @@ index 0a09a6e..e267184 100644
  }
  
  /**
-@@ -382,8 +382,8 @@ class RESTv2 {
+@@ -382,8 +382,8 @@
     * @returns {Promise} p
     * @see https://docs.bitfinex.com/v2/reference#rest-public-books
     */
@@ -26,7 +26,7 @@ index 0a09a6e..e267184 100644
    }
  
    /**
-@@ -532,9 +532,10 @@ class RESTv2 {
+@@ -532,9 +532,10 @@
      timeframe = '1m',
      symbol = 'tBTCUSD',
      section = 'hist',
@@ -38,15 +38,18 @@ index 0a09a6e..e267184 100644
  
      if (Object.keys(query).length > 0) {
        url += `?${new URLSearchParams(query).toString()}`
-@@ -1282,7 +1283,12 @@ class RESTv2 {
+@@ -1279,6 +1280,10 @@
+    * @returns {Promise} p
+    */
    submitOrder (order, cb) {
-+    // bfx-api-node-models@1.8.2+ wraps the order as { order: <Order> }
++    // bfx-api-node-models@1.8.2+ wraps as { order: <Order> }
 +    if (order && order.order && typeof order.order.toNewOrderPacket === 'function') {
 +      order = order.order
 +    }
      const packet = order.toNewOrderPacket()
  
-@@ -1293,8 +1299,8 @@ class RESTv2 {
+     if (this._affCode) {
+@@ -1293,8 +1298,8 @@
        .then((res) => {
          // 2 orders can be returned if OCO was used. But due to the interface
          // we can only return one. User should use getOrders instead
@@ -57,3 +60,15 @@ index 0a09a6e..e267184 100644
        })
    }
  
+@@ -1499,6 +1504,10 @@
+    * @returns {Promise} p
+    */
+   submitFundingOffer (offer, cb) {
++    // bfx-api-node-models@1.8.2+ wraps as { offer: <FundingOffer> }
++    if (offer && offer.offer && typeof offer.offer.toNewOfferPacket === 'function') {
++      offer = offer.offer
++    }
+     const packet = offer.toNewOfferPacket()
+ 
+     if (this._affCode) {
+
