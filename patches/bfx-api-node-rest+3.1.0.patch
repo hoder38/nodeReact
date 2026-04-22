@@ -38,7 +38,15 @@ index 0a09a6e..e267184 100644
  
      if (Object.keys(query).length > 0) {
        url += `?${new URLSearchParams(query).toString()}`
-@@ -1293,8 +1294,8 @@ class RESTv2 {
+@@ -1282,7 +1283,12 @@ class RESTv2 {
+   submitOrder (order, cb) {
++    // bfx-api-node-models@1.8.2+ wraps the order as { order: <Order> }
++    if (order && order.order && typeof order.order.toNewOrderPacket === 'function') {
++      order = order.order
++    }
+     const packet = order.toNewOrderPacket()
+ 
+@@ -1293,8 +1299,8 @@ class RESTv2 {
        .then((res) => {
          // 2 orders can be returned if OCO was used. But due to the interface
          // we can only return one. User should use getOrders instead
