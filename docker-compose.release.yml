@@ -1,0 +1,109 @@
+name: anomopi
+services:
+  redis:
+    build:
+      context: .
+      dockerfile: redis.Dockerfile
+    image: nodereact-redis:v1.0
+    container_name: redis-release
+    env_file: .env
+    volumes:
+      - /mnt/redis:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${SESS_PWD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    build:
+      context: .
+      dockerfile: mongodb.Dockerfile
+    image: nodereact-mongodb:v1.0
+    container_name: mongodb-release
+    env_file: .env
+    volumes:
+      - /mnt/mongodb:/data/db
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: mongod --config /etc/mongo/mongod.conf
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PWD}
+      MONGO_INITDB_DATABASE: ${DB_USERNAME}
+    healthcheck:
+      test: test $$(echo "db.version()" | mongo --port 27017 --quiet)
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    image: nodereact-nginx:v1.0
+    container_name: nginx-proxy-release
+    ports:
+      - "443:443" # Map host 8080 to Nginx container 8080
+      - "80:80"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /mnt/release/storage:/mnt/release/storage:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+
+  reactnode-file-server:
+    build:
+      context: .
+      dockerfile: reactnode-file-server.Dockerfile
+    image: reactnode-file-server:v1.0
+    container_name: reactnode-file-server-release
+    env_file: .env
+    environment:
+      - TZ=Asia/Taipei
+    expose:
+      - "3390"
+      - "3391" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/release/storage:/mnt/release/storage
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  reactnode-server:
+    build:
+      context: .
+      dockerfile: reactnode-server.Dockerfile
+    image: reactnode-server:v1.0
+    container_name: reactnode-server-release
+    env_file: .env
+    environment:
+      - TZ=Asia/Taipei
+    expose:
+      - "3389" # Expose internally for Nginx to access
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /mnt/tmp_dev:/mnt/tmp
+      - /mnt/release/storage:/mnt/release/storage:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+

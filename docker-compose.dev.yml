@@ -1,3 +1,4 @@
+name: anomopi-dev
 services:
   redis:
     build:
@@ -5,9 +6,11 @@ services:
       dockerfile: redis.Dockerfile
     image: nodereact-redis:v1.0
     container_name: redis
-    env_file: .env
+    env_file: .env.dev
     volumes:
       - /mnt/redis-docker:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
     restart: no
     healthcheck:
@@ -22,9 +25,11 @@ services:
       dockerfile: mongodb.Dockerfile
     image: nodereact-mongodb:v1.0
     container_name: mongodb
-    env_file: .env
+    env_file: .env.dev
     volumes:
       - /mnt/mongodb-docker:/data/db
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     command: mongod --config /etc/mongo/mongod.conf
     restart: no
     environment:
@@ -49,6 +54,8 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/storage:/mnt/storage:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     restart: no
 
   reactnode-file-server:
@@ -57,7 +64,9 @@ services:
       dockerfile: reactnode-file-server.Dockerfile
     image: reactnode-file-server:v1.0
     container_name: reactnode-file-server
-    env_file: .env
+    env_file: .env.dev
+    environment:
+      - TZ=Asia/Taipei
     expose:
       - "3390"
       - "3391" # Expose internally for Nginx to access
@@ -65,6 +74,8 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
       - /mnt/storage:/mnt/storage
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
       - .:/app/
     depends_on:
       redis:
@@ -79,13 +90,17 @@ services:
       dockerfile: reactnode-server.Dockerfile
     image: reactnode-server:v1.0
     container_name: reactnode-server
-    env_file: .env
+    env_file: .env.dev
+    environment:
+      - TZ=Asia/Taipei
     expose:
       - "3389" # Expose internally for Nginx to access
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/tmp_dev:/mnt/tmp
       - /mnt/storage:/mnt/storage:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
       - .:/app/
     depends_on:
       redis:
