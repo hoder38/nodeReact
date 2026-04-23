@@ -9,7 +9,7 @@
     "dev-test": "docker exec -w /app reactnode-server npm run test",
     "dev-build": "docker exec -w /app reactnode-server npm run build",
     "dev-back": "docker compose -f docker-compose.dev.yml down; docker compose -f docker-compose.dev.yml up -d --build",
-    "dev-code": "docker compose -f docker-compose.dev.yml restart reactnode-file-server reactnode-server",
+    "dev-code": "docker compose -f docker-compose.dev.yml restart reactnode-file-server reactnode-server nginx",
     "dev-front": "docker exec -w /app reactnode-server ./node_modules/.bin/webpack --watch --config config/webpack.dev.config.cjs",
     "dev-stop": "docker compose -f docker-compose.dev.yml down",
     "release": "docker compose -f docker-compose.release.yml up -d",

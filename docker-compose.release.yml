@@ -56,6 +56,9 @@ services:
       - /mnt/release/storage:/mnt/release/storage:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - reactnode-file-server
+      - reactnode-server
     restart: unless-stopped
 
   reactnode-file-server:

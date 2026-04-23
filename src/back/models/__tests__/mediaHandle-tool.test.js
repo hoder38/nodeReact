@@ -698,7 +698,7 @@ describe('handleMediaUpload', () => {
 
   test('PDF type → qpdf split + completeMedia', async () => {
     mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
-    mockReaddirSync.mockReturnValue(['001.pdf', '002.pdf', '003.pdf']);
+    mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf', '3.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]); // completeMedia
     const mt = { type: 'pdf', ext: 'pdf' };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
@@ -707,9 +707,31 @@ describe('handleMediaUpload', () => {
     expect(mockMongo).toHaveBeenCalled();
   });
 
+  test('PDF type → renames qpdf output to zero-padded names', async () => {
+    mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
+    mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf', '10.pdf']);
+    mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
+    const mt = { type: 'pdf', ext: 'pdf' };
+    await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());
+    const renameCalls = mockRenameSync.mock.calls;
+    expect(renameCalls.some(([, dst]) => dst.endsWith('001.pdf'))).toBe(true);
+    expect(renameCalls.some(([, dst]) => dst.endsWith('002.pdf'))).toBe(true);
+    expect(renameCalls.some(([, dst]) => dst.endsWith('003.pdf'))).toBe(true);
+  });
+
+  test('PDF type → qpdf exits with code 3 (warnings) → treated as success', async () => {
+    const warnErr = Object.assign(new Error('qpdf warnings'), { code: 3 });
+    mockExec.mockImplementation((cmd, cb) => cb(warnErr, ''));
+    mockReaddirSync.mockReturnValue(['1.pdf', '2.pdf']);
+    mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
+    const mt = { type: 'pdf', ext: 'pdf' };
+    await expect(MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser())).resolves.not.toThrow();
+    expect(mockMongo).toHaveBeenCalled();
+  });
+
   test('PDF with realPath → uses fileIndex path', async () => {
     mockExec.mockImplementation((cmd, cb) => cb(null, 'ok'));
-    mockReaddirSync.mockReturnValue(['001.pdf']);
+    mockReaddirSync.mockReturnValue(['1.pdf']);
     mockMongo.mockResolvedValueOnce({}).mockResolvedValueOnce([makeItem()]);
     const mt = { type: 'pdf', ext: 'pdf', realPath: 'rp', fileIndex: 2 };
     await MediaHandleTool.handleMediaUpload(mt, '/f', 'fid', makeUser());

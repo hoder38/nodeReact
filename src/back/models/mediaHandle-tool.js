@@ -241,10 +241,16 @@ export default {
             const pdfPath = `${filePath}_pdf`;
             console.log(pdfPath);
             deleteFolderRecursive(pdfPath);
-            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`qpdf ${comPath} --split-pages=1 -- ${pdfPath}/%03d.pdf`, (err, output) => err ? reject(err) : resolve(output)))).then(() => {
-                let number = 0;
-                FsReaddirSync(pdfPath).forEach((file,index) => number++);
-                return completeMedia(fileID, 10, mediaType['fileIndex'], number);
+            // qpdf exit code 3 means "succeeded with warnings" — treat it as success
+            return Mkdirp(pdfPath).then(() => new Promise((resolve, reject) => Child_process.exec(`qpdf ${comPath} --split-pages=1 -- ${pdfPath}/%d.pdf`, (err, output) => (err && err.code !== 3) ? reject(err) : resolve(output)))).then(() => {
+                const files = FsReaddirSync(pdfPath)
+                    .filter(f => f.endsWith('.pdf'))
+                    .sort((a, b) => parseInt(a) - parseInt(b));
+                files.forEach((file, i) => {
+                    const padded = String(i + 1).padStart(3, '0') + '.pdf';
+                    if (file !== padded) FsRenameSync(`${pdfPath}/${file}`, `${pdfPath}/${padded}`);
+                });
+                return completeMedia(fileID, 10, mediaType['fileIndex'], files.length);
             });
         } else if (mediaType['type'] === 'zipbook') {
             filePath = mediaType['realPath'] ? `${filePath}/${mediaType['fileIndex']}` : filePath;

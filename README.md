@@ -44,6 +44,6 @@ services:
 
 docker exec -it reactnode-file-server node ./src/back/cmd/cmd.js
 
-docker compose -f docker-compose.dev.yml logs -f
+docker compose -f docker-compose.dev.yml logs -f | -C 100
 
 docker system prune -a
