@@ -436,7 +436,7 @@ describe('api-tool.js', () => {
 
             const result = await Api('url', 'https://example.com');
 
-            expect(mockBufferToString).toHaveBeenCalledWith(mockBody);
+            expect(mockBufferToString).toHaveBeenCalledWith(mockBody, false);
             expect(result).toBe('test response');
         });
     });

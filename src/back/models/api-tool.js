@@ -135,7 +135,7 @@ function stopApi() {
     return Promise.resolve();
 }
 
-function download(user, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null, rest=null, errHandle=null, is_dm5=false, timeout=0, agent=false } = {}) {
+function download(user, url, { filePath=null, is_check=true, referer=null, is_json=false, post=null, not_utf8=false, cookie=null, fake_ip=null, rest=null, errHandle=null, is_dm5=false, timeout=0, agent=false, big5=false } = {}) {
     let qspost = null;
     if (post && !isEmptyObject(post)) {
         not_utf8 ? Object.entries(post).forEach(f => qspost = qspost ? `${qspost}&${f[0]}=${big5Encode(f[1])}` : `${f[0]}=${big5Encode(f[1])}`) : qspost = QStringify(post);
@@ -180,7 +180,7 @@ function download(user, url, { filePath=null, is_check=true, referer=null, is_js
                 const dest = FsCreateWriteStream(temp);
                 res.body.pipe(dest);
                 dest.on('finish', () => resolve());
-            })).then(() => FsRenameSync(temp, filePath)) : res.buffer().then(buffer => bufferToString(buffer));
+            })).then(() => FsRenameSync(temp, filePath)) : res.buffer().then(buffer => bufferToString(buffer, big5));
         }
     }).catch(err => {
         if (err.code === 'HPE_INVALID_CONSTANT') {

@@ -505,7 +505,7 @@ export default {
                 const recur_getTwseProfit = () => {
                     console.log(year);
                     console.log(quarter);
-                    return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`).then(raw_data => {
+                    return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`, {big5: true}).then(raw_data => {
                         if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
                             if (latestQuarter) {
                                 return handleError(new HoError('too short stock data'));
