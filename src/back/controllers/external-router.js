@@ -1,5 +1,5 @@
 import { OPENSUBTITLES_KEY, OPENSUBTITLES_USERNAME, OPENSUBTITLES_PASSWORD } from '../../../ver.js'
-import { USERDB, STORAGEDB, __dirname } from '../constants.js'
+import { USERDB, STORAGEDB } from '../constants.js'
 import Express from 'express'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync, unlink: FsUnlink, statSync: FsStatSync, renameSync: FsRenameSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, createReadStream: FsCreateReadStream, writeFile: FsWriteFile } = fsModule;
@@ -11,7 +11,6 @@ const { createInterface } = readline;
 import ReadTorrent from 'read-torrent'
 import OpenSubtitleRest from 'opensubtitles.com'
 //import OpenSubtitle from 'opensubtitles-api'
-import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
@@ -19,8 +18,8 @@ import PlaylistApi from '../models/api-tool-playlist.js'
 import Api from '../models/api-tool.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import External/*, { subHdUrl }*/ from '../models/external-tool.js'
-import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime.js'
-import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility.js'
+import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub } from '../util/mime.js'
+import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, completeZero } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();

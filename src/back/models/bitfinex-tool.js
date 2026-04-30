@@ -1,6 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { TBTC_SYM, TETH_SYM, BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, /*COIN_MAX, COIN_MAX_MAX, */RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM/*, FOMG_SYM*/, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
-import Htmlparser from 'htmlparser2'
+import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
@@ -9,7 +8,7 @@ import { calStair, stockProcess, stockTest, logArray } from '../models/stock-too
 import Mongo from '../models/mongo-tool.js'
 import Redis from '../models/redis-tool.js'
 import Api from './api-tool.js'
-import { handleError, HoError, isValidString, findTag } from '../util/utility.js'
+import { handleError, HoError, isValidString } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
 //system

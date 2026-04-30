@@ -3,7 +3,6 @@ import { HINT } from '../config.js'
 import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
-import { getOptionTag } from '../util/mime.js'
 
 export default function process(collection) {
     let getQuerySql = null;

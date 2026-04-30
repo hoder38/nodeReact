@@ -10,7 +10,7 @@ import Mongo, { objectID } from '../models/mongo-tool.js'
 import GoogleApi, { isApiing } from '../models/api-tool-google.js'
 import TagTool, { normalize, isDefaultTag } from '../models/tag-tool.js'
 import { isValidString, handleError, HoError, checkAdmin, getFileLocation, deleteFolderRecursive, sortList, toValidName } from '../util/utility.js'
-import { extTag, extType, isZip, isImage, changeExt, addPost } from '../util/mime.js'
+import { extTag, extType, isImage, addPost } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
 const StorageTagTool = TagTool(STORAGEDB);

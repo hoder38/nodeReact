@@ -1,4 +1,4 @@
-import { USERDB, DRIVE_LIMIT, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants.js'
+import { USERDB, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants.js'
 import { ENV_TYPE } from '../../../ver.js'
 import { BACKUP_PATH } from '../config.js'
 import readline from 'readline'
@@ -6,13 +6,13 @@ const { createInterface } = readline;
 import fsModule from 'fs'
 const { writeFile: FsWriteFile, createReadStream: FsCreateReadStream, existsSync: FsExistsSync } = fsModule;
 import Mkdirp from 'mkdirp'
-import { userDrive, autoDoc, sendPresentName } from '../models/api-tool-google.js'
+import { autoDoc, sendPresentName } from '../models/api-tool-google.js'
 import { completeMimeTag } from '../models/tag-tool.js'
 //import External from '../models/external-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import StockTool, { getStockListV2 } from '../models/stock-tool.js'
 import { updatePasswordCipher } from '../models/password-tool.js'
-import { handleError, isValidString, HoError, completeZero } from '../util/utility.js'
+import { handleError, HoError, completeZero } from '../util/utility.js'
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 

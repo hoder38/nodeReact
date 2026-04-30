@@ -1,4 +1,4 @@
-import { DEV, RELEASE } from './constants.js'
+import { RELEASE } from './constants.js'
 import DevConfig from '../../config/node-dev-config.js'
 import ReleaseConfig from '../../config/node-release-config.js'
 

@@ -2,11 +2,10 @@ import fsModule from 'fs'
 const { readFileSync: FsReadFileSync, createReadStream: FsCreateReadStream } = fsModule;
 
 //constant
-import { STATIC_PATH } from '../constants.js'
 
 //config
 import { ENV_TYPE, CA, CERT, PKEY/*, PKEY_PWD*/ } from '../../../ver.js'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT, APP_HTML } from '../config.js'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, EXTENT_PORT, IP, PORT } from '../config.js'
 
 //external
 import httpsModule from 'https'
@@ -18,7 +17,6 @@ const { urlencoded: BodyParserUrlencoded, json: BodyParserJson } = bodyParser;
 import Passport from 'passport'
 
 //model
-import Mongo, { objectID } from '../models/mongo-tool.js'
 import SessionStore from '../models/session-tool.js'
 
 //router

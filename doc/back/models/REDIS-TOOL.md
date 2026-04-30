@@ -4,7 +4,7 @@
 > **Role**: Redis client wrapper — provides a unified Promise-based interface to all Redis commands with transactional (`multi`) support
 > **Layer**: Model (Infrastructure)
 > **External Dependency**: `redis` npm package (Node Redis client)
-> **Referenced By**: `fitness-tool.js`, `external-tool.js`, `bitfinex-tool.js`, `stock-tool.js`, `storage-router.js`, `file-other-router.js`
+> **Referenced By**: `external-tool.js`, `bitfinex-tool.js`, `stock-tool.js`, `storage-router.js`, `file-other-router.js`
 > **Test File Location**: `src/back/models/__tests__/redis-tool.test.js`
 
 ---
@@ -40,7 +40,7 @@ redis (npm) ──────► Redis.createClient()
                          │
               ┌──────────┼──────────────┬──────────────┐
               ▼          ▼              ▼              ▼
-        fitness-tool  stock-tool  storage-router  file-other-router
+        stock-tool   storage-router  file-other-router
         external-tool bitfinex-tool
 ```
 
@@ -48,11 +48,9 @@ redis (npm) ──────► Redis.createClient()
 
 | Command    | Callers                                             |
 |------------|-----------------------------------------------------|
-| `hmset`    | bitfinex-tool, external-tool, fitness-tool, stock-tool, storage-router, file-other-router |
-| `hgetall`  | bitfinex-tool, external-tool, fitness-tool, stock-tool, storage-router, file-other-router |
-| `hmget`    | fitness-tool                                        |
-| `hget`     | fitness-tool, storage-router, file-other-router     |
-| `del`      | fitness-tool                                        |
+| `hmset`    | bitfinex-tool, external-tool, stock-tool, storage-router, file-other-router |
+| `hgetall`  | bitfinex-tool, external-tool, stock-tool, storage-router, file-other-router |
+| `hget`     | storage-router, file-other-router                   |
 | `multi`    | storage-router, file-other-router                   |
 
 ---
@@ -428,8 +426,8 @@ redisTool('multi', [
 ```json
 {
   "functionName": "hmget",
-  "args": ["cache:fitness:user42", "weight", "height", "nonexistent"],
-  "expectedResponse": ["75.5", "180", null]
+  "args": ["cache:stock:portfolio42", "shares", "value", "nonexistent"],
+  "expectedResponse": ["100", "12500", null]
 }
 ```
 

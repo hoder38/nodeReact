@@ -1,4 +1,4 @@
-import { STORAGEDB, PASSWORDDB, STOCKDB, BITFINEX } from '../constants.js'
+import { STORAGEDB, PASSWORDDB, STOCKDB } from '../constants.js'
 import Express from 'express'
 import TagTool from '../models/tag-tool.js'
 import { checkLogin, checkAdmin, handleError, getStorageItem, getPasswordItem, getStockItem } from '../util/utility.js'

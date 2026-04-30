@@ -36,14 +36,13 @@
 22. [`downloadPresent()` — Google Slides SVG Export](#22-downloadpresent--google-slides-svg-export)
 23. [`downloadDoc()` — Google Docs ZIP Export](#23-downloaddoc--google-docs-zip-export)
 24. [`googleBackup()` — Selective File Backup to Drive](#24-googlebackup--selective-file-backup-to-drive)
-25. [`googleDownloadSubtitle()` — YouTube Subtitle Downloader](#25-googledownloadsubtitle--youtube-subtitle-downloader)
-26. [`userDrive()` — Automated User Drive Sync](#26-userdrive--automated-user-drive-sync)
-27. [`autoDoc()` — Scheduled Document Downloader](#27-autodoc--scheduled-document-downloader)
-28. [`isApiing()` — Active API Check](#28-isapiing--active-api-check)
-29. [`sendPresentName()` — Christmas Exchange Email](#29-sendpresentname--christmas-exchange-email)
-30. [`sendLotteryName()` — Lottery Notification Email](#30-sendlotteryname--lottery-notification-email)
-31. [`googleBackupWhole()` — Full System Backup Upload](#31-googlebackupwhole--full-system-backup-upload)
-32. [`googleBackupDb()` — Database Collection Backup](#32-googlebackupdb--database-collection-backup)
+25. [`userDrive()` — Automated User Drive Sync](#25-userdrive--automated-user-drive-sync)
+26. [`autoDoc()` — Scheduled Document Downloader](#26-autodoc--scheduled-document-downloader)
+27. [`isApiing()` — Active API Check](#27-isapiing--active-api-check)
+28. [`sendPresentName()` — Christmas Exchange Email](#28-sendpresentname--christmas-exchange-email)
+29. [`sendLotteryName()` — Lottery Notification Email](#29-sendlotteryname--lottery-notification-email)
+30. [`googleBackupWhole()` — Full System Backup Upload](#30-googlebackupwhole--full-system-backup-upload)
+31. [`googleBackupDb()` — Database Collection Backup](#31-googlebackupdb--database-collection-backup)
 
 ---
 
@@ -1201,76 +1200,7 @@ googleBackup(user, id, name, filePath, tags, recycle, append='')
 | 8 | `recycle=0` (invalid) | `HoError('recycle 0 denied!!!')` |
 | 9 | `recycle=4` (invalid) | `HoError('recycle 4 denied!!!')` |
 
----
-
-## 25. `googleDownloadSubtitle()` — YouTube Subtitle Downloader
-
-### Purpose
-Download YouTube subtitles with language priority (Chinese variants > English), convert to VTT format.
-
-### Invocation & Authentication
-```js
-import { googleDownloadSubtitle } from '../models/api-tool-google.js';
-googleDownloadSubtitle(url: string, filePath: string): Promise<void>
-```
-
-### Logic Flow
-1. Create `{filePath}_sub/youtube/` directory
-2. Call `youtubedl.getSubs()` with languages: `zh-TW,zh-Hant,zh-CN,zh-Hans,zh-HK,zh-SG,en`
-3. Scan downloaded files, prioritize by language:
-   - `zh-TW` (7) > `zh-Hant` (6) > `zh-CN` (5) > `zh-Hans` (4) > `zh-HK` (3) > `zh-SG` (2)
-   - `en` tracked separately
-4. If neither Chinese nor English found → error
-5. For each selected subtitle:
-   - Backup existing subtitles (rename to `.srt1`, `.ass1`, `.ssa1`)
-   - Validate extension via `isSub()`
-6. Rename downloaded files to final paths
-7. Convert non-VTT formats via `SRT2VTT()`
-8. Delete `_sub/youtube/` temp directory
-
-### Returns & Side Effects
-- **Filesystem**: Creates temp dir, downloads subs, renames, converts, cleans up
-- **External**: Calls `youtube-dl-exec` for subtitle download
-
-### Snapshot Testing Data
-
-```js
-// Downloaded files in _sub/youtube/
-['video.zh-TW.vtt', 'video.en.srt']
-
-// Priority resolution
-{ choose: 'video.zh-TW.vtt', en: 'video.en.srt', pri: 7 }
-```
-
-### Comprehensive Test Scenarios
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| 1 | `zh-TW` available | Selected as primary (priority 7) |
-| 2 | `zh-Hant` highest available | Selected (priority 6) |
-| 3 | `zh-CN` highest available | Selected (priority 5) |
-| 4 | `zh-Hans` highest available | Selected (priority 4) |
-| 5 | `zh-HK` highest available | Selected (priority 3) |
-| 6 | `zh-SG` highest available | Selected (priority 2) |
-| 7 | Only `en` available | English selected, no Chinese |
-| 8 | Neither Chinese nor English | `HoError('sub donot have chinese and english!!!')` |
-| 9 | Multiple Chinese variants | Highest priority wins |
-| 10 | Subtitle ext not supported by `isSub()` | `HoError('sub ext not support!!!')` |
-| 11 | Both Chinese and English selected but both unsupported ext | `HoError('sub ext not support!!!')` |
-| 12 | Existing `.srt` at target path | Renamed to `.srt1` (backup) |
-| 13 | Existing `.ass` at target path | Renamed to `.ass1` |
-| 14 | Existing `.ssa` at target path | Renamed to `.ssa1` |
-| 15 | Downloaded format is VTT | No `SRT2VTT` conversion |
-| 16 | Downloaded format is SRT | `SRT2VTT()` conversion called |
-| 17 | `_sub/youtube/` already exists | Reuse directory |
-| 18 | `youtubedl.getSubs()` fails | Error propagated |
-| 19 | Temp directory cleanup | `deleteFolderRecursive` called |
-
-**Note**: Line 892 has a typo: `${filePath}}${lang}` (double `}`) — potential bug to document.
-
----
-
-## 26. `userDrive()` — Automated User Drive Sync
+## 25. `userDrive()` — Automated User Drive Sync
 
 ### Purpose
 Recursively traverse a user's Google Drive folder tree, listing files and dispatching them to `MediaHandleTool.singleDrive()` for processing. Iterates through multiple users.
@@ -1327,7 +1257,7 @@ userDrive(userlist: Array, index: number, drive_batch?: number): Promise<void>
 
 ---
 
-## 27. `autoDoc()` — Scheduled Document Downloader
+## 26. `autoDoc()` — Scheduled Document Downloader
 
 ### Purpose
 Automatically download documents from external sources for each user, organized by document type and country.
@@ -1376,7 +1306,7 @@ autoDoc(userlist: Array, index: number, type: string, date?: Date): Promise<void
 
 ---
 
-## 28. `isApiing()` — Active API Check
+## 27. `isApiing()` — Active API Check
 
 ### Purpose
 Check if any rate-limited Google API operations are currently in progress.
@@ -1400,7 +1330,7 @@ isApiing(): boolean
 
 ---
 
-## 29. `sendPresentName()` — Christmas Exchange Email
+## 28. `sendPresentName()` — Christmas Exchange Email
 
 ### Purpose
 Convenience wrapper to send a Christmas gift exchange notification email.
@@ -1424,7 +1354,7 @@ sendPresentName(text: string, mail: string, append?: string|null): Promise<void>
 
 ---
 
-## 30. `sendLotteryName()` — Lottery Notification Email
+## 29. `sendLotteryName()` — Lottery Notification Email
 
 ### Purpose
 Convenience wrapper to send lottery result notification emails.
@@ -1447,7 +1377,7 @@ sendLotteryName(title: string, text: string, mail: string): Promise<void>
 
 ---
 
-## 31. `googleBackupWhole()` — Full System Backup Upload
+## 30. `googleBackupWhole()` — Full System Backup Upload
 
 ### Purpose
 Upload a complete system backup file to Google Drive and notify via WebSocket.
@@ -1478,7 +1408,7 @@ googleBackupWhole(backupName: string): Promise<void>
 
 ---
 
-## 32. `googleBackupDb()` — Database Collection Backup
+## 31. `googleBackupDb()` — Database Collection Backup
 
 ### Purpose
 Create a Drive folder structure mirroring MongoDB backup directories and upload all backup files.

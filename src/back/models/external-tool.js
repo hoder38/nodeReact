@@ -1,22 +1,19 @@
-import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, MONTH_SHORTS, DOCDB } from '../constants.js'
+import { GENRE_LIST, GENRE_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, GAME_LIST, GAME_LIST_CH, MUSIC_LIST, MUSIC_LIST_WEB, CACHE_EXPIRE, STORAGEDB, MONTH_NAMES, DOCDB } from '../constants.js'
 import OpenCC from 'node-opencc'
 import Htmlparser from 'htmlparser2'
 import pathModule from 'path'
 const { dirname: PathDirname, extname: PathExtname, join: PathJoin } = pathModule;
-import youtubedl from 'youtube-dl-exec'
 import Mkdirp from 'mkdirp'
 import fsModule from 'fs'
 const { existsSync: FsExistsSync } = fsModule;
 import ReadTorrent from 'read-torrent'
 import Redis from '../models/redis-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
-import { normalize, isDefaultTag } from '../models/tag-tool.js'
+import { normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { handleError, HoError, toValidName, isValidString, getJson, completeZero, getFileLocation, findTag, addPre, torrent2Magnet } from '../util/utility.js'
-import { addPost } from '../util/mime.js'
 import Api from './api-tool.js'
 
-import sendWs from '../util/sendWs.js'
 
 
 export default {

@@ -2,7 +2,7 @@
 
 > **Project**: ANoMoPi (anomopi.com)
 > **Stack**: Node.js 14 · Express · React 17 · Redux · MongoDB 4.4 · Redis 5 · Nginx · Docker Compose
-> **Generated**: 2026-03-17
+> **Generated**: 2026-05-01
 
 ---
 
@@ -56,7 +56,7 @@
 │  · parent-router        │       │                                    │
 │  · home-router          │       │  WebSocket Server (path: /f)       │
 │  · other-router         │       │  Background Job Scheduler          │
-│  · lottery-router       │       │  File Upload (connect-multiparty)  │
+│                         │       │  File Upload (connect-multiparty)  │
 └────────┬────────────────┘       └────────┬──────────────────────────┘
          │                                  │
          ▼                                  ▼
@@ -163,7 +163,6 @@
 | **parent-router** | `/api/parent/*` | Tag category CRUD and queries |
 | **home-router** | `/api/homepage` | Help text / instructions |
 | **other-router** | `/refresh`, `/privacy`, `/s` | Utility & short URL redirects |
-| **lottery-router** | `/api/lottery/*` | Lottery management |
 
 #### File Server (`/f/api/*`)
 
@@ -192,12 +191,9 @@
 | `api-tool-google.js` | Google Drive upload, doc download, backup | googleapis |
 | `api-tool-playlist.js` | Playlist/torrent management | torrent-stream |
 | `discord-tool.js` | Discord webhook notifications | discord.js |
-| `external-tool.js` | External media sources (YIFY, DM5, EZTV, KUBO) | Various scrapers |
+| `external-tool.js` | External media sources (YIFY, DM5) | Various scrapers |
 | `mediaHandle-tool.js` | Media processing, thumbnails, integrity | ffmpeg, yt-dlp |
 | `tag-tool.js` | Tag CRUD, bookmark management, related tags | — |
-| `fitness-tool.js` | Fitness tracking records | — |
-| `rank-tool.js` | Ranking system | — |
-| `lottery-tool.js` | Lottery management + CSV export | — |
 | `api-tool.js` | General API utilities | — |
 
 ### 3.5 Utilities
@@ -207,7 +203,6 @@
 | `utility.js` | Validation (`isValidString`), auth middleware (`checkLogin`, `checkAdmin`), error handling (`HoError`), data formatters, file path helpers, crypto utilities |
 | `mime.js` | File type detection (23+ media, 10+ archive, 8+ doc, 6+ subtitle types), MIME mapping, extension utilities |
 | `sendWs.js` | WebSocket broadcast, TCP inter-process communication, Discord forwarding |
-| `kubo.js` | IPFS pinning and retrieval |
 | `twse.py` | Taiwan stock exchange Python helpers |
 | `myuzip.py` | Python ZIP/archive utilities |
 
@@ -333,8 +328,7 @@ Key API helper functions:
 | **Discord** | `discord.js` | Notification webhook | DISCORD_TOKEN, DISCORD_CHANNEL |
 | **OpenSubtitles** | `opensubtitles.com` (patched) | Subtitle search & download | OPENSUBTITLES_KEY, USERNAME, PASSWORD |
 | **YouTube/yt-dlp** | `youtube-dl-exec` + yt-dlp | Video downloading | — |
-| **YIFY/EZTV/DM5/KUBO** | Custom scrapers | External media sources | — |
-| **IPFS (Kubo)** | Custom client | Distributed file storage | — |
+| **YIFY/DM5** | Custom scrapers | External media sources | — |
 | **WebRTC TURN** | Nginx config | P2P relay | TURN_USERNAME, TURN_CREDENTIAL |
 | **Let's Encrypt** | Certbot | SSL/TLS certificates | `/etc/letsencrypt/` |
 
@@ -353,11 +347,6 @@ Key API helper functions:
 | `passwordUser` | User-password prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
 | `stock` | Stock entries | type, index, per, tags, important | 5 compound indexes |
 | `stockUser` | User-stock prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
-| `fitness` | Fitness records | name, tags, type | 3 indexes |
-| `fitnessUser` | User-fitness prefs | userId, name, mtime | 2 indexes |
-| `rank` | Rankings | name, tags | 2 indexes |
-| `rankUser` | User-rank prefs | userId, name, mtime | 2 indexes |
-| `lottery` | Lottery data | type, owner | `type_1_owner_1` |
 | `docUpdate` | Document sync status | — | — |
 | `verify` | 2FA verification codes | — | — |
 | `total` | Stock portfolio totals | — | — |
@@ -476,12 +465,12 @@ File Server (WSS /f)
 - **Supertest** available as a dev dependency (HTTP assertions)
 - **Scripts**: `npm test` (Jest), `npm run dev-test` (Docker exec), `npm run dev-test-python`
 
-### 10.2 Current Coverage: ⚠️ No Application Tests
+### 10.2 Current Coverage
 
-- **No test files exist** under `src/` (`*.test.js`, `*.spec.js`)
-- Python test file referenced (`myuzip.test.py`) for archive utilities
-- Jest config is ready but unused for application code
-- Zero unit, integration, or E2E test coverage
+- **37 test suites passing** with **3808 tests** across `src/back/` (`util/`, `models/`, `controllers/`, `cmd/`)
+- ESM-aware mocking via `jest.unstable_mockModule()` throughout
+- Python tests for archive utilities (`myuzip_test.py`) and TWSE helpers (`twse_test.py`)
+- Coverage hot-spots (≈100% line coverage where reachable): `util/utility.js`, `util/mime.js`, `util/sendWs.js`, `models/mongo-tool.js`, `models/redis-tool.js`, `models/tag-tool.js`, `models/api-tool-google.js`, `models/discord-tool.js`, `models/password-tool.js`, `models/external-tool.js`, `controllers/user-router.js`, `cmd/cmd.js`
 
 ---
 

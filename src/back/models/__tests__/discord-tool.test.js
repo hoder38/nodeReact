@@ -5,7 +5,7 @@
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
 let mockMongo, mockGenerateAuthUrl, mockGetToken;
-let mockChannelSend, mockMsgReply, mockClientOn, mockClientLogin, mockCacheGet;
+let mockChannelSend, mockClientOn, mockClientLogin, mockCacheGet;
 
 const DISCORD_TOKEN = 'test-token';
 const DISCORD_CHANNEL = 'test-channel-id';

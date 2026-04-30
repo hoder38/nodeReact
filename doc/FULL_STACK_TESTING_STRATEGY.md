@@ -11,7 +11,7 @@
 
 | Layer | What we have | What we don't have |
 |---|---|---|
-| Backend unit tests | **37 suites / 4 109 tests / 12 snapshots**, ~90-100% line coverage on most `models/*` and `controllers/*` | Coverage is uneven — `bitfinex-tool.js` ~56%, parts of file-server flow uncovered |
+| Backend unit tests | **37 suites / 3 808 tests / 12 snapshots**, ~90-100% line coverage on most `models/*` and `controllers/*` | Coverage is uneven — `bitfinex-tool.js` ~56%, parts of file-server flow uncovered |
 | Backend mocking | ESM `jest.unstable_mockModule()` everywhere, lots of seam exports (`_setState`, factories) | No contract tests against real `bfx-api-node-rest`, MongoDB, Redis |
 | Frontend | (none in repo so far) | No Jest/Vitest, no React Testing Library, no Storybook, no visual regression |
 | Integration (single container) | Implicit through controller tests with mocked deps | No real Express boot + supertest, no real Mongo/Redis through Docker |
@@ -428,13 +428,6 @@ After Phase C+A landed (210 bitfinex tests), running `--coverage` against `src/b
 |---|---|---|
 | `back/cmd/googledrive.js` | 0% | **DEAD** (no inbound imports). Recommend deletion in a separate cleanup PR. |
 | `back/cmd/tdameritrade.js` | 0% | **DEAD** (cmd wrapper not imported). Recommend deletion. |
-| `back/controllers/fitness-router.js` | 0% | **DEAD** — `server.js` import is commented out. |
-| `back/controllers/rank-router.js` | 0% | **DEAD** — `server.js` import is commented out. |
-| `back/models/fitness-tool.js` | 0% | **DEAD** — only consumer is the dead `fitness-router.js`. |
-| `back/models/rank-tool.js` | 0% | **DEAD** — only consumer is the dead `rank-router.js`. |
-| `back/util/kubo.js` | 0% | **DEAD** — only commented import in `external-tool.js`. |
-| `back/controllers/lottery-router.js` | 0% | **ACTIVE** but untested (server.js + file-other-router.js import it). Add tests in next PR. |
-| `back/models/lottery-tool.js` | 0% | **ACTIVE** but untested. Add tests in next PR. |
 | `back/models/bitfinex-tool.js` | 56.33% | Needs **Phase A-2** (see 1.1 below). |
 | `back/controllers/bookmark-router.js` | 90.47% | Edge cases left (`isDefaultTag` channel branch, search-tags adultonly flag, error catches). |
 | `back/models/mongo-tool.js` | 90.62% | Uncovered = connect-time error branches (require ESM re-import gymnastics). |
@@ -442,13 +435,12 @@ After Phase C+A landed (210 bitfinex tests), running `--coverage` against `src/b
 | `back/controllers/parent-router.js` | 93.18% → **~98%** ✅ | Added 4 catch-error tests (2026-04-22). |
 
 ### 1.2 — Quick wins shipped this PR
-- `parent-router.test.js`: +4 tests covering `.catch(err => handleError(err, next))` paths for `password/stock/fitness/rank /query` endpoints. Lifts parent-router from 93.18% → ~98%.
+- `parent-router.test.js`: +4 tests covering `.catch(err => handleError(err, next))` paths for `password/stock /query` endpoints. Lifts parent-router from 93.18% → ~98%.
 
 ### 1.2 — Recommended follow-up PR (small)
-1. **Delete dead modules** (≈ 7 files, ~1100 lines): `cmd/googledrive.js`, `cmd/tdameritrade.js`, `controllers/fitness-router.js`, `controllers/rank-router.js`, `models/fitness-tool.js`, `models/rank-tool.js`, `util/kubo.js`. Verify the commented imports in `server.js` and `external-tool.js` are intentional, then strip them. Will lift overall coverage by mechanical denominator reduction.
-2. **Test lottery-tool + lottery-router** (the only active 0% modules). Lottery is small (~482 lines combined) and has clear pure logic — straightforward unit tests.
-3. **bookmark-router edge tests**: cover `isDefaultTag.index === 30 / [1] === 'ch'` channel-bookmark path, and the `searchTags()` adultonly branch.
-4. **mongo-tool connect-error tests**: requires resetting `jest.resetModules()` between tests with different mock conditions for `MongoClient.connect` and `db.collection`.
+1. **Delete dead modules** (≈ 2 files): `cmd/googledrive.js`, `cmd/tdameritrade.js`. Will lift overall coverage by mechanical denominator reduction.
+2. **bookmark-router edge tests**: cover `isDefaultTag.index === 30 / [1] === 'ch'` channel-bookmark path, and the `searchTags()` adultonly branch.
+3. **mongo-tool connect-error tests**: requires resetting `jest.resetModules()` between tests with different mock conditions for `MongoClient.connect` and `db.collection`.
 
 ### 1.1 — `bitfinex-tool.js` 56% → 90%
 
@@ -467,7 +459,7 @@ After Phase C+A landed (210 bitfinex tests), running `--coverage` against `src/b
 - Risk profile justifies a single dedicated PR with focused review — not a multi-track change inside a coverage push.
 
 **Recommended Phase A-2 PR plan** (one engineer, ~2 days):
-1. Convert `recur_status` and `recur_NewOrder` to async/await for-loops (mirrors Phase B pattern). Run 4 113 tests — must stay green.
+1. Convert `recur_status` and `recur_NewOrder` to async/await for-loops (mirrors Phase B pattern). Run 3 808 tests — must stay green.
 2. Extract `singleLoanFn` to module level. Replace `singleLoan = current => singleLoanFn(id, current, userRest, deps)` inside `setWsOffer`. Run tests.
 3. Extract `singleTradeFn` similarly. Fix the `i++`/`j++` bug as a labelled commit with a new test that asserts cancel iterates through all candidates.
 4. Add table-driven tests:
@@ -481,6 +473,6 @@ After Phase C+A landed (210 bitfinex tests), running `--coverage` against `src/b
 **Projected outcome of Phase A-2**: lines 56% → **80-85%**; the remaining 5-10pp requires recorded-fixture replay against the real Bitfinex sandbox (out of scope for unit tests).
 
 ### Final state after this PR
-- Full repo: **37 suites / 4 113 tests** all passing.
+- Full repo: **37 suites / 3 808 tests** all passing.
 - Repo-wide line coverage: **87.96%** (statements 86.65%, branches 79.13%, functions 81.98%).
 - See `doc/back/models/BITFINEX-TOOL-TESTABILITY.md` for the bitfinex-specific roadmap.

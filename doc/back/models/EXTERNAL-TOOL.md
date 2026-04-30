@@ -2,8 +2,8 @@
 
 > **Module**: `src/back/models/external-tool.js`
 > **Project**: ANoMoPi (anomopi.com)
-> **Role**: External media source integration — scraping, parsing, metadata extraction from YIFY, Bilibili, Kubo, DM5, EZTV, YouTube, Steam, IMDB, and more
-> **External Dependencies**: `node-opencc`, `htmlparser2`, `youtube-dl-exec`, `mkdirp`, `fs`, `read-torrent`
+> **Role**: External media source integration — scraping, parsing, metadata extraction from YIFY, DM5, Steam, IMDB, and more
+> **External Dependencies**: `node-opencc`, `htmlparser2`, `mkdirp`, `fs`, `read-torrent`
 > **Internal Dependencies**: `redis-tool.js`, `api-tool-google.js`, `tag-tool.js`, `mongo-tool.js`, `utility.js`, `mime.js`, `api-tool.js`, `sendWs.js`
 > **Testing Approach**: Mock HTTP clients, HTML parsers, filesystem, MongoDB, Redis; stub external API responses per OUTLINE.md §11.4 (Phase 6)
 > **Priority**: 🟡 High — Critical for external content aggregation, complex HTML parsing, multi-source scraping with rate-limiting and caching
@@ -17,14 +17,9 @@
    - 2.1 [`getSingleList()`](#21-getsinglelist--multi-source-list-scraper)
    - 2.2 [`save2Drive()`](#22-save2drive--google-drive-persistence)
    - 2.3 [`parseTagUrl()`](#23-parsetagurl--url-metadata-extractor)
-   - 2.4 [`youtubePlaylist()`](#24-youtubeplaylist--youtube-playlist-paginator)
-   - 2.5 [`getSingleId()`](#25-getsingleid--single-item-fetcher)
-   - 2.6 [`saveSingle()`](#26-savesingle--single-item-metadata-persister)
-3. [Named Export Functions](#3-named-export-functions)
-   - 3.1 [`bilibiliVideoUrl()`](#31-bilibilivideourl--bilibili-video-extractor)
-   - 3.2 [`kuboVideoUrl()`](#32-kubovideourl--kubo-multi-player-extractor)
-   - 3.3 [`youtubeVideoUrl()`](#33-youtubevideourl--youtube-dl-wrapper)
-4. [Internal Helper Functions](#4-internal-helper-functions)
+   - 2.4 [`getSingleId()`](#24-getsingleid--single-item-fetcher)
+   - 2.5 [`saveSingle()`](#25-savesingle--single-item-metadata-persister)
+3. [Internal Helper Functions](#3-internal-helper-functions)
 
 ---
 
@@ -41,7 +36,6 @@
 | `CACHE_EXPIRE` | `constants.js` | Redis cache TTL (seconds) |
 | `STORAGEDB`, `DOCDB` | `constants.js` | MongoDB collection names |
 | `MONTH_NAMES`, `MONTH_SHORTS` | `constants.js` | Date parsing utilities |
-| `KUBO_TYPE` | `constants.js` | Kubo video player type mappings |
 
 ### Module Architecture
 
@@ -50,36 +44,24 @@
 │                      external-tool.js                           │
 │                                                                 │
 │  ┌────────────────────────────────────────────────────────┐   │
-│  │  Default Export Object (6 functions)                   │   │
+│  │  Default Export Object (5 functions)                   │   │
 │  ├────────────────────────────────────────────────────────┤   │
-│  │  getSingleList()  ─┬─> YIFY, Bilibili, Kubo, DM5      │   │
-│  │                    ├─> EZTV, Steam, IMDB scraping      │   │
+│  │  getSingleList()  ─┬─> YIFY, DM5, Steam, IMDB scrape  │   │
 │  │                    └─> Returns: [{id, name, thumb}]    │   │
 │  │                                                         │   │
 │  │  save2Drive()      ─┬─> Parse external source HTML     │   │
 │  │                    ├─> Extract video/torrent links     │   │
 │  │                    └─> Upload to Google Drive          │   │
 │  │                                                         │   │
-│  │  parseTagUrl()     ─┬─> IMDB, Steam, Youku parsing     │   │
+│  │  parseTagUrl()     ─┬─> IMDB, Steam tag parsing        │   │
 │  │                    └─> Extract tags from URL metadata  │   │
 │  │                                                         │   │
-│  │  youtubePlaylist() ─┬─> YouTube Data API v3           │   │
-│  │                    └─> Paginated playlist retrieval    │   │
-│  │                                                         │   │
 │  │  getSingleId()     ─┬─> Single item deep fetch         │   │
-│  │                    ├─> YouTube, EZTV, YIFY, Kubo       │   │
+│  │                    ├─> YIFY, DM5 item retrieval        │   │
 │  │                    └─> Returns: [item, isEnd, total]   │   │
 │  │                                                         │   │
 │  │  saveSingle()      ─┬─> Persist metadata to MongoDB    │   │
 │  │                    └─> Returns: [name, tags, ...]      │   │
-│  └────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌────────────────────────────────────────────────────────┐   │
-│  │  Named Exports (3 functions)                           │   │
-│  ├────────────────────────────────────────────────────────┤   │
-│  │  bilibiliVideoUrl()  → Bilibili embed extractor        │   │
-│  │  kuboVideoUrl()      → Kubo multi-player URL parser    │   │
-│  │  youtubeVideoUrl()   → youtube-dl-exec wrapper         │   │
 │  └────────────────────────────────────────────────────────┘   │
 │                                                                 │
 │  External Dependencies:                                        │
@@ -87,7 +69,6 @@
 │  ├─ GoogleApi() ────────> Google Drive upload                  │
 │  ├─ Redis() ────────────> Caching layer (TTL: CACHE_EXPIRE)   │
 │  ├─ Mongo() ────────────> CRUD operations on STORAGEDB         │
-│  ├─ youtubedl() ────────> Video URL extraction               │
 │  ├─ Htmlparser ─────────> HTML DOM parsing                     │
 │  └─ OpenCC ─────────────> Traditional/Simplified Chinese      │
 └─────────────────────────────────────────────────────────────────┘
@@ -124,7 +105,7 @@ User clicks → getSingleId('yify', url, index)
 ## 2.1 `getSingleList()` — Multi-Source List Scraper
 
 ### Purpose
-Fetches paginated lists of media items from external sources. Supports 18+ different platforms including torrent sites (YIFY, EZTV), manga (DM5), streaming platforms (Bilibili, Kubo), and more. Returns standardized item arrays with `id`, `name`, `thumb`, `date`, `tags`, `rating`, `count`.
+Fetches paginated lists of media items from external sources. Supports various platforms including torrent sites (YIFY), manga (DM5), and metadata sources (Steam, IMDB). Returns standardized item arrays with `id`, `name`, `thumb`, `date`, `tags`, `rating`, `count`.
 
 ### Invocation & Authentication
 ```js
@@ -141,8 +122,6 @@ defaultExport.getSingleList(type: string, url: string, post?: object): Promise<A
 ### Logic Flow
 1. **Type Routing**: Switch on `type` parameter:
    - `'yify'` → Scrape YIFY torrent site
-   - `'bilibili'` → Parse Bilibili video pages
-   - `'kubo'` → Extract Kubo streaming content
    - `'dm5'` → DM5 manga chapters
    - `'bls'`, `'cen'`, `'bea'`, `'ism'`, `'cbo'`, `'nar'`, `'sca'`, `'fed'`, `'sea'`, `'tri'`, `'ndc'`, `'sta'`, `'mof'`, `'moe'`, `'cbc'` → Various manga/content aggregators
 2. **HTTP Fetch**: Use `Api('url', url)` or `Api('url', url, {post})` for POST requests
@@ -242,12 +221,9 @@ url: 'https://www.dm5.com/manhua-list-p1/'
 | # | Scenario | Input | Expected Output |
 |---|----------|-------|-----------------|
 | 1 | YIFY movie list (page 1) | `type='yify'`, `url='https://yts.mx/browse-movies'` | Array of movie objects with torrents |
-| 2 | Bilibili video search | `type='bilibili'`, `url` with search query | Array with video IDs, titles, thumbnails |
-| 3 | Kubo streaming list | `type='kubo'`, URL to Kubo category | Array with video entries |
-| 4 | DM5 manga category | `type='dm5'`, category URL | Array of manga with chapter counts |
-| 5 | EZTV torrent list | `type='eztv'`, EZTV URL (if supported) | Array with torrent metadata |
-| 6 | POST request type | Any type supporting POST, with `post` object | Correct POST data sent |
-| 7 | Each of 18+ supported types | All `type` values | Type-specific parsing logic executes |
+| 2 | DM5 manga category | `type='dm5'`, category URL | Array of manga with chapter counts |
+| 3 | POST request type | Any type supporting POST, with `post` object | Correct POST data sent |
+| 4 | Each of 15+ supported types | All `type` values | Type-specific parsing logic executes |
 
 #### Edge Cases
 | # | Scenario | Input | Expected Behavior |
@@ -295,7 +271,7 @@ Downloads content from external sources (HTML pages, torrents, media links) and 
 defaultExport.save2Drive(type: string, obj: object, parent: string): Promise<object>
 ```
 - **Parameters**:
-  - `type`: External source type (e.g., `'bls'`, `'cen'`, `'kubo'`)
+  - `type`: External source type (e.g., `'bls'`, `'cen'`)
   - `obj`: Object with `{ name: string, date?: string, url: string }`
   - `parent`: Google Drive folder ID (destination)
 - **Authentication**: Requires Google Drive OAuth via `GoogleApi`
@@ -338,21 +314,21 @@ defaultExport.save2Drive(type: string, obj: object, parent: string): Promise<obj
 
 ### Snapshot Testing Data
 
-#### Input: Kubo Episode Upload
+#### Input: DM5 Manga Upload
 ```js
-type: 'kubo'
+type: 'dm5'
 obj: {
-  name: "進擊的巨人 EP12",
+  name: "One Piece Chapter 1",
   date: "2023-05-15",
-  url: "https://www.99kubo.tv/vod-play/12345-1-12.html"
+  url: "https://www.dm5.com/manhua-onepiece/"
 }
 parent: "1DriveParentFolderId"
 ```
 
 #### Expected Behavior:
-1. Fetch HTML from Kubo URL
-2. Parse DOM to extract video `<source src="https://cdn.99kubo.tv/12345.mp4">`
-3. Call `GoogleApi('upload', { name: "進擊的巨人 EP12", url: "https://cdn.99kubo.tv/12345.mp4", parent: "1DriveParentFolderId" })`
+1. Fetch HTML from DM5 URL
+2. Parse DOM to extract image `<img src="https://...image.jpg">`
+3. Call `GoogleApi('upload', { name: "One Piece Chapter 1", url: "https://...image.jpg", parent: "1DriveParentFolderId" })`
 4. Return Google Drive file object
 
 ### Comprehensive Test Scenarios
@@ -364,7 +340,6 @@ parent: "1DriveParentFolderId"
 | 2 | Valid obj with all fields | `{ name, date, url }` | Successful upload |
 | 3 | obj missing `date` | `{ name, url }` | Date omitted, upload proceeds |
 | 4 | Multiple video sources | HTML with multiple `<source>` | Upload all or first source (document) |
-| 5 | Torrent link extraction | `type='eztv'`, torrent page | Extract magnet/torrent URL |
 | 6 | Direct video URL | `type` with direct `.mp4` link | Upload without intermediate download |
 
 #### Edge Cases
@@ -402,14 +377,14 @@ parent: "1DriveParentFolderId"
 ## 2.3 `parseTagUrl()` — URL Metadata Extractor
 
 ### Purpose
-Extracts tags, genres, and metadata from various URL types (IMDB, Steam, Youku, etc.) to enrich file metadata. Parses URL patterns and scrapes linked pages to build comprehensive tag sets.
+Extracts tags, genres, and metadata from various URL types (IMDB, Steam, etc.) to enrich file metadata. Parses URL patterns and scrapes linked pages to build comprehensive tag sets.
 
 ### Invocation & Authentication
 ```js
 defaultExport.parseTagUrl(type: string, url: string): Promise<Array<string>>
 ```
 - **Parameters**:
-  - `type`: URL source type (`'imdb'`, `'steam'`, `'youku'`, `'youku_playlist'`)
+  - `type`: URL source type (`'imdb'`, `'steam'`)
   - `url`: URL to parse/scrape
 - **Authentication**: None required for public pages
 - Returns array of normalized tag strings
@@ -418,8 +393,6 @@ defaultExport.parseTagUrl(type: string, url: string): Promise<Array<string>>
 1. **Type Dispatch**:
    - `'imdb'` → Extract IMDB movie ID, scrape genres/actors/directors
    - `'steam'` → Parse Steam app ID, fetch game categories/tags
-   - `'youku'` → Parse Youku video page for tags
-   - `'youku_playlist'` → Extract playlist metadata
 2. **URL Pattern Matching**:
    - Use regex to extract IDs from URLs
    - Example IMDB: `/title/tt0133093/` → `tt0133093`
@@ -438,7 +411,7 @@ defaultExport.parseTagUrl(type: string, url: string): Promise<Array<string>>
 ### Returns & Side Effects
 - **Returns**: `Promise<string[]>` — Array of tag strings
 - **Side Effects**:
-  - HTTP requests to external sites (IMDB, Steam, Youku)
+  - HTTP requests to external sites (IMDB, Steam)
   - No database writes
 
 ### Snapshot Testing Data
@@ -487,8 +460,6 @@ url: 'https://store.steampowered.com/app/570/Dota_2/'
 |---|----------|-------|----------|
 | 1 | IMDB movie URL | Valid IMDB URL | Array of genres/actors |
 | 2 | Steam game URL | Valid Steam app URL | Array of game categories |
-| 3 | Youku video URL | Valid Youku URL | Tags from video page |
-| 4 | Youku playlist URL | Playlist URL with `type='youku_playlist'` | Playlist-level tags |
 | 5 | Each supported type | All 4 type values | Type-specific scraping |
 
 #### Edge Cases
@@ -520,140 +491,8 @@ url: 'https://store.steampowered.com/app/570/Dota_2/'
 | 21 | Age-gated content (Steam) | May return restricted tags or error |
 | 22 | Geo-blocked content | Request fails with regional error |
 
----
 
-## 2.4 `youtubePlaylist()` — YouTube Playlist Paginator
-
-### Purpose
-Fetches items from a YouTube playlist using YouTube Data API v3 with pagination support. Returns a single item at specified index, along with navigation metadata (is_end, total_count).
-
-### Invocation & Authentication
-```js
-defaultExport.youtubePlaylist(id: string, index: number, pageToken?: string, back?: boolean): Promise<[object, boolean, number]>
-```
-- **Parameters**:
-  - `id`: YouTube playlist ID (e.g., `PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf`)
-  - `index`: Zero-based index of item to fetch
-  - `pageToken` (optional): Pagination token from previous call
-  - `back` (optional): If `true`, navigate backwards through pages
-- **Authentication**: Uses Google API key via `GoogleApi('y playlist', ...)`
-- Returns `[item_object, is_end_boolean, total_count]`
-
-### Logic Flow
-1. **API Call**:
-   - Construct request: `GoogleApi('y playlist', { id, pageToken, maxResults: 50 })`
-   - Receive response with `items[]`, `nextPageToken`, `pageInfo.totalResults`
-2. **Index Resolution**:
-   - Calculate which page contains `index`
-   - If `index` beyond current page, recursively call with `nextPageToken`
-   - If `index` within current page, extract item at position
-3. **End Detection**:
-   - If `nextPageToken` is absent → `is_end = true`
-   - If `back === true` and no `prevPageToken` → `is_end = true`
-4. **Item Transformation**:
-   - Extract `videoId`, `title`, `thumbnail`, `publishedAt`
-   - Normalize to internal schema
-5. **Return**: `[item, is_end, total_count]`
-
-### Returns & Side Effects
-- **Returns**: `Promise<[object, boolean, number]>`
-  - `item`: Playlist item with video metadata
-  - `is_end`: Boolean indicating last item
-  - `total_count`: Total items in playlist
-- **Side Effects**:
-  - YouTube Data API quota consumption (~1-3 units per call)
-  - Recursive calls for deep pagination (multiple API requests)
-
-### Snapshot Testing Data
-
-#### Input: First Item of Playlist
-```js
-id: "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"
-index: 0
-pageToken: undefined
-back: false
-```
-
-#### Expected Output:
-```js
-[
-  {
-    id: "dQw4w9WgXcQ",
-    name: "Rick Astley - Never Gonna Give You Up",
-    thumb: "https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg",
-    date: "2009-10-25T06:57:33Z"
-  },
-  false,  // Not the last item
-  217     // Total items in playlist
-]
-```
-
-#### Input: Last Item of Playlist
-```js
-id: "PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf"
-index: 216
-pageToken: "CBQQAA"
-back: false
-```
-
-#### Expected Output:
-```js
-[
-  {
-    id: "J9gKyRmic20",
-    name: "Last Video in Playlist",
-    thumb: "https://i.ytimg.com/vi/J9gKyRmic20/default.jpg",
-    date: "2023-05-20T12:00:00Z"
-  },
-  true,   // Last item
-  217
-]
-```
-
-### Comprehensive Test Scenarios
-
-#### Logical Branches
-| # | Scenario | Input | Expected |
-|---|----------|-------|----------|
-| 1 | First item, no token | `index=0`, `pageToken=undefined` | First item, `is_end=false` |
-| 2 | Mid-playlist item | `index=25` | Correct item at index 25 |
-| 3 | Last item in playlist | `index=total_count-1` | Last item, `is_end=true` |
-| 4 | Item on second page | `index=60` (page size 50) | Recursive call with `nextPageToken` |
-| 5 | Backwards navigation | `back=true`, `pageToken` present | Previous page fetched |
-| 6 | Item at page boundary | `index=49` (last on page 1) | Correct item, `is_end=false` |
-
-#### Edge Cases
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 7 | Empty playlist | Total count = 0, returns `[null, true, 0]` |
-| 8 | Single-item playlist | `index=0`, returns item with `is_end=true` |
-| 9 | Index out of bounds | `index >= total_count`, error or null item |
-| 10 | Invalid playlist ID | YouTube API error (404), propagated |
-| 11 | Private/deleted videos | Item skipped or marked as unavailable |
-| 12 | Extremely large playlist (5000+ items) | Multiple recursive API calls, eventual result |
-| 13 | Negative index | Error or treated as 0 |
-| 14 | Non-integer index | Rounded down or error |
-
-#### Error Handling
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 15 | YouTube API rate limit | 403 error, propagated to caller |
-| 16 | Network timeout | Retry logic in `GoogleApi`, eventual error |
-| 17 | Invalid pageToken | API error (400), propagated |
-| 18 | API key quota exceeded | Daily quota error (403) |
-| 19 | Malformed API response | Parsing error, rejected promise |
-
-#### Authentication Scenarios
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 20 | Valid API key | Request succeeds |
-| 21 | API key missing | 400 error from YouTube |
-| 22 | API key revoked | 403 error |
-| 23 | OAuth vs API key | Uses API key (not OAuth) |
-
----
-
-## 2.5 `getSingleId()` — Single Item Fetcher
+## 2.4 `getSingleId()` — Single Item Fetcher
 
 ### Purpose
 Deep-fetches a single media item from external sources with full metadata. Used when user clicks on a list item to view details. Supports pagination context (previous/next) and returns navigation metadata.
@@ -663,23 +502,18 @@ Deep-fetches a single media item from external sources with full metadata. Used 
 defaultExport.getSingleId(type: string, url: string, index: number, pageToken?: string, back?: boolean): Promise<[object, boolean, number]>
 ```
 - **Parameters**:
-  - `type`: Source type (`'youtube'`, `'lovetv'`, `'eztv'`, `'yify'`, `'kubo'`, `'dm5'`, `'bilibili'`)
+  - `type`: Source type (`'yify'`, `'dm5'`)
   - `url`: Item or list URL
   - `index`: Item index within list context
-  - `pageToken` (optional): For YouTube playlists
+  - `pageToken` (optional): Not used
   - `back` (optional): Navigation direction
-- **Authentication**: None for most sources; Google API key for YouTube
+- **Authentication**: None required
 - Returns `[item_data, is_end, total_count]`
 
 ### Logic Flow
 1. **Type Dispatch**: Switch on `type`:
-   - `'youtube'` → Delegate to `youtubePlaylist()`
-   - `'lovetv'` → Scrape lovetv drama episode list
-   - `'eztv'` → Parse EZTV torrent page
    - `'yify'` → Fetch YIFY movie with torrent links
-   - `'kubo'` → Extract Kubo video episode data
    - `'dm5'` → Scrape DM5 manga chapter
-   - `'bilibili'` → Parse Bilibili video metadata
 2. **List Context Handling**:
    - If `url` is a list page, parse to find item at `index`
    - Extract item's detail page URL
@@ -748,41 +582,13 @@ index: 0
 ]
 ```
 
-#### Input: YouTube Playlist Item
-```js
-type: 'youtube'
-url: 'https://www.youtube.com/playlist?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf'
-index: 5
-```
-
-#### Expected Output:
-```js
-[
-  {
-    id: "dQw4w9WgXcQ",
-    name: "Video Title at Index 5",
-    thumb: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-    date: "2021-03-15T10:30:00Z",
-    channel: "Channel Name",
-    views: 1500000
-  },
-  false,  // Not last item
-  217     // Total in playlist
-]
-```
-
 ### Comprehensive Test Scenarios
 
 #### Logical Branches
 | # | Scenario | Input | Expected |
 |---|----------|-------|----------|
-| 1 | YouTube playlist item | `type='youtube'`, valid playlist URL | Delegates to `youtubePlaylist()` |
 | 2 | YIFY movie detail | `type='yify'`, movie URL | Full movie metadata with torrents |
-| 3 | EZTV torrent page | `type='eztv'`, episode URL | Episode info with magnet links |
-| 4 | Kubo video episode | `type='kubo'`, episode URL | Video sources and subtitles |
 | 5 | DM5 manga chapter | `type='dm5'`, chapter URL | Chapter images and metadata |
-| 6 | Bilibili video | `type='bilibili'`, video URL | Video info with embed URL |
-| 7 | LoveTV drama episode | `type='lovetv'`, episode URL | Episode metadata |
 | 8 | Each supported type | All 7+ type values | Type-specific detail scraping |
 
 #### Edge Cases
@@ -807,19 +613,18 @@ index: 5
 | 21 | Parsing error | Logged via `handleError()`, rejected |
 | 22 | Invalid `type` parameter | Default case error or `[]` |
 | 23 | Malformed URL | URL parsing error, propagated |
-| 24 | YouTube API rate limit | 403 error from YouTube |
 | 25 | Redis connection error | Logged, continues without cache |
 
 #### Authentication Scenarios
 | # | Scenario | Expected Behavior |
 |---|----------|-------------------|
-| 26 | YouTube (requires API key) | Uses `GoogleApi` with key |
-| 27 | Public sources (YIFY, etc.) | No auth required |
-| 28 | Login-walled content | Fails with 401/403 (not supported) |
+
+| 26 | Public sources (YIFY, etc.) | No auth required |
+| 27 | Login-walled content | Fails with 401/403 (not supported) |
 
 ---
 
-## 2.6 `saveSingle()` — Single Item Metadata Persister
+## 2.5 `saveSingle()` — Single Item Metadata Persister
 
 ### Purpose
 Persists metadata for a single item to MongoDB's `STORAGEDB` collection. Extracts comprehensive metadata (tags, thumbnails, URLs) and stores in normalized format for search and retrieval.
@@ -829,7 +634,7 @@ Persists metadata for a single item to MongoDB's `STORAGEDB` collection. Extract
 defaultExport.saveSingle(type: string, id: string | number): Promise<[string, Set<string>, Set<string>, string, string, string]>
 ```
 - **Parameters**:
-  - `type`: Source type (`'yify'`, `'kubo'`, `'dm5'`, `'eztv'`)
+  - `type`: Source type (`'yify'`, `'dm5'`)
   - `id`: Item identifier from source
 - **Authentication**: None for external fetch; requires user session for DB write
 - Returns tuple: `[name, tags_set, additional_tags_set, type_name, thumbnail_url, full_url]`
@@ -837,9 +642,7 @@ defaultExport.saveSingle(type: string, id: string | number): Promise<[string, Se
 ### Logic Flow
 1. **Type Dispatch**: Switch on `type`:
    - `'yify'` → Fetch YIFY movie API JSON
-   - `'kubo'` → Scrape Kubo video page
    - `'dm5'` → Parse DM5 manga metadata
-   - `'eztv'` → Extract EZTV show info
 2. **Data Fetching**:
    - `Api('url', constructed_url)` or API endpoint
    - Parse response (JSON or HTML)
@@ -913,9 +716,7 @@ id: "one-piece"
 | # | Scenario | Input | Expected |
 |---|----------|-------|----------|
 | 1 | YIFY movie | `type='yify'`, valid movie ID | Full movie metadata tuple |
-| 2 | Kubo video | `type='kubo'`, video ID | Video metadata tuple |
 | 3 | DM5 manga | `type='dm5'`, manga ID | Manga metadata tuple |
-| 4 | EZTV show | `type='eztv'`, show ID | Show metadata tuple |
 | 5 | Each supported type | All 4 type values | Type-specific extraction |
 
 #### Edge Cases
@@ -949,410 +750,7 @@ id: "one-piece"
 
 ---
 
-## 3. Named Export Functions
-
----
-
-## 3.1 `bilibiliVideoUrl()` — Bilibili Video Extractor
-
-### Purpose
-Extracts video metadata and embed URLs from Bilibili (Chinese video platform). Uses Bilibili's public API to fetch video info and constructs embed player URL.
-
-### Invocation & Authentication
-```js
-import { bilibiliVideoUrl } from '../models/external-tool.js';
-bilibiliVideoUrl(url: string): Promise<object>
-```
-- **Parameters**:
-  - `url`: Bilibili video URL (format: `https://www.bilibili.com/video/av{id}` or `https://www.bilibili.com/video/BV{bvid}`)
-- **Authentication**: None required (public API)
-- Returns video metadata with embed URL
-
-### Logic Flow
-1. **ID Extraction**:
-   - Parse URL for `av{id}` (e.g., `av170001`)
-   - Extract numeric ID: `170001`
-2. **API Call**:
-   - `Api('url', 'https://api.bilibili.com/x/web-interface/view?aid={id}')`
-   - Response is JSON with video metadata
-3. **Response Parsing**:
-   - Extract `data.title` → video title
-   - Extract `data.aid` → video ID
-   - Extract `data.bvid` → BV ID (newer format)
-4. **Embed URL Construction**:
-   - Build: `https://player.bilibili.com/player.html?aid={aid}&bvid={bvid}`
-5. **Return**: Object with title, video array, embed array
-
-### Returns & Side Effects
-- **Returns**: `Promise<object>`
-  ```js
-  {
-    title: "Video Title",
-    video: [],  // Empty (direct URLs not exposed by API)
-    embed: ["https://player.bilibili.com/player.html?aid=170001&bvid=BV17x411w7KC"]
-  }
-  ```
-- **Side Effects**:
-  - HTTP request to Bilibili API
-  - No database writes
-
-### Snapshot Testing Data
-
-#### Input:
-```js
-url: "https://www.bilibili.com/video/av170001"
-```
-
-#### Expected Output:
-```js
-{
-  title: "【東方】Bad Apple!! ＰＶ【影絵】",
-  video: [],
-  embed: ["https://player.bilibili.com/player.html?aid=170001&bvid=BV17x411w7KC"]
-}
-```
-
-### Comprehensive Test Scenarios
-
-#### Logical Branches
-| # | Scenario | Input | Expected |
-|---|----------|-------|----------|
-| 1 | Standard AV URL | `https://www.bilibili.com/video/av170001` | Title and embed URL |
-| 2 | BV URL format | `https://www.bilibili.com/video/BV17x411w7KC` | Correct parsing (if supported) |
-| 3 | Mobile URL | `https://m.bilibili.com/video/av170001` | Same result |
-
-#### Edge Cases
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 4 | Invalid video ID | API returns error (404 or -404 code) |
-| 5 | Deleted video | API error, propagated |
-| 6 | Private video | API error (access denied) |
-| 7 | URL without ID | Parsing fails, error |
-| 8 | Non-Bilibili URL | ID extraction fails, error |
-
-#### Error Handling
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 9 | Network timeout | Retry, eventual error |
-| 10 | Bilibili API down | 500 error, propagated |
-| 11 | Malformed JSON response | Parsing error |
-| 12 | URL is `null` | Error thrown |
-
-#### Authentication Scenarios
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 13 | Public video | No auth required, succeeds |
-| 14 | Region-locked video | May fail based on server IP |
-
----
-
-## 3.2 `kuboVideoUrl()` — Kubo Multi-Player Extractor
-
-### Purpose
-Extracts video URLs from Kubo (99kubo.tv) with support for multiple player types. Handles 3 different player implementations (kdy, kud, kyu) with varying URL structures and subtitle support.
-
-### Invocation & Authentication
-```js
-import { kuboVideoUrl } from '../models/external-tool.js';
-kuboVideoUrl(id: string, url: string, subIndex?: number): Promise<object>
-```
-- **Parameters**:
-  - `id`: Player type identifier (`'kdy'`, `'kud'`, `'kyu'`)
-  - `url`: Kubo video page URL
-  - `subIndex` (optional): Subtitle/source index (default: `1`)
-- **Authentication**: None required
-- Returns video URLs and optional subtitle info
-
-### Logic Flow
-1. **Type Dispatch**: Switch on `id`:
-   - `'kdy'` → KDY player (most common)
-   - `'kud'` → KUD player variant
-   - `'kyu'` → KYU player (older format)
-2. **Page Fetch**:
-   - `Api('url', url)` → HTML response
-   - `Htmlparser.parseDOM(raw_data)` → DOM tree
-3. **Player-Specific Parsing**:
-   - **KDY**: Extract from `<script>` tag containing `player_aaaa=` variable
-     - Parse JSON object with video sources
-     - Support multiple subtitle tracks
-     - Return: `{ video: [urls], url: [urls], title, sub: count }`
-   - **KUD**: Similar to KDY but different variable name
-   - **KYU**: Parse from `player_data` with iframe fallback
-4. **Subtitle Handling** (if `subIndex` provided):
-   - Select subtitle track at index
-   - Extract subtitle URL and video URL pair
-5. **URL Resolution**:
-   - Resolve relative URLs to absolute
-   - Handle CDN variations
-6. **Return**: Object with video URLs and metadata
-
-### Returns & Side Effects
-- **Returns**: `Promise<object>`
-  - KDY/KUD format:
-    ```js
-    {
-      video: ["https://cdn1.99kubo.tv/20230515/vid1.m3u8", "https://cdn2.99kubo.tv/20230515/vid1.m3u8"],
-      url: ["https://cdn1.99kubo.tv/20230515/vid1.m3u8"],
-      title: "進擊的巨人 第12集",
-      sub: 3  // Number of subtitle tracks
-    }
-    ```
-  - KYU format:
-    ```js
-    {
-      video: ["https://v.99kubo.tv/play/abc123.mp4"],
-      url: ["https://v.99kubo.tv/play/abc123.mp4"]
-    }
-    ```
-- **Side Effects**:
-  - HTTP request to Kubo
-  - No database writes
-
-### Snapshot Testing Data
-
-#### Input: KDY Player
-```js
-id: 'kdy'
-url: 'https://www.99kubo.tv/vod-play/12345-1-12.html'
-subIndex: 1
-```
-
-#### Expected Output:
-```js
-{
-  video: [
-    "https://cdn1.99kubo.tv/20230515/12345_12.m3u8",
-    "https://cdn2.99kubo.tv/20230515/12345_12.m3u8"
-  ],
-  url: ["https://cdn1.99kubo.tv/20230515/12345_12.m3u8"],
-  title: "進擊的巨人 第12集",
-  sub: 2
-}
-```
-
-#### Input: KYU Player (Fallback)
-```js
-id: 'kyu'
-url: 'https://www.99kubo.tv/vod-play/old-12345-1-1.html'
-subIndex: 1
-```
-
-#### Expected Output:
-```js
-{
-  video: ["https://v.99kubo.tv/play/old_12345.mp4"],
-  url: ["https://v.99kubo.tv/play/old_12345.mp4"]
-}
-```
-
-### Comprehensive Test Scenarios
-
-#### Logical Branches
-| # | Scenario | Input | Expected |
-|---|----------|-------|----------|
-| 1 | KDY player | `id='kdy'`, valid URL | Video URLs with subtitle info |
-| 2 | KUD player | `id='kud'`, valid URL | KUD-specific parsing |
-| 3 | KYU player | `id='kyu'`, valid URL | KYU-specific parsing |
-| 4 | subIndex = 1 | Default subtitle track | First subtitle source |
-| 5 | subIndex = 2 | Second subtitle track | Second subtitle source |
-| 6 | Multiple CDN mirrors | Page with 2+ CDN URLs | All URLs in `video` array |
-
-#### Edge Cases
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 7 | Page with no subtitles | `sub` field omitted or `0` |
-| 8 | Single CDN source | `video` and `url` arrays have 1 item |
-| 9 | subIndex out of bounds | Returns last available or error |
-| 10 | Invalid player ID | Default case, may error |
-| 11 | URL with no video data | Empty arrays or null |
-| 12 | Relative video URLs | Converted to absolute with base URL |
-| 13 | M3U8 playlist URLs | Returned as-is for HLS playback |
-| 14 | Direct MP4 URLs | Returned for direct download |
-
-#### Error Handling
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 15 | Network timeout | Retry, eventual error |
-| 16 | HTTP 404 | Error propagated |
-| 17 | Malformed HTML | Parsing error, rejected |
-| 18 | Missing `player_aaaa` variable | Error or empty result |
-| 19 | Invalid JSON in script tag | JSON parse error |
-| 20 | `id` is `null` or `undefined` | Error or default behavior |
-
-#### Authentication Scenarios
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 21 | Public video | No auth required, succeeds |
-| 22 | Premium content | May fail if not supported |
-
----
-
-## 3.3 `youtubeVideoUrl()` — YouTube-DL Wrapper
-
-### Purpose
-Extracts video and audio URLs from multiple platforms using `youtube-dl-exec` (yt-dlp). Supports YouTube, Dailymotion, LINE TV, iQiyi, Youku, and others. Returns direct media URLs or embed URLs depending on platform.
-
-### Invocation & Authentication
-```js
-import { youtubeVideoUrl } from '../models/external-tool.js';
-youtubeVideoUrl(id: string, url: string): Promise<object>
-```
-- **Parameters**:
-  - `id`: Platform identifier (`'you'`, `'dym'`, `'lin'`, `'iqi'`, `'yuk'`, or generic)
-  - `url`: Video URL from respective platform
-- **Authentication**: None required (uses public extraction)
-- Returns media URLs and metadata
-
-### Logic Flow
-1. **Platform Detection**: Switch on `id`:
-   - `'you'` → YouTube (video + audio split)
-   - `'dym'` → Dailymotion
-   - `'lin'` → LINE TV
-   - `'iqi'` → iQiyi
-   - `'yuk'` → Youku (with iframe embed)
-   - Default → Generic platform
-2. **youtube-dl-exec Call**:
-   - For YouTube: `youtubedl(url, { dumpSingleJson: true, format: 'bestvideo+bestaudio' })`
-   - For others: `youtubedl(url, { dumpSingleJson: true })`
-   - Returns JSON with format list
-3. **Format Selection**:
-   - **YouTube**: Find best video format (h264, VP9) + best audio (m4a, opus)
-   - **Others**: Extract all available format URLs
-4. **URL Extraction**:
-   - Parse `formats` array from JSON
-   - Filter by codec, quality preferences
-   - Build URL arrays
-5. **Special Handling**:
-   - **Youku**: Detect FLV format → construct iframe embed URL
-   - **YouTube**: Return separate video and audio URLs
-6. **Return**: Object with video, audio, embed, iframe, title fields
-
-### Returns & Side Effects
-- **Returns**: `Promise<object>`
-  - YouTube format:
-    ```js
-    {
-      video: ["https://rr5---sn-..googlevideo.com/videoplayback?..."],
-      audio: "https://rr5---sn-..googlevideo.com/videoplayback?...",
-      title: "Video Title"
-    }
-    ```
-  - Generic format:
-    ```js
-    {
-      video: ["https://platform.com/video1.mp4", "https://platform.com/video2.mp4"],
-      title: "Video Title"
-    }
-    ```
-  - Youku (FLV) format:
-    ```js
-    {
-      video: ["https://v.youku.com/v_show/id_XMTIzNDU2Nzg5MA==.html?spm=..."],
-      iframe: ["//player.youku.com/embed/XMTIzNDU2Nzg5MA=="]
-    }
-    ```
-- **Side Effects**:
-  - Spawns `youtube-dl-exec` subprocess
-  - HTTP requests to video platforms
-  - CPU/memory usage for video metadata extraction
-  - No database writes
-
-### Snapshot Testing Data
-
-#### Input: YouTube Video
-```js
-id: 'you'
-url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-```
-
-#### Expected Output:
-```js
-{
-  video: ["https://rr5---sn-ab5l6nls.googlevideo.com/videoplayback?expire=1234567890&ei=..."],
-  audio: "https://rr5---sn-ab5l6nls.googlevideo.com/videoplayback?expire=1234567890&ei=...&mime=audio%2Fmp4",
-  title: "Rick Astley - Never Gonna Give You Up (Official Video)"
-}
-```
-
-#### Input: Dailymotion Video
-```js
-id: 'dym'
-url: 'https://www.dailymotion.com/video/x8b9xyz'
-```
-
-#### Expected Output:
-```js
-{
-  video: [
-    "https://www.dailymotion.com/cdn/H264-1280x720/video/x8b9xyz.mp4",
-    "https://www.dailymotion.com/cdn/H264-854x480/video/x8b9xyz.mp4"
-  ],
-  title: "Dailymotion Video Title"
-}
-```
-
-#### Input: Youku Video (FLV)
-```js
-id: 'yuk'
-url: 'https://v.youku.com/v_show/id_XMTIzNDU2Nzg5MA==.html'
-```
-
-#### Expected Output:
-```js
-{
-  video: ["https://v.youku.com/v_show/id_XMTIzNDU2Nzg5MA==.html?type=flv"],
-  iframe: ["//player.youku.com/embed/XMTIzNDU2Nzg5MA=="]
-}
-```
-
-### Comprehensive Test Scenarios
-
-#### Logical Branches
-| # | Scenario | Input | Expected |
-|---|----------|-------|----------|
-| 1 | YouTube video | `id='you'`, YouTube URL | Video + audio URLs separated |
-| 2 | Dailymotion video | `id='dym'`, Dailymotion URL | Multiple quality video URLs |
-| 3 | LINE TV video | `id='lin'`, LINE TV URL | LINE-specific extraction |
-| 4 | iQiyi video | `id='iqi'`, iQiyi URL | iQiyi video URLs |
-| 5 | Youku video (FLV) | `id='yuk'`, Youku URL with FLV | Iframe embed URL |
-| 6 | Youku video (non-FLV) | `id='yuk'`, Youku URL without FLV | Direct video URLs |
-| 7 | Generic platform | `id='generic'`, unsupported platform | Best-effort extraction |
-
-#### Edge Cases
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 8 | Video with no audio | `audio` field omitted or empty |
-| 9 | Audio-only content | `video` array empty, `audio` present |
-| 10 | Multiple video qualities | All qualities in `video` array |
-| 11 | Age-restricted YouTube | May fail without auth |
-| 12 | Private/deleted video | youtube-dl error propagated |
-| 13 | Live stream URL | May return manifest URL or error |
-| 14 | Playlist URL | Only extracts first video (or error) |
-| 15 | Short URL (youtu.be) | Resolves to full URL, extracts |
-| 16 | Mobile URL (m.youtube.com) | Resolves and extracts normally |
-
-#### Error Handling
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 17 | youtube-dl-exec not installed | Process spawn error |
-| 18 | youtube-dl-exec crashes | Error caught, propagated |
-| 19 | Unsupported URL | youtube-dl error message |
-| 20 | Network timeout | youtube-dl timeout error |
-| 21 | Invalid JSON from youtube-dl | JSON parse error |
-| 22 | Empty format list | Returns empty `video` array |
-| 23 | `url` is `null` or `undefined` | Error thrown by youtube-dl |
-| 24 | Geo-blocked content | youtube-dl error (403) |
-
-#### Authentication Scenarios
-| # | Scenario | Expected Behavior |
-|---|----------|-------------------|
-| 25 | Public videos | No auth required, succeeds |
-| 26 | Login-required content | Fails (cookies not passed) |
-| 27 | Premium-only content | Extraction fails |
-
----
-
-## 4. Internal Helper Functions
+## 3. Internal Helper Functions
 
 ### Overview
 The module contains numerous internal helper functions not exported but critical for operation:
@@ -1375,9 +773,9 @@ The module contains numerous internal helper functions not exported but critical
 
 ---
 
-## 5. Testing Infrastructure Recommendations
+## 4. Testing Infrastructure Recommendations
 
-### 5.1 Mock Strategy
+### 4.1 Mock Strategy
 
 #### HTTP Mocking
 ```js
@@ -1387,8 +785,8 @@ jest.mock('../api-tool.js', () => ({
     if (url.includes('yts.mx')) {
       return Promise.resolve(mockYifyHtml);
     }
-    if (url.includes('bilibili.com')) {
-      return Promise.resolve(mockBilibiliJson);
+    if (url.includes('dm5.com')) {
+      return Promise.resolve(mockDm5Html);
     }
     return Promise.reject(new Error('Unmocked URL'));
   })
@@ -1414,7 +812,7 @@ jest.mock('../mongo-tool.js', () => ({
 }));
 ```
 
-### 5.2 Fixture Data
+### 4.2 Fixture Data
 
 **Create fixtures directory**: `test/fixtures/external-tool/`
 
@@ -1422,55 +820,40 @@ jest.mock('../mongo-tool.js', () => ({
 test/fixtures/external-tool/
 ├── yify-browse-page.html       # YIFY movie list HTML
 ├── yify-movie-detail.html      # YIFY movie detail page
-├── bilibili-api-response.json  # Bilibili API JSON
-├── kubo-kdy-player.html        # Kubo KDY player page
 ├── dm5-manga-list.html         # DM5 manga category
-├── youtube-playlist-api.json   # YouTube Data API response
 └── ...
 ```
 
-### 5.3 Test File Structure
+### 4.3 Test File Structure
 
 ```
 test/back/models/
 ├── external-tool.test.js
 │   ├── describe('getSingleList')
 │   │   ├── test('yify movie list')
-│   │   ├── test('bilibili search')
-│   │   ├── test('kubo category')
+│   │   ├── test('dm5 category')
 │   │   └── ...
 │   ├── describe('save2Drive')
-│   │   ├── test('kubo episode upload')
 │   │   └── ...
 │   ├── describe('parseTagUrl')
 │   │   ├── test('imdb url')
 │   │   └── ...
-│   ├── describe('youtubePlaylist')
-│   │   ├── test('first item')
-│   │   ├── test('pagination')
-│   │   └── ...
 │   ├── describe('getSingleId')
 │   │   └── ...
-│   ├── describe('saveSingle')
-│   │   └── ...
-│   ├── describe('bilibiliVideoUrl')
-│   │   └── ...
-│   ├── describe('kuboVideoUrl')
-│   │   └── ...
-│   └── describe('youtubeVideoUrl')
+│   └── describe('saveSingle')
 │       └── ...
 ```
 
-### 5.4 Integration Test Considerations
+### 4.4 Integration Test Considerations
 
 #### Live API Tests (Optional, Separate Suite)
 ```js
 describe('external-tool integration (live)', () => {
   jest.setTimeout(30000); // 30s timeout
   
-  test('real YouTube playlist fetch', async () => {
-    // Use actual YouTube API (requires key)
-    const result = await youtubePlaylist('PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf', 0);
+  test('real YIFY movie fetch', async () => {
+    // Use actual YIFY site (public)
+    const result = await getSingleId('yify', 'https://yts.mx/movies/inception-2010', 0);
     expect(result).toMatchSnapshot();
   });
 });
@@ -1478,55 +861,46 @@ describe('external-tool integration (live)', () => {
 
 **Run separately**: `npm test -- --testPathPattern=integration`
 
-### 5.5 Performance Benchmarks
+### 4.5 Performance Benchmarks
 
 | Function | Expected Max Duration | Notes |
 |----------|----------------------|-------|
 | `getSingleList()` | 5s | Network-bound |
 | `save2Drive()` | 30s | File upload, network-bound |
 | `parseTagUrl()` | 3s | Single page scrape |
-| `youtubePlaylist()` | 2s | API call |
 | `getSingleId()` | 5s | Detail page scrape |
 | `saveSingle()` | 3s | Metadata fetch |
-| `bilibiliVideoUrl()` | 2s | API call |
-| `kuboVideoUrl()` | 3s | Page scrape |
-| `youtubeVideoUrl()` | 10s | youtube-dl subprocess |
 
 ---
 
-## 6. Known Limitations & Edge Cases
+## 5. Known Limitations & Edge Cases
 
-### 6.1 External Site Dependencies
+### 5.1 External Site Dependencies
 - **Risk**: HTML structure changes break parsers
 - **Mitigation**: Fixture-based tests detect breakage; version pins on dependencies
 - **Monitoring**: Log parsing errors to detect site changes
 
-### 6.2 Rate Limiting
-- **YIFY, EZTV**: May block after excessive requests
-- **YouTube**: API quota (10,000 units/day)
-- **Bilibili**: Soft limits on API calls
+### 5.2 Rate Limiting
+- **YIFY**: May block after excessive requests
+- **Steam, IMDB**: Rate-limited on some requests
 - **Mitigation**: Redis caching with `CACHE_EXPIRE` TTL; backoff in `Api()`
 
-### 6.3 Geo-Restrictions
-- **YouTube, Bilibili**: Some content region-locked
+### 5.3 Geo-Restrictions
+- **IMDB, Steam**: Region availability varies
 - **Behavior**: Returns error or empty results
 - **Testing**: Mock geo-blocked responses
 
-### 6.4 Authentication Limitations
+### 5.4 Authentication Limitations
 - **No Cookie Support**: Login-walled content inaccessible
 - **OAuth Limitation**: Only Google Drive OAuth implemented
 - **Premium Content**: Cannot extract subscription-only media
 
-### 6.5 youtube-dl-exec Dependency
-- **Maintenance Risk**: youtube-dl/yt-dlp frequently updated
-- **Breakage**: YouTube changes break extraction weekly
-- **Mitigation**: Use yt-dlp (active fork), version pin, update regularly
 
 ---
 
-## 7. Future Enhancements
+## 6. Future Enhancements
 
-### 7.1 Recommended Improvements
+### 6.1 Recommended Improvements
 1. **Retry Logic**: Add exponential backoff for transient failures
 2. **Circuit Breaker**: Disable failing sources temporarily
 3. **Caching Layer**: Expand Redis caching to all functions
@@ -1536,7 +910,7 @@ describe('external-tool integration (live)', () => {
 7. **WebSocket Notifications**: Real-time scrape status updates
 8. **Admin Panel**: UI for managing external sources
 
-### 7.2 Testability Improvements
+### 6.2 Testability Improvements
 1. **Dependency Injection**: Pass `Api`, `Mongo`, `Redis` as params
 2. **Config Externalization**: Move site URLs to config files
 3. **Parser Abstraction**: Separate DOM parsing logic into testable units
@@ -1544,30 +918,30 @@ describe('external-tool integration (live)', () => {
 
 ---
 
-## 8. Security Considerations
+## 7. Security Considerations
 
-### 8.1 Input Validation
+### 7.1 Input Validation
 - **URL Sanitization**: Validate URLs before fetching
 - **XSS Prevention**: Sanitize scraped HTML before rendering
 - **Path Traversal**: Use `PathJoin()` for file operations
 - **Injection Prevention**: Parameterize MongoDB queries
 
-### 8.2 External Content Risks
+### 7.2 External Content Risks
 - **Malicious HTML**: Untrusted HTML parsed (use Htmlparser2 safely)
 - **Large Responses**: Limit HTTP response sizes
 - **Redirect Loops**: Limit redirects in `Api()`
 - **SSRF**: Validate URLs are external, not internal IPs
 
-### 8.3 Secrets Management
+### 7.3 Secrets Management
 - **Google API Key**: Store in `ver.js` (environment vars)
 - **OAuth Tokens**: Encrypted in MongoDB `accessToken` collection
 - **No Hardcoded Secrets**: All secrets externalized
 
 ---
 
-## 9. Documentation Maintenance
+## 8. Documentation Maintenance
 
-### 9.1 Update Triggers
+### 8.1 Update Triggers
 Update this document when:
 - New external source added
 - Function signature changes
@@ -1575,40 +949,31 @@ Update this document when:
 - External API version updates
 - Breaking changes to HTML structure
 
-### 9.2 Documentation Ownership
+### 8.2 Documentation Ownership
 - **Primary**: Backend team
 - **Review**: QA team (test scenarios)
 - **Approval**: Tech lead
 
 ---
 
-## 10. Appendix: External Source Details
+## 9. Appendix: External Source Details
 
-### 10.1 Supported Sources
+### 9.1 Supported Sources
 
 | Type | Name | URL Pattern | Content Type | Status |
 |------|------|-------------|--------------|--------|
 | `yify` | YIFY Torrents | `yts.mx` | Movies (torrents) | Active |
-| `bilibili` | Bilibili | `bilibili.com` | Videos | Active |
-| `kubo` | 99Kubo | `99kubo.tv` | TV shows/anime | Active |
 | `dm5` | DM5 | `dm5.com` | Manga | Active |
-| `eztv` | EZTV | `eztv.re` | TV torrents | Active |
 | `bls`, `cen`, `bea`, etc. | Various manga/video | Multiple | Manga/video | Various |
-| `youtube` | YouTube | `youtube.com` | Videos/playlists | Active |
 | `imdb` | IMDB | `imdb.com` | Movie metadata | Active |
 | `steam` | Steam | `steampowered.com` | Game metadata | Active |
-| `youku` | Youku | `youku.com` | Videos | Active |
-| `dailymotion` | Dailymotion | `dailymotion.com` | Videos | Active |
-| `linetv` | LINE TV | `tv.line.me` | Videos | Active |
-| `iqiyi` | iQiyi | `iqiyi.com` | Videos | Active |
 
-### 10.2 External API Versions
+### 9.2 External API Versions
 
 | Service | API Version | Docs |
 |---------|-------------|------|
-| YouTube Data API | v3 | https://developers.google.com/youtube/v3 |
-| Bilibili API | Unofficial | Community-documented |
-| youtube-dl-exec | yt-dlp 2023+ | https://github.com/yt-dlp/yt-dlp |
+| YIFY | None | Public scraping |
+| DM5 | None | Public scraping |
 
 ---
 

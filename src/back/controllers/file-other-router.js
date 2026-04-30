@@ -14,7 +14,7 @@ import Mongo, { objectID } from '../models/mongo-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility.js'
-import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub, isCSV } from '../util/mime.js'
+import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
 const router = Express.Router();

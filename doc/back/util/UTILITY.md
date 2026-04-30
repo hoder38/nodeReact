@@ -25,19 +25,17 @@
    - 3.11 [getStorageItem](#311-getstorageitem)
    - 3.12 [getPasswordItem](#312-getpassworditem)
    - 3.13 [getStockItem](#313-getstockitem)
-   - 3.14 [getFitnessItem](#314-getfitnessitem)
-   - 3.15 [getRankItem](#315-getrankitem)
-   - 3.16 [getFileLocation](#316-getfilelocation)
-   - 3.17 [deleteFolderRecursive](#317-deletefolderrecursive)
-   - 3.18 [SRT2VTT](#318-srt2vtt)
-   - 3.19 [bufferToString](#319-buffertostring)
-   - 3.20 [getJson](#320-getjson)
-   - 3.21 [torrent2Magnet](#321-torrent2magnet)
-   - 3.22 [sortList](#322-sortlist)
-   - 3.23 [completeZero](#323-completezero)
-   - 3.24 [findTag](#324-findtag)
-   - 3.25 [convertTimestampToDate](#325-converttimestamptodate)
-   - 3.26 [addPre](#326-addpre)
+   - 3.14 [getFileLocation](#316-getfilelocation)
+   - 3.15 [deleteFolderRecursive](#317-deletefolderrecursive)
+   - 3.16 [SRT2VTT](#318-srt2vtt)
+   - 3.17 [bufferToString](#319-buffertostring)
+   - 3.18 [getJson](#320-getjson)
+   - 3.19 [torrent2Magnet](#321-torrent2magnet)
+   - 3.20 [sortList](#322-sortlist)
+   - 3.21 [completeZero](#323-completezero)
+   - 3.22 [findTag](#324-findtag)
+   - 3.23 [convertTimestampToDate](#325-converttimestamptodate)
+   - 3.24 [addPre](#326-addpre)
 4. [Internal (Non-Exported) Functions](#4-internal-non-exported-functions)
    - 4.1 [showError](#41-showerror)
 5. [Module-Level State](#5-module-level-state)
@@ -55,7 +53,7 @@
 | **Authentication & Authorization** | `checkLogin`, `checkAdmin`, `userPWCheck` |
 | **Error Handling** | `HoError` (constructor), `handleError`, `showError` (internal) |
 | **Middleware** | `showLog`, `checkLogin` |
-| **Data Formatters** | `getStorageItem`, `getPasswordItem`, `getStockItem`, `getFitnessItem`, `getRankItem` |
+| **Data Formatters** | `getStorageItem`, `getPasswordItem`, `getStockItem` |
 | **File System** | `getFileLocation`, `deleteFolderRecursive`, `SRT2VTT`, `sortList` |
 | **Encoding / Parsing** | `big5Encode`, `bufferToString`, `getJson` |
 | **Misc Helpers** | `selectRandom`, `completeZero`, `findTag`, `torrent2Magnet`, `convertTimestampToDate`, `addPre` |
@@ -913,57 +911,7 @@ export const getStockItem = (user, items) => checkAdmin(1, user) ? items.map(...
 
 ---
 
-### 3.14 `getFitnessItem`
-
-**Priority**: 🟢 Medium
-
-#### Purpose
-
-Transforms raw MongoDB fitness documents into API response objects.
-
-#### Signature
-
-```js
-export const getFitnessItem = (user, items) => items.map(item => ({
-  name, id, tags, price, count, desc, type
-}))
-```
-
-#### Comprehensive Test Scenarios
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| 1 | Standard mapping | All fields correctly mapped |
-| 2 | Empty array | `[]` |
-
----
-
-### 3.15 `getRankItem`
-
-**Priority**: 🟢 Medium
-
-#### Purpose
-
-Transforms raw MongoDB rank documents into API response objects.
-
-#### Signature
-
-```js
-export const getRankItem = (user, items) => items.map(item => ({
-  name, id, tags, start, type
-}))
-```
-
-#### Comprehensive Test Scenarios
-
-| # | Scenario | Expected |
-|---|----------|----------|
-| 1 | Standard mapping | All fields correctly mapped |
-| 2 | Empty array | `[]` |
-
----
-
-### 3.16 `getFileLocation`
+### 3.14 `getFileLocation`
 
 **Priority**: 🟢 Medium
 
@@ -1008,7 +956,7 @@ Returns a path string like: `/mnt/storage/ab/owner123/cd/uid456`. No side effect
 
 ---
 
-### 3.17 `deleteFolderRecursive`
+### 3.15 `deleteFolderRecursive`
 
 **Priority**: 🟢 Medium
 
@@ -1051,7 +999,7 @@ export const deleteFolderRecursive = path => { ... }
 
 ---
 
-### 3.18 `SRT2VTT`
+### 3.16 `SRT2VTT`
 
 **Priority**: 🟢 Medium
 
@@ -1101,7 +1049,7 @@ Returns a `Promise<void>`. **Side Effects**: Creates `.vtt` file on disk; for AS
 
 ---
 
-### 3.19 `bufferToString`
+### 3.17 `bufferToString`
 
 **Priority**: 🟢 Medium
 
@@ -1143,7 +1091,7 @@ export const bufferToString = (buffer, big5 = false) => { ... }
 
 ---
 
-### 3.20 `getJson`
+### 3.18 `getJson`
 
 **Priority**: 🟢 Medium
 
@@ -1186,7 +1134,7 @@ export const getJson = raw_data => { ... }
 
 ---
 
-### 3.21 `torrent2Magnet`
+### 3.19 `torrent2Magnet`
 
 **Priority**: 🟢 Medium
 
@@ -1231,7 +1179,7 @@ export const torrent2Magnet = torInfo => { ... }
 
 ---
 
-### 3.22 `sortList`
+### 3.20 `sortList`
 
 **Priority**: 🟢 Medium
 
@@ -1275,7 +1223,7 @@ export const sortList = list => { ... }
 
 ---
 
-### 3.23 `completeZero`
+### 3.21 `completeZero`
 
 **Priority**: 🟢 Medium
 
@@ -1318,7 +1266,7 @@ export const completeZero = (number, offset) => { ... }
 
 ---
 
-### 3.24 `findTag`
+### 3.22 `findTag`
 
 **Priority**: 🟢 Medium
 
@@ -1372,7 +1320,7 @@ export const findTag = (node, tag = null, id = null) => { ... }
 
 ---
 
-### 3.25 `convertTimestampToDate`
+### 3.23 `convertTimestampToDate`
 
 **Priority**: 🟢 Low
 
@@ -1412,7 +1360,7 @@ export const convertTimestampToDate = (timestamp) => { ... }
 
 ---
 
-### 3.26 `addPre`
+### 3.24 `addPre`
 
 **Priority**: 🟢 Low
 
@@ -1546,8 +1494,6 @@ src/back/util/__tests__/utility.test.js
 ├── describe('getStorageItem')
 ├── describe('getPasswordItem')
 ├── describe('getStockItem')
-├── describe('getFitnessItem')
-├── describe('getRankItem')
 ├── describe('getFileLocation')
 ├── describe('deleteFolderRecursive')
 ├── describe('SRT2VTT')

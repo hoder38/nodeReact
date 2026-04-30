@@ -14,8 +14,8 @@ const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: 
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
 import External from '../models/external-tool.js'
-import { handleError, HoError, deleteFolderRecursive, SRT2VTT, isValidString } from '../util/utility.js'
-import { mediaMIME, isSub, isKindle } from '../util/mime.js'
+import { handleError, HoError, isValidString } from '../util/utility.js'
+import { mediaMIME, isKindle } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
 
 const OAuth2 = googleapis.auth.OAuth2;

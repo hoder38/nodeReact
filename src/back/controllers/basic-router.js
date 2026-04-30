@@ -1,6 +1,6 @@
 import { STORAGEDB } from '../constants.js'
 import { ENV_TYPE } from '../../../ver.js'
-import { EXTENT_FILE_IP, EXTENT_FILE_PORT, EXTENT_IP, WS_PORT } from '../config.js'
+import { EXTENT_FILE_IP, EXTENT_FILE_PORT, WS_PORT } from '../config.js'
 import Express from 'express'
 import TagTool from '../models/tag-tool.js'
 import { checkAdmin, checkLogin } from '../util/utility.js'

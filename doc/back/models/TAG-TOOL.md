@@ -29,15 +29,13 @@ The `tag-tool.js` module is a **factory function** that creates a collection-spe
 - **STORAGEDB**: File storage items (videos, images, archives)
 - **PASSWORDDB**: Password manager entries
 - **STOCKDB**: Stock/investment tracking
-- **FITNESSDB**: Fitness/workout logs
-- **RANKDB**: Ranking/rating system
 
 ### 1.2 Key Capabilities
 
 - **Tag-Based Queries**: Complex multi-tag search with exact/fuzzy matching
 - **Hierarchical Navigation**: Parent-child tag relationships
 - **Bookmark System**: Save and restore query states across sessions
-- **External API Integration**: Yify, Bilibili, MangaDex, Kubo queries
+- **External API Integration**: Yify, MangaDex queries
 - **Relative Tag Calculation**: Find related tags using union/intersection logic
 - **Session State Management**: Persistent tag search state via Redis session
 - **Permission Enforcement**: Owner-based and admin-level access control
@@ -49,7 +47,7 @@ export default function process(collection)
 ```
 
 **Parameters**:
-- `collection` (string): One of STORAGEDB, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB
+- `collection` (string): One of STORAGEDB, PASSWORDDB, STOCKDB
 
 **Returns**: Object containing 30+ methods for tag operations, or `false` if invalid collection
 
@@ -181,10 +179,6 @@ Predefined tags with special meaning (indices 0-31):
    - Sorting: `[[getSortName(sortName), sortType]]`
    - Hint: `sql.hint` for index optimization
 
-5. **Fitness Count Enhancement** (FITNESSDB only):
-   - Query `${collection}Count` for user-specific item counts
-   - Join counts to items by `itemId` matching `_id`
-   - Default count = 0 if not found
 
 6. **Media Type Handling**:
    - If `sql.nosql.mediaType` exists → Return `{items, parentList, mediaHadle: 1}`
@@ -244,9 +238,6 @@ Predefined tags with special meaning (indices 0-31):
 4. **MongoDB Query**: `Mongo('find', collection, sql.nosql, {projection, limit: 1, hint: {_id: 1}})`
    - Use `_id` index for fast lookup
 
-5. **Fitness Count Enhancement** (FITNESSDB only):
-   - Query `${collection}Count` for single item count
-   - Merge into item object
 
 6. **Result Handling**:
    - `items.length < 1` → `{empty: true}`
@@ -291,7 +282,6 @@ Predefined tags with special meaning (indices 0-31):
 
 3. **MongoDB Query**: Fetch first page (skip: 0, limit: QUERY_LIMIT)
 
-4. **Fitness Count Enhancement** (FITNESSDB only)
 
 **Edge Cases**:
 - No SQL generated → Returns `{items: [], parentList}`
@@ -301,80 +291,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.4 `getBiliQuery(search_arr, sortName, page, is_movie)`
-
-**Purpose**: Build Bilibili API query parameters from tag array
-
-**Parameters**:
-- `search_arr` (array): Array of normalized tag strings
-- `sortName` (string): Sort field ('count', 'mtime', etc.)
-- `page` (number): Page number (1-indexed for Bilibili API)
-- `is_movie` (boolean): Movie vs. TV/anime flag
-
-**Returns**: Object or false
-```javascript
-{
-    type: 1,              // Content type (1=anime, 2=movie, etc.)
-    maxResults: 50,       // Page size
-    order: 'pubdate',     // Sort order
-    keyword: 'search terms',
-    area_id: 2,           // Region filter
-    style_id: 1,          // Genre filter
-    page: 1,              // Page number
-    is_finish: 1          // Completion status
-}
-// OR false if invalid query
-```
-
-**Logic Flow**:
-
-1. **Initialize Query Object**:
-   ```javascript
-   {
-       type: is_movie ? 2 : 1,
-       maxResults: QUERY_LIMIT,
-       order: 'pubdate',  // Default, overridden by sortName
-       page: Math.floor(page / QUERY_LIMIT) + 1
-   }
-   ```
-
-2. **Sort Mapping**:
-   - `sortName === 'count'` → `order: 'click'`
-   - `sortName === 'mtime'` → `order: 'pubdate'`
-   - Default → `'pubdate'`
-
-3. **Tag Processing Loop**: For each tag in `search_arr`:
-   - Check `isDefaultTag(normalize(tag))`
-   - Index 0, 6, 17, 22 → Add to keyword array (general search)
-   - Index 1 (`local`) → `type = 10` (local content)
-   - Index 2 (`media`) → `type = 20` (media files)
-   - BILI_TYPE match → Set `query.type` to mapped value
-   - BILI_INDEX[0] match (area) → Set `query.area_id`
-   - BILI_INDEX[1] match (style) → Set `query.style_id`
-   - BILI_INDEX[2] match (finish status) → Set `query.is_finish`
-   - BILI_INDEX[3] match (year) → Set `query.year`
-   - BILI_INDEX[4] match (month) → Set `query.month`
-   - No match → Add to keyword array
-
-4. **Keyword Assembly**: If keyword array not empty → `query.keyword = keywords.join(' ')`
-
-5. **Validation**: If `query.type` still undefined → Return `false`
-
-**Edge Cases**:
-- Empty `search_arr` → Returns false (no type set)
-- Conflicting type tags → Last one wins
-- Invalid month/year format → Added to keywords instead
-- Page 0 → Bilibili page 1
-
-**Returns**: Object ready for Bilibili API client, or false
-
-**Authentication**: None (public API query builder)
-
-**Side Effects**: None (pure function)
-
----
-
-### 3.5 `getYifyQuery(search_arr, sortName, page)`
+### 3.4 `getYifyQuery(search_arr, sortName, page)`
 
 **Purpose**: Build Yify Torrents API query parameters
 
@@ -420,7 +337,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.6 `getMadQuery(search_arr, sortName, page)`
+### 3.5 `getMadQuery(search_arr, sortName, page)`
 
 **Purpose**: Build MangaDex API query parameters
 
@@ -462,47 +379,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.7 `getKuboQuery(search_arr, sortName, page)`
-
-**Purpose**: Build Kubo (Korean webtoon) API query parameters
-
-**Parameters**: Same as others
-
-**Returns**: Object or false
-```javascript
-{
-    keyword: 'search',
-    orderby: 'update',
-    offset: 0,
-    limit: 50,
-    genre: 'romance',
-    publish_day: '월',  // Korean weekday
-    adult: 0
-}
-```
-
-**Logic Flow**:
-
-1. **Initialize**: `{limit: QUERY_LIMIT, offset: page, orderby: 'update'}`
-
-2. **Sort Mapping**:
-   - 'count' → 'score'
-   - 'mtime' → 'update'
-
-3. **Tag Processing**:
-   - GENRE_LIST → `genre`
-   - KUBO_COUNTRY → Set country filter
-   - Korean weekdays (`월`, `화`, `수`, etc.) → `publish_day`
-   - `adult` tag → `adult: 1`
-   - Default → Add to `keyword`
-
-**Edge Cases**:
-- Multiple genres → Last wins
-- Adult + non-adult tags → Adult=1
-
----
-
-### 3.8 `getRelativeTag(tag_arr, user, pre_arr, exactly_arr)`
+### 3.6 `getRelativeTag(tag_arr, user, pre_arr, exactly_arr)`
 
 **Purpose**: Calculate related tags using union/intersection logic
 
@@ -568,7 +445,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.9 `addTag(uid, tag, user, checkValid)`
+### 3.7 `addTag(uid, tag, user, checkValid)`
 
 **Purpose**: Add a tag to an item with permission validation
 
@@ -640,7 +517,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.10 `delTag(uid, tag, user, checkValid)`
+### 3.8 `delTag(uid, tag, user, checkValid)`
 
 **Purpose**: Remove a tag from an item
 
@@ -691,7 +568,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.11 `sendTag(uid, objName, tags, user)`
+### 3.9 `sendTag(uid, objName, tags, user)`
 
 **Purpose**: Batch replace all tags on an item
 
@@ -733,7 +610,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.12 `searchTags(search)`
+### 3.10 `searchTags(search)`
 
 **Purpose**: Create or retrieve session-based tag state manager
 
@@ -818,7 +695,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.13 `getBookmarkList(sortName, sortType, user)`
+### 3.11 `getBookmarkList(sortName, sortType, user)`
 
 **Purpose**: Retrieve user's saved bookmarks
 
@@ -845,7 +722,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.14 `getBookmark(id, sortName, sortType, user, session)`
+### 3.12 `getBookmark(id, sortName, sortType, user, session)`
 
 **Purpose**: Load a specific bookmark by ID
 
@@ -877,7 +754,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.15 `setBookmark(btag, bexactly, sortName, sortType, user, session)`
+### 3.13 `setBookmark(btag, bexactly, sortName, sortType, user, session)`
 
 **Purpose**: Update existing bookmark with current search state
 
@@ -909,7 +786,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.16 `addBookmark(name, user, session, bpath, bexactly)`
+### 3.14 `addBookmark(name, user, session, bpath, bexactly)`
 
 **Purpose**: Create new bookmark
 
@@ -957,7 +834,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.17 `delBookmark(id)`
+### 3.15 `delBookmark(id)`
 
 **Purpose**: Delete a bookmark by ID
 
@@ -985,7 +862,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.18 `parentList()`
+### 3.16 `parentList()`
 
 **Purpose**: Get list of parent categories for collection
 
@@ -1008,7 +885,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.19 `adultonlyParentList()`
+### 3.17 `adultonlyParentList()`
 
 **Purpose**: Get adult-only parent categories
 
@@ -1022,7 +899,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.20 `parentQuery(tagName, sortName, sortType, page, user)`
+### 3.18 `parentQuery(tagName, sortName, sortType, page, user)`
 
 **Purpose**: Query items by parent category
 
@@ -1058,7 +935,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.21 `queryParentTag(id, single, sortName, sortType, user, session)`
+### 3.19 `queryParentTag(id, single, sortName, sortType, user, session)`
 
 **Purpose**: Query items within a specific parent tag
 
@@ -1091,7 +968,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.22 `addParent(parentName, tagName, user)`
+### 3.20 `addParent(parentName, tagName, user)`
 
 **Purpose**: Add a tag to a parent category
 
@@ -1135,7 +1012,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.23 `delParent(uid, user)`
+### 3.21 `delParent(uid, user)`
 
 **Purpose**: Remove a tag from all parent categories (admin only)
 
@@ -1170,7 +1047,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.24 `setLatest(latest, session, saveName)`
+### 3.22 `setLatest(latest, session, saveName)`
 
 **Purpose**: Update latest viewed item for bookmark
 
@@ -1205,7 +1082,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 3.25 `saveSql(page, saveName, back, user, session)`
+### 3.23 `saveSql(page, saveName, back, user, session)`
 
 **Purpose**: Save current query as named search
 
@@ -1303,37 +1180,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 4.2 `getFitnessQuerySql(user, tagList, exactly)` (lines 1441-1499)
-
-**Purpose**: Build query for FITNESSDB (workout logs)
-
-**Similar structure to `getStorageQuerySql` but with fitness-specific tags**:
-
-- **Index 0**: All workouts
-- **Index 1-5**: Workout types (cardio, strength, flexibility, etc.)
-- **Index 17**: Exercise name search
-- **Default**: Date range filters, equipment tags
-
-**Special Logic**:
-- Date range parsing (`2024-01-01:2024-12-31`)
-- Duration filters (`>30min`, `<60min`)
-- Calorie ranges
-
----
-
-### 4.3 `getRankQuerySql(user, tagList, exactly)` (lines 1500-1559)
-
-**Purpose**: Build query for RANKDB (ranking/rating system)
-
-**Rank-Specific Filters**:
-- Score ranges (`score>8`, `score<5`)
-- Category tags
-- Completion status
-- Date added
-
----
-
-### 4.4 `getPasswordQuerySql / getStockQuerySql` (inline in switch)
+### 4.2 `getPasswordQuerySql / getStockQuerySql` (inline in switch)
 
 **Purpose**: Build queries for password manager and stock tracker
 
@@ -1341,9 +1188,9 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 4.5 Tag Extraction Functions
+### 4.3 Tag Extraction Functions
 
-**`getStorageQueryTag(tagName)`, `getFitnessQueryTag()`, etc.**
+**`getStorageQueryTag(tagName)`, etc.**
 
 **Purpose**: Extract tags belonging to a parent category
 
@@ -1355,7 +1202,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 4.6 Sort Name Mappers
+### 4.4 Sort Name Mappers
 
 **`getStorageSortName(sortName)`, etc.**
 
@@ -1374,7 +1221,7 @@ Predefined tags with special meaning (indices 0-31):
 
 ---
 
-### 4.7 `normalize(tag)`
+### 4.5 `normalize(tag)`
 
 **Purpose**: Standardize tag format for storage
 
@@ -1390,7 +1237,7 @@ tag.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\w_-]/g, '')
 
 ---
 
-### 4.8 `denormalize(tag)`
+### 4.6 `denormalize(tag)`
 
 **Purpose**: Convert normalized tag to display format
 
@@ -1405,7 +1252,7 @@ tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
 ---
 
-### 4.9 `isDefaultTag(tag)`
+### 4.7 `isDefaultTag(tag)`
 
 **Purpose**: Check if tag is predefined system tag
 
@@ -1420,7 +1267,7 @@ tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
 ---
 
-### 4.10 `inParentArray(parent)`
+### 4.8 `inParentArray(parent)`
 
 **Purpose**: Validate parent category existence
 
@@ -1430,7 +1277,7 @@ tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
 ---
 
-### 4.11 `getLatest(bookmark)`
+### 4.9 `getLatest(bookmark)`
 
 **Purpose**: Get latest viewed item for bookmark
 
@@ -1440,7 +1287,7 @@ tag.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
 ---
 
-### 4.12 `returnPath(items, parentList)`
+### 4.10 `returnPath(items, parentList)`
 
 **Purpose**: Enhance query results with bookmark context
 
@@ -1855,22 +1702,6 @@ describe('tagQuery()', () => {
         })
     })
     
-    describe('Fitness Count Enhancement', () => {
-        test('should add count field for FITNESS collection', async () => {
-            const fitnessTool = process(FITNESSDB)
-            const result = await fitnessTool.tagQuery(0, 'workout', false, 0, 'mtime', -1, user, session)
-            result.items.forEach(item => {
-                expect(item).toHaveProperty('count')
-            })
-        })
-        
-        test('should default count to 0 when no count doc', async () => {
-            const fitnessTool = process(FITNESSDB)
-            const result = await fitnessTool.tagQuery(0, 'new', false, 0, 'mtime', -1, user, session)
-            expect(result.items[0].count).toBe(0)
-        })
-    })
-    
     describe('Bookmark Integration', () => {
         test('should include latest item for bookmark query', async () => {
             session.searchData.storagedb = {bookmark: bookmarkId}
@@ -1892,104 +1723,6 @@ describe('tagQuery()', () => {
 ---
 
 ### 5.3 Unit Tests — External API Query Builders
-
-#### Test Suite: `getBiliQuery()`
-
-**Logical Branches**:
-
-```javascript
-describe('getBiliQuery()', () => {
-    describe('Query Type Resolution', () => {
-        test('should set type=1 for anime (default)', () => {
-            const query = tool.getBiliQuery(['action'], 'mtime', 0, false)
-            expect(query.type).toBe(1)
-        })
-        
-        test('should set type=2 for movies', () => {
-            const query = tool.getBiliQuery(['action'], 'mtime', 0, true)
-            expect(query.type).toBe(2)
-        })
-        
-        test('should override type with BILI_TYPE tag', () => {
-            const query = tool.getBiliQuery(['国创'], 'mtime', 0, false)
-            expect(query.type).toBe(4) // Guochuang type
-        })
-    })
-    
-    describe('Sort Mapping', () => {
-        test('should map count to click sort', () => {
-            const query = tool.getBiliQuery(['action'], 'count', 0, false)
-            expect(query.order).toBe('click')
-        })
-        
-        test('should map mtime to pubdate sort', () => {
-            const query = tool.getBiliQuery(['action'], 'mtime', 0, false)
-            expect(query.order).toBe('pubdate')
-        })
-    })
-    
-    describe('Filter Tags', () => {
-        test('should set area_id for region tags', () => {
-            const query = tool.getBiliQuery(['日本'], 'mtime', 0, false)
-            expect(query.area_id).toBeDefined()
-        })
-        
-        test('should set style_id for genre tags', () => {
-            const query = tool.getBiliQuery(['热血'], 'mtime', 0, false)
-            expect(query.style_id).toBeDefined()
-        })
-        
-        test('should set is_finish for completion status', () => {
-            const query = tool.getBiliQuery(['完结'], 'mtime', 0, false)
-            expect(query.is_finish).toBe(1)
-        })
-        
-        test('should set year filter', () => {
-            const query = tool.getBiliQuery(['2024'], 'mtime', 0, false)
-            expect(query.year).toBe('2024')
-        })
-    })
-    
-    describe('Keyword Assembly', () => {
-        test('should join multiple search terms', () => {
-            const query = tool.getBiliQuery(['dragon', 'ball'], 'mtime', 0, false)
-            expect(query.keyword).toBe('dragon ball')
-        })
-        
-        test('should include default tag content', () => {
-            const query = tool.getBiliQuery(['all', 'naruto'], 'mtime', 0, false)
-            expect(query.keyword).toContain('naruto')
-        })
-    })
-    
-    describe('Pagination', () => {
-        test('should calculate page from offset', () => {
-            const query = tool.getBiliQuery(['action'], 'mtime', 100, false)
-            expect(query.page).toBe(3) // 100 / QUERY_LIMIT(50) + 1 = 3
-        })
-    })
-    
-    describe('Edge Cases', () => {
-        test('should return false for empty search_arr', () => {
-            const query = tool.getBiliQuery([], 'mtime', 0, false)
-            expect(query).toBe(false)
-        })
-        
-        test('should handle conflicting type tags', () => {
-            // Last type tag should win
-            const query = tool.getBiliQuery(['anime', '电影'], 'mtime', 0, false)
-            expect(query.type).toBe(2)
-        })
-        
-        test('should preserve maxResults constant', () => {
-            const query = tool.getBiliQuery(['action'], 'mtime', 0, false)
-            expect(query.maxResults).toBe(QUERY_LIMIT)
-        })
-    })
-})
-```
-
----
 
 #### Test Suite: `getYifyQuery()`
 
@@ -2052,7 +1785,7 @@ describe('getYifyQuery()', () => {
 
 ---
 
-#### Test Suite: `getMadQuery()` & `getKuboQuery()`
+#### Test Suite: `getMadQuery()`
 
 ```javascript
 describe('getMadQuery()', () => {
@@ -2070,23 +1803,6 @@ describe('getMadQuery()', () => {
     test('should filter by status', () => {
         const query = tool.getMadQuery(['completed'], 'mtime', 0)
         expect(query.status).toContain('completed')
-    })
-})
-
-describe('getKuboQuery()', () => {
-    test('should set Korean weekday filter', () => {
-        const query = tool.getKuboQuery(['월'], 'mtime', 0) // Monday
-        expect(query.publish_day).toBe('월')
-    })
-    
-    test('should set adult filter', () => {
-        const query = tool.getKuboQuery(['adult'], 'mtime', 0)
-        expect(query.adult).toBe(1)
-    })
-    
-    test('should map KUBO_COUNTRY filters', () => {
-        const query = tool.getKuboQuery(['한국'], 'mtime', 0)
-        expect(query.country).toBeDefined()
     })
 })
 ```
@@ -2736,18 +2452,6 @@ const relativeTagResult = {
     single: [],
     all: {name: 'all', count: 100}
 }
-
-// getBiliQuery() response
-const biliQueryResult = {
-    type: 1,
-    maxResults: 50,
-    order: 'pubdate',
-    keyword: 'naruto shippuden',
-    area_id: 2,
-    style_id: 1,
-    is_finish: 1,
-    page: 1
-}
 ```
 
 ### 6.7 Sample Parent Categories
@@ -2892,7 +2596,6 @@ async function clearTestData() {
     const collections = [
         'storageUser', 'storageTag', 'storageBookmark', 'storageParent',
         'stockUser', 'stockTag', 'stockBookmark', 'stockParent',
-        'fitnessUser', 'fitnessTag', 'fitnessCount',
         'user'
     ]
     
@@ -3037,10 +2740,8 @@ describe('E2E: Complete Tag Management Workflow', () => {
 - [ ] `singleQuery()` — permission checks
 - [ ] `resetQuery()` — state reset
 - [ ] `getRelativeTag()` — union/intersection logic
-- [ ] `getBiliQuery()` — query builder
 - [ ] `getYifyQuery()` — query builder
 - [ ] `getMadQuery()` — query builder
-- [ ] `getKuboQuery()` — query builder
 - [ ] `searchTags()` — session state manager
 - [ ] `addBookmark()` — validation
 - [ ] `getBookmark()` — loading
@@ -3113,7 +2814,7 @@ npm test -- --testNamePattern="Performance"
 - ✅ **30+ methods** for tag operations, queries, bookmarks, and parent categories
 - ✅ **Session-based state** management via Redis-backed Express sessions
 - ✅ **Complex query building** for MongoDB with permission filtering
-- ✅ **External API integration** (Bilibili, Yify, MangaDex, Kubo)
+- ✅ **External API integration** (Yify, MangaDex)
 - ✅ **Relative tag calculation** using union/intersection algorithms
 - ✅ **Bookmark system** for saving/loading search states
 

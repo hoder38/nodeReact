@@ -23,7 +23,7 @@
 | [10. File Server Utilities](#section-10) | `file-other-router.js` | 753 | 10+ |
 | [11. External Sources & Subtitles](#section-11) | `external-router.js` | 1,188 | 15+ |
 | [12. Playlist & Torrent](#section-12) | `playlist-router.js` | 340 | 5+ |
-| [13. Feature Routers](#section-13) | `bitfinex-router.js`, `fitness-router.js`, `rank-router.js`, `lottery-router.js` | 387 | 25+ |
+| [13. Feature Routers](#section-13) | `bitfinex-router.js` | 50 | 8 |
 
 ---
 
@@ -78,8 +78,6 @@
 | 8 | `/api/parent` | `ParentRouter` | Tag category management |
 | 9 | `/` | `OtherRouter` | `/refresh`, `/privacy`, `/s` |
 | 10 | `/` | `LoginRouter(fileServerUrl)` | `POST /api/login`, `GET /api/logout` — receives file-server origin for cascading login |
-
-> **Commented-out routes**: `FitnessRouter` (`/api/fitness`), `RankRouter` (`/api/rank`), `LotteryRouter` (`/api/lottery`) are imported but not mounted.
 
 #### Error Handling
 
@@ -905,15 +903,15 @@ All routes in this router are guarded by `checkLogin` at the middleware level (`
 | Greeting | `"hello"` |
 | Archive/book instructions | Explanation of `.book`, `.cbr`, `.cbz` file handling for reading compressed archives as books |
 | Search commands | `>50` (search by ID), `all item`, `all external`, `no local` |
-| External search integrations | `yify movie` (with genre filters), `dm5 comic` (with genre filters), `kubo animation/movie/tv series/tv show` |
+| External search integrations | `yify movie` (with genre filters), `dm5 comic` (with genre filters) |
 | Bookmark instructions | Explanation of bookmark objects created when saving bookmarks |
 | Search behaviour notes | Default shows only first-item files; commands not counted in single-item search |
 | Player shortcuts | Space (play/pause), `c`/`7` (subtitles), `f`/`8` (fullscreen), `<`/`4` (rewind 5s), `>`/`5` (forward 5s), `1` (rewind 1%), `2` (forward 1%), Up/Down (volume), play modes (loop, reverse, single, random for music) |
 | Subtitle calibration | Fix current subtitle, use `<>`/`45` to shift ±0.5s |
-| Upload support | Magnet, Torrent, Mega, YIFY, DM5, EZTV, KUBO |
+| Upload support | Magnet, Torrent, Mega, YIFY, DM5 |
 | **Adult section** (admin only) | `"18+指令: "`, `"18+: 顯示十八禁的檔案"` |
 
-Several entries are **commented out** in source and not included in output: YouTube, YouTube music, Bilibili movie/animation.
+Several entries are **commented out** in source and not included in output: (none currently).
 
 Some entries are empty strings `""` used as visual separators. One entry is a bare `,` (trailing comma producing `undefined`/sparse entry).
 
@@ -2830,7 +2828,7 @@ Both `addTag` and `delTag` use the same recursive pattern with 500ms delay betwe
 
 ## Overview
 
-The largest feature router in the application (711 lines). Manages a file storage browser with tag-based search, weighted random discovery, external media integrations (kubo, yify, dm5, bilibili), playback tracking, and torrent playlist support. All endpoints require authentication via `checkLogin` middleware applied at the router level.
+The largest feature router in the application (711 lines). Manages a file storage browser with tag-based search, weighted random discovery, external media integrations (yify, dm5), playback tracking, and torrent playlist support. All endpoints require authentication via `checkLogin` middleware applied at the router level.
 
 **Imports & Initialisation:**
 - Database: `STORAGEDB` = `'storage'`
@@ -3043,10 +3041,10 @@ After the switch, additional probabilistic overrides may replace the random_tag:
 | Condition | Probability | Override |
 |-----------|-------------|---------|
 | random_tag[0]==='影片' && [1]==='電影' | ~1/14 (selectRandom([11,1,1,1]), index 3) | `['yify movie', 'no local', last_genre]` |
-| random_tag[0]==='影片' && [1]==='動畫' | ~1/11 (selectRandom([9,1,1]), index 1 or 2) | Currently commented out (bilibili) |
+| random_tag[0]==='影片' && [1]==='動畫' | ~1/11 (selectRandom([9,1,1]), index 1 or 2) | Reserved for future use |
 | random_tag[0]==='影片' && [1]==='電視劇' | selectRandom([10]) → always 0 | No override (only one weight) |
 | random_tag[0]==='圖片' && comic tag present | ~1/5 (selectRandom([4,1])) | `['dm5 comic', 'no local', random_comic_genre]` — dm5 comic genre drawn from subset [24,25,27,28,32,34,35,37,38,39,40] |
-| random_tag[0]==='音頻' | selectRandom([6]) → always 0 | No override (YouTube music commented out) |
+| random_tag[0]==='音頻' | selectRandom([6]) → always 0 | No override (single weight) |
 
 #### Phase 5: Execute Query
 1. `StorageTagTool.searchTags(session).setArray('', random_tags, [true, true, ...])` — sets session search state
@@ -3068,7 +3066,7 @@ After the switch, additional probabilistic overrides may replace the random_tag:
 | 9 | Picture→dm5 override | 漫畫 selected, prob triggers | random_tag=['dm5 comic','no local', genre] |
 | 10 | Redis hgetall fails | Redis error | handleError → 500 |
 | 11 | tagQuery fails after random | DB error | handleError → 500 |
-| 12 | All commented-out paths | YouTube/bilibili paths | Skipped, no effect |
+| 12 | Edge case: reserved media type | Reserved index selected | Expected behavior for future media types |
 
 ---
 
@@ -3114,7 +3112,7 @@ After the switch, additional probabilistic overrides may replace the random_tag:
 
 **Route pattern:** `/external/get/:sortName(name|mtime|count)/:pageToken?`
 
-**Purpose:** Fetch items from external sources (kubo, yify, dm5) based on the current session search tags.
+**Purpose:** Fetch items from external sources (yify, dm5) based on the current session search tags.
 
 **Parameters:**
 
@@ -3126,13 +3124,11 @@ After the switch, additional probabilistic overrides may replace the random_tag:
 **Flow:**
 1. Reads current search state: `StorageTagTool.searchTags(session).getArray()`
 2. Parses `pageToken` → `index` (leading digits, default 1) and `pageToken` (trailing non-digits or false)
-3. Sequentially queries 3 external sources:
-   - **Kubo:** `External.getSingleList('kubo', ...)` → items with `id: 'kub_{id}'`, status=3
+3. Sequentially queries 2 external sources:
    - **Yify:** `External.getSingleList('yify', ...)` → items with `id: 'yif_{id}'`, status=3, count=rating
    - **DM5:** `External.getSingleList('dm5', query)` — query may include POST body if `query.post` exists → items with `id: 'mad_{id}'`, status=2, count=0, utime=0
 4. All external items get `tags: [...item.tags, 'first item']`, `recycle: 0`, `isOwn: false`, `noDb: true`
-5. YouTube and bilibili queries are **commented out** (code present but inactive)
-6. Returns `{ itemList, pageToken: '{index+1}' }`
+5. Returns `{ itemList, pageToken: '{index+1}' }`
 
 **External Item Shape:**
 ```json
@@ -3149,13 +3145,11 @@ After the switch, additional probabilistic overrides may replace the random_tag:
 |---|----------|-------|----------|
 | 1 | First page, no pageToken | GET /storage/external/get/name | 200, combined results, pageToken="2" |
 | 2 | With pageToken "2abc" | GET /storage/external/get/name/2abc | index=2, token="abc" |
-| 3 | Kubo returns items | Kubo API success | Items prefixed `kub_` |
 | 4 | Yify returns items | Yify API success | Items prefixed `yif_`, count=rating |
 | 5 | DM5 with POST query | dm5 query has `.post` | POST request to dm5 |
 | 6 | DM5 without POST | dm5 query is string | GET request to dm5 |
 | 7 | One external source fails | e.g., yify timeout | handleError → 500 (sequential chain breaks) |
 | 8 | Empty results from all sources | No matches | 200, `{ itemList: [], pageToken: "2" }` |
-| 9 | Commented YouTube/bilibili | Always | Skipped entirely |
 
 ---
 
@@ -3496,10 +3490,8 @@ Or without `uids` to just preview parsed tags:
 
 | ID Prefix | Playlist Type | Source    | playlistId     |
 |-----------|--------------|-----------|----------------|
-| `kub_`    | 3            | Kubo      | after prefix   |
 | `yif_`    | 4            | Yify      | after prefix   |
 | `mad_`    | 5            | DM5       | after prefix   |
-| `bbl_`    | 6            | Bilibili  | after prefix   |
 | No prefix | 0 (or 2)    | Internal  | N/A            |
 
 **Internal ID with playlist detection:**
@@ -3508,7 +3500,7 @@ Or without `uids` to just preview parsed tags:
 - Otherwise → playlist=0 (no playlist)
 
 **Validation after parsing:**
-- External IDs: validated as 'name' → `HoError('youtube is not vaild')` if invalid (error message references YouTube despite broader use)
+- External IDs: validated as 'name' → `HoError('external is not vaild')` if invalid
 - Internal IDs: validated as 'uid' → `HoError('file is not vaild')` if invalid
 - type: validated as 'name' → `HoError('type is not vaild')` if invalid
 
@@ -3546,16 +3538,12 @@ If no playlist or no obj → `Promise.resolve()` (no-op).
 |----------|--------|------------------|
 | 0 (none) | Internal | If record exists AND type !== 'music': `{ time: record }`; else `{ apiOK: true }` |
 | 2 | Internal external | `Mongo find` item → `External.getSingleId(owner, url, recordTime, rPageToken, back)` |
-| 3 | Kubo | `External.getSingleId('kubo', kubo_url, recordTime)` |
 | 4 | Yify | `External.getSingleId('yify', yify_api_url, recordTime)` |
 | 5 | DM5 | `External.getSingleId('dm5', dm5_url, recordTime)` |
-| 6 | Bilibili | URL depends on ID: `av*` → video URL, else → bangumi URL; `External.getSingleId('bilibili', url, recordTime)` |
 
 **Playlist URL construction:**
-- Kubo: `http://www.99kubo.tv/vod-read-id-{playlistId}.html`
 - Yify: `https://yts.ag/api/v2/movie_details.json?movie_id={playlistId}`
 - DM5: `http://www.dm5.com/{playlistId}/`
-- Bilibili: `http://www.bilibili.com/video/{playlistId}/` (if `av*`) or `http://www.bilibili.com/bangumi/i/{playlistId}/`
 
 **`ret_rest` helper — Build playlist response:**
 - Validates `total >= 1` → else `HoError('playlist is empty')`
@@ -3578,7 +3566,7 @@ If no playlist or no obj → `Promise.resolve()` (no-op).
 }
 ```
 
-For playlist types 3–6 (external), `obj_arr`/`pageN`/`pageP`/`pageToken` are NOT included (only obj, end, total).
+For playlist types 4–5 (external), `obj_arr`/`pageN`/`pageP`/`pageToken` are NOT included (only obj, end, total).
 
 ### Phase 5: Side Effects (fire-and-forget)
 
@@ -3589,31 +3577,26 @@ After response is sent:
 
 **Test Scenarios:**
 
-| # | Scenario | Input | Expected |
-|---|----------|-------|----------|
 | 1 | Internal file, no playlist | `/setTime/validUid/video` | `{ time: savedPos }` or `{ apiOK: true }` |
 | 2 | Internal file, type=music | `/setTime/validUid/music` | `{ apiOK: true }` (no time for music) |
 | 3 | Internal file, type=url | `/setTime/validUid/url` | `{ apiOK: true }` (immediate, no setTag) |
 | 4 | Internal with obj (playlist=2) | `/setTime/uid/video/1.5` | Redis record set, playlist resolved |
 | 5 | Internal with obj='external' | `/setTime/uid/video/external` | obj→null, playlist=2 |
-| 6 | Kubo external (kub_) | `/setTime/kub_123/video` | playlist=3, kubo URL resolved |
-| 7 | Yify external (yif_) | `/setTime/yif_456/video` | playlist=4, yify API resolved |
-| 8 | DM5 external (mad_) | `/setTime/mad_abc/video` | playlist=5, dm5 URL resolved |
-| 9 | Bilibili av-prefix | `/setTime/bbl_av123/video` | playlist=6, video URL |
-| 10 | Bilibili non-av | `/setTime/bbl_ss123/video` | playlist=6, bangumi URL |
-| 11 | With pageToken | `/setTime/uid/video/1.5/token123` | Redis stores `1.5>>token123` |
-| 12 | With back flag | `/setTime/uid/video/1.5/token/back` | Backwards navigation in playlist |
-| 13 | Existing record with >> | Previous `obj>>token` stored | Parsed into recordTime + rPageToken |
-| 14 | Existing record without >> | Simple position stored | All as recordTime, rPageToken=null |
-| 15 | No existing record | First time access | recordTime=1, rPageToken=null |
-| 16 | Invalid external ID | `yif_!!!` fails validation | `HoError('youtube is not vaild')` |
-| 17 | Invalid internal UID | Bad UID format | `HoError('file is not vaild')` |
-| 18 | Invalid type | Type fails isValidString | `HoError('type is not vaild')` |
-| 19 | obj fails numeric pattern | `/setTime/uid/video/abc` | playlist=0 (pattern doesn't match) |
-| 20 | playlist=2, obj fails validation | Invalid obj in numeric check | `HoError('external is not vaild')` |
-| 21 | Empty playlist (total < 1) | External returns 0 items | `HoError('playlist is empty')` |
-| 22 | Tag counting side effect | Item has OPTION_TAG tags | Redis hincrby for each matching tag |
-| 23 | Play count increment | Any successful access | count +1 in Mongo (fire-and-forget) |
+| 6 | Yify external (yif_) | `/setTime/yif_456/video` | playlist=4, yify API resolved |
+| 7 | DM5 external (mad_) | `/setTime/mad_abc/video` | playlist=5, dm5 URL resolved |
+| 8 | With pageToken | `/setTime/uid/video/1.5/token123` | Redis stores `1.5>>token123` |
+| 9 | With back flag | `/setTime/uid/video/1.5/token/back` | Backwards navigation in playlist |
+| 10 | Existing record with >> | Previous `obj>>token` stored | Parsed into recordTime + rPageToken |
+| 11 | Existing record without >> | Simple position stored | All as recordTime, rPageToken=null |
+| 12 | No existing record | First time access | recordTime=1, rPageToken=null |
+| 13 | Invalid external ID | `yif_!!!` fails validation | `HoError('file is not vaild')` |
+| 14 | Invalid internal UID | Bad UID format | `HoError('file is not vaild')` |
+| 15 | Invalid type | Type fails isValidString | `HoError('type is not vaild')` |
+| 16 | obj fails numeric pattern | `/setTime/uid/video/abc` | playlist=0 (pattern doesn't match) |
+| 17 | playlist=2, obj fails validation | Invalid obj in numeric check | `HoError('external is not vaild')` |
+| 18 | Empty playlist (total < 1) | External returns 0 items | `HoError('playlist is empty')` |
+| 19 | Tag counting side effect | Item has OPTION_TAG tags | Redis hincrby for each matching tag |
+| 20 | Play count increment | Any successful access | count +1 in Mongo (fire-and-forget) |
 | 24 | setLatest failure | Redis/Mongo error | Logged but response already sent |
 
 ---
@@ -3884,11 +3867,9 @@ All endpoints follow: `.catch(err => handleError(err, next))` except:
 | Line 423 | `console.log(user)` — `user` undefined, should be `req.user` | High — ReferenceError |
 | Lines 432, 435, 506, 542, 663, 703 | `handleError()` without `next` param | Medium — errors may not propagate |
 | Line 708 | `apiOk` vs `apiOK` inconsistency | Low — client may not detect success |
-| Line 483 | Error message says 'youtube' for all external sources | Low — misleading error text |
-| Lines 171–200 | Commented-out YouTube/bilibili code | Info — dead code |
 # Section 8: bookmark-router.js & parent-router.js (Bookmarks & Tag Categories)
 
-Both routers follow the same multi-collection pattern, instantiating a dedicated `TagTool` per collection type — `STORAGEDB`, `PASSWORDDB`, `STOCKDB`, `FITNESSDB`, `RANKDB` — then exposing CRUD endpoints for each. All routes are protected by the `checkLogin` middleware applied at the router level.
+Both routers follow the same multi-collection pattern, instantiating a dedicated `TagTool` per collection type — `STORAGEDB`, `PASSWORDDB`, `STOCKDB` — then exposing CRUD endpoints for each. All routes are protected by the `checkLogin` middleware applied at the router level.
 
 ---
 
@@ -3901,7 +3882,7 @@ Both routers follow the same multi-collection pattern, instantiating a dedicated
 | Concern | Detail |
 |---|---|
 | Auth gate | `router.use(checkLogin)` — every route requires an authenticated session |
-| TagTool instances | `StorageTagTool`, `PasswordTagTool`, `StockTagTool`, `FitnessTagTool`, `RankTagTool` — each wraps the corresponding DB constant |
+| TagTool instances | `StorageTagTool`, `PasswordTagTool`, `StockTagTool` — each wraps the corresponding DB constant |
 | Imports | `crypto.createHash` (MD5), `TagTool` + `isDefaultTag` + `normalize`, `Mongo` + `objectID`, `sendWs`, `addPost`, `checkAdmin`, `isValidString`, per-type `getXxxItem` helpers |
 
 ### 8.1.2 STORAGE Bookmarks (Most Complex)
@@ -3917,7 +3898,7 @@ Storage has 6 endpoints and a private helper function `newBookmarkItem`.
 | 3 | POST | `/{STORAGEDB}/add` | Validates `req.body.name` via `isValidString(name, 'name')`. Calls `StorageTagTool.addBookmark(name, user, session)`. Reads `parentList.cur` / `parentList.exactly` from `searchTags(session).getArray()`. If `cur` is empty → error. Calls `newBookmarkItem(...)`. Merges result: `{ ...addBookmarkResult, bid?, bname?, other:[]?, select?, option? }`. |
 | 4 | DELETE | `/{STORAGEDB}/del/:id` | Calls `StorageTagTool.delBookmark(id)`. Returns `{ id }`. |
 | 5 | GET | `/{STORAGEDB}/set/:id/:sortName(name\|mtime\|count)/:sortType(desc\|asc)` | Validates `:id` as `uid`. Finds the item in `STORAGEDB` with `{ _id: id, status: 8 }`. Verifies `btag` and `bexactly` exist on the found item. Calls `StorageTagTool.setLatest(id, session)`, then `Mongo('update', ..., { $inc: { count: 1 } })`, then `StorageTagTool.setBookmark(btag, bexactly, sortName, sortType, user, session)`. Returns `{ itemList, parentList, latest }`. |
-| 6 | POST | `/{STORAGEDB}/subscript/:id` | Validates `req.body.path` (non-empty array), `req.body.exactly` (non-empty array), `req.body.name`. Validates `:id` — if it matches the external-ID pattern `/^(you\|ypl\|kub\|yif\|mad\|bbl\|c99)_(.*)$/` it is validated as `'name'`, otherwise as `'uid'`. Validates each element in `path` array. Maps `exactly` to booleans. Calls `addBookmark(name, user, session, bpath, bexactly)` then `newBookmarkItem(...)`. Also fire-and-forget calls `setLatest(id)` and `$inc count` on the external ID. Returns same merged shape as `/add`. |
+| 6 | POST | `/{STORAGEDB}/subscript/:id` | Validates `req.body.path` (non-empty array), `req.body.exactly` (non-empty array), `req.body.name`. Validates `:id` — if it matches the external-ID pattern `/^(yif\|mad)_(.*)$/` it is validated as `'name'`, otherwise as `'uid'`. Validates each element in `path` array. Maps `exactly` to booleans. Calls `addBookmark(name, user, session, bpath, bexactly)` then `newBookmarkItem(...)`. Also fire-and-forget calls `setLatest(id)` and `$inc count` on the external ID. Returns same merged shape as `/add`. |
 
 #### `newBookmarkItem(name, user, session, bpath, bexactly)` — Private Helper
 
@@ -3939,7 +3920,7 @@ This function creates a new bookmark item document in STORAGEDB. Step-by-step fl
    - Each normalized `bpath` element (unless it is a default tag)
    - Genre tags from `searchTags(session).getArray().cur` (the current parent tags)
 6. **Adultonly Detection** — During tag iteration, if any tag is a default tag with `index === 0`, sets `data.adultonly = 1`. This applies to both `bpath` tags and parent tags.
-7. **Channel Detection** — If a `bpath` tag is a default tag with `index === 30` and sub-type `'ch'`, extracts a channel ID (commented-out YouTube channel API integration path exists; currently falls through to the regular bookmark path).
+7. **Channel Detection** — If a `bpath` tag is a default tag with `index === 30` and sub-type `'ch'`, extracts a channel ID (integration path exists; currently falls through to the regular bookmark path).
 8. **Relative Tag Enrichment** — Calls `StorageTagTool.getRelativeTag(bpath, user, [], bexactly)` to find related tags. Adds them to the set. Names the document `"000 Bookmark {name}"` (the `000` prefix forces sort-to-top).
 9. **Final Tag Filtering** — Iterates the accumulated `Set`, filters out default tags (except for detecting `adultonly` one more time). Stores as `data.tags` and `data[user._id]`.
 10. **Insert** — `Mongo('insert', STORAGEDB, data)`.
@@ -3947,7 +3928,7 @@ This function creates a new bookmark item document in STORAGEDB. Step-by-step fl
 12. **Option Building** — Builds `opt` array from `GENRE_LIST_CH` excluding already-selected tags. Fetches up to 5 more relative tags. If `checkAdmin(2, user)`, adds `'18+'` to selected or options based on `adultonly`. Adds `'first item'` to selected or options based on `first` field.
 13. **Return** — `[item._id, bname, selectedTagsArray, optionTagsArray]`.
 
-### 8.1.3 PASSWORD / STOCK / FITNESS / RANK Bookmarks
+### 8.1.3 PASSWORD / STOCK Bookmarks
 
 Each follows an identical 4-endpoint pattern (no `set` or `subscript` endpoints, no `newBookmarkItem` helper):
 
@@ -3971,17 +3952,12 @@ Each follows an identical 4-endpoint pattern (no `set` or `subscript` endpoints,
 
 ### 8.1.5 External ID Pattern (subscript route)
 
-The `subscript` endpoint recognises 7 external service prefixes:
+The `subscript` endpoint recognises 2 external service prefixes:
 
 | Prefix | Likely Source |
 |--------|--------------|
-| `you_` | YouTube video |
-| `ypl_` | YouTube playlist |
-| `kub_` | Kubex / external video |
 | `yif_` | Yify / torrent |
 | `mad_` | MAD / external media |
-| `bbl_` | Bilibili |
-| `c99_` | C99 / external service |
 
 When matched, the ID is validated as `'name'` type (allowing alphanumeric + underscores) instead of `'uid'` (ObjectID format).
 
@@ -4024,7 +4000,7 @@ Parent tags are predefined category groupings. Each collection type exposes 5 en
 | 4 | POST | `/{STORAGEDB}/add` | Calls `StorageTagTool.addParent(req.body.name, req.body.tag, user)`. No pre-validation of body fields at route level (delegated to TagTool). |
 | 5 | DELETE | `/{STORAGEDB}/del/:id` | Calls `StorageTagTool.delParent(id, user)`. |
 
-### 8.2.3 PASSWORD / STOCK / FITNESS / RANK Parents
+### 8.2.3 PASSWORD / STOCK Parents
 
 Each follows the same 5-endpoint pattern as storage with these differences:
 
@@ -4076,7 +4052,7 @@ Each follows the same 5-endpoint pattern as storage with these differences:
 | T8-001 | Request any bookmark/parent route without login session | Rejected by `checkLogin` middleware |
 | T8-002 | Request `GET /{STORAGEDB}/list` as non-admin user (admin level < 2) | Returns `parentList` without adult-only entries |
 | T8-003 | Request `GET /{STORAGEDB}/list` as admin level 2 user | Returns `parentList` concatenated with `adultonlyParentList` entries |
-| T8-004 | Non-storage `/list` routes (password, stock, fitness, rank) with admin user | Returns `parentList` only — no adult-only entries regardless of admin level |
+| T8-004 | Non-storage `/list` routes (password, stock) with admin user | Returns `parentList` only — no adult-only entries regardless of admin level |
 
 ### 8.4.2 Input Validation
 
@@ -4091,7 +4067,7 @@ Each follows the same 5-endpoint pattern as storage with these differences:
 | T8-016 | GET `/storage/getList/invalid_sort/asc` (sortName not name\|mtime) | Express 404 — route regex does not match |
 | T8-017 | GET `/storage/getList/name/invalid` (sortType not desc\|asc) | Express 404 — route regex does not match |
 | T8-018 | GET `/storage/getList/name/asc/5` (page != 0) | Express 404 — page constrained to `(0)?` |
-| T8-019 | POST `/password/add`, `/stock/add`, `/fitness/add`, `/rank/add` with empty name | Error: `'name is not vaild'` |
+| T8-019 | POST `/password/add`, `/stock/add` with empty name | Error: `'name is not vaild'` |
 
 ### 8.4.3 Empty/Edge Results
 
@@ -4117,16 +4093,10 @@ Each follows the same 5-endpoint pattern as storage with these differences:
 
 | ID | Scenario | Expected |
 |----|----------|----------|
-| T8-040 | POST `/storage/subscript/you_abc123` (YouTube video ID) | ID validated as `'name'` type; `setLatest` + count increment called on `you_abc123` |
-| T8-041 | POST `/storage/subscript/ypl_XYZ` (YouTube playlist) | ID validated as `'name'` type |
-| T8-042 | POST `/storage/subscript/kub_test` | ID validated as `'name'` type |
-| T8-043 | POST `/storage/subscript/yif_movie1` | ID validated as `'name'` type |
-| T8-044 | POST `/storage/subscript/mad_item` | ID validated as `'name'` type |
-| T8-045 | POST `/storage/subscript/bbl_video` (Bilibili) | ID validated as `'name'` type |
-| T8-046 | POST `/storage/subscript/c99_data` | ID validated as `'name'` type |
-| T8-047 | POST `/storage/subscript/unknown_prefix` (no matching pattern) | ID validated as `'uid'` type (ObjectID format) |
-| T8-048 | POST `/storage/subscript/you_` (prefix with empty suffix) | Validated as `'name'`; `isValidString` result depends on empty-string handling |
-| T8-049 | POST `/storage/subscript/invalidObjectId` (non-matching prefix, non-ObjectID) | Error: `'uid is not vaild'` |
+| T8-040 | POST `/storage/subscript/yif_movie1` | ID validated as `'name'` type |
+| T8-041 | POST `/storage/subscript/mad_item` | ID validated as `'name'` type |
+| T8-042 | POST `/storage/subscript/unknown_prefix` (no matching pattern) | ID validated as `'uid'` type (ObjectID format) |
+| T8-043 | POST `/storage/subscript/invalidObjectId` (non-matching prefix, non-ObjectID) | Error: `'uid is not vaild'` |
 
 ### 8.4.6 Storage newBookmarkItem Logic
 
@@ -4159,9 +4129,9 @@ Each follows the same 5-endpoint pattern as storage with these differences:
 
 | ID | Scenario | Expected |
 |----|----------|----------|
-| T8-080 | Verify all 5 collection types expose `/getList`, `/get`, `/add`, `/del` bookmark routes | All present in bookmark-router |
-| T8-081 | Verify only storage exposes `/set` and `/subscript` bookmark routes | Password, stock, fitness, rank do NOT have these |
-| T8-082 | Verify all 5 collection types expose `/list`, `/taglist`, `/query`, `/add`, `/del` parent routes | All present in parent-router |
+| T8-080 | Verify all 3 collection types expose `/getList`, `/get`, `/add`, `/del` bookmark routes | All present in bookmark-router |
+| T8-081 | Verify only storage exposes `/set` and `/subscript` bookmark routes | Password, stock do NOT have these |
+| T8-082 | Verify all 3 collection types expose `/list`, `/taglist`, `/query`, `/add`, `/del` parent routes | All present in parent-router |
 | T8-083 | Verify only storage's `/list` has `adultonlyParentList` | Other types return `parentList()` only |
 | T8-084 | Verify storage's `/get` and `/query` pass `mediaHadle` to `getStorageItem` | Other types' `getXxxItem` calls do NOT receive `mediaHadle` |
 # Section 9: file-router.js (File Operations)
@@ -4579,7 +4549,7 @@ Returns empty `feedbacks: []` if no untagged items exist (even after admin fallb
 
 **File:** `src/back/controllers/file-other-router.js` (753 lines)  
 **Mount point:** `/f` (via `app.use('/f', OtherRouter)` in `file-server.js`)  
-**Purpose:** Serves file previews, video streams, subtitles, images, documents, downloads, file uploads, and lottery CSV exports. All file serving uses the **nginx X-Accel-Redirect (sendfile) pattern** — the Node.js process sets `X-Forwarded-Path`, `X-Forwarded-Type`, and optionally `X-Forwarded-Name` headers, then responds with a minimal body; nginx intercepts these headers and streams the actual file to the client.
+**Purpose:** Serves file previews, video streams, subtitles, images, documents, and file uploads. All file serving uses the **nginx X-Accel-Redirect (sendfile) pattern** — the Node.js process sets `X-Forwarded-Path`, `X-Forwarded-Type`, and optionally `X-Forwarded-Name` headers, then responds with a minimal body; nginx intercepts these headers and streams the actual file to the client.
 
 **Key dependencies:**
 
@@ -4590,7 +4560,6 @@ Returns empty `feedbacks: []` if no untagged items exist (even after admin fallb
 | `MediaHandleTool` | Post-upload media processing (transcoding, thumbnails) |
 | `PlaylistApi` | Torrent playlist creation from magnet links |
 | `TagTool` (as `StorageTagTool`) | Tag management, latest-item tracking, relative-tag suggestions |
-| `Lottery` | Lottery CSV import/export |
 | `ReadTorrent` | Parse `.torrent` files into torrent metadata |
 | `SRT2VTT` | Convert SRT/ASS/SSA subtitle files to WebVTT format |
 | `sendWs` | WebSocket push notifications to connected clients |
@@ -4716,18 +4685,8 @@ Returns empty `feedbacks: []` if no untagged items exist (even after admin fallb
 
 | Prefix | Platform | Storage key |
 |---|---|---|
-| `you_` | YouTube | `youtube` |
-| `dym_` | Dailymotion | `dailymotion` |
-| `bil_` | Bilibili | `bilibili` |
 | `yif_` | Yify | `yify` |
-| `yuk_` | Youku | `youku` |
-| `ope_` | Openload | `openload` |
-| `lin_` | Line | `line` |
-| `iqi_` | iQiyi | `iqiyi` |
-| `kud_` | Kubo Drive | `kubodrive` |
-| `kyu_` | Kubo Youku | `kuboyouku` |
-| `kdy_` | Kubo DymYou | `kubodymyou` |
-| `kur_` | Kubo URL | `kubourl` |
+| `mad_` | MAD/DM5 | `dm5` |
 
 **Flow — external IDs (prefix match):**
 
@@ -4953,243 +4912,6 @@ Returns empty `feedbacks: []` if no untagged items exist (even after admin fallb
 
 ---
 
-### GET /f/download/lottery
-
-**Purpose:** Export lottery data as a downloadable CSV file.
-
-**Authentication:** None explicitly (relies on `req.user` being set by upstream middleware).
-
-**Flow:**
-
-1. Call `Lottery.downloadCsv(req.user)` which returns `{ path, name }`.
-2. Respond with `X-Forwarded-Path` and `X-Forwarded-Name` with UTF-8 encoded filename `{name}.csv`.
-
-**Note:** This route is defined **before** `/download/:uid`, so `/download/lottery` is matched as a literal path, not as `uid = "lottery"`.
-
-**Test scenarios:**
-
-| Scenario | Expected |
-|---|---|
-| Valid user with lottery data | 200, CSV download with proper filename |
-| Lottery.downloadCsv rejects | Error passed to next() |
-
----
-
-### POST /f/upload/file
-
-**Purpose:** Handle multipart file upload — the most complex endpoint in this router. Processes torrent files, regular files, and creates database entries with auto-generated tags.
-
-**Authentication:** `checkLogin` (default type).
-
-**Flow overview:**
-
-```
-Upload → Stream to disk → Detect type → Branch:
-  ├─ Torrent file → Parse → Extract magnet → Check duplicates → Get playlist → Insert DB
-  └─ Regular file → Insert DB → handleMediaUpload (transcode/thumbnail)
-→ Tag building → WebSocket notification → JSON response
-```
-
-**Step-by-step:**
-
-1. Generate new ObjectId (`oOID`) and file path.
-2. Ensure directory exists (`Mkdirp`).
-3. Stream uploaded file from temp path to permanent location.
-4. **Branch: Torrent file** (detected via `isTorrent(filename)`):
-   a. Parse torrent file with `ReadTorrent`.
-   b. Extract magnet URI via `torrent2Magnet()`.
-   c. Validate magnet, extract short magnet (before first `&`).
-   d. Delete the torrent file, recreate path as directory.
-   e. Check for duplicate magnets in DB (regex match on short magnet).
-   f. Call `PlaylistApi('torrent info', magnet, filePath)` to get torrent file list.
-   g. Build tags from each file in the torrent (via `extType` → `extTag`).
-   h. Sort playlist, prepare DB object with `magnet` and `playList` fields.
-5. **Branch: Regular file**:
-   a. Proceed with filename and empty tag sets.
-6. Delete temp upload file.
-7. Sanitize filename via `toValidName()`. If name matches a default tag, append `'1'`.
-8. Call `MediaHandleTool.handleTag()` to detect media type and build initial DB record.
-9. **Tag building** (complex multi-source aggregation):
-
-| Tag source | Set type | Details |
-|---|---|---|
-| Torrent media types | `setTag` (definite) | From `extTag().def` for each playlist file |
-| Torrent media types | `optTag` (optional) | From `extTag().opt` for each playlist file |
-| Item name (normalized) | `setTag` | Always added |
-| Username | `setTag` | Always added |
-| `req.body.path` (JSON array) | `setTag` | Path components from client |
-| `handleTag` media tags `.def` | `setTag` | From media type detection |
-| `handleTag` media tags `.opt` | `optTag` | From media type detection |
-| Relative tags (top 5) | `optTag` | From `getRelativeTag()` |
-| `'torrent'`, `'playlist'`, `'播放列表'` | `setTag` | Only for torrent files |
-| `'18+'` | `setTag` or `optTag` | Based on `adultonly` flag |
-| `'first item'` | `setTag` or `optTag` | Based on `first` flag |
-
-10. Filter tags: default tags are excluded from arrays; if a tag matches adult-default, set `adultonly=1`.
-11. Insert into MongoDB with `tags`, user-specific tag array, and torrent-specific fields.
-12. Send WebSocket notification: `{type: 'file', data: item._id}`.
-13. For regular files: call `handleMediaUpload()` (transcoding, thumbnail generation).
-14. Return JSON response:
-
-```json
-{
-  "id": "<ObjectId>",
-  "name": "<sanitized name>",
-  "select": ["<definite tags>"],
-  "option": ["<optional tags>"],
-  "other": []
-}
-```
-
-**DB record fields:**
-
-| Field | Value |
-|---|---|
-| `_id` | New ObjectId |
-| `name` | Sanitized filename |
-| `owner` | `req.user._id` |
-| `utime` | Unix timestamp (seconds) |
-| `size` | File size (0 for torrents) |
-| `count` | 0 |
-| `first` | 1 |
-| `recycle` | 0 |
-| `adultonly` | 1 if admin type 2 + body type 1, else 0 |
-| `untag` | 1 |
-| `status` | 9 for torrents, 0 for regular files |
-| `tags` | Array of normalized tag strings |
-| `[userId]` | Same as `tags` (per-user tag copy) |
-| `magnet` | (torrent only) Encoded magnet URI |
-| `playList` | (torrent only) Sorted array of file paths |
-
-**Test scenarios:**
-
-| Scenario | Expected |
-|---|---|
-| Upload regular image file | DB insert status=0, handleMediaUpload called, JSON response |
-| Upload `.torrent` file | Parse torrent, extract magnet, status=9, playlist built |
-| Duplicate torrent (magnet exists) | Error: "already has one" |
-| Invalid magnet from torrent | Error: "magnet create fail" |
-| Empty torrent (no files) | Error: "empty content!!!" |
-| Filename matches default tag | `'1'` appended to name |
-| Admin user + body type=1 | `adultonly=1` set |
-| Non-admin user | `adultonly=0` |
-| `req.body.path` with tag array | Tags added to `setTag` |
-| Media processing fails | `errorMedia` callback invoked |
-| WebSocket notification | Sent with item `_id` and adultonly flag |
-
----
-
-### POST /f/upload/subtitle/:uid/:index(\\d+)?
-
-**Purpose:** Upload a subtitle file for a video (internal or external).
-
-**Authentication:** `checkLogin` (default type).
-
-**Route parameters:**
-
-| Param | Description |
-|---|---|
-| `uid` | MongoDB ObjectId or external prefixed ID |
-| `index` | (optional) Playlist index for status=9 items |
-
-**Flow:**
-
-1. Reject if file size > 10 MB.
-2. Validate subtitle extension via `isSub(filename)`.
-3. **Backup existing subtitles before overwrite:**
-   - `.srt` → `.srt1`
-   - `.ass` → `.ass1`
-   - `.ssa` → `.ssa1`
-4. Stream uploaded file to `{path}.{ext}`.
-5. Convert to VTT via `SRT2VTT(filePath, ext)`.
-6. Send WebSocket notification: `{type: 'sub', data: id}`.
-
-**External ID handling:** Same prefix mapping as subtitle GET endpoint. Uses `req.body.lang` to determine language — if `'en'`, subtitle path gets `.en` suffix.
-
-**Internal ID handling:**
-- Status must be 3 (single video) or 9 (playlist).
-- Reject if `item.thumb` exists (external file — must open video first).
-- For status=9: determine file index from `index` param or first video in playlist.
-
-**Subtitle file format support:**
-
-| Extension | Detected by | Conversion |
-|---|---|---|
-| `.srt` | `isSub()` | SRT → VTT (comma→dot timestamp fix + WEBVTT header) |
-| `.ass` | `isSub()` | ASS → VTT (via `Ass2vtt` stream converter) |
-| `.ssa` | `isSub()` | SSA → VTT (via `Ass2vtt` stream converter) |
-| `.vtt` | `isSub()` | Already VTT, minimal processing |
-| `.sub` | `isSub()` | SUB → VTT |
-
-**Test scenarios:**
-
-| Scenario | Expected |
-|---|---|
-| Upload .srt for internal video | Backup existing, convert to .vtt, WS notify |
-| Upload .ass for playlist index 3 | Saves as `{path}/3.ass`, converts to `{path}/3.vtt` |
-| Upload .srt for external `you_xxx` | Saves to youtube storage path |
-| Upload English subtitle (lang=en) | Path gets `.en` suffix |
-| File > 10 MB | Error: "size too large!!!" |
-| Non-subtitle extension | Error: "not valid subtitle!!!" |
-| Existing .srt before upload | Renamed to `.srt1` |
-| Item has `thumb` (external) | Error: "external file, please open video" |
-| Status not 3 or 9 | Error: "file type error!!!" |
-
----
-
-### POST /f/upload/lottery/:name/:type(0|1|2|3|4|5)
-
-**Purpose:** Upload a CSV file to create a new lottery.
-
-**Authentication:** `checkLogin` (default type).
-
-**Route parameters:**
-
-| Param | Pattern | Description |
-|---|---|---|
-| `name` | string | Lottery name |
-| `type` | `0`–`5` | Lottery type |
-
-**Flow:**
-
-1. Validate file is CSV via `isCSV()`.
-2. Parse `req.body.lang` — if `'en'`, pass `false` to `Lottery.input()`; otherwise `true`.
-3. `Lottery.input()` parses CSV, returns `{ user, reward }`.
-4. `Lottery.newLottery(userId, name, type, lang, user, reward)` creates the lottery.
-5. Return `{apiOK: true}`.
-
-**Test scenarios:**
-
-| Scenario | Expected |
-|---|---|
-| Valid CSV, type=0, lang=en | Lottery created, `{apiOK: true}` |
-| Non-CSV file | Error: "not valid csv!!!" |
-| Invalid lang JSON | Error: "json parse error!!!" |
-
----
-
-### GET /f/output/lottery
-
-**Purpose:** Trigger lottery output/CSV generation.
-
-**Authentication:** None explicit (uses `req.user` from middleware).
-
-**Flow:**
-
-1. Call `Lottery.outputCsv(req.user)`.
-2. Return `{apiOk: true}`.
-
-**Note:** The response uses `apiOk` (lowercase 'k') while other endpoints use `apiOK` (uppercase). This is likely an inconsistency in the codebase.
-
-**Test scenarios:**
-
-| Scenario | Expected |
-|---|---|
-| Valid user | `{apiOk: true}` |
-| outputCsv fails | Error passed to next() |
-
----
-
 ## Cross-Cutting Concerns
 
 ### Nginx Sendfile Pattern
@@ -5238,7 +4960,7 @@ External content from third-party platforms uses prefixed IDs (`you_`, `bil_`, `
 
 ## Overview
 
-The largest router in the application (1188 lines), `external-router.js` manages all external media source integrations, subtitle operations, Google Drive uploads, and Kindle delivery. It orchestrates interactions with third-party APIs including OpenSubtitles (v1 and v2), Google Drive, YIFY, DM5, KUBO, EZTV, and Mega.
+The largest router in the application (1188 lines), `external-router.js` manages all external media source integrations, Google Drive uploads, and Kindle delivery. It orchestrates interactions with third-party APIs including OpenSubtitles (v1 and v2), Google Drive, YIFY, DM5, and Mega.
 
 **File:** `src/back/controllers/external-router.js`
 **Mount path:** `/f/api/external` (all routes below are relative to this)
@@ -5251,9 +4973,9 @@ The largest router in the application (1188 lines), `external-router.js` manages
 | `read-torrent` (ReadTorrent) | Parse torrent files to extract metadata and magnet links |
 | `opensubtitles.com` (OpenSubtitleRest) | OpenSubtitles REST API v2 — search and download subtitles |
 | `opensubtitles-api` (OpenSubtitle) | OpenSubtitles API v1 — file hashing for subtitle lookup |
-| `GoogleApi` / `googleDownloadSubtitle` | Google Drive uploads, YouTube subtitle downloads, email sending |
+| `GoogleApi` | Google Drive uploads, email sending |
 | `PlaylistApi` | Torrent management, mega downloads, zip handling |
-| `External` / `bilibiliVideoUrl` / `youtubeVideoUrl` / `kuboVideoUrl` | External source scrapers and video URL extractors |
+| `External` | External source scrapers |
 | `MediaHandleTool` / `errorMedia` | Media file processing, tag handling, upload workflow |
 | `TagTool` / `StorageTagTool` | Tag normalization, relative tag suggestions, default tag detection |
 | `Api` | Generic download utility, process stop commands |
@@ -5387,55 +5109,9 @@ The largest router in the application (1188 lines), `external-router.js` manages
 
 ---
 
-### GET /getSingle/:uid
-
-**Purpose:** Resolve an external video source identifier to a playable URL. Supports multiple video platforms via prefix-based routing.
-
-**Lines:** 220–274
-
-#### UID Format
-
-Pattern: `{prefix}_{id}` — validated by regex `^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)`
-
-#### Platform Prefix Mapping
-
-| Prefix | Platform | URL Template | Notes |
-|---|---|---|---|
-| `you` | YouTube | `http://www.youtube.com/watch?v={id}` | Default case |
-| `dym` | Dailymotion | `http://www.dailymotion.com/embed/video/{id}` | Direct embed |
-| `bil` | Bilibili | `http://www.bilibili.com/video/{id}/` | Supports `{id}_{page}` for multi-part |
-| `yuk` | Youku | `http://v.youku.com/v_show/id_{id}.html` | — |
-| `ope` | OpenLoad/Generic | Base64-decoded from `id` | `Buffer.from(id, 'base64').toString()` |
-| `lin` | LINE TV | `https://tv.line.me/v/{id}` | — |
-| `iqi` | iQiyi | `http://www.iqiyi.com/{id}.html` | — |
-| `kud` | KUBO Drive | `http://www.99tw.net/redirect?mode=xplay&id={x}&pid={y}` | ID format: `{x}_{y}` |
-| `kyu` | KUBO Youku | `http://v.youku.com/v_show/id_{x}.html` | ID format: `{x}_{subIndex}` |
-| `kdy` | KUBO DM/YouTube | `http://www.58b.tv/168player/youtube.php?{x}` | ID format: `{x}_{subIndex}` |
-| `kur` | KUBO URL | `http://www.99kubo.tv{base64decoded}` | Base64-encoded path |
-
-#### Video URL Resolution Functions
-
-| Prefix | Resolver Function |
-|---|---|
-| `bil` | `bilibiliVideoUrl(url)` |
-| `kdy`, `kud`, `kyu`, `kur`, `ope` | `kuboVideoUrl(prefix, url, subIndex)` |
-| All others (incl. `you`) | `youtubeVideoUrl(prefix, url)` |
-
-#### Response
-
-Returns the resolved video URL object from the respective resolver function.
-
-#### Error Conditions
-
-| Error | Condition |
-|---|---|
-| `'file is not youtube video!!!'` | UID doesn't match any known prefix pattern |
-
----
-
 ### POST /upload/url
 
-**Purpose:** The primary external source upload endpoint. Handles URL bookmarks, magnet links, torrent files, and external media sources (YIFY, KUBO, DM5, EZTV, Mega).
+**Purpose:** The primary external source upload endpoint. Handles URL bookmarks, magnet links, torrent files, and external media sources (YIFY, DM5, Mega).
 
 **Lines:** 276–788
 
@@ -5487,14 +5163,8 @@ The endpoint first checks if the URL starts with `url%3A` (URL bookmark) or is a
 | URL Pattern (Regex) | Source | `is_media` | ID Extraction |
 |---|---|---|---|
 | `^(https\|http):\/\/yts\.ag\/movie\/` | YIFY | 3 (video) | Last path segment: `[^\/]+$` |
-| `^(https\|http):\/\/www\.99kubo\.tv\/` | KUBO | 3 (video) | Numeric ID before `.html`: `(\d+)\.html$` |
 | `^(https\|http):\/\/www\.dm5\.com\/` | DM5 | 2 (comic/image) | Path segment after domain: `\/([^\/]+)` |
-| `^(https\|http):\/\/eztv\.re\/` | EZTV | 3 (video) | Shows path: `\/shows\/([^\/]+)` |
 | `^(https\|http):\/\/mega\.` | Mega | — | Full URL passed to `PlaylistApi('mega add', ...)` |
-
-**Commented-out sources:**
-- YouTube (`www.youtube.com` / `youtu.be`) — Lines 423–493
-- Bilibili (`www.bilibili.com` / `bangumi.bilibili.com`) — Lines 554–573
 
 Each external source:
 1. Checks for duplicates via `Mongo('find', STORAGEDB, {owner: source, url: encodedUrl})`
@@ -5562,9 +5232,7 @@ The shared finalization function for all upload types:
 | `'already has one'` | Duplicate magnet hash or external URL found |
 | `'empty content!!!'` | Torrent has no files |
 | `'yify url invalid'` | Cannot extract YIFY ID from URL |
-| `'kubo url invalid'` | Cannot extract KUBO numeric ID |
 | `'dm5 url invalid'` | Cannot extract DM5 path segment |
-| `'eztv url invalid'` | Cannot extract EZTV show ID |
 | `'unknown type'` | URL doesn't match any known pattern |
 | `'permission denied!'` | Non-admin tries stopapi/stopgoogle |
 | `'magnet create fail'` | Torrent-to-magnet conversion failed |
@@ -5613,14 +5281,6 @@ Episode/season strings are generated with zero-padding for search queries (e.g.,
 
 | Prefix | Platform Type |
 |---|---|
-| `dym` | dailymotion |
-| `bil` | bilibili |
-| `yuk` | youku |
-| `ope` | openload |
-| `kud` | kubodrive |
-| `kyu` | kuboyouku |
-| `kdy` | kubodymyou |
-| `kur` | kubourl |
 
 **Storage file UIDs:**
 - Validates as MongoDB ObjectId
@@ -5702,7 +5362,7 @@ sendWs({ type: 'sub', data: id }, 0, 0);
 | Error | Condition |
 |---|---|
 | `'name is not vaild'` | Invalid search name |
-| `'file is not youtube video!!!'` | (from getSingle path) Invalid prefix |
+| `'file is not valid!!!'` | (from getSingle path) Invalid prefix |
 | `'external is not vaild'` | External UID fails name validation |
 | `'uid is not vaild'` | Storage UID fails validation |
 | `'cannot find file!!!'` | File not found in DB |
@@ -5711,40 +5371,6 @@ sendWs({ type: 'sub', data: id }, 0, 0);
 | `'cannot find subtitle!!!'` | No subtitles found in either search pass |
 | `'donot have sub!!!'` | Null subtitle URL passed to SUB2VTT |
 | `'is not sub!!!'` | File extension not recognized as subtitle |
-
----
-
-### GET /getSubtitle/:uid
-
-**Purpose:** Download YouTube auto-generated subtitles via Google API.
-
-**Lines:** 1053–1070
-
-#### Parameters
-
-| Parameter | Source | Validation | Description |
-|---|---|---|---|
-| `uid` | URL param | Must match `^you_(.*)` | YouTube video external ID |
-
-#### Processing Logic
-
-1. Validates UID starts with `you_` prefix
-2. Constructs YouTube URL: `http://www.youtube.com/watch?v={youtubeId}`
-3. Calls `googleDownloadSubtitle(url, filePath)` where filePath = `getFileLocation('youtube', id)`
-4. Sends WebSocket notification on success
-
-#### Response
-
-```json
-{ "apiOK": true }
-```
-
-#### Error Conditions
-
-| Error | Condition |
-|---|---|
-| `'file is not youtube video!!!'` | UID doesn't start with `you_` |
-| `'external is not vaild'` | UID fails name validation |
 
 ---
 
@@ -5764,12 +5390,6 @@ sendWs({ type: 'sub', data: id }, 0, 0);
 | `index` | URL param (optional) | Regex `\d+` | Playlist item index |
 
 #### UID Resolution
-
-| Prefix | External Type |
-|---|---|
-| `you` | youtube |
-| `dym` | dailymotion |
-| `bil` | bilibili (in type mapping but not in prefix regex) |
 
 For storage UIDs: same resolution as subtitle search (status 3/9, playlist index support).
 
@@ -5828,7 +5448,6 @@ The following endpoints are **not implemented** in this file (may reside in othe
 | GET | `/getSingle/:uid` | 220–274 | Resolve external video platform URL |
 | POST | `/upload/url` | 276–788 | External source upload (magnet, torrent, URLs) |
 | POST | `/subtitle/search/:uid/:index?` | 790–1051 | Search + download subtitles from OpenSubtitles |
-| GET | `/getSubtitle/:uid` | 1053–1070 | Download YouTube subtitles via Google API |
 | GET | `/subtitle/fix/:uid/:lang/:adjust/:index?` | 1072–1186 | Adjust subtitle timing offset |
 
 ---
@@ -5851,20 +5470,10 @@ The following endpoints are **not implemented** in this file (may reside in othe
 | Regex | Source |
 |---|---|
 | `^(https\|http):\/\/yts\.ag\/movie\/` | YIFY movie page |
-| `^(https\|http):\/\/www\.99kubo\.tv\/` | KUBO video page |
 | `^(https\|http):\/\/www\.dm5\.com\/` | DM5 comic page |
-| `^(https\|http):\/\/eztv\.re\/` | EZTV TV show page |
 | `^(https\|http):\/\/mega\.` | Mega download link |
 | `^url%3A(.*)` | URL bookmark (status 7) |
 
-### Commented-Out URL Patterns
-
-| Regex | Source | Lines |
-|---|---|---|
-| `^(https\|http):\/\/(www\.youtube\.com\|youtu\.be)\/` | YouTube | 423–493 |
-| `^(https\|http):\/\/www\.bilibili\.com\/` or `bangumi\.bilibili\.com` | Bilibili | 554–573 |
-
----
 
 ## External API Call Reference
 
@@ -5873,14 +5482,11 @@ The following endpoints are **not implemented** in this file (may reside in othe
 | Google Drive | `GoogleApi('upload', {...})` | Upload file to Drive |
 | Google Drive | `GoogleApi('create', {...})` | Create folder on Drive |
 | Google Mail | `GoogleApi('send mail', {...})` | Send file to Kindle |
-| Google YouTube | `googleDownloadSubtitle(url, path)` | Download YouTube subtitles |
 | OpenSubtitles v2 | `OpenSubtitles.subtitles(params)` | Search subtitles |
 | OpenSubtitles v2 | `OpenSubtitles.download({file_id})` | Get subtitle download link |
 | OpenSubtitles v1 | `OpenSubtitlesHash.hash(filePath)` | Calculate file hash |
 | YIFY | `External.saveSingle('yify', id)` | Scrape YIFY movie data |
 | DM5 | `External.saveSingle('dm5', id)` | Scrape DM5 comic data |
-| KUBO | `External.saveSingle('kubo', id)` | Scrape KUBO video data |
-| EZTV | `External.saveSingle('eztv', id)` | Scrape EZTV show data |
 | Mega | `PlaylistApi('mega add', ...)` | Download from Mega |
 | Torrent | `PlaylistApi('torrent info', ...)` | Get torrent file info |
 | Generic | `Api('download', ...)` | Download file from URL |
@@ -5895,7 +5501,7 @@ The following endpoints are **not implemented** in this file (may reside in othe
 | OpenSubtitles login failure | `try/catch` → `handleError(err, next)` | Lines 936–941 |
 | OpenSubtitles search returns no results | Two-pass search; if both fail → `'cannot find subtitle!!!'` | Lines 989–1010 |
 | OpenSubtitles download failure | Promise chain `.catch(err => handleError(err, next))` | Line 1050 |
-| External.saveSingle() failure (YIFY/DM5/KUBO/EZTV) | Caught by outer `.catch()` → falls through to `pureDownload()` | Line 604 |
+| External.saveSingle() failure (YIFY/DM5) | Caught by outer `.catch()` → falls through to `pureDownload()` | Line 604 |
 | Mega download failure | `errhandle` callback → `pureDownload()` | Line 598 |
 | Google Drive upload failure | Promise chain `.catch(err => handleError(err, next))` | Line 187 |
 | Torrent parsing failure (ReadTorrent) | Promise rejection → `handleError(err, next)` | Line 612 |
@@ -5961,8 +5567,8 @@ OpenSubtitles API → download .srt → SRT2VTT(subPath, 'srt') → .vtt file
 |---|---|---|
 | 0 | Normal file | Direct upload to Drive |
 | 2 | Comic/Image | External comic (DM5) |
-| 3 | Video | External video (YIFY, KUBO, EZTV) |
-| 4 | Music | YouTube music (commented out) |
+| 3 | Video | External video (YIFY) |
+| 4 | Music | External music |
 | 7 | URL Bookmark | Skipped for Drive upload; created by `url%3A` prefix |
 | 8 | Thumb-only | Skipped for Drive upload |
 | 9 | Playlist (torrent/mega) | Complex upload: folders + files or zip + txt fallback |
@@ -6003,19 +5609,6 @@ OpenSubtitles API → download .srt → SRT2VTT(subPath, 'srt') → .vtt file
 
 | # | Scenario | Input | Expected Outcome |
 |---|---|---|---|
-| 1 | YouTube video | `you_dQw4w9WgXcQ` | Resolved YouTube URL via `youtubeVideoUrl()` |
-| 2 | Dailymotion video | `dym_x5e9eog` | Dailymotion embed URL resolved |
-| 3 | Bilibili video | `bil_BV1xx411c7mD` | Bilibili URL resolved via `bilibiliVideoUrl()` |
-| 4 | Bilibili multi-part | `bil_BV1xx_3` | Bilibili URL with page index |
-| 5 | KUBO Drive video | `kud_1234_5678` | 99tw redirect URL resolved |
-| 6 | KUBO Youku video | `kyu_XMTI_2` | Youku URL with subIndex |
-| 7 | KUBO URL (base64) | `kur_L3ZpZGVvLzEyMw==` | Base64-decoded KUBO URL |
-| 8 | OpenLoad (base64) | `ope_aHR0cDovL2V4LmNvbQ==` | Base64-decoded generic URL |
-| 9 | LINE TV | `lin_12345` | LINE TV URL resolved |
-| 10 | iQiyi | `iqi_v_12345` | iQiyi URL resolved |
-| 11 | Invalid prefix | `xxx_12345` | Error: `'file is not youtube video!!!'` |
-| 12 | No prefix | `plainstring` | Error: `'file is not youtube video!!!'` |
-
 ### POST /upload/url
 
 | # | Scenario | Input | Expected Outcome |
@@ -6031,9 +5624,7 @@ OpenSubtitles API → download .srt → SRT2VTT(subPath, 'srt') → .vtt file
 | 9 | `magnet:stopgoogle` (admin) | Admin user | Google process stopped |
 | 10 | YIFY URL | `https://yts.ag/movie/example-2020` | YIFY metadata scraped, status 3 entry |
 | 11 | Duplicate YIFY URL | Same URL already in DB | Error: `'already has one'` |
-| 12 | KUBO URL | `https://www.99kubo.tv/vod-read-id-12345.html` | KUBO metadata scraped, status 3 |
 | 13 | DM5 URL | `https://www.dm5.com/manhua-example/` | DM5 metadata scraped, status 2 |
-| 14 | EZTV URL | `https://eztv.re/shows/123/example` | EZTV metadata scraped, status 3 |
 | 15 | Mega URL | `https://mega.nz/file/abc` | Mega download started, playlist created |
 | 16 | Unknown URL type | `https://unknown-site.com/file` | Error: `'unknown type'` → fallback to `pureDownload()` |
 | 17 | Torrent file via URL | URL that downloads a `.torrent` file | File downloaded, parsed, magnet extracted, playlist created |
@@ -6063,15 +5654,6 @@ OpenSubtitles API → download .srt → SRT2VTT(subPath, 'srt') → .vtt file
 | 15 | Existing subtitles | `.srt` already exists at path | Old file renamed to `.srt1`, new subtitle saved |
 | 16 | OpenSubtitles API failure | API login or search throws | Error propagated via catch |
 
-### GET /getSubtitle/:uid
-
-| # | Scenario | Input | Expected Outcome |
-|---|---|---|---|
-| 1 | Valid YouTube ID | `you_dQw4w9WgXcQ` | Subtitle downloaded via Google API |
-| 2 | Non-YouTube prefix | `dym_abc123` | Error: `'file is not youtube video!!!'` |
-| 3 | Invalid UID | `you_!!!` | Error: `'external is not vaild'` |
-| 4 | No subtitle available | YouTube video without captions | Error from `googleDownloadSubtitle()` |
-
 ### GET /subtitle/fix/:uid/:lang/:adjust/:index?
 
 | # | Scenario | Input | Expected Outcome |
@@ -6085,8 +5667,8 @@ OpenSubtitles API → download .srt → SRT2VTT(subPath, 'srt') → .vtt file
 | 7 | Playlist item subtitle | `index` = `2` | Fixes subtitle for playlist item 2 |
 | 8 | Missing VTT file | VTT doesn't exist on disk | Error: `'do not have subtitle!!!'` |
 | 9 | Invalid adjust format | `adjust` = `abc` | Error: `'adjust time is not vaild'` |
-| 10 | External source UID | `you_abc123` | Resolves to youtube file path |
-| 11 | Dailymotion UID | `dym_xyz` | Resolves to dailymotion file path |
+| 10 | External source UID | `yif_abc123` | Resolves to YIFY file path |
+| 11 | Comic UID | `mad_xyz` | Resolves to DM5 file path |
 | 12 | Non-video file status | Status = 0 file | Error: `'file type error!!!'` |
 
 ---
@@ -6101,9 +5683,7 @@ URL Input
   ├── magnet:stop* → Process control commands
   ├── magnet:... → Torrent info → Playlist (status 9)
   ├── yts.ag/movie/... → YIFY scrape → Video entry (status 3)
-  ├── www.99kubo.tv/... → KUBO scrape → Video entry (status 3)
   ├── www.dm5.com/... → DM5 scrape → Comic entry (status 2)
-  ├── eztv.re/... → EZTV scrape → Video entry (status 3)
   ├── mega.... → Mega download → Playlist (status 9)
   └── (unknown) → Error → pureDownload() fallback
                             ├── Downloaded .torrent → Parse → Playlist (status 9)
@@ -6674,7 +6254,7 @@ All endpoints interact with `STORAGEDB` collection via the `Mongo` helper:
 - `find` with `{limit: 1}` for single-item lookups
 - `update` with `$inc` for count increments
 - `insert` for new file entries (copy endpoint)
-# Section 13: Feature Routers (Bitfinex, Fitness, Rank, Lottery)
+# Section 13: Feature Routers (Bitfinex)
 
 ---
 
@@ -6738,263 +6318,3 @@ All routes are protected by `checkLogin` applied as router-level middleware. No 
 
 ---
 
-## 13.2 fitness-router.js — Fitness Tracking
-
-**Source:** `src/back/controllers/fitness-router.js` (161 lines)
-
-### Overview
-
-Full CRUD and tag-management router for fitness tracking data. Uses `TagTool(FITNESSDB)` for tag-based querying and `FitnessTool` for row manipulation, point management, exchange, and statistics. Admin-gated write operations. WebSocket notifications via `sendWs` on mutations.
-
-### Dependencies
-
-| Import | Purpose |
-|---|---|
-| `FITNESSDB` | Database identifier constant |
-| `Express` | Router factory |
-| `TagTool` | Factory producing `FitnessTagTool` instance bound to `FITNESSDB` |
-| `FitnessTool` | Model layer — row CRUD, points, exchange, statistics |
-| `checkLogin`, `handleError`, `getFitnessItem`, `checkAdmin`, `HoError` | Auth, error handling, item transformation, admin validation, custom error |
-| `sendWs` | WebSocket broadcast utility |
-
-### Authentication & Authorization
-
-- **All routes:** `checkLogin` via router-level middleware.
-- **Admin-gated routes (level 1):** `POST /newRow`, `PUT /editRow/:uid`, `DELETE /delRow/:uid` — each calls `checkAdmin(1, req.user)` inline. On failure returns `HoError('permission denied')`.
-- **User-level routes (no admin check):** All tag operations, `/getPoint`, `/exchange/:uid`, `/getStat`, `/reset`.
-
-### Route Table
-
-| Method | Path | Handler | Admin | WebSocket | Response Shape |
-|---|---|---|---|---|---|
-| GET | `/get/:sortName/:sortType/:page/:name?/:exactly?/:index?` | `FitnessTagTool.tagQuery(...)` | No | No | `{ itemList, parentList, latest, bookmarkID }` |
-| GET | `/getSingle/...` (same params) | Conditionally calls `searchTags().resetArray()` when page=0 and name present, then `tagQuery` | No | No | `{ itemList, parentList, latest, bookmarkID }` |
-| GET | `/reset/:sortName/:sortType` | `FitnessTagTool.resetQuery(...)` | No | No | `{ itemList, parentList }` |
-| GET | `/single/:uid` | `FitnessTagTool.singleQuery(uid, user, session)` | No | No | `{ item }` or `{ empty: true }` |
-| POST | `/getOptionTag` | `FitnessTagTool.getRelativeTag(body.tags, user, [])` | No | No | `{ relative: [...] }` (max 5 items) |
-| PUT | `/addTag/:tag` | Recursive loop: `FitnessTagTool.addTag(uid, tag, user, false)` for each uid in `body.uids` | No | Yes — `{ type: 'fitness', data: id }` per uid | `{ apiOK: true }` |
-| PUT | `/delTag/:tag` | Recursive loop: `FitnessTagTool.delTag(uid, tag, user, false)` for each uid in `body.uids` | No | Yes — `{ type: 'fitness', data: id }` per uid | `{ apiOK: true }` |
-| POST | `/newRow` | `FitnessTool.newRow(body)` | **Yes (1)** | Yes — `{ type: 'fitness', data: id }` | `{ id }` |
-| PUT | `/editRow/:uid` | `FitnessTool.editRow(uid, body, session)` | **Yes (1)** | Yes — `{ type: 'fitness', data: uid }` | `{ apiOK: true }` |
-| DELETE | `/delRow/:uid` | `FitnessTool.delRow(uid)` | **Yes (1)** | Yes — `{ type: 'fitness', data: uid }` | `{ apiOK: true }` |
-| GET | `/getPoint` | `FitnessTool.getPoint(user)` | No | No | `{ point }` |
-| PUT | `/exchange/:uid` | `FitnessTool.exchange(uid, user, body.exchange, session)` | No | Yes — `{ type: 'fitness', data: uid }` | `{ point }` |
-| GET | `/getStat/:index?/:uid?` | `FitnessTool.getStat(user._id, index, uid)` | No | No | Result object or `{ apiOK: true }` if falsy |
-| GET | `/reset` | `FitnessTool.resetDate(user._id)` | No | No | `{ apiOK: true }` |
-
-### Implementation Notes
-
-1. **`/getSingle` tag-reset logic:** When `page === 0` and `req.params.name` is truthy, it calls `FitnessTagTool.searchTags(req.session).resetArray()` before the main query. This clears previously accumulated search tags for the session, enabling a fresh single-item search.
-2. **Recursive tag operations (`addTag` / `delTag`):** Tags are applied to multiple UIDs sequentially using a recursive function with a 500 ms `setTimeout` delay between iterations. This is a rate-limiting mechanism but means a request with N UIDs takes ≈ N×500 ms to complete. The HTTP response is only sent after all UIDs are processed.
-3. **`/getOptionTag` caps at 5 results:** `relative.length < 5 ? relative.length : 5` — at most 5 relative tags are returned regardless of the total set.
-4. **Response transform:** `getFitnessItem(req.user, items)` wraps raw DB items with user-specific presentation data; used in `/get`, `/getSingle`, `/reset/:sort`, `/single`.
-5. **Two `/reset` routes coexist:** `GET /reset/:sortName/:sortType` (tag reset) and `GET /reset` (date reset via `FitnessTool.resetDate`). Express resolves correctly because the parameterised route is registered first.
-
-### Test Scenarios
-
-| # | Scenario | Expected Result |
-|---|---|---|
-| T-FIT-01 | Unauthenticated request to any route | Rejected by `checkLogin` |
-| T-FIT-02 | Non-admin POST `/newRow` | `HoError('permission denied')` |
-| T-FIT-03 | Non-admin PUT `/editRow/:uid` | `HoError('permission denied')` |
-| T-FIT-04 | Non-admin DELETE `/delRow/:uid` | `HoError('permission denied')` |
-| T-FIT-05 | Admin POST `/newRow` with valid body | Returns `{ id }`, WebSocket broadcast fires |
-| T-FIT-06 | Admin PUT `/editRow/:uid` with valid body | Returns `{ apiOK: true }`, WebSocket broadcast fires |
-| T-FIT-07 | Admin DELETE `/delRow/:uid` | Returns `{ apiOK: true }`, WebSocket broadcast fires |
-| T-FIT-08 | GET `/get/name/asc/0` — no optional params | `tagQuery` called; returns `{ itemList, parentList, latest, bookmarkID }` |
-| T-FIT-09 | GET `/getSingle/name/asc/0/cardio` — page=0 with name | `searchTags().resetArray()` called, then `tagQuery` |
-| T-FIT-10 | GET `/getSingle/name/asc/1/cardio` — page≠0 with name | `resetArray()` NOT called; `tagQuery` proceeds directly |
-| T-FIT-11 | GET `/single/:uid` — item exists | Returns `{ item: [...] }` |
-| T-FIT-12 | GET `/single/:uid` — item does not exist | Returns `{ empty: true }` |
-| T-FIT-13 | POST `/getOptionTag` with empty tags array | Returns `{ relative: [] }` immediately (no DB call) |
-| T-FIT-14 | POST `/getOptionTag` with 3 tags | Returns up to 5 relative tags |
-| T-FIT-15 | PUT `/addTag/cardio` with `body.uids = [uid1, uid2, uid3]` | 3 sequential calls with 500 ms gaps; WebSocket per uid; final `{ apiOK: true }` |
-| T-FIT-16 | PUT `/addTag/cardio` with empty `body.uids` | Immediate `{ apiOK: true }` (base case of recursion) |
-| T-FIT-17 | GET `/getPoint` | Returns `{ point }` for the authenticated user |
-| T-FIT-18 | PUT `/exchange/:uid` with `body.exchange` | Returns `{ point }`, WebSocket fires |
-| T-FIT-19 | GET `/getStat` — no optional params | `getStat(user._id, undefined, undefined)` |
-| T-FIT-20 | GET `/getStat/3/someUid` — both optional params | `getStat(user._id, "3", "someUid")` — note: passed as strings |
-| T-FIT-21 | GET `/reset` (no sort params) | Calls `FitnessTool.resetDate(user._id)`, returns `{ apiOK: true }` |
-| T-FIT-22 | GET `/reset/name/asc` (with sort params) | Calls `FitnessTagTool.resetQuery`, returns `{ itemList, parentList }` |
-| T-FIT-23 | Concurrent `addTag` requests for overlapping UIDs | Each request runs its own sequential loop; potential race condition on shared tag state |
-
----
-
-## 13.3 rank-router.js — Rankings
-
-**Source:** `src/back/controllers/rank-router.js` (129 lines)
-
-### Overview
-
-CRUD and tag-management router for ranking data. Structurally mirrors `fitness-router.js` closely — uses `TagTool(RANKDB)` for tag queries and `RankTool` for row operations. Includes two additional read-only endpoints (`/getChart`, `/getItem`) not present in fitness. **No `editRow` endpoint exists** — only `newRow` and `delRow`.
-
-### Dependencies
-
-| Import | Purpose |
-|---|---|
-| `RANKDB` | Database identifier constant |
-| `Express` | Router factory |
-| `TagTool` | Factory producing `RankTagTool` instance bound to `RANKDB` |
-| `RankTool` | Model layer — row CRUD, chart data, item list |
-| `checkLogin`, `getRankItem`, `handleError`, `checkAdmin` | Auth, item transform, error handler, admin check |
-| `sendWs` | WebSocket broadcast utility |
-
-**Note:** `HoError` is referenced in the code (lines 95, 108) but is **not imported** in the file's import block. This would cause a `ReferenceError` at runtime if a non-admin user hits `/newRow` or `/delRow`. This is a latent bug.
-
-### Authentication & Authorization
-
-- **All routes:** `checkLogin` via router-level middleware.
-- **Admin-gated routes (level 1):** `POST /newRow`, `DELETE /delRow/:uid` — inline `checkAdmin(1, req.user)`. Failure throws `HoError('permission denied')` (see bug note above).
-- **User-level routes:** All others.
-
-### Route Table
-
-| Method | Path | Handler | Admin | WebSocket | Response Shape |
-|---|---|---|---|---|---|
-| GET | `/get/:sortName/:sortType/:page/:name?/:exactly?/:index?` | `RankTagTool.tagQuery(...)` | No | No | `{ itemList, parentList, latest, bookmarkID }` |
-| GET | `/getSingle/...` (same params) | Conditional `resetArray()`, then `tagQuery` | No | No | `{ itemList, parentList, latest, bookmarkID }` |
-| GET | `/reset/:sortName/:sortType` | `RankTagTool.resetQuery(...)` | No | No | `{ itemList, parentList }` |
-| GET | `/single/:uid` | `RankTagTool.singleQuery(uid, user, session)` | No | No | `{ item }` or `{ empty: true }` |
-| POST | `/getOptionTag` | `RankTagTool.getRelativeTag(body.tags, user, [])` | No | No | `{ relative: [...] }` (max 5) |
-| PUT | `/addTag/:tag` | Recursive loop over `body.uids` with 500 ms delay | No | Yes — `{ type: 'rank', data: id }` | `{ apiOK: true }` |
-| PUT | `/delTag/:tag` | Recursive loop over `body.uids` with 500 ms delay | No | Yes — `{ type: 'rank', data: id }` | `{ apiOK: true }` |
-| POST | `/newRow` | `RankTool.newRow(body)` | **Yes (1)** | Yes — `{ type: 'rank', data: id }` | `{ id }` |
-| DELETE | `/delRow/:uid` | `RankTool.delRow(uid)` | **Yes (1)** | Yes — `{ type: 'rank', data: uid }` | `{ apiOK: true }` |
-| GET | `/getChart/:uid` | `RankTool.getChart(uid, user, session)` | No | No | Chart result object |
-| GET | `/getItem` | `RankTool.getItem()` | No | No | `{ item }` |
-
-### Implementation Notes
-
-1. **Missing `HoError` import:** The file uses `new HoError('permission denied')` in the admin check blocks but does not import `HoError` from `../util/utility.js`. This is a **bug** — runtime `ReferenceError` will occur when a non-admin user hits a protected route.
-2. **No `editRow` endpoint:** Unlike `fitness-router.js`, rank has no PUT `/editRow/:uid` route. Rank rows can be created and deleted but not edited through this API.
-3. **`/getChart/:uid`** and **`/getItem`** are rank-specific endpoints not found in the fitness router. `getChart` requires a UID and the user's session; `getItem` takes no parameters.
-4. **`getSingle` tag-reset logic:** Identical to fitness: `page === 0 && name` triggers `searchTags(session).resetArray()`.
-5. **`getRankItem`** is used instead of `getFitnessItem` for item transformation.
-
-### Test Scenarios
-
-| # | Scenario | Expected Result |
-|---|---|---|
-| T-RNK-01 | Unauthenticated request to any route | Rejected by `checkLogin` |
-| T-RNK-02 | Non-admin POST `/newRow` | **ReferenceError** (`HoError` not imported) — or `permission denied` if bug is fixed |
-| T-RNK-03 | Non-admin DELETE `/delRow/:uid` | Same as T-RNK-02 |
-| T-RNK-04 | Admin POST `/newRow` with valid body | Returns `{ id }`, WebSocket broadcast fires |
-| T-RNK-05 | Admin DELETE `/delRow/:uid` | Returns `{ apiOK: true }`, WebSocket broadcast fires |
-| T-RNK-06 | GET `/get/name/asc/0` — basic query | Returns `{ itemList, parentList, latest, bookmarkID }` |
-| T-RNK-07 | GET `/getSingle/name/asc/0/term` — page=0 with name | `resetArray()` called before query |
-| T-RNK-08 | GET `/single/:uid` — item exists | Returns `{ item: [...] }` |
-| T-RNK-09 | GET `/single/:uid` — item missing | Returns `{ empty: true }` |
-| T-RNK-10 | PUT `/addTag/mytag` with multiple UIDs | Sequential with 500 ms gaps; WebSocket per uid |
-| T-RNK-11 | GET `/getChart/:uid` | Returns chart data for the given uid |
-| T-RNK-12 | GET `/getItem` | Returns `{ item }` — full item list |
-| T-RNK-13 | PUT `/editRow/:uid` (non-existent route) | 404 — route does not exist |
-| T-RNK-14 | Verify `HoError` import bug — non-admin hitting `/newRow` | Expect crash or unhandled error until import is added |
-
----
-
-## 13.4 lottery-router.js — Lottery
-
-**Source:** `src/back/controllers/lottery-router.js` (47 lines)
-
-### Overview
-
-Manages lottery selection with a **module-level mutex** (`isSelecting`) to serialise draws. Compact router with four endpoints and no admin checks — all authenticated users can participate.
-
-### Dependencies
-
-| Import | Purpose |
-|---|---|
-| `Express` | Router factory |
-| `Lottery` | Model layer (aliased from `lottery-tool.js`) — `getInit`, `select`, `getData` |
-| `checkLogin`, `isValidString`, `handleError`, `HoError` | Auth, string validation (imported but unused), error handler, custom error |
-| `sendWs` | WebSocket broadcast utility |
-
-**Note:** `isValidString` is imported but never called in this file.
-
-### Authentication & Authorization
-
-- **All routes:** `checkLogin` via router-level middleware.
-- **No admin checks** on any route.
-
-### The `isSelecting` Mutex Pattern
-
-```
-Module scope: let isSelecting = false;
-```
-
-| Phase | State | Behaviour |
-|---|---|---|
-| Idle | `isSelecting === false` | `/select/:uid` proceeds; sets `isSelecting = true` |
-| Selecting | `isSelecting === true` | Concurrent `/select/:uid` requests immediately receive `HoError('someone is lotterying!!!')` |
-| Success | `.then()` | `isSelecting = false`, WebSocket broadcast `{ type: 'select', data }`, respond `{ apiOK: true }` |
-| Error | `.catch()` | `isSelecting = false`, error forwarded to `handleError` |
-
-**Critical characteristics:**
-
-- **Single-process only:** The flag is a JavaScript variable in module scope. In a multi-process (cluster/PM2) deployment, each worker has its own `isSelecting`, so the mutex does **not** prevent concurrent selections across workers.
-- **No timeout:** If `Lottery.select` hangs (never resolves/rejects), `isSelecting` remains `true` forever, permanently blocking the endpoint until process restart.
-- **Reset on both success and error:** The flag is always cleared, preventing permanent lock from transient errors.
-- **Not atomic at the language level**, but safe in Node.js's single-threaded event loop within a single process — no two synchronous code paths can read `isSelecting` simultaneously.
-
-### Route Table
-
-| Method | Path | Handler | Mutex | WebSocket | Response Shape |
-|---|---|---|---|---|---|
-| GET | `/get` | `Lottery.getInit(user._id)` | No | No | Init data object |
-| GET | `/select/:uid` | `Lottery.select(uid, user._id)` | **Yes** | Yes — `{ type: 'select', data }` | `{ apiOK: true }` |
-| GET | `/single/:uid` | `Lottery.getData(uid)` | No | No | `{ item: data }` |
-| GET | `/userlist` | `Lottery.getData()` (no args) | No | No | Data object (full user list) |
-
-### Implementation Notes
-
-1. **All routes are GET:** Including `/select/:uid` which is a state-mutating operation. This means it can be triggered by link prefetch, browser preloading, or cached by HTTP intermediaries.
-2. **`/select/:uid` uses GET for a write operation:** This is a design concern — a POST or PUT would be more semantically correct and safer against accidental re-triggering.
-3. **`Lottery.getData` dual use:** Called with `uid` in `/single/:uid` and without arguments in `/userlist`. The model method uses the presence/absence of the argument to determine its return shape.
-4. **`isValidString` imported but unused** — dead import.
-5. **WebSocket broadcast on select:** All connected clients receive the selection result, enabling real-time lottery board updates.
-
-### Test Scenarios
-
-| # | Scenario | Expected Result |
-|---|---|---|
-| T-LOT-01 | Unauthenticated request to any route | Rejected by `checkLogin` |
-| T-LOT-02 | GET `/get` — authenticated | Returns lottery init data for user |
-| T-LOT-03 | GET `/select/:uid` — no concurrent selection | `isSelecting` set to `true`; `Lottery.select` called; on success: flag reset, WebSocket sent, `{ apiOK: true }` |
-| T-LOT-04 | GET `/select/:uid` — while another selection is in progress | Immediate `HoError('someone is lotterying!!!')` |
-| T-LOT-05 | GET `/select/:uid` — `Lottery.select` rejects | `isSelecting` reset to `false`; error forwarded; subsequent select allowed |
-| T-LOT-06 | GET `/select/:uid` — rapid-fire concurrent requests (same tick) | First request wins; all others rejected with mutex error |
-| T-LOT-07 | GET `/select/:uid` — after a previous error | Mutex should be `false`; new selection proceeds normally |
-| T-LOT-08 | GET `/single/:uid` | Returns `{ item: data }` for the given uid |
-| T-LOT-09 | GET `/userlist` | Returns full user list data |
-| T-LOT-10 | Multi-process deployment: two workers call `/select` simultaneously | **Both succeed** — mutex is per-process; potential double-draw bug |
-| T-LOT-11 | `Lottery.select` hangs (never resolves) | `isSelecting` remains `true` indefinitely; all subsequent `/select` requests blocked; requires process restart |
-| T-LOT-12 | WebSocket verification on successful select | `sendWs({ type: 'select', data })` called with selection result |
-
----
-
-## Cross-Router Comparison
-
-| Feature | Bitfinex | Fitness | Rank | Lottery |
-|---|---|---|---|---|
-| Auth middleware | `checkLogin` | `checkLogin` | `checkLogin` | `checkLogin` |
-| Admin checks | None | `checkAdmin(1)` on newRow, editRow, delRow | `checkAdmin(1)` on newRow, delRow | None |
-| Tag system (`TagTool`) | No | Yes (`FITNESSDB`) | Yes (`RANKDB`) | No |
-| Item transform | None | `getFitnessItem` | `getRankItem` | None |
-| WebSocket notifications | None | On mutations (add/del tag, new/edit/del row, exchange) | On mutations (add/del tag, new/del row) | On `/select` only |
-| Sync vs Async handlers | Query routes synchronous; bot routes async | All async (Promise) | All async (Promise) | All async (Promise) |
-| Concurrency control | None | None | None | `isSelecting` module-level mutex |
-| `editRow` endpoint | N/A | Yes (admin) | **No** | N/A |
-| Destructive GET routes | `/bot/del/:type`, `/bot/close/:credit` | None | None | `/select/:uid` |
-
-## Identified Bugs & Risks
-
-| ID | Router | Severity | Description |
-|---|---|---|---|
-| BUG-01 | rank-router.js | **High** | `HoError` is used in admin-check failure paths but is **not imported**. Non-admin requests to `/newRow` or `/delRow` will throw `ReferenceError` instead of the intended permission error. |
-| BUG-02 | bitfinex-router.js | **Low** | `/single` handler references `req.params.name` which is not defined in the route pattern — always `undefined`. |
-| RISK-01 | lottery-router.js | **Medium** | `isSelecting` mutex is per-process; ineffective in clustered deployments. Potential double-draw. |
-| RISK-02 | lottery-router.js | **Medium** | No timeout on `isSelecting` — a hanging `Lottery.select` permanently blocks the endpoint. |
-| RISK-03 | bitfinex-router.js | **Low** | `/bot/del/:type` and `/bot/close/:credit` use GET for destructive operations — susceptible to prefetch/cache side effects. |
-| RISK-04 | lottery-router.js | **Low** | `/select/:uid` uses GET for a state-mutating operation — same prefetch/cache concern. |
-| RISK-05 | fitness/rank | **Low** | `addTag`/`delTag` recursive loops with 500 ms delay can produce very long request times for large UID arrays, risking HTTP timeouts. |
-| UNUSED-01 | lottery-router.js | **Info** | `isValidString` is imported but never used. |

@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT, TDAMERITRADE_SECRET } from '../../../ver.js'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, UPDATE_BOOK, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility.js'
