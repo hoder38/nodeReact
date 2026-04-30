@@ -105,8 +105,8 @@ jest.unstable_mockModule('ass-to-vtt', () => ({
 // ─── Dynamic import of the module under test ────────────────────────
 let isValidString, toValidName, userPWCheck, checkAdmin, HoError,
     handleError, showLog, checkLogin, big5Encode, selectRandom,
-    getStorageItem, getPasswordItem, getStockItem, getFitnessItem,
-    getRankItem, getFileLocation, deleteFolderRecursive, SRT2VTT,
+    getStorageItem, getPasswordItem, getStockItem, getFileLocation,
+    deleteFolderRecursive, SRT2VTT,
     bufferToString, getJson, torrent2Magnet, sortList, completeZero,
     findTag, convertTimestampToDate, addPre, isEmptyObject;
 
@@ -131,8 +131,6 @@ beforeEach(async () => {
     getStorageItem = mod.getStorageItem;
     getPasswordItem = mod.getPasswordItem;
     getStockItem = mod.getStockItem;
-    getFitnessItem = mod.getFitnessItem;
-    getRankItem = mod.getRankItem;
     getFileLocation = mod.getFileLocation;
     deleteFolderRecursive = mod.deleteFolderRecursive;
     SRT2VTT = mod.SRT2VTT;
@@ -937,34 +935,6 @@ describe('getStockItem', () => {
 
     test('perm > check returns empty array', () => {
         expect(getStockItem({ perm: 5 }, [{ name: 'x' }])).toEqual([]);
-    });
-});
-
-// =====================================================================
-// getFitnessItem
-// =====================================================================
-describe('getFitnessItem', () => {
-    test('maps fields', () => {
-        const items = [{
-            name: 'Push-up', _id: 'f1', tags: ['chest'],
-            price: 0, count: 20, desc: 'desc', type: 'exercise',
-        }];
-        const result = getFitnessItem({}, items);
-        expect(result[0].name).toBe('Push-up');
-        expect(result[0].count).toBe(20);
-    });
-});
-
-// =====================================================================
-// getRankItem
-// =====================================================================
-describe('getRankItem', () => {
-    test('maps fields', () => {
-        const items = [{
-            name: 'Rank1', _id: 'r1', tags: [], start: 100, type: 'rank',
-        }];
-        const result = getRankItem({}, items);
-        expect(result[0].start).toBe(100);
     });
 });
 

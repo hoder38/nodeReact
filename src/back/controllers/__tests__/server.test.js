@@ -126,10 +126,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   VERIFYDB: 'verify',
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
-  FITNESSDB: 'fitness',
-  RANKDB: 'rank',
   DOCDB: 'docUpdate',
-  LOTTERYDB: 'lottery',
   TOTALDB: 'total',
   RE_WEBURL: /^https?:\/\//,
   QUERY_LIMIT: 20,
@@ -230,9 +227,6 @@ jest.unstable_mockModule('../bookmark-router.js', () => ({ default: mockBookmark
 
 const mockParentRouter = jest.fn((req, res, next) => next());
 jest.unstable_mockModule('../parent-router.js', () => ({ default: mockParentRouter }));
-
-const mockLotteryRouter = jest.fn((req, res, next) => next());
-jest.unstable_mockModule('../lottery-router.js', () => ({ default: mockLotteryRouter }));
 
 // OtherRouter: supports triggering errors via x-test-error header
 const mockOtherRouter = jest.fn((req, res, next) => {

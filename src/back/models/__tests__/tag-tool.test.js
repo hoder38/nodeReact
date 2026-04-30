@@ -17,8 +17,6 @@ let mockMongoFn, mockObjectID, mockHINT, mockCheckAdmin, mockIsValidString,
 const STORAGEDB = 'storage';
 const PASSWORDDB = 'password';
 const STOCKDB = 'stock';
-const FITNESSDB = 'fitness';
-const RANKDB = 'rank';
 const DEFAULT_TAGS = ['adultonly', 'handle', 'unactive', 'recycle', 'first', 'nofirst', 'important', 
     'nolocal', 'yv', 'yp', 'ym', 'ymp', 'unplaylist', 'yify', 'dm5', 'bili', 'bilimovie', 
     'all item', 'movie', 'tvseries', 'tvshow', 'animation', 'search', 'hidemeta', 'showmeta', 
@@ -26,8 +24,6 @@ const DEFAULT_TAGS = ['adultonly', 'handle', 'unactive', 'recycle', 'first', 'no
 const STORAGE_PARENT = [{name: 'video'}, {name: 'image'}, {name: 'archive'}];
 const PASSWORD_PARENT = [{name: 'web'}, {name: 'app'}];
 const STOCK_PARENT = [{name: 'twse'}, {name: 'usse'}];
-const FITNESS_PARENT = [{name: 'exercise'}];
-const RANK_PARENT = [{name: 'game'}, {name: 'anime'}];
 const ADULTONLY_PARENT = [{name: 'adult'}];
 const HANDLE_TIME = 86400;
 const UNACTIVE_DAY = 30;
@@ -77,14 +73,10 @@ jest.unstable_mockModule('../../constants.js', () => ({
     STORAGEDB,
     PASSWORDDB,
     STOCKDB,
-    FITNESSDB,
-    RANKDB,
     DEFAULT_TAGS,
     STORAGE_PARENT,
     PASSWORD_PARENT,
     STOCK_PARENT,
-    FITNESS_PARENT,
-    RANK_PARENT,
     ADULTONLY_PARENT,
     HANDLE_TIME,
     UNACTIVE_DAY,
@@ -182,18 +174,6 @@ describe('process() - Factory Function', () => {
 
     test('returns object with methods for STOCKDB', () => {
         const tool = process(STOCKDB);
-        expect(tool).toBeTruthy();
-        expect(typeof tool.tagQuery).toBe('function');
-    });
-
-    test('returns object with methods for FITNESSDB', () => {
-        const tool = process(FITNESSDB);
-        expect(tool).toBeTruthy();
-        expect(typeof tool.tagQuery).toBe('function');
-    });
-
-    test('returns object with methods for RANKDB', () => {
-        const tool = process(RANKDB);
         expect(tool).toBeTruthy();
         expect(typeof tool.tagQuery).toBe('function');
     });
@@ -411,16 +391,6 @@ describe('searchTags()', () => {
         expect(loaded.sortName).toBe('username');
     });
 
-    test('saveArray uses collection-specific getSortName (FITNESS)', () => {
-        const fitTool = process(FITNESSDB);
-        const fitSession = {};
-        const tags = fitTool.searchTags(fitSession);
-        tags.getArray('sometag', false);
-        // FITNESS: 'mtime' → 'price', 'name'/'count' → 'name'
-        tags.saveArray('fitSave', 'mtime', 'desc');
-        const loaded = tags.loadArray('fitSave');
-        expect(loaded.sortName).toBe('price');
-    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -518,17 +488,6 @@ describe('singleQuery()', () => {
         mockIsValidString.mockReturnValue(false);
         await tool.singleQuery('invalid<uid', user, session);
         expect(mockHandleError).toHaveBeenCalled();
-    });
-
-    test('FITNESS collection includes count enrichment', async () => {
-        const fitnessTool = process(FITNESSDB);
-        mockIsValidString.mockReturnValue('item1');
-        mockMongoFn.mockResolvedValue([
-            { _id: 'item1', name: 'Exercise' }
-        ]);
-        await fitnessTool.singleQuery('item1', user, session);
-        // Should make queries
-        expect(mockMongoFn.mock.calls.length > 0).toBe(true);
     });
 });
 
@@ -1556,23 +1515,6 @@ describe('Collection-Specific Behavior', () => {
         await tool.tagQuery(1, '>100', false, false, 'name', 1, { _id: 'u1', perm: 1 }, session);
         expect(mockMongoFn).toHaveBeenCalled();
     });
-
-    test('FITNESSDB includes count enrichment', async () => {
-        const tool = process(FITNESSDB);
-        mockIsValidString.mockReturnValue('item1');
-        mockMongoFn.mockResolvedValue([
-            { _id: 'item1', name: 'Exercise' }
-        ]);
-        await tool.singleQuery('item1', { _id: 'u1', perm: 1 }, {});
-        // Should make count query
-        expect(mockMongoFn.mock.calls.length).toBeGreaterThan(1);
-    });
-
-    test('RANKDB has specific parent list', () => {
-        const tool = process(RANKDB);
-        const parents = tool.parentList();
-        expect(parents).toEqual(RANK_PARENT);
-    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1647,8 +1589,6 @@ describe('Constants and Utilities', () => {
         STORAGE_PARENT.forEach(p => expect(p).toHaveProperty('name'));
         PASSWORD_PARENT.forEach(p => expect(p).toHaveProperty('name'));
         STOCK_PARENT.forEach(p => expect(p).toHaveProperty('name'));
-        FITNESS_PARENT.forEach(p => expect(p).toHaveProperty('name'));
-        RANK_PARENT.forEach(p => expect(p).toHaveProperty('name'));
     });
 });
 
@@ -2032,74 +1972,6 @@ describe('tagQuery with index parameter validation', () => {
             return false;
         });
         const result = await stockTool.tagQuery(1, '>50', false, '1', 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 25. COVERAGE: FITNESS count enrichment (lines 124-133, 182-191)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('FITNESS count enrichment', () => {
-    let tool, session, user;
-
-    beforeEach(() => {
-        tool = process(FITNESSDB);
-        session = {};
-        user = { _id: { toString: () => 'user1', equals: (o) => o === 'user1' || (o && o.toString && o.toString() === 'user1') }, perm: 1 };
-        mockCheckAdmin.mockReturnValue(true);
-        mockIsValidString.mockReturnValue('validname');
-    });
-
-    test('tagQuery FITNESS enriches items with matching counts (lines 124-133)', async () => {
-        const itemId1 = { equals: (o) => o === 'id1' || (o && o.toString && o.toString() === 'id1'), toString: () => 'id1' };
-        const itemId2 = { equals: (o) => o === 'id2' || (o && o.toString && o.toString() === 'id2'), toString: () => 'id2' };
-        mockMongoFn
-            .mockResolvedValueOnce([
-                { _id: itemId1, name: 'Exercise 1', tags: ['cardio'] },
-                { _id: itemId2, name: 'Exercise 2', tags: ['strength'] },
-            ])
-            .mockResolvedValueOnce([
-                { itemId: itemId1, count: 10 },
-            ]);
-        const result = await tool.tagQuery(0, null, false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-        expect(mockMongoFn).toHaveBeenCalledTimes(2);
-    });
-
-    test('tagQuery FITNESS sets count=0 for items without matching count (line 132)', async () => {
-        const itemId1 = { equals: (o) => false, toString: () => 'id1' };
-        mockMongoFn
-            .mockResolvedValueOnce([
-                { _id: itemId1, name: 'Exercise 1', tags: ['cardio'] },
-            ])
-            .mockResolvedValueOnce([]);
-        const result = await tool.tagQuery(0, null, false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('resetQuery FITNESS enriches items with counts (lines 182-191)', async () => {
-        const itemId1 = { equals: (o) => o === 'id1', toString: () => 'id1' };
-        mockMongoFn
-            .mockResolvedValueOnce([
-                { _id: itemId1, name: 'Exercise 1', tags: [] },
-            ])
-            .mockResolvedValueOnce([
-                { itemId: 'id1', count: 5 },
-            ]);
-        const result = await tool.resetQuery('name', 1, user, session);
-        expect(result).toBeDefined();
-        expect(result.items).toBeDefined();
-    });
-
-    test('resetQuery FITNESS sets count=0 when no matching count (line 190)', async () => {
-        const itemId1 = { equals: (o) => false, toString: () => 'id1' };
-        mockMongoFn
-            .mockResolvedValueOnce([
-                { _id: itemId1, name: 'Exercise 1', tags: [] },
-            ])
-            .mockResolvedValueOnce([]);
-        const result = await tool.resetQuery('name', 1, user, session);
         expect(result).toBeDefined();
     });
 });
@@ -3411,198 +3283,6 @@ describe('getStockQuerySql coverage', () => {
     });
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// 41. COVERAGE: getFitnessQuerySql (lines 1444-1492)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('getFitnessQuerySql coverage', () => {
-    let user, session;
-
-    beforeEach(() => {
-        user = { _id: { toString: () => 'user1', equals: (o) => false }, perm: 1 };
-        session = {};
-        mockCheckAdmin.mockReturnValue(true);
-        mockIsValidString.mockReturnValue('validname');
-    });
-
-    test('comparison tag (index 31) in FITNESS continues (lines 1447-1451)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const result = await tool.tagQuery(0, '>50', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('other default tag skipped in FITNESS (line 1452)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const result = await tool.tagQuery(0, 'handle', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('non-default exact tag in FITNESS (lines 1454-1456)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const result = await tool.tagQuery(0, 'cardio', true, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('non-default non-exact tag in FITNESS (lines 1457-1458)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const result = await tool.tagQuery(0, 'cardio', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('$and set in FITNESS (line 1464)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const tags = tool.searchTags(session);
-        tags.getArray('tag1', true);
-        const result = await tool.tagQuery(0, 'tag2', true, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('FITNESS addTag normal tag type 1 (lines 1474-1482)', async () => {
-        const tool = process(FITNESSDB);
-        mockIsValidString.mockImplementation((val, type) => val);
-        mockMongoFn
-            .mockResolvedValueOnce([{ _id: 'uid1', tags: [], adultonly: 0 }])
-            .mockResolvedValueOnce({ modifiedCount: 1 });
-        const result = await tool.addTag('uid1', 'newtag', user);
-        expect(result.tag).toBe('newtag');
-    });
-
-    test('FITNESS addTag default tag → type 0 (lines 1476-1477)', async () => {
-        const tool = process(FITNESSDB);
-        mockCheckAdmin.mockReturnValue(false);
-        mockHandleError.mockReturnValue('not authority');
-        await tool.addTag('uid1', 'handle', user);
-        expect(mockHandleError).toHaveBeenCalled();
-    });
-
-    test('getFitnessSortName name returns name (line 1492)', async () => {
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        await tool.resetQuery('name', 1, user, session);
-        const findCall = mockMongoFn.mock.calls.find(c => c[0] === 'find');
-        if (findCall) {
-            expect(findCall[3].sort[0][0]).toBe('name');
-        }
-    });
-
-    test('HINT enabled in FITNESS query', async () => {
-        mockHINT.mockReturnValue(true);
-        const tool = process(FITNESSDB);
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        await tool.tagQuery(0, null, false, false, 'name', 1, user, session);
-        expect(mockMongoFn).toHaveBeenCalled();
-    });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 42. COVERAGE: getRankQuerySql (lines 1497-1552)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('getRankQuerySql coverage', () => {
-    let user, session;
-
-    beforeEach(() => {
-        user = { _id: 'user1', perm: 1 };
-        session = {};
-        mockCheckAdmin.mockReturnValue(true);
-        mockIsValidString.mockReturnValue('validname');
-    });
-
-    test('empty tagList in RANK (line 1501)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const result = await tool.resetQuery('name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('comparison tag (index 31) in RANK continues (lines 1506-1510)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const result = await tool.tagQuery(0, '>50', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('other default tag skipped in RANK (line 1511)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const result = await tool.tagQuery(0, 'handle', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('non-default exact tag in RANK (lines 1513-1515)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const result = await tool.tagQuery(0, 'rpg', true, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('non-default non-exact tag in RANK (lines 1516-1517)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const result = await tool.tagQuery(0, 'rpg', false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('$and set in RANK (line 1522)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const tags = tool.searchTags(session);
-        tags.getArray('tag1', true);
-        const result = await tool.tagQuery(0, 'tag2', true, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('RANK addTag default tag → type 0 (line 1535-1536)', async () => {
-        const tool = process(RANKDB);
-        mockCheckAdmin.mockReturnValue(false);
-        mockHandleError.mockReturnValue('not authority');
-        await tool.addTag('uid1', 'handle', user);
-        expect(mockHandleError).toHaveBeenCalled();
-    });
-
-    test('RANK addTag normal tag type 1 (lines 1538-1541)', async () => {
-        const tool = process(RANKDB);
-        mockIsValidString.mockImplementation((val, type) => val);
-        mockMongoFn
-            .mockResolvedValueOnce([{ _id: 'uid1', tags: [], adultonly: 0 }])
-            .mockResolvedValueOnce({ modifiedCount: 1 });
-        const result = await tool.addTag('uid1', 'newtag', user);
-        expect(result.tag).toBe('newtag');
-    });
-
-    test('getRankSortName mtime returns start (line 1548)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        await tool.resetQuery('mtime', 1, user, session);
-        const findCall = mockMongoFn.mock.calls.find(c => c[0] === 'find');
-        if (findCall) {
-            expect(findCall[3].sort[0][0]).toBe('start');
-        }
-    });
-
-    test('getRankSortName count returns type (line 1549)', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        await tool.resetQuery('count', 1, user, session);
-        const findCall = mockMongoFn.mock.calls.find(c => c[0] === 'find');
-        if (findCall) {
-            expect(findCall[3].sort[0][0]).toBe('type');
-        }
-    });
-
-    test('HINT enabled in RANK query', async () => {
-        mockHINT.mockReturnValue(true);
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        await tool.tagQuery(0, null, false, false, 'name', 1, user, session);
-        expect(mockMongoFn).toHaveBeenCalled();
-    });
-});
 
 // ═══════════════════════════════════════════════════════════════════════
 // 43. COVERAGE: completeMimeTag (lines 1591-1722)
@@ -4103,41 +3783,6 @@ describe('Additional coverage for remaining lines', () => {
 
     test('line 1416: STOCK default non-important tag type 0', async () => {
         const tool = process(STOCKDB);
-        mockCheckAdmin.mockReturnValue(false);
-        mockHandleError.mockReturnValue('not authority');
-        const result = await tool.addTag('uid1', 'adultonly', user);
-        expect(mockHandleError).toHaveBeenCalled();
-    });
-
-    test('lines 1448-1451: FITNESS comparison tag continues', async () => {
-        const tool = process(FITNESSDB);
-        const fUser = { _id: { toString: () => 'user1', equals: (o) => false }, perm: 1 };
-        mockMongoFn.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-        const tags = tool.searchTags(session);
-        tags.setArray('', ['>50'], [false]);
-        const result = await tool.tagQuery(0, null, false, false, 'name', 1, fUser, session);
-        expect(result).toBeDefined();
-    });
-
-    test('line 1477: FITNESS default tag type 0', async () => {
-        const tool = process(FITNESSDB);
-        mockCheckAdmin.mockReturnValue(false);
-        mockHandleError.mockReturnValue('not authority');
-        const result = await tool.addTag('uid1', 'adultonly', user);
-        expect(mockHandleError).toHaveBeenCalled();
-    });
-
-    test('lines 1507-1510: RANK comparison tag continues', async () => {
-        const tool = process(RANKDB);
-        mockMongoFn.mockResolvedValue([]);
-        const tags = tool.searchTags(session);
-        tags.setArray('', ['>50'], [false]);
-        const result = await tool.tagQuery(0, null, false, false, 'name', 1, user, session);
-        expect(result).toBeDefined();
-    });
-
-    test('line 1536: RANK default tag type 0', async () => {
-        const tool = process(RANKDB);
         mockCheckAdmin.mockReturnValue(false);
         mockHandleError.mockReturnValue('not authority');
         const result = await tool.addTag('uid1', 'adultonly', user);

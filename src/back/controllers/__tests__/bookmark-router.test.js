@@ -3,7 +3,7 @@
  *
  * 22 routes across 5 collection types (all require auth):
  *   STORAGE (6): getList, get, add (+ newBookmarkItem), del, set, subscript
- *   PASSWORD/STOCK/FITNESS/RANK (4 each): getList, get, add, del
+ *   PASSWORD/STOCK (4 each): getList, get, add, del
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
@@ -52,9 +52,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   USERDB: 'user', VERIFYDB: 'verify', STORAGEDB: 'storage',
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
-  STOCKDB: 'stock', PASSWORDDB: 'password', FITNESSDB: 'fitness', RANKDB: 'rank',
-  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [],
-  FITNESS_PARENT: [], RANK_PARENT: [], HANDLE_TIME: 7200,
+  STOCKDB: 'stock', PASSWORDDB: 'password',
+  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
   BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: ['動作', '冒險'],
@@ -523,69 +522,4 @@ describe('bookmark-router.js', () => {
   });
 
   // ---------------------------------------------------------------
-  // FITNESS bookmarks
-  // ---------------------------------------------------------------
-  describe('FITNESS bookmarks', () => {
-    test('GET /fitness/getList returns bookmarkList', async () => {
-      mockGetBookmarkList.mockResolvedValueOnce({ bookmarkList: [] });
-      const res = await request(app).get('/fitness/getList/name/desc/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
-    test('GET /fitness/get returns fitness itemList', async () => {
-      mockGetBookmark.mockResolvedValueOnce({
-        items: [{ _id: 'f1', name: 'Run', tags: [], utime: 1, count: 1, record: [], important: 0 }],
-        parentList: [], latest: null, bookmark: null,
-      });
-      const res = await request(app).get('/fitness/get/b1/name/desc').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body.itemList).toHaveLength(1);
-    });
-
-    test('POST /fitness/add works', async () => {
-      mockAddBookmark.mockResolvedValueOnce({ ok: 1 });
-      const res = await request(app).post('/fitness/add')
-        .set('x-test-user', u(ADMIN)).send({ name: 'FitBM' });
-      expect(res.status).toBe(200);
-    });
-
-    test('DELETE /fitness/del works', async () => {
-      mockDelBookmark.mockResolvedValueOnce({ id: 'fb1' });
-      const res = await request(app).delete('/fitness/del/fb1').set('x-test-user', u(ADMIN));
-      expect(res.body.id).toBe('fb1');
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // RANK bookmarks
-  // ---------------------------------------------------------------
-  describe('RANK bookmarks', () => {
-    test('GET /rank/getList returns bookmarkList', async () => {
-      mockGetBookmarkList.mockResolvedValueOnce({ bookmarkList: [] });
-      const res = await request(app).get('/rank/getList/name/asc/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
-    test('GET /rank/get returns rank itemList', async () => {
-      mockGetBookmark.mockResolvedValueOnce({
-        items: [{ _id: 'r1', name: 'Top10', tags: [], utime: 1, count: 1 }],
-        parentList: [], latest: null, bookmark: null,
-      });
-      const res = await request(app).get('/rank/get/b1/count/desc').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
-    test('POST /rank/add works', async () => {
-      mockAddBookmark.mockResolvedValueOnce({ ok: 1 });
-      const res = await request(app).post('/rank/add')
-        .set('x-test-user', u(ADMIN)).send({ name: 'RkBM' });
-      expect(res.status).toBe(200);
-    });
-
-    test('DELETE /rank/del works', async () => {
-      mockDelBookmark.mockResolvedValueOnce({ id: 'rb1' });
-      const res = await request(app).delete('/rank/del/rb1').set('x-test-user', u(ADMIN));
-      expect(res.body.id).toBe('rb1');
-    });
-  });
 });

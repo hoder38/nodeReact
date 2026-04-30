@@ -12,11 +12,8 @@ export const USERDB = 'user'
 export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
 export const PASSWORDDB = 'password'
-export const FITNESSDB = 'fitness'
-export const RANKDB = 'rank'
 export const DOCDB = 'docUpdate'
 export const VERIFYDB = 'verify'
-export const LOTTERYDB = 'lottery'
 export const TOTALDB = 'total'
 
 //basic set
@@ -206,27 +203,6 @@ export const STOCK_PARENT = [
         tw: '產業分類',
     },
 ]
-export const FITNESS_PARENT = [
-    {
-        name: 'command',
-        tw: '指令',
-    },
-    {
-        name: 'part',
-        tw: '訓練部位',
-    },
-    {
-        name: 'strength',
-        tw: '強度'
-    },
-]
-export const RANK_PARENT = [
-    {
-        name: 'command',
-        tw: '指令',
-    },
-]
-
 //tag list
 export const MEDIA_LIST = [
     'image',
@@ -764,11 +740,7 @@ export const MIME_EXT = {
     rar: 'application/x-rar-compressed',
 }
 
-export const FITNESS_POINT = '598174b08bd4ed7a80e4dc80';
-
 export const CHART_LIMIT = 4;
-
-export const RANK_LIMIT = 10;
 
 //export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.send';
 export const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/drive.file';

@@ -1,9 +1,9 @@
-import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB, FITNESSDB, RANKDB } from '../constants.js'
+import { STORAGEDB, GENRE_LIST_CH, PASSWORDDB, STOCKDB } from '../constants.js'
 import Express from 'express'
 import crypto from 'crypto'
 const { createHash } = crypto;
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
-import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem, getFitnessItem, getRankItem } from '../util/utility.js'
+import { checkLogin, handleError, HoError, checkAdmin, isValidString, getStorageItem, getPasswordItem, getStockItem } from '../util/utility.js'
 import { addPost } from '../util/mime.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import GoogleApi from '../models/api-tool-google.js'
@@ -13,8 +13,6 @@ const router = Express.Router();
 const StorageTagTool = TagTool(STORAGEDB);
 const PasswordTagTool = TagTool(PASSWORDDB);
 const StockTagTool = TagTool(STOCKDB);
-const FitnessTagTool = TagTool(FITNESSDB);
-const RankTagTool = TagTool(RANKDB);
 
 router.use(function(req, res, next) {
     checkLogin(req, res, next);
@@ -295,66 +293,6 @@ router.post(`/${STOCKDB}/add`, function (req, res, next) {
 router.delete(`/${STOCKDB}/del/:id`, function (req, res, next) {
     console.log('del stock bookmark');
     StockTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
-});
-
-//fitness
-router.get(`/${FITNESSDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
-    console.log('get fitness bookmark list');
-    FitnessTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
-});
-
-router.get(`/${FITNESSDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('get fitness bookmark');
-    FitnessTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
-        itemList: getFitnessItem(req.user, result.items),
-        parentList: result.parentList,
-        latest: result.latest,
-        bookmarkID: result.bookmark,
-    })).catch(err => handleError(err, next));
-});
-
-router.post(`/${FITNESSDB}/add`, function (req, res, next) {
-    console.log('fitness add bookmark');
-    const name = isValidString(req.body.name, 'name');
-    if (!name) {
-        return handleError(new HoError('name is not vaild'), next);
-    }
-    FitnessTagTool.addBookmark(name, req.user, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
-});
-
-router.delete(`/${FITNESSDB}/del/:id`, function (req, res, next) {
-    console.log('del fitness bookmark');
-    FitnessTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
-});
-
-//rank
-router.get(`/${RANKDB}/getList/:sortName(name|mtime)/:sortType(desc|asc)/:page(0)?`, function (req, res, next) {
-    console.log('get rank bookmark list');
-    RankTagTool.getBookmarkList(req.params.sortName, req.params.sortType, req.user).then(result => res.json({bookmarkList: result.bookmarkList})).catch(err => handleError(err, next));
-});
-
-router.get(`/${RANKDB}/get/:id/:sortName(name|mtime|count)/:sortType(desc|asc)`, function (req, res, next) {
-    console.log('get rank bookmark');
-    RankTagTool.getBookmark(req.params.id, req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
-        itemList: getRankItem(req.user, result.items),
-        parentList: result.parentList,
-        latest: result.latest,
-        bookmarkID: result.bookmark,
-    })).catch(err => handleError(err, next));
-});
-
-router.post(`/${RANKDB}/add`, function (req, res, next) {
-    console.log('rank add bookmark');
-    const name = isValidString(req.body.name, 'name');
-    if (!name) {
-        return handleError(new HoError('name is not vaild'), next);
-    }
-    RankTagTool.addBookmark(name, req.user, req.session).then(result => res.json(result)).catch(err => handleError(err, next));
-});
-
-router.delete(`/${RANKDB}/del/:id`, function (req, res, next) {
-    console.log('del rank bookmark');
-    RankTagTool.delBookmark(req.params.id).then(result => res.json({id: result.id})).catch(err => handleError(err, next));
 });
 
 export default router

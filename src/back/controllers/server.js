@@ -29,11 +29,8 @@ import UserRouter from './user-router.js'
 import StorageRouter from './storage-router.js'
 import PasswordRouter from './password-router.js'
 import StockRouter from './stock-router.js'
-//import FitnessRouter from './fitness-router.js'
-//import RankRouter from './rank-router.js'
 import BookmarkRouter from './bookmark-router.js'
 import ParentRouter from './parent-router.js'
-import LotteryRouter from './lottery-router.js'
 import OtherRouter from './other-router.js'
 
 //util
@@ -97,15 +94,9 @@ app.use('/api/password', PasswordRouter);
 
 app.use('/api/stock', StockRouter);
 
-//app.use('/api/fitness', FitnessRouter);
-
-//app.use('/api/rank', RankRouter);
-
 app.use('/api/bookmark', BookmarkRouter);
 
 app.use('/api/parent', ParentRouter);
-
-//app.use('/api/lottery', LotteryRouter);
 
 //other
 app.use('/', OtherRouter);

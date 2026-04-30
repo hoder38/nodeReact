@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { HINT } from '../config.js'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, FITNESSDB, FITNESS_PARENT, RANKDB, RANK_PARENT, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { getOptionTag } from '../util/mime.js'
@@ -28,18 +28,6 @@ export default function process(collection) {
         getQueryTag = getStockQueryTag;
         getSortName = getStockSortName;
         parent_arr = STOCK_PARENT;
-        break;
-        case FITNESSDB:
-        getQuerySql = getFitnessQuerySql;
-        getQueryTag = getFitnessQueryTag;
-        getSortName = getFitnessSortName;
-        parent_arr = FITNESS_PARENT;
-        break;
-        case RANKDB:
-        getQuerySql = getRankQuerySql;
-        getQueryTag = getRankQueryTag;
-        getSortName = getRankSortName;
-        parent_arr = RANK_PARENT;
         break;
         default:
         return false;
@@ -118,26 +106,11 @@ export default function process(collection) {
                     getSortName(sortName),
                     sortType,
                 ]],
-            }, sql.skip ? {skip: page + sql.skip} : {}, sql.hint ? {hint: sql.hint} : {})).then(items => {
-                const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
-                    owner: user._id,
-                    itemId: {'$in': items.map(i => i._id)},
-                }).then(counts => items.map(i => {
-                    for (let c of counts) {
-                        if (i._id.equals(c.itemId)) {
-                            i['count'] = c['count'];
-                            return i;
-                        }
-                    }
-                    i['count'] = 0;
-                    return i;
-                })) : Promise.resolve(items);
-                return getCount().then(items => sql.nosql.mediaType ? ({
-                    items,
-                    parentList: parentList,
-                    mediaHadle: 1,
-                }) : returnPath(items, parentList));
-            }) : returnPath([], parentList);
+            }, sql.skip ? {skip: page + sql.skip} : {}, sql.hint ? {hint: sql.hint} : {})).then(items => sql.nosql.mediaType ? ({
+                items,
+                parentList: parentList,
+                mediaHadle: 1,
+            }) : returnPath(items, parentList)) : returnPath([], parentList);
         },
         singleQuery: function(uid, user, session) {
             const id = isValidString(uid, 'uid');
@@ -152,16 +125,10 @@ export default function process(collection) {
                     projection: sql.select ? sql.select : {},
                     limit: 1,
                     hint: {_id: 1},
-                }).then(items => {
-                    const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
-                        owner: user._id,
-                        itemId: items[0]._id,
-                    }).then(counts => [Object.assign(items[0], {count: (counts.length < 1) ? 0 : counts[0]['count']})]) : Promise.resolve(items);
-                    return (items.length < 1) ? {empty: true} : getCount().then(items => sql.nosql.mediaType ? {
-                        item: items[0],
-                        mediaHadle: 1,
-                    } : {item: items[0]});
-                });
+                }).then(items => (items.length < 1) ? {empty: true} : sql.nosql.mediaType ? {
+                    item: items[0],
+                    mediaHadle: 1,
+                } : {item: items[0]});
             } else {
                 return {empty: true};
             }
@@ -176,25 +143,10 @@ export default function process(collection) {
                     getSortName(sortName),
                     sortType,
                 ]],
-            }, sql.hint ? {hint: sql.hint} : {})).then(items => {
-                const getCount = () => (collection === FITNESSDB) ? Mongo('find', `${collection}Count`, {
-                    owner: user._id,
-                    itemId: {'$in': items.map(i => i._id)},
-                }).then(counts => items.map(i => {
-                    for (let c of counts) {
-                        if (i._id.equals(c.itemId)) {
-                            i['count'] = c['count'];
-                            return i;
-                        }
-                    }
-                    i['count'] = 0;
-                    return i;
-                })) : Promise.resolve(items);
-                return getCount().then(items => ({
-                    items,
-                    parentList,
-                }));
-            }) : {
+            }, sql.hint ? {hint: sql.hint} : {})).then(items => ({
+                items,
+                parentList,
+            })) : {
                 items: [],
                 parentList: parentList,
             };
@@ -1431,125 +1383,6 @@ function getStockSortName(sortName) {
         case 'name':
         default:
         return 'per';
-    }
-}
-
-const getFitnessQuerySql = function(user, tagList, exactly) {
-    let nosql = {};
-    let and = [];
-    let is_tags = false;
-    let skip = 0;
-    if (tagList.length < 1) {
-    } else {
-        for (let [i, tag] of Object.entries(tagList)) {
-            const normal = normalize(tag);
-            const index = isDefaultTag(normal);
-            if (index.index === 31) {
-                if (index[1] === '') {
-                    skip = Number(index.index[2]);
-                }
-                continue;
-            } else if (index) {
-            } else {
-                if (exactly[i]) {
-                    and.push({tags: normal});
-                    is_tags = true;
-                } else {
-                    and.push({tags: { $regex: escapeRegExp(normal) }});
-                }
-            }
-        }
-    }
-    if (and.length > 0) {
-        nosql.$and = and;
-    }
-    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, {name: 1});
-    const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
-    console.log(ret);
-    console.log(ret.nosql);
-    return ret;
-}
-
-function getFitnessQueryTag(user, tag, del=1) {
-    const normal = normalize(tag);
-    const index = isDefaultTag(normal);
-    if (index) {
-        return {type: 0};
-    } else {
-        return {
-            tag: {tags: normal},
-            type: 1,
-        };
-    }
-}
-function getFitnessSortName(sortName) {
-    switch (sortName) {
-        case 'mtime':
-        return 'price';
-        case 'name':
-        case 'count':
-        default:
-        return 'name';
-    }
-}
-
-const getRankQuerySql = function(user, tagList, exactly) {
-    let nosql = {};
-    let and = [];
-    let is_tags = false;
-    let skip = 0;
-    if (tagList.length < 1) {
-    } else {
-        for (let [i, tag] of Object.entries(tagList)) {
-            const normal = normalize(tag);
-            const index = isDefaultTag(normal);
-            if (index.index === 31) {
-                if (index[1] === '') {
-                    skip = Number(index.index[2]);
-                }
-                continue;
-            } else if (index) {
-            } else {
-                if (exactly[i]) {
-                    and.push({tags: normal});
-                    is_tags = true;
-                } else {
-                    and.push({tags: { $regex: escapeRegExp(normal) }});
-                }
-            }
-        }
-    }
-    if (and.length > 0) {
-        nosql.$and = and;
-    }
-    const hint = Object.assign({}, is_tags ? {tags: 1} : {}, {name: 1});
-    const ret = Object.assign({nosql}, HINT(ENV_TYPE) ? {hint} : {}, skip ? {skip} : {});
-    console.log(ret);
-    console.log(ret.nosql);
-    return ret;
-}
-
-function getRankQueryTag(user, tag, del=1) {
-    const normal = normalize(tag);
-    const index = isDefaultTag(normal);
-    if (index) {
-        return {type: 0};
-    } else {
-        return {
-            tag: {tags: normal},
-            type: 1,
-        };
-    }
-}
-function getRankSortName(sortName) {
-    switch (sortName) {
-        case 'mtime':
-        return 'start';
-        case 'count':
-        return 'type';
-        case 'name':
-        default:
-        return 'name';
     }
 }
 

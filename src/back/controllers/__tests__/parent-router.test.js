@@ -2,7 +2,7 @@
  * parent-router.test.js — Comprehensive tests for src/back/controllers/parent-router.js
  *
  * 25 routes (5 collections × 5 endpoints each, all require auth):
- *   For each of STORAGE, PASSWORD, STOCK, FITNESS, RANK:
+ *   For each of STORAGE, PASSWORD, STOCK:
  *     GET  /{db}/list       — parent category list (storage has admin adultonlyParentList)
  *     GET  /{db}/taglist/:name/:sortName/:sortType/:page — tag listing
  *     GET  /{db}/query/:id/:sortName/:sortType/:single?  — parent tag query
@@ -56,9 +56,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   USERDB: 'user', VERIFYDB: 'verify', STORAGEDB: 'storage',
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
-  STOCKDB: 'stock', PASSWORDDB: 'password', FITNESSDB: 'fitness', RANKDB: 'rank',
-  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [],
-  FITNESS_PARENT: [], RANK_PARENT: [], HANDLE_TIME: 7200,
+  STOCKDB: 'stock', PASSWORDDB: 'password',
+  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
   BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: [],
@@ -371,83 +370,9 @@ describe('parent-router.js', () => {
   });
 
   // ---------------------------------------------------------------
-  // FITNESS parents
+  // Error paths
   // ---------------------------------------------------------------
-  describe('FITNESS parents', () => {
-    test('GET /fitness/list works', async () => {
-      mockParentList.mockReturnValueOnce([]);
-      const res = await request(app).get('/fitness/list').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body.parentList).toEqual([]);
-    });
-
-    test('GET /fitness/taglist works', async () => {
-      mockParentQuery.mockResolvedValueOnce({ items: [] });
-      const res = await request(app).get('/fitness/taglist/tag/mtime/asc/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
-    test('GET /fitness/query returns fitness items', async () => {
-      mockQueryParentTag.mockResolvedValueOnce({
-        items: [{ _id: 'f1', name: 'Run', tags: [], utime: 1, count: 1, record: [] }],
-        parentList: [], latest: null, bookmark: null,
-      });
-      const res = await request(app).get('/fitness/query/pid1/name/desc').set('x-test-user', u(ADMIN));
-      expect(res.body.itemList).toHaveLength(1);
-    });
-
-    test('POST /fitness/add works', async () => {
-      mockAddParent.mockResolvedValueOnce({});
-      const res = await request(app).post('/fitness/add')
-        .set('x-test-user', u(ADMIN)).send({ name: 'n', tag: 't' });
-      expect(res.status).toBe(200);
-    });
-
-    test('DELETE /fitness/del works', async () => {
-      mockDelParent.mockResolvedValueOnce({});
-      const res = await request(app).delete('/fitness/del/f1').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // RANK parents
-  // ---------------------------------------------------------------
-  describe('RANK parents', () => {
-    test('GET /rank/list works', async () => {
-      mockParentList.mockReturnValueOnce([{ name: 'top', tw: '排行' }]);
-      const res = await request(app).get('/rank/list').set('x-test-user', u(ADMIN));
-      expect(res.body.parentList[0]).toEqual({ name: 'top', show: '排行' });
-    });
-
-    test('GET /rank/taglist with page=10', async () => {
-      mockParentQuery.mockResolvedValueOnce({ items: [] });
-      await request(app).get('/rank/taglist/tag/name/asc/10').set('x-test-user', u(ADMIN));
-      expect(mockParentQuery.mock.calls[0][3]).toBe(10);
-    });
-
-    test('GET /rank/query returns rank items', async () => {
-      mockQueryParentTag.mockResolvedValueOnce({
-        items: [{ _id: 'r1', name: 'Top', tags: [], utime: 1, count: 1 }],
-        parentList: [], latest: null, bookmark: null,
-      });
-      const res = await request(app).get('/rank/query/pid1/mtime/desc').set('x-test-user', u(ADMIN));
-      expect(res.body.itemList).toHaveLength(1);
-    });
-
-    test('POST /rank/add works', async () => {
-      mockAddParent.mockResolvedValueOnce({});
-      const res = await request(app).post('/rank/add')
-        .set('x-test-user', u(ADMIN)).send({ name: 'n', tag: 't' });
-      expect(res.status).toBe(200);
-    });
-
-    test('DELETE /rank/del works', async () => {
-      mockDelParent.mockResolvedValueOnce({});
-      const res = await request(app).delete('/rank/del/r1').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
+  describe('Error paths', () => {
     // Error path coverage — exercises catch(err => handleError(err, next)) lines
     test('GET /password/query rejects → next(err) → 500', async () => {
       mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
@@ -457,16 +382,6 @@ describe('parent-router.js', () => {
     test('GET /stock/query rejects → next(err) → 500', async () => {
       mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
       const res = await request(app).get('/stock/query/pid1/name/desc').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
-    });
-    test('GET /fitness/query rejects → next(err) → 500', async () => {
-      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
-      const res = await request(app).get('/fitness/query/pid1/name/desc').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
-    });
-    test('GET /rank/query rejects → next(err) → 500', async () => {
-      mockQueryParentTag.mockRejectedValueOnce(new Error('boom'));
-      const res = await request(app).get('/rank/query/pid1/mtime/desc').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(500);
     });
   });

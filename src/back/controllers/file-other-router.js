@@ -13,7 +13,6 @@ import MediaHandleTool, { handleMediaError } from '../models/mediaHandle-tool.js
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
-import Lottery from '../models/lottery-tool.js'
 import { checkLogin, isValidString, handleError, getFileLocation, HoError, checkAdmin, toValidName, getJson, torrent2Magnet, sortList, completeZero, SRT2VTT } from '../util/utility.js'
 import { isVideo, isImage, isMusic, addPost, supplyTag, isTorrent, extTag, extType, isDoc, isZipbook, isSub, isCSV } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
@@ -59,17 +58,6 @@ router.get('/preview/:uid', function(req, res, next) {
             FsCreateReadStream(previewPath).pipe(res);*/
         }).catch(err => handleError(err, next));
     });
-});
-
-router.get('/download/lottery', function(req, res, next) {
-    console.log('lottery output');
-    Lottery.downloadCsv(req.user).then(data => {
-        res.writeHead(200, {
-            'X-Forwarded-Path': data.path,
-            'X-Forwarded-Name': `attachment;filename*=UTF-8''${encodeURIComponent(`${data.name}.csv`)}`,
-        });
-        res.end('ok');
-    }).catch(err => handleError(err, next));
 });
 
 router.get('/download/:uid', function(req, res, next) {
@@ -724,27 +712,6 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
             }).catch(err => handleError(err, next));
         }
     });
-});
-
-router.post('/upload/lottery/:name/:type(0|1|2|3|4|5)', function(req, res, next) {
-    checkLogin(req, res, () => {
-        console.log('upload lottery');
-        console.log(req.files);
-        const ext = isCSV(req.files.file.name);
-        if (!ext) {
-            return handleError(new HoError('not valid csv!!!'), next);
-        }
-        const json_data = getJson(req.body.lang);
-        if (json_data === false) {
-            return handleError(new HoError('json parse error!!!'), next);
-        }
-        Lottery.input(req.files.file.path, (json_data === 'en') ? false: true).then(data => Lottery.newLottery(req.user._id, req.params.name, req.params.type, json_data, data.user, data.reward)).then(() => res.json({apiOK: true})).catch(err => handleError(err, next));
-    });
-});
-
-router.get('/output/lottery', function(req, res, next) {
-    console.log('lottery output');
-    Lottery.outputCsv(req.user).then(data => res.json({apiOk: true})).catch(err => handleError(err, next));
 });
 
 export default router

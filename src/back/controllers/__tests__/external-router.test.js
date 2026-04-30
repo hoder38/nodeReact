@@ -115,9 +115,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   // Must include optional url: prefix — matches real constants.js pattern
   RE_WEBURL: /^(url:)?(?:https?:\/\/).+/,
   RELEASE: 'release', DEV: 'dev',
-  STOCKDB: 'stock', PASSWORDDB: 'password', FITNESSDB: 'fitness', RANKDB: 'rank',
-  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [],
-  FITNESS_PARENT: [], RANK_PARENT: [], HANDLE_TIME: 7200,
+  STOCKDB: 'stock', PASSWORDDB: 'password',
+  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
   BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: [],

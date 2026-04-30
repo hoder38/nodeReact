@@ -99,10 +99,10 @@ jest.unstable_mockModule('../../constants.js', () => ({
   // Other constants utility.js needs
   RE_WEBURL: /^(url:)?(?:https?:\/\/).+/,
   STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
-  VERIFYDB: 'verify', FITNESSDB: 'fitness', RANKDB: 'rank',
+  VERIFYDB: 'verify',
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [],
-  STOCK_PARENT: [], FITNESS_PARENT: [], RANK_PARENT: [],
+  STOCK_PARENT: [],
   HANDLE_TIME: 7200, BOOKMARK_LIMIT: 100,
   ADULTONLY_PARENT: [], QUERY_LIMIT: 20,
   RELATIVE_LIMIT: 100, RELATIVE_UNION: 2, RELATIVE_INTER: 3,

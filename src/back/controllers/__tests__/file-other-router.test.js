@@ -1,9 +1,8 @@
 /**
  * file-other-router.test.js — Comprehensive tests for src/back/controllers/file-other-router.js
  *
- * 11 routes:
+ * 8 routes:
  *   GET    /preview/:uid                          — preview thumbnail
- *   GET    /download/lottery                      — lottery CSV download
  *   GET    /download/:uid                         — file download
  *   GET    /video/:uid/file                       — video streaming
  *   GET    /subtitle/:uid/:lang/:index/:fresh?    — subtitle serving
@@ -11,8 +10,6 @@
  *   GET    /image/:uid/:type/:number?             — image/doc pages
  *   POST   /upload/file                           — file upload
  *   POST   /upload/subtitle/:uid/:index?          — subtitle upload
- *   POST   /upload/lottery/:name/:type            — lottery CSV upload
- *   GET    /output/lottery                        — lottery output
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
@@ -113,9 +110,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   STATIC_PATH: '/static', NOISE_TIME: 7200,
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   RE_WEBURL: /^https?:\/\//, RELEASE: 'release', DEV: 'dev',
-  STOCKDB: 'stock', PASSWORDDB: 'password', FITNESSDB: 'fitness', RANKDB: 'rank',
-  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [],
-  FITNESS_PARENT: [], RANK_PARENT: [], HANDLE_TIME: 7200,
+  STOCKDB: 'stock', PASSWORDDB: 'password',
+  DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
   BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: [],
@@ -184,17 +180,6 @@ jest.unstable_mockModule('../../models/api-tool-playlist.js', () => ({
 // --- api-tool-google.js ---
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   googleBackup: jest.fn(() => Promise.resolve()),
-}));
-
-// --- lottery-tool.js ---
-const mockLottery = {
-  downloadCsv: jest.fn(() => Promise.resolve({ path: '/tmp/lot.csv', name: 'lottery' })),
-  outputCsv: jest.fn(() => Promise.resolve()),
-  input: jest.fn(() => Promise.resolve({ user: ['u1'], reward: ['r1'] })),
-  newLottery: jest.fn(() => Promise.resolve()),
-};
-jest.unstable_mockModule('../../models/lottery-tool.js', () => ({
-  default: mockLottery,
 }));
 
 // --- mkdirp ---
@@ -343,10 +328,6 @@ describe('file-other-router.js', () => {
     mockSupplyTag.mockReset();
     mockAddPost.mockReset();
     mockIsDefaultTag.mockReset();
-    mockLottery.downloadCsv.mockReset();
-    mockLottery.outputCsv.mockReset();
-    mockLottery.input.mockReset();
-    mockLottery.newLottery.mockReset();
     // Defaults
     mockExistsSync.mockReturnValue(false);
     mockUnlink.mockImplementation((_p, cb) => cb(null));
@@ -463,25 +444,6 @@ describe('file-other-router.js', () => {
       mockExistsSync.mockReturnValue(false);
       const res = await request(app).get(`/preview/${VALID_UID}`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
-    });
-  });
-
-  // =================================================================
-  // GET /download/lottery (defined BEFORE /download/:uid)
-  // =================================================================
-  describe('GET /download/lottery', () => {
-    test('returns CSV download headers', async () => {
-      mockLottery.downloadCsv.mockResolvedValueOnce({ path: '/tmp/lot.csv', name: 'MyLottery' });
-      const res = await request(app).get('/download/lottery').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.headers['x-forwarded-path']).toBe('/tmp/lot.csv');
-      expect(res.headers['x-forwarded-name']).toContain('MyLottery.csv');
-    });
-
-    test('downloadCsv failure → error', async () => {
-      mockLottery.downloadCsv.mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app).get('/download/lottery').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
     });
   });
 
@@ -1891,62 +1853,4 @@ describe('file-other-router.js', () => {
     });
   });
 
-  // =================================================================
-  // POST /upload/lottery/:name/:type
-  // =================================================================
-  describe('POST /upload/lottery/:name/:type', () => {
-    test('valid CSV → lottery created', async () => {
-      mockIsCSV.mockReturnValue('csv');
-      mockLottery.input.mockResolvedValueOnce({ user: ['u1'], reward: ['r1'] });
-      mockLottery.newLottery.mockResolvedValueOnce({});
-      const res = await request(app)
-        .post('/upload/lottery/TestLot/0')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('data.csv', 500))
-        .send({ lang: '"en"' });
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOK: true });
-      expect(mockLottery.input).toHaveBeenCalledWith('/tmp/upload', false); // en → false
-    });
-
-    test('non-CSV file → not valid csv', async () => {
-      mockIsCSV.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/lottery/TestLot/0')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('data.xlsx', 500))
-        .send({ lang: '"en"' });
-      expect(res.status).toBe(400);
-      expect(res.text).toMatch(/not valid csv/);
-    });
-
-    test('invalid lang JSON → json parse error', async () => {
-      mockIsCSV.mockReturnValue('csv');
-      const res = await request(app)
-        .post('/upload/lottery/TestLot/0')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('data.csv', 500))
-        .send({ lang: '{bad json' });
-      expect(res.status).toBe(400);
-      expect(res.text).toMatch(/json parse error/);
-    });
-  });
-
-  // =================================================================
-  // GET /output/lottery
-  // =================================================================
-  describe('GET /output/lottery', () => {
-    test('success → returns apiOk: true', async () => {
-      mockLottery.outputCsv.mockResolvedValueOnce({});
-      const res = await request(app).get('/output/lottery').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOk: true }); // Note: lowercase 'k'
-    });
-
-    test('outputCsv failure → error', async () => {
-      mockLottery.outputCsv.mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app).get('/output/lottery').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
-    });
-  });
 });
