@@ -168,16 +168,9 @@ router.get('/getRandom/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
                 if (mtype === 3) {
                     //yify
                     random_tag = ['yify movie', 'no local', random_tag.splice(random_tag.length -1, 1)[0]];
-                }/* else if (mtype === 4) {
-                    //bilibili
-                    random_tag = ['bilibili movie', 'no local'];
-                }*/
+                }
             } else if (random_tag[1] === '動畫') {
                 mtype = selectRandom([9, 1, 1]);
-                /*if (mtype === 3) {
-                    //bilibili
-                    random_tag = ['bilibili animation', 'no local'];
-                }*/
             } else if (random_tag[1] === '電視劇') {
                 mtype = selectRandom([10]);
             }
@@ -222,18 +215,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
     const index = req.params.pageToken ? Number(req.params.pageToken.match(/^\d+/)) : 1;
     const pageToken = req.params.pageToken ? req.params.pageToken.match(/[^\d]+$/) : false;
     let itemList = [];
-    External.getSingleList('kubo', StorageTagTool.getKuboQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
-        name: item.name,
-        id: `kub_${item.id}`,
-        tags: [...item.tags, 'first item'],
-        recycle: 0,
-        isOwn: false,
-        utime: new Date(item.date).getTime()/1000,
-        thumb: item.thumb,
-        noDb: true,
-        status: 3,
-        count: item.count,
-    }))).then(() => External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
+    External.getSingleList('yify', StorageTagTool.getYifyQuery(parentList.cur, req.params.sortName, index)).then(list => itemList = list.map(item => ({
         name: item.name,
         id: `yif_${item.id}`,
         tags: [...item.tags, 'first item'],
@@ -244,29 +226,7 @@ router.get('/external/get/:sortName(name|mtime|count)/:pageToken?', function(req
         noDb: true,
         status: 3,
         count: item.rating,
-    /*}))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index))).then(list => itemList = [...itemList, ...list.map(item => ({
-        name: item.name,
-        id: `bbl_${item.id}`,
-        tags: [...item.tags, 'first item'],
-        recycle: 0,
-        isOwn: false,
-        utime: item.date,
-        thumb: item.thumb,
-        noDb: true,
-        status: 3,
-        count: item.count,
-    }))]).then(() => External.getSingleList('bilibili', StorageTagTool.getBiliQuery(parentList.cur, req.params.sortName, index, true))).then(list => itemList = [...itemList, ...list.map(item => ({
-        name: item.name,
-        id: `bbl_${item.id}`,
-        tags: [...item.tags, 'first item'],
-        recycle: 0,
-        isOwn: false,
-        utime: item.date,
-        thumb: item.thumb,
-        noDb: true,
-        status: 3,
-        count: item.count,*/
-    }))]).then(() => {
+    }))).then(() => {
         const query = StorageTagTool.getMadQuery(parentList.cur, req.params.sortName, index);
         return query.post ? External.getSingleList('dm5', query.url, query.post) : External.getSingleList('dm5', query);
     }).then(list => itemList = [...itemList, ...list.map(item => ({
@@ -456,8 +416,8 @@ router.post('/media/saveParent/:sortName(name|mtime|count)/:sortType(desc|asc)',
 
 router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(req, res, next){
     console.log('media setTime');
-    //let id = req.params.id.match(/^(you|ypl|yif|mad|bbl|kub)_(.*)$/);
-    let id = req.params.id.match(/^(yif|mad|bbl|kub)_(.*)$/);
+    //let id = req.params.id.match(/^(you|ypl|yif)_(.*)$/);
+    let id = req.params.id.match(/^(yif|mad)_(.*)$/);
     let playlist = 0;
     let playlistId = null;
     let obj = req.params.obj;
@@ -465,17 +425,11 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
         /*if (id[1] === 'ypl') {
             playlist = 1;
             playlistId = id[2];
-        } else*/ if (id[1] === 'kub') {
-            playlist = 3;
-            playlistId = id[2];
-        } else if (id[1] === 'yif') {
+        } else*/ if (id[1] === 'yif') {
             playlist = 4;
             playlistId = id[2];
         } else if (id[1] === 'mad') {
             playlist = 5;
-            playlistId = id[2];
-        } else if (id[1] === 'bbl') {
-            playlist = 6;
             playlistId = id[2];
         }
         id = isValidString(req.params.id, 'name');
@@ -571,18 +525,12 @@ router.get('/media/setTime/:id/:type/:obj?/:pageToken?/:back(back)?', function(r
             } else if (playlist > 2) {
                 let playurl = null;
                 let playtype = null;
-                if (playlist === 3) {
-                    playurl = `http://www.99kubo.tv/vod-read-id-${playlistId}.html`;
-                    playtype = 'kubo';
-                } else if (playlist === 4) {
+                if (playlist === 4) {
                     playurl = `https://yts.ag/api/v2/movie_details.json?movie_id=${playlistId}`;
                     playtype = 'yify';
                 } else if (playlist === 5) {
                     playurl = `http://www.dm5.com/${playlistId}/`;
                     playtype = 'dm5';
-                } else if (playlist === 6) {
-                    playurl = playlistId.match(/^av/) ? `http://www.bilibili.com/video/${playlistId}/` : `http://www.bilibili.com/bangumi/i/${playlistId}/`;
-                    playtype = 'bilibili';
                 }
                 return External.getSingleId(playtype, playurl, recordTime).then(([obj, is_end, total]) => ret_rest(obj, is_end, total));
             }
@@ -601,7 +549,7 @@ router.get('/media/record/:id/:time/:pId?', function(req, res, next) {
     if (!req.params.time.match(/^\d+(&\d+|\.\d+)?$/)) {
         return handleError(new HoError('timestamp is not vaild'), next);
     }
-    const id = req.params.id.match(/^(you|dym|bil|mad|yuk|ope|lin|iqi|bbl|kud|kyu|kdy|kub|kur)_/) ? isValidString(req.params.id, 'name') : isValidString(req.params.id, 'uid');
+    const id = req.params.id.match(/^(you|lin|iqi)_/) ? isValidString(req.params.id, 'name') : isValidString(req.params.id, 'uid');
     if (!id) {
         return handleError(new HoError('file is not vaild'), next);
     }

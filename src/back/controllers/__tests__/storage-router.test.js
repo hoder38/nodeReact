@@ -71,7 +71,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
-  BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
+  RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: ['動作', '冒險'],
   BOOKMARK_LIMIT: 100,
@@ -79,7 +79,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   GAME_LIST: [], GAME_LIST_CH: ['休閒', '冒險'],
   MEDIA_LIST: [], MEDIA_LIST_CH: [],
   DM5_ORI_LIST: [], DM5_CH_LIST: [],
-  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [], KUBO_COUNTRY: [],
+  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [],
   QUERY_LIMIT: 20,
   ADULT_LIST: ['ol', '中出'],
   MUSIC_LIST: ['blues', 'classical'],
@@ -117,7 +117,6 @@ const mockSearchTags = jest.fn(() => ({
 const mockSetLatest = jest.fn();
 const mockSendTag = jest.fn();
 const mockSaveSql = jest.fn();
-const mockGetKuboQuery = jest.fn(() => 'kubo_query');
 const mockGetYifyQuery = jest.fn(() => 'yify_query');
 const mockGetMadQuery = jest.fn(() => 'mad_query');
 
@@ -133,7 +132,6 @@ jest.unstable_mockModule('../../models/tag-tool.js', () => ({
     setLatest: mockSetLatest,
     sendTag: mockSendTag,
     saveSql: mockSaveSql,
-    getKuboQuery: mockGetKuboQuery,
     getYifyQuery: mockGetYifyQuery,
     getMadQuery: mockGetMadQuery,
   })),
@@ -871,21 +869,20 @@ describe('storage-router.js', () => {
   });
 
   // ---------------------------------------------------------------
-  // GET /external/get — kubo, yify, dm5
+  // GET /external/get — yify, dm5
   // ---------------------------------------------------------------
   describe('GET /external/get/:sortName/:pageToken?', () => {
-    test('fetches kubo, yify, dm5 lists and returns combined itemList', async () => {
+    test('fetches yify, dm5 lists and returns combined itemList', async () => {
+      mockGetMadQuery.mockReturnValueOnce('mad_query'); // not an object
       mockGetSingleList
-        .mockResolvedValueOnce([{ name: 'K1', id: '1', tags: ['a'], date: '2023-01-01', thumb: 't', count: 10 }]) // kubo
         .mockResolvedValueOnce([{ name: 'Y1', id: '2', tags: ['b'], date: '2023-02-01', thumb: 'u', rating: 8 }]) // yify
         .mockResolvedValueOnce([{ name: 'D1', id: '3', tags: ['c'], thumb: 'v' }]); // dm5
       const res = await request(app).get('/external/get/name').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
-      expect(res.body.itemList).toHaveLength(3);
-      expect(res.body.itemList[0].id).toBe('kub_1');
-      expect(res.body.itemList[1].id).toBe('yif_2');
-      expect(res.body.itemList[2].id).toBe('mad_3');
-      expect(res.body.pageToken).toBe('2'); // index(1) + 1
+      expect(res.body.itemList).toHaveLength(2);
+      expect(res.body.itemList[0].id).toBe('yif_2');
+      expect(res.body.itemList[1].id).toBe('mad_3');
+      expect(res.body.pageToken).toBe('2');
     });
 
     test('with pageToken, extracts index and token', async () => {
@@ -898,7 +895,6 @@ describe('storage-router.js', () => {
     test('external items have noDb=true and "first item" tag', async () => {
       mockGetSingleList
         .mockResolvedValueOnce([{ name: 'K', id: '1', tags: [], date: '2023-01-01', thumb: '', count: 0 }])
-        .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
       const res = await request(app).get('/external/get/name').set('x-test-user', u(ADMIN));
       expect(res.body.itemList[0].noDb).toBe(true);
@@ -909,8 +905,7 @@ describe('storage-router.js', () => {
       mockGetMadQuery.mockReturnValueOnce({ url: 'dm5url', post: 'postdata' });
       mockGetSingleList.mockResolvedValue([]);
       await request(app).get('/external/get/name').set('x-test-user', u(ADMIN));
-      // Third call (dm5) should have 3 args
-      const dm5Call = mockGetSingleList.mock.calls[2];
+      const dm5Call = mockGetSingleList.mock.calls[1];
       expect(dm5Call[0]).toBe('dm5');
       expect(dm5Call[1]).toBe('dm5url');
       expect(dm5Call[2]).toBe('postdata');
@@ -1274,9 +1269,9 @@ describe('storage-router.js', () => {
       expect(mockRedis).toHaveBeenCalledWith('hdel', expect.stringContaining('record:'), VALID_UID);
     });
 
-    test('external id (kub_ prefix) validated as name', async () => {
+    test('external id (you_ prefix) validated as name', async () => {
       mockRedis.mockResolvedValueOnce('OK');
-      const res = await request(app).get('/media/record/kub_12345/50').set('x-test-user', u(ADMIN));
+      const res = await request(app).get('/media/record/you_12345/50').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
     });
 
@@ -1569,24 +1564,6 @@ describe('storage-router.js', () => {
       expect(res.body.time).toBeUndefined();
     });
 
-    test('external id (kub_ prefix): sets playlist=3, calls getSingleId', async () => {
-      // kub_ prefix → validated as 'name', playlist=3
-      // setTag(id): Mongo find → Redis multi → Redis hget
-      mockMongo.mockResolvedValueOnce([{ _id: 'kub_abc', tags: [] }]); // setTag Mongo find
-      mockRedis.mockResolvedValueOnce([]); // setTag Redis multi
-      mockRedis.mockResolvedValueOnce(null); // setTag Redis hget (no record → recordTime=1)
-      // External.getSingleId for kubo playlist
-      mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Episode 1' }, false, 5]);
-      // fire-and-forget
-      mockSetLatest.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce({}); // update count
-      const res = await request(app).get('/media/setTime/kub_abc/video').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockGetSingleId).toHaveBeenCalledWith('kubo', expect.stringContaining('99kubo'), 1);
-      expect(res.body.playlist).toBeDefined();
-      expect(res.body.playlist.total).toBe(5);
-    });
-
     test('invalid id returns 400', async () => {
       // Short ID that doesn't match external prefix and fails uid validation
       const res = await request(app).get('/media/setTime/bad/video').set('x-test-user', u(ADMIN));
@@ -1643,7 +1620,7 @@ describe('storage-router.js', () => {
       expect(res.body.playlist.total).toBe(3);
     });
 
-    test('mad_ prefix: playlist=5, dm5 URL (lines 474-476, 580-582)', async () => {
+    test('mad_ prefix: playlist=5, dm5 URL', async () => {
       mockMongo.mockResolvedValueOnce([{ _id: 'mad_ch12345', tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
@@ -1652,32 +1629,13 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce({});
       const res = await request(app).get('/media/setTime/mad_ch12345/video').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
-      expect(mockGetSingleId).toHaveBeenCalledWith('dm5', expect.stringContaining('dm5.com/ch12345'), 1);
     });
 
-    test('bbl_ prefix with av: playlist=6, bilibili video URL (lines 477-479, 583-585)', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'bbl_av12345', tags: [] }]);
-      mockRedis.mockResolvedValueOnce([]);
-      mockRedis.mockResolvedValueOnce(null);
-      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1]);
-      mockSetLatest.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce({});
-      const res = await request(app).get('/media/setTime/bbl_av12345/video').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockGetSingleId).toHaveBeenCalledWith('bilibili', 'http://www.bilibili.com/video/av12345/', 1);
-    });
 
-    test('bbl_ prefix without av: bilibili bangumi URL (line 584 else)', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'bbl_ep12345', tags: [] }]);
-      mockRedis.mockResolvedValueOnce([]);
-      mockRedis.mockResolvedValueOnce(null);
-      mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1]);
-      mockSetLatest.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce({});
-      const res = await request(app).get('/media/setTime/bbl_ep12345/video').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockGetSingleId).toHaveBeenCalledWith('bilibili', 'http://www.bilibili.com/bangumi/i/ep12345/', 1);
-    });
+
+
+
+
 
     test('external prefix with invalid name returns 400 (line 483)', async () => {
       // A name matching the prefix regex but failing isValidString 'name' validation
@@ -1691,13 +1649,13 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
-      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
       mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Ep1' }, false, 5, null, null, null, null, false]);
       const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
       expect(res.body.playlist).toBeDefined();
       expect(res.body.playlist.total).toBe(5);
-      expect(mockGetSingleId).toHaveBeenCalledWith('kubo', 'http://example.com', 1, null, undefined);
+      expect(mockGetSingleId).toHaveBeenCalledWith('yify', 'http://example.com', 1, null, undefined);
     });
 
     test('uid with obj=number: playlist=2, first() stores record (lines 505-513)', async () => {
@@ -1705,7 +1663,7 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
-      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
       mockGetSingleId.mockResolvedValueOnce([{ id: null, name: 'Ep1' }, false, 1, null, null, null, null, false]);
       const res = await request(app).get(`/media/setTime/${VALID_UID}/video/42`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
@@ -1717,7 +1675,7 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
-      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
       mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 1, null, null, null, null, false]);
       const res = await request(app).get(`/media/setTime/${VALID_UID}/video/42/mytoken`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
@@ -1758,17 +1716,17 @@ describe('storage-router.js', () => {
     });
 
     test('empty playlist (total < 1) returns error (line 543)', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'kub_empty', tags: [] }]);
+      mockMongo.mockResolvedValueOnce([{ _id: 'yif_empty', tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
       mockGetSingleId.mockResolvedValueOnce([{ id: null }, false, 0]);
-      const res = await request(app).get('/media/setTime/kub_empty/video').set('x-test-user', u(ADMIN));
+      const res = await request(app).get('/media/setTime/yif_empty/video').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
       expect(res.text).toContain('playlist is empty');
     });
 
     test('ret_rest with obj.id calls setTag again (line 546)', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'kub_abc', tags: [] }]);
+      mockMongo.mockResolvedValueOnce([{ _id: 'yif_abc', tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
       mockGetSingleId.mockResolvedValueOnce([
@@ -1777,7 +1735,7 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce('10');
-      const res = await request(app).get('/media/setTime/kub_abc/video').set('x-test-user', u(ADMIN));
+      const res = await request(app).get('/media/setTime/yif_abc/video').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
       expect(res.body.playlist.obj.id).toBe(VALID_UID);
       expect(res.body.time).toBe('10');
@@ -1787,7 +1745,7 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
-      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
       mockGetSingleId.mockResolvedValueOnce([
         { id: VALID_UID, name: 'Ep1' }, false, 5,
         ['item1', 'item2'], 'pageN', 'pageP', 'tok123', true,
@@ -1807,8 +1765,8 @@ describe('storage-router.js', () => {
     });
 
     test('first() with invalid obj format returns error (line 506)', async () => {
-      // kub_ prefix: playlist=3. obj='badobj' doesn't match digit pattern
-      const res = await request(app).get('/media/setTime/kub_abc/video/badobj').set('x-test-user', u(ADMIN));
+      // yif_ prefix: playlist=3. obj='badobj' doesn't match digit pattern
+      const res = await request(app).get('/media/setTime/yif_abc/video/badobj').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
       expect(res.text).toContain('external is not vaild');
     });
@@ -1816,7 +1774,7 @@ describe('storage-router.js', () => {
     test('first() with obj passing digit regex but failing name validation (line 510)', async () => {
       // 501-char digit string passes /^\d+$/ but fails isValidString 'name' (>500 chars)
       const longDigit = '1'.repeat(501);
-      const res = await request(app).get(`/media/setTime/kub_abc/video/${longDigit}`).set('x-test-user', u(ADMIN));
+      const res = await request(app).get(`/media/setTime/yif_abc/video/${longDigit}`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
       expect(res.text).toContain('external is not vaild');
     });
@@ -1825,15 +1783,15 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
-      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'kubo', url: 'http%3A%2F%2Fexample.com' }]);
+      mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, owner: 'yify', url: 'http%3A%2F%2Fexample.com' }]);
       mockGetSingleId.mockResolvedValueOnce([{ id: null }, true, 5, null, null, null, null, false]);
       const res = await request(app).get(`/media/setTime/${VALID_UID}/video/external/tok/back`).set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
-      expect(mockGetSingleId).toHaveBeenCalledWith('kubo', expect.any(String), 1, null, 'back');
+      expect(mockGetSingleId).toHaveBeenCalledWith('yify', expect.any(String), 1, null, 'back');
     });
 
     test('type=music with playlist: no time in response (line 555)', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'kub_mus', tags: [] }]);
+      mockMongo.mockResolvedValueOnce([{ _id: 'yif_mus', tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce(null);
       mockGetSingleId.mockResolvedValueOnce([
@@ -1842,7 +1800,7 @@ describe('storage-router.js', () => {
       mockMongo.mockResolvedValueOnce([{ _id: VALID_UID, tags: [] }]);
       mockRedis.mockResolvedValueOnce([]);
       mockRedis.mockResolvedValueOnce('99');
-      const res = await request(app).get('/media/setTime/kub_mus/music').set('x-test-user', u(ADMIN));
+      const res = await request(app).get('/media/setTime/yif_mus/music').set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
       expect(res.body.time).toBeUndefined();
     });

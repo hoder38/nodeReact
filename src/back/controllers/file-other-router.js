@@ -127,51 +127,13 @@ router.get('/subtitle/:uid/:lang/:index(\\d+|v)/:fresh(0+)?', function(req, res,
             /*res.writeHead(200, {'Content-Type': 'text/vtt'});
             FsCreateReadStream(FsExistsSync(`${subPath}.vtt`) ? `${subPath}.vtt` : `${STATIC_PATH}/123.vtt`).pipe(res);*/
         }
-        const id = req.params.uid.match(/^(you|dym|bil|yif|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
+        const id = req.params.uid.match(/^(yif)_/);
         if (id) {
             const id_valid = isValidString(req.params.uid, 'name');
             if (!id_valid) {
                 return handleError(new HoError('external is not vaild'), next);
             }
-            let filePath = null;
-            switch(id[1]) {
-                case 'dym':
-                filePath = getFileLocation('dailymotion', id_valid);
-                break;
-                case 'bil':
-                filePath = getFileLocation('bilibili', id_valid);
-                break;
-                case 'yif':
-                filePath = getFileLocation('yify', id_valid);
-                break;
-                case 'yuk':
-                filePath = getFileLocation('youku', id_valid);
-                break;
-                case 'ope':
-                filePath = getFileLocation('openload', id_valid);
-                break;
-                case 'lin':
-                filePath = getFileLocation('line', id_valid);
-                break;
-                case 'iqi':
-                filePath = getFileLocation('iqiyi', id_valid);
-                break;
-                case 'kud':
-                filePath = getFileLocation('kubodrive', id_valid);
-                break;
-                case 'kyu':
-                filePath = getFileLocation('kuboyouku', id_valid);
-                break;
-                case 'kdy':
-                filePath = getFileLocation('kubodymyou', id_valid);
-                break;
-                case 'kur':
-                filePath = getFileLocation('kubourl', id_valid);
-                break;
-                default:
-                filePath = getFileLocation('youtube', id_valid);
-                break;
-            }
+            const filePath = getFileLocation('yify', id_valid);
             sendSub(filePath);
         } else {
             const id_valid = isValidString(req.params.uid, 'uid');
@@ -626,91 +588,44 @@ router.post('/upload/subtitle/:uid/:index(\\d+)?', function(req, res, next) {
                 }).then(() => convertSub(filePath, id));
             });
         }
-        const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_/);
-        if (idMatch) {
-            let ex_type = 'youtube';
-            switch(idMatch[1]) {
-                case 'dym':
-                ex_type = 'dailymotion';
-                break;
-                case 'bil':
-                ex_type = 'bilibili';
-                break;
-                case 'yuk':
-                ex_type = 'youku';
-                break;
-                case 'ope':
-                ex_type = 'openload';
-                break;
-                case 'lin':
-                ex_type = 'line';
-                break;
-                case 'iqi':
-                ex_type = 'iqiyi';
-                break;
-                case 'kud':
-                ex_type = 'kubodrive';
-                break;
-                case 'kyu':
-                ex_type = 'kuboyouku';
-                break;
-                case 'kdy':
-                ex_type = 'kubodymyou';
-                break;
-                case 'kur':
-                ex_type = 'kubourl';
-                break;
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            return handleError(new HoError('uid is not vaild'), next);
+        }
+        Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+            if (items.length < 1 ) {
+                return handleError(new HoError('file not exist!!!'));
             }
-            const id = isValidString(req.params.uid, 'name');
-            if (!id) {
-                return handleError(new HoError('external is not vaild'), next);
+            if (items[0].status !== 3 && items[0].status !== 9) {
+                return handleError(new HoError('file type error!!!'));
             }
-            const filePath = getFileLocation(ex_type, id);
-            const json_data = getJson(req.body.lang);
-            if (json_data === false) {
-                return handleError(new HoError('json parse error!!!'), next);
+            if (items[0].thumb) {
+                return handleError(new HoError('external file, please open video'));
             }
-            saveSub((json_data === 'en') ? `${filePath}.en` : filePath, id).catch(err => handleError(err, next));
-        } else {
-            const id = isValidString(req.params.uid, 'uid');
-            if (!id) {
-                return handleError(new HoError('uid is not vaild'), next);
-            }
-            Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
-                if (items.length < 1 ) {
-                    return handleError(new HoError('file not exist!!!'));
-                }
-                if (items[0].status !== 3 && items[0].status !== 9) {
-                    return handleError(new HoError('file type error!!!'));
-                }
-                if (items[0].thumb) {
-                    return handleError(new HoError('external file, please open video'));
-                }
-                let filePath = getFileLocation(items[0].owner, items[0]._id);
-                if (items[0].status === 9) {
-                    let fileIndex = 0;
-                    if (req.params.index) {
-                        fileIndex = Number(req.params.index);
-                    } else {
-                        for (let i in items[0]['playList']) {
-                            if (isVideo(items[0]['playList'][i])) {
-                                fileIndex = Number(i);
-                                break;
-                            }
+            let filePath = getFileLocation(items[0].owner, items[0]._id);
+            if (items[0].status === 9) {
+                let fileIndex = 0;
+                if (req.params.index) {
+                    fileIndex = Number(req.params.index);
+                } else {
+                    for (let i in items[0]['playList']) {
+                        if (isVideo(items[0]['playList'][i])) {
+                            fileIndex = Number(i);
+                            break;
                         }
                     }
-                    if (!isVideo(items[0]['playList'][fileIndex])) {
-                        return handleError(new HoError('file type error!!!'));
-                    }
-                    filePath = `${filePath}/${fileIndex}`;
                 }
-                const json_data = getJson(req.body.lang);
-                if (json_data === false) {
-                    return handleError(new HoError('json parse error!!!'));
+                if (!isVideo(items[0]['playList'][fileIndex])) {
+                    return handleError(new HoError('file type error!!!'));
                 }
-                return saveSub((json_data === 'en') ? `${filePath}.en` : filePath, items[0]._id);
-            }).catch(err => handleError(err, next));
-        }
+                filePath = `${filePath}/${fileIndex}`;
+            }
+            const json_data = getJson(req.body.lang);
+            if (json_data === false) {
+                return handleError(new HoError('json parse error!!!'));
+            }
+            return saveSub((json_data === 'en') ? `${filePath}.en` : filePath, items[0]._id);
+        }).catch(err => handleError(err, next));
     });
 });
 

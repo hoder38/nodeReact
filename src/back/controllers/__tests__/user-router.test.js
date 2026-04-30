@@ -58,11 +58,11 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
-  BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
+  RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3, GENRE_LIST: [], GENRE_LIST_CH: [],
   BOOKMARK_LIMIT: 100, ADULTONLY_PARENT: [], GAME_LIST: [], GAME_LIST_CH: [],
   MEDIA_LIST: [], MEDIA_LIST_CH: [], DM5_ORI_LIST: [], DM5_CH_LIST: [],
-  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [], KUBO_COUNTRY: [],
+  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [],
   QUERY_LIMIT: 20,
 }));
 

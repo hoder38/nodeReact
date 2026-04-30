@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { HINT } from '../config.js'
-import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, BILI_TYPE, BILI_INDEX, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, KUBO_COUNTRY, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
+import { STORAGEDB, STOCKDB, PASSWORDDB, DEFAULT_TAGS, STORAGE_PARENT, PASSWORD_PARENT, STOCK_PARENT, HANDLE_TIME, UNACTIVE_DAY, UNACTIVE_HIT, QUERY_LIMIT, RELATIVE_LIMIT, RELATIVE_UNION, RELATIVE_INTER, GENRE_LIST, GENRE_LIST_CH, BOOKMARK_LIMIT, ADULTONLY_PARENT, GAME_LIST, GAME_LIST_CH, MEDIA_LIST, MEDIA_LIST_CH, DM5_ORI_LIST, DM5_CH_LIST, DM5_LIST, DM5_AREA_LIST, DM5_TAG_LIST } from '../constants.js'
 import { checkAdmin, isValidString, selectRandom, handleError, HoError } from '../util/utility.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { getOptionTag } from '../util/mime.js'
@@ -248,113 +248,6 @@ export default function process(collection) {
                 return false;
             }
         },
-        getBiliQuery: function(search_arr, sortName, page, is_movie=false) {
-            const order = sortName === 'mtime' ? 2 : 0;
-            const mOrder = sortName === 'count' ? 'hot' : 'default';
-            const sOrder = sortName === 'count' ? 'click' : null;
-            let s_country = -1;
-            let s_year = 0;
-            let query_term = null;
-            let search = 0;
-            search_arr.forEach(s => {
-                const normal = normalize(s);
-                const index = isDefaultTag(normal);
-                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
-                    if (s.match(/^\d\d\d\d$/)) {
-                        if (Number(s) < 2100 && Number(s) > 1800) {
-                            s_year = Number(s);
-                            query_term = null;
-                            s_country = -1;
-                        } else {
-                            query_term = s;
-                            s_year = 0;
-                            s_country = -1;
-                        }
-                    } else if (BILI_TYPE.includes(normal)) {
-                        s_year = 0;
-                        s_country = BILI_TYPE.indexOf(normal);
-                        query_term = null;
-                    } else {
-                        s_year = 0;
-                        query_term = denormalize(s);
-                        s_country = -1;
-                    }
-                } else if (!is_movie && (index.index === 15)) {
-                    search = 1;
-                } else if (is_movie && (index.index === 16)) {
-                    search = 2;
-                }
-            });
-            if (search) {
-                let url = '';
-                if (query_term) {
-                    const s_append = search === 2 ? sOrder ? `&tids_1=23&duration=4&order=&{sOrder}` : '&tids_1=23&duration=4' : '';
-                    url = `http://search.bilibili.com/ajax_api/${search === 2 ? 'video' : 'bangumi'}?keyword=${query_term}${s_append}`;
-                    if (page > 1) {
-                        url = `${url}&page=${page}`;
-                    }
-                } else {
-                    if (search === 2) {
-                        let ch_type = 0;
-                        let ch_page = 0;
-                        if (s_country !== -1 && s_country !== 12) {
-                            switch(s_country) {
-                                case 0:
-                                case 3:
-                                case 4:
-                                ch_type = 147;
-                                break;
-                                case 1:
-                                ch_type = 146;
-                                break;
-                                case 2:
-                                ch_type = 145;
-                                break;
-                                default:
-                                ch_type = 83;
-                                break;
-                            }
-                            ch_page = page;
-                        } else {
-                            if (page%4 === 1) {
-                                ch_type = 147;
-                                ch_page = Math.round((page+3)/4);
-                            } else if (page%4 === 2) {
-                                ch_type = 146;
-                                ch_page = Math.round((page+2)/4);
-                            } else if (page%4 === 3) {
-                                ch_type = 145;
-                                ch_page = Math.round((page+1)/4);
-                            } else {
-                                ch_type = 83;
-                                ch_page = Math.round(page/4);
-                            }
-                        }
-                        const d = new Date();
-                        const pd = new Date(new Date(d).setMonth(d.getMonth()-3));
-                        url = `http://www.bilibili.com/list/${mOrder}-${ch_type}-${ch_page}-${pd.getFullYear()}-${pd.getMonth() + 1}-${pd.getDate() + 1}~${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}.html`;
-                    } else {
-                        if (s_country === 12) {
-                            const d = new Date();
-                            const pd = new Date(new Date(d).setMonth(d.getMonth()-3));
-                            url = `http://www.bilibili.com/list/${mOrder}-32-${page}-${pd.getFullYear()}-${pd.getMonth() + 1}-${pd.getDate() + 1}~${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}.html`;
-                        } else {
-                            url = `http://www.bilibili.com/api_proxy?app=bangumi&pagesize=20&action=site_season_index&page=${page}&indexType=${order}`;
-                            if (s_country !== -1) {
-                                url = `${url}&seasonArea=${BILI_INDEX[s_country]}`;
-                            }
-                            if (s_year) {
-                                url = `${url}&startYear=${s_year}`;
-                            }
-                        }
-                    }
-                }
-                console.log(url);
-                return url;
-            } else {
-                return false;
-            }
-        },
         getMadQuery: function(search_arr, sortName, page) {
             let query_term = null;
             let search = false;
@@ -412,60 +305,6 @@ export default function process(collection) {
                     console.log(url);
                     return url;
                 }
-            } else {
-                return false;
-            }
-        },
-        getKuboQuery: function(search_arr, sortName, page) {
-            let searchWord = null;
-            let year = 0;
-            let type = 0;
-            let country = '';
-            search_arr.forEach(s => {
-                const normal = normalize(s);
-                const index = isDefaultTag(normal);
-                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
-                    if (s.match(/^\d\d\d\d$/)) {
-                        if (Number(s) < 2100 && Number(s) > 1800) {
-                            year = Number(s);
-                            searchWord = null;
-                            country = '';
-                        } else {
-                            searchWord = s;
-                            year = 0;
-                            country = '';
-                        }
-                    } else if (KUBO_COUNTRY.includes(normal)) {
-                        country = normal;
-                        searchWord = null;
-                        year = 0;
-                    } else {
-                        searchWord = s;
-                        year = 0;
-                        country = '';
-                    }
-                //movie
-                } else if (index.index === 18) {
-                    type = 1;
-                //tv series
-                } else if (index.index === 19) {
-                    type = 2;
-                //tv show
-                } else if (index.index === 20) {
-                    type = 41;
-                //animation
-                } else if (index.index === 21 || index.index === 22) {
-                    type = 3;
-                }
-            });
-            if (type) {
-                //const order = (sortName === 'mtime') ? 'addtime' : 'hits_month';
-                //const url = searchWord ? `http://www.iwatchme2u.com/vod-search-wd-${searchWord}-p-${page}.html` : `http://www.iwatchme2u.com/list-select-id-${type}-cid--type--area-${country}-year-${year}-star--state--order-${order}-p-${page}.html`
-                const order = (sortName === 'mtime') ? 'vod_addtime' : 'vod_hits_month';
-                const sOrder = (sortName === 'mtime') ? 1 : 2;
-                const url = searchWord ? `http://www.99kubo.tv/index.php?s=home-vod-innersearch&q=${encodeURIComponent(searchWord)}` : `http://www.99kubo.tv/vod-search-id-${type}-cid--tag--area-${country}-tag--year-${year}-wd--actor--order-${order}%20desc-p-${page}.html`;
-                console.log(url);
-                return url;
             } else {
                 return false;
             }
@@ -677,7 +516,7 @@ export default function process(collection) {
                             };
                         } else {
                             for (let i in items[0]) {
-                                if (isValidString(i, 'uid') || i === 'lovetv' || i === 'eztv') {
+                                if (isValidString(i, 'uid')) {
                                     tagType.tag[i] = tagType.tag.tags;
                                     return Mongo('update', collection, {_id: id}, {$pull: tagType.tag}).then(item1 => ({
                                         id: items[0]._id,
@@ -1482,7 +1321,7 @@ export const completeMimeTag = add => {
                 if (option_index !== -1) {
                     if (!items[index].tags.includes(trans[option_index])) {
                         for (let j in items[index]) {
-                            if (isValidString(j, 'uid') || j === 'eztv' || j === 'lovetv') {
+                            if (isValidString(j, 'uid')) {
                                 if (items[index][j].includes(list[option_index])) {
                                     complete_tag.push({
                                         owner: j,

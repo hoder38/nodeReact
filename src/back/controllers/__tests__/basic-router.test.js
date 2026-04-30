@@ -103,8 +103,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   HANDLE_TIME: 7200,
   UNACTIVE_DAY: 5,
   UNACTIVE_HIT: 10,
-  BILI_TYPE: [],
-  BILI_INDEX: [],
+
+
   RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2,
   RELATIVE_INTER: 3,
@@ -121,7 +121,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   DM5_LIST: [],
   DM5_AREA_LIST: [],
   DM5_TAG_LIST: [],
-  KUBO_COUNTRY: [],
+
 }));
 
 // --- mongo-tool.js ---

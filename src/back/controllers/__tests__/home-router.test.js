@@ -163,14 +163,11 @@ describe('home-router.js — Homepage API', () => {
       const joined = msg.join(' ');
       expect(joined).toContain('yify movie');
       expect(joined).toContain('dm5 comic');
-      expect(joined).toContain('kubo animation');
       expect(joined).toContain('Magnet');
       expect(joined).toContain('Torrent');
       expect(joined).toContain('Mega');
       expect(joined).toContain('YIFY');
       expect(joined).toContain('DM5');
-      expect(joined).toContain('EZTV');
-      expect(joined).toContain('KUBO');
     });
 
     test('msg contains player shortcut keys', async () => {

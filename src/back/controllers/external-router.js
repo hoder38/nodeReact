@@ -14,11 +14,11 @@ import OpenSubtitleRest from 'opensubtitles.com'
 import Child_process from 'child_process'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import MediaHandleTool, { errorMedia } from '../models/mediaHandle-tool.js'
-import GoogleApi, { googleDownloadSubtitle } from '../models/api-tool-google.js'
+import GoogleApi from '../models/api-tool-google.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
 import Api from '../models/api-tool.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
-import External, { bilibiliVideoUrl, youtubeVideoUrl, kuboVideoUrl/*, subHdUrl*/ } from '../models/external-tool.js'
+import External/*, { subHdUrl }*/ from '../models/external-tool.js'
 import { addPost, extType, extTag, supplyTag, isTorrent, isVideo, isDoc, isZipbook, isSub, isZip } from '../util/mime.js'
 import { checkLogin, handleError, HoError, isValidString, getFileLocation, getJson, toValidName, checkAdmin, sortList, torrent2Magnet, SRT2VTT, deleteFolderRecursive, completeZero } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
@@ -215,62 +215,6 @@ router.get('/2kindle/:uid', function(req, res, next){
             });
         }).then(() => res.json({apiOK: true}));
     }).catch(err => handleError(err, next));
-});
-
-router.get('/getSingle/:uid', function(req, res, next) {
-    console.log('external getSingle');
-    const id = req.params.uid.match(/^(you|dym|bil|yuk|ope|lin|iqi|kud|kyu|kdy|kur)_(.*)/);
-    if (!id) {
-        return handleError(new HoError('file is not youtube video!!!'), next);
-    }
-    let subIndex = 1;
-    let url = null;
-    let idsub = null;
-    switch(id[1]) {
-        case 'dym':
-        url = `http://www.dailymotion.com/embed/video/${id[2]}`;
-        break;
-        case 'kud':
-        console.log(id[2]);
-        idsub = id[2].match(/^(\d+)_(\d+)$/);
-        url = `http://www.99tw.net/redirect?mode=xplay&id=${idsub[1]}&pid=${idsub[2]}`;
-        break;
-        case 'kyu':
-        idsub = id[2].match(/^(.*)_(\d+)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://v.youku.com/v_show/id_${idsub[1]}.html`;
-        break;
-        case 'kdy':
-        idsub = id[2].match(/^(.*)_(\d+)$/);
-        subIndex = Number(idsub[2]);
-        url = `http://www.58b.tv/168player/youtube.php?${idsub[1]}`;
-        break;
-        case 'kur':
-        url = `http://www.99kubo.tv${Buffer.from(id[2], 'base64').toString()}`;
-        break;
-        case 'bil':
-        idsub = id[2].match(/^([^_]+)_(\d+)$/);
-        url = idsub ? `http://www.bilibili.com/video/${idsub[1]}/index_${idsub[2]}.html` : `http://www.bilibili.com/video/${id[2]}/`;
-        break;
-        case 'yuk':
-        url = `http://v.youku.com/v_show/id_${id[2]}.html`;
-        break;
-        case 'ope':
-        //url = `https://openload.co/embed/${id[2]}/`;
-        url = Buffer.from(id[2], 'base64').toString();
-        break;
-        case 'iqi':
-        url = `http://www.iqiyi.com/${id[2]}.html`;
-        break;
-        case 'lin':
-        url = `https://tv.line.me/v/${id[2]}`;
-        break;
-        default:
-        url = `http://www.youtube.com/watch?v=${id[2]}`;
-        break;
-    }
-    const getUrl = () => (id[1] === 'bil') ? bilibiliVideoUrl(url) : (id[1] === 'kdy' || id[1] === 'kud' || id[1] === 'kyu' || id[1] === 'kur' || id[1] === 'ope') ? kuboVideoUrl(id[1], url, subIndex) : youtubeVideoUrl(id[1], url);
-    getUrl().then(ret_obj => res.json(ret_obj)).catch(err => handleError(err, next));
 });
 
 router.post('/upload/url', function(req, res, next) {
@@ -511,26 +455,6 @@ router.post('/upload/url', function(req, res, next) {
                             url: url,
                         }]);
                     });
-                } else if (decodeUrl.match(/^(https|http):\/\/www\.99kubo\.tv\//)) {
-                    return Mongo('find', STORAGEDB, {
-                        owner: 'kubo',
-                        url: encodeURIComponent(decodeUrl),
-                    }, {limit: 1}).then(items => {
-                        if (items.length > 0) {
-                            return handleError(new HoError('already has one'), next);
-                        }
-                        const kubo_id = decodeUrl.match(/(\d+)\.html$/);
-                        if (!kubo_id) {
-                            return handleError(new HoError('kubo url invalid'), next);
-                        }
-                        is_media = 3;
-                        return External.saveSingle('kubo', kubo_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
-                            owner: owner,
-                            untag: 0,
-                            thumb: thumb,
-                            url: url,
-                        }]);
-                    });
                 } else if (decodeUrl.match(/^(https|http):\/\/www\.dm5\.com\//)) {
                     return Mongo('find', STORAGEDB, {
                         owner: 'dm5',
@@ -545,47 +469,6 @@ router.post('/upload/url', function(req, res, next) {
                         }
                         is_media = 2;
                         return External.saveSingle('dm5', cartoonmad_id[2]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
-                            owner: owner,
-                            untag: 0,
-                            thumb: thumb,
-                            url: url,
-                        }]);
-                    });
-                /*} else if (decodeUrl.match(/^(https|http):\/\/www\.bilibili\.com\//) || decodeUrl.match(/^(https|http):\/\/bangumi\.bilibili\.com\//)) {
-                    return Mongo('find', STORAGEDB, {
-                        owner: 'bilibili',
-                        url: encodeURIComponent(decodeUrl),
-                    }, {limit: 1}).then(items => {
-                        if (items.length > 0) {
-                            return handleError(new HoError('already has one'), next);
-                        }
-                        const bili_id = decodeUrl.match(/([^\/]+)\/?$/);
-                        if (!bili_id) {
-                            return handleError(new HoError('bilibili url invalid'), next);
-                        }
-                        is_media = 3;
-                        return External.saveSingle('bilibili', bili_id[1]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
-                            owner: owner,
-                            untag: 0,
-                            thumb: thumb,
-                            url: url,
-                        }]);
-                    });*/
-                } else if (decodeUrl.match(/^(https|http):\/\/eztv.re\//)) {
-                    console.log('eztv');
-                    return Mongo('find', STORAGEDB, {
-                        owner: 'eztv',
-                        url: encodeURIComponent(decodeUrl),
-                    }, {limit: 1}).then(items => {
-                        if (items.length > 0) {
-                            return handleError(new HoError('already has one'), next);
-                        }
-                        const eztv_id = decodeUrl.match(/^(https|http):\/\/eztv\.re\/shows\/([^\/]+)/);
-                        if (!eztv_id) {
-                            return handleError(new HoError('eztv url invalid'), next);
-                        }
-                        is_media = 3;
-                        return External.saveSingle('eztv', eztv_id[2]).then(([media_name, setTag, optTag, owner, thumb, url]) => [media_name, setTag, optTag, {
                             owner: owner,
                             untag: 0,
                             thumb: thumb,
@@ -838,44 +721,9 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     }
     console.log(season);
     console.log(episode);
-    //const idMatch = req.params.uid.match(/^(you|dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
-    const idMatch = req.params.uid.match(/^(dym|bil|yuk|ope|kud|kyu|kdy|kur)_/);
-    let type = 'youtube';
-    if (idMatch) {
-        switch(idMatch[1]) {
-            case 'dym':
-            type = 'dailymotion';
-            break;
-            case 'bil':
-            type = 'bilibili';
-            break;
-            case 'yuk':
-            type = 'youku';
-            break;
-            case 'ope':
-            type = 'openload';
-            break;
-            case 'kud':
-            type = 'kubodrive';
-            break;
-            case 'kyu':
-            type = 'kuboyouku';
-            break;
-            case 'kdy':
-            type = 'kubodymyou';
-            break;
-            case 'kur':
-            type = 'kubourl';
-            break;
-        }
-    }
     const getId = () => {
-        if (idMatch) {
-            const vaildName = isValidString(req.params.uid, 'name');
-            return vaildName ? Promise.resolve([vaildName, getFileLocation(type, id)]) : handleError(new HoError('external is not vaild'), next);
-        } else {
-            const validId = isValidString(req.params.uid, 'uid');
-            return validId ?  Mongo('find', STORAGEDB, {_id: validId}, {limit: 1}).then(items => {
+        const validId = isValidString(req.params.uid, 'uid');
+        return validId ?  Mongo('find', STORAGEDB, {_id: validId}, {limit: 1}).then(items => {
                 if (items.length < 1) {
                     return handleError(new HoError('cannot find file!!!'), next);
                 }
@@ -912,7 +760,6 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
                 }
                 return [items[0]._id, filePath, fileName/*, size*/];
             }) : handleError(new HoError('uid is not vaild'), next);
-        }
     }
     getId().then(([id, filePath, fileName, size]) => {
         if (fileName) {
@@ -1048,77 +895,46 @@ router.post('/subtitle/search/:uid/:index(\\d+)?', function(req, res, next) {
     }).catch(err => handleError(err, next));
 });
 
-router.get('/getSubtitle/:uid', function(req, res, next) {
-    console.log('external getSub');
-    const idMatch = req.params.uid.match(/^you_(.*)/);
-    if (!idMatch) {
-        return handleError(new HoError('file is not youtube video!!!'), next);
-    }
-    const id = isValidString(req.params.uid, 'name');
-    if (!id) {
-        return handleError(new HoError('external is not vaild'), next);
-    }
-    googleDownloadSubtitle(`http://www.youtube.com/watch?v=${idMatch[1]}`, getFileLocation('youtube', id)).then(() => {
-        sendWs({
-            type: 'sub',
-            data: id,
-        }, 0, 0);
-        res.json({apiOK: true});
-    }).catch(err => handleError(err, next));
-});
-
 router.get('/subtitle/fix/:uid/:lang/:adjust/:index(\\d+)?', function(req, res, next) {
     console.log('subtitle fix');
     if (!req.params.adjust.match(/^\-?\d+(\.\d+)?$/)) {
         return handleError(new HoError('adjust time is not vaild'), next);
     }
     const getId = () => {
-        const idMatch = req.params.uid.match(/^(you|dym)_/);
-        if (idMatch) {
-            const ex_type = (idMatch[1] === 'dym') ? 'dailymotion' : (idMatch[1] === 'bil') ? 'bilibili' : 'youtube';
-            const id = isValidString(req.params.uid, 'name');
-            if (!id) {
-                return handleError(new HoError('external is not vaild'), next);
+        const id = isValidString(req.params.uid, 'uid');
+        if (!id) {
+            return handleError(new HoError('uid is not vaild'), next);
+        }
+        return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
+            if (items.length < 1) {
+                return handleError(new HoError('cannot find file!!!'), next);
             }
-            let filePath = getFileLocation(ex_type, id);
-            filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
-            return Promise.resolve([id, filePath]);
-        } else {
-            const id = isValidString(req.params.uid, 'uid');
-            if (!id) {
-                return handleError(new HoError('uid is not vaild'), next);
+            if (items[0].status !== 3 && items[0].status !== 9) {
+                return handleError(new HoError('file type error!!!'), next);
             }
-            return Mongo('find', STORAGEDB, {_id: id}, {limit: 1}).then(items => {
-                if (items.length < 1) {
-                    return handleError(new HoError('cannot find file!!!'), next);
-                }
-                if (items[0].status !== 3 && items[0].status !== 9) {
-                    return handleError(new HoError('file type error!!!'), next);
-                }
-                let fileIndex = 0;
-                if (items[0].status === 9) {
-                    if (req.params.index) {
-                        fileIndex = Number(req.params.index);
-                    } else {
-                        for (let i in items[0]['playList']) {
-                            if (isVideo(items[0]['playList'][i])) {
-                                fileIndex = Number(i);
-                                break;
-                            }
+            let fileIndex = 0;
+            if (items[0].status === 9) {
+                if (req.params.index) {
+                    fileIndex = Number(req.params.index);
+                } else {
+                    for (let i in items[0]['playList']) {
+                        if (isVideo(items[0]['playList'][i])) {
+                            fileIndex = Number(i);
+                            break;
                         }
                     }
-                    if (!isVideo(items[0]['playList'][fileIndex])) {
-                        return handleError(new HoError('file type error!!!'), next);
-                    }
                 }
-                let filePath = getFileLocation(items[0].owner, items[0]._id);
-                if (items[0].status === 9) {
-                    filePath = `${filePath}/${fileIndex}`;
+                if (!isVideo(items[0]['playList'][fileIndex])) {
+                    return handleError(new HoError('file type error!!!'), next);
                 }
-                filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
-                return Promise.resolve([items[0]._id, filePath]);
-            });
-        }
+            }
+            let filePath = getFileLocation(items[0].owner, items[0]._id);
+            if (items[0].status === 9) {
+                filePath = `${filePath}/${fileIndex}`;
+            }
+            filePath = (req.params.lang === 'en') ? `${filePath}.en` : filePath;
+            return Promise.resolve([items[0]._id, filePath]);
+        });
     }
     getId().then(([id, filePath]) => {
         const vtt = `${filePath}.vtt`;

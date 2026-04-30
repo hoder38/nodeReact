@@ -4,10 +4,8 @@
  * 7 routes:
  *   GET    /2drive/:uid                                    — upload file to Google Drive
  *   GET    /2kindle/:uid                                   — send file to Kindle via email
- *   GET    /getSingle/:uid                                 — resolve external video URL
  *   POST   /upload/url                                     — external source upload (URL/magnet/torrent)
  *   POST   /subtitle/search/:uid/:index(\d+)?              — search & download subtitles
- *   GET    /getSubtitle/:uid                               — YouTube subtitle download
  *   GET    /subtitle/fix/:uid/:lang/:adjust/:index(\d+)?   — subtitle timing adjustment
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
@@ -117,14 +115,14 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
-  BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
+  RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: [],
   BOOKMARK_LIMIT: 100, ADULTONLY_PARENT: [],
   GAME_LIST: [], GAME_LIST_CH: [],
   MEDIA_LIST: [], MEDIA_LIST_CH: [],
   DM5_ORI_LIST: [], DM5_CH_LIST: [],
-  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [], KUBO_COUNTRY: [],
+  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [],
   QUERY_LIMIT: 20, ADULT_LIST: [], MUSIC_LIST: [], BITFINEX: '',
   __dirname: '/app/src/back',
 }));
@@ -172,10 +170,8 @@ jest.unstable_mockModule('../../models/mediaHandle-tool.js', () => ({
 
 // --- api-tool-google.js ---
 const mockGoogleApi = jest.fn(() => Promise.resolve({ id: 'drive-id' }));
-const mockGoogleDownloadSubtitle = jest.fn(() => Promise.resolve());
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   default: mockGoogleApi,
-  googleDownloadSubtitle: mockGoogleDownloadSubtitle,
 }));
 
 // --- api-tool-playlist.js ---
@@ -192,16 +188,10 @@ jest.unstable_mockModule('../../models/api-tool.js', () => ({
 
 // --- external-tool.js ---
 const mockExternalSaveSingle = jest.fn();
-const mockBilibiliVideoUrl = jest.fn(() => Promise.resolve({ url: 'bilibili-url' }));
-const mockYoutubeVideoUrl = jest.fn(() => Promise.resolve({ url: 'youtube-url' }));
-const mockKuboVideoUrl = jest.fn(() => Promise.resolve({ url: 'kubo-url' }));
 jest.unstable_mockModule('../../models/external-tool.js', () => ({
   default: {
     saveSingle: mockExternalSaveSingle,
   },
-  bilibiliVideoUrl: mockBilibiliVideoUrl,
-  youtubeVideoUrl: mockYoutubeVideoUrl,
-  kuboVideoUrl: mockKuboVideoUrl,
 }));
 
 // --- sendWs.js ---
@@ -396,11 +386,6 @@ describe('external-router.js', () => {
       expect(res.status).toBe(401);
     });
 
-    test('unauthenticated GET /getSingle returns 401', async () => {
-      const res = await request(app).get('/getSingle/you_abc');
-      expect(res.status).toBe(401);
-    });
-
     test('unauthenticated POST /upload/url returns 401', async () => {
       const res = await request(app).post('/upload/url').send({ url: 'http://test.com' });
       expect(res.status).toBe(401);
@@ -408,11 +393,6 @@ describe('external-router.js', () => {
 
     test('unauthenticated POST /subtitle/search returns 401', async () => {
       const res = await request(app).post(`/subtitle/search/${VALID_UID}`).send({ name: 'test' });
-      expect(res.status).toBe(401);
-    });
-
-    test('unauthenticated GET /getSubtitle returns 401', async () => {
-      const res = await request(app).get('/getSubtitle/you_abc');
       expect(res.status).toBe(401);
     });
 
@@ -588,73 +568,6 @@ describe('external-router.js', () => {
         kindle: 'mykindle@kindle.com',
         name: 'file.mp4',
       }));
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // GET /getSingle/:uid — resolve external video URL
-  // ---------------------------------------------------------------
-  describe('GET /getSingle/:uid', () => {
-    test('invalid prefix returns 400', async () => {
-      const res = await request(app).get('/getSingle/bad_123').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
-    });
-
-    test('YouTube prefix (you_) calls youtubeVideoUrl', async () => {
-      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'yt-resolved' });
-      const res = await request(app).get('/getSingle/you_abc123').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ url: 'yt-resolved' });
-      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('you', 'http://www.youtube.com/watch?v=abc123');
-    });
-
-    test('Dailymotion prefix (dym_) calls youtubeVideoUrl', async () => {
-      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'dym-resolved' });
-      const res = await request(app).get('/getSingle/dym_xyz789').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('dym', 'http://www.dailymotion.com/embed/video/xyz789');
-    });
-
-    test('Bilibili prefix (bil_) calls bilibiliVideoUrl', async () => {
-      mockBilibiliVideoUrl.mockResolvedValueOnce({ url: 'bili-resolved' });
-      const res = await request(app).get('/getSingle/bil_BV1234').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockBilibiliVideoUrl).toHaveBeenCalledWith('http://www.bilibili.com/video/BV1234/');
-    });
-
-    test('Bilibili with page suffix', async () => {
-      mockBilibiliVideoUrl.mockResolvedValueOnce({ url: 'bili-page' });
-      const res = await request(app).get('/getSingle/bil_BV1234_2').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockBilibiliVideoUrl).toHaveBeenCalledWith('http://www.bilibili.com/video/BV1234/index_2.html');
-    });
-
-    test('KUBO drive prefix (kud_) calls kuboVideoUrl', async () => {
-      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kubo-drive' });
-      const res = await request(app).get('/getSingle/kud_123_456').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kud', 'http://www.99tw.net/redirect?mode=xplay&id=123&pid=456', 1);
-    });
-
-    test('OpenLoad prefix (ope_) decodes base64 and calls kuboVideoUrl', async () => {
-      const encoded = Buffer.from('http://example.com/video').toString('base64');
-      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'ope-resolved' });
-      const res = await request(app).get(`/getSingle/ope_${encoded}`).set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockKuboVideoUrl).toHaveBeenCalled();
-    });
-
-    test('LINE TV prefix (lin_) calls youtubeVideoUrl', async () => {
-      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'line-resolved' });
-      const res = await request(app).get('/getSingle/lin_12345').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('lin', 'https://tv.line.me/v/12345');
-    });
-
-    test('resolver rejection returns error', async () => {
-      mockYoutubeVideoUrl.mockRejectedValueOnce(new Error('resolve fail'));
-      const res = await request(app).get('/getSingle/you_fail').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
     });
   });
 
@@ -837,31 +750,6 @@ describe('external-router.js', () => {
       expect(res.status).toBe(400);
     });
 
-    test('KUBO URL processes and returns id', async () => {
-      mockMongo.mockResolvedValueOnce([]); // no dup
-      mockExternalSaveSingle.mockResolvedValueOnce([
-        'Kubo Video', new Set(), new Set(), 'kubo', 'http://thumb', 'encoded',
-      ]);
-      setupStreamCloseMocks();
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://www.99kubo.tv/movie/123.html', type: '0' });
-      expect(res.status).toBe(200);
-      expect(mockExternalSaveSingle).toHaveBeenCalledWith('kubo', '123');
-    });
-
-    test('KUBO URL without numeric ID returns error (falls to pureDownload)', async () => {
-      mockMongo.mockResolvedValueOnce([]); // no dup
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://www.99kubo.tv/movie/invalid', type: '0' });
-      // kubo URL without .html → invalid → falls through catch → pureDownload
-      expect([200, 400, 500]).toContain(res.status);
-    });
-
     test('DM5 URL processes and returns id', async () => {
       mockMongo.mockResolvedValueOnce([]); // no dup
       mockExternalSaveSingle.mockResolvedValueOnce([
@@ -876,22 +764,6 @@ describe('external-router.js', () => {
       expect(res.status).toBe(200);
       expect(mockExternalSaveSingle).toHaveBeenCalledWith('dm5', 'manhua-test');
     });
-
-    test('EZTV URL processes and returns id', async () => {
-      mockMongo.mockResolvedValueOnce([]); // no dup
-      mockExternalSaveSingle.mockResolvedValueOnce([
-        'TV Show', new Set(), new Set(), 'eztv', 'http://thumb', 'encoded',
-      ]);
-      setupStreamCloseMocks();
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect(res.status).toBe(200);
-      expect(mockExternalSaveSingle).toHaveBeenCalledWith('eztv', 'test-show');
-    });
-
     test('Mega URL calls PlaylistApi mega add', async () => {
       mockPlaylistApi.mockImplementationOnce((action, user, url, fp, opts) => {
         if (action === 'mega add' && opts && opts.rest) {
@@ -1162,14 +1034,6 @@ describe('external-router.js', () => {
       expect(res.status).toBe(200);
     });
 
-    test('external UID returns 500 (known id variable bug)', async () => {
-      const res = await request(app)
-        .post('/subtitle/search/dym_testid')
-        .set('x-test-user', u(ADMIN))
-        .send({ name: 'test' });
-      expect(res.status).toBe(500);
-    });
-
     test('OpenSubtitles constructor failure returns 400', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
       mockOSHash.mockRejectedValueOnce(new Error('hash fail'));
@@ -1183,48 +1047,6 @@ describe('external-router.js', () => {
   });
 
   // ---------------------------------------------------------------
-  // GET /getSubtitle/:uid — YouTube subtitle download
-  // ---------------------------------------------------------------
-  describe('GET /getSubtitle/:uid', () => {
-    test('non-YouTube UID returns 400', async () => {
-      const res = await request(app)
-        .get('/getSubtitle/dym_test')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
-    });
-
-    test('invalid name after you_ returns error', async () => {
-      // A 501+ char name fails isValidString(str, 'name') — max 500 chars
-      const longId = 'you_' + 'x'.repeat(501);
-      const res = await request(app)
-        .get(`/getSubtitle/${longId}`)
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
-    });
-
-    test('success calls googleDownloadSubtitle and returns apiOK', async () => {
-      const res = await request(app)
-        .get('/getSubtitle/you_abc123')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOK: true });
-      expect(mockGoogleDownloadSubtitle).toHaveBeenCalledWith(
-        'http://www.youtube.com/watch?v=abc123',
-        expect.any(String),
-      );
-      expect(mockSendWs).toHaveBeenCalledWith(expect.objectContaining({ type: 'sub' }), 0, 0);
-    });
-
-    test('googleDownloadSubtitle failure returns 500', async () => {
-      mockGoogleDownloadSubtitle.mockRejectedValueOnce(new Error('dl fail'));
-      const res = await request(app)
-        .get('/getSubtitle/you_fail')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
-    });
-  });
-
-  // ---------------------------------------------------------------
   // GET /subtitle/fix/:uid/:lang/:adjust/:index?
   // ---------------------------------------------------------------
   describe('GET /subtitle/fix/:uid/:lang/:adjust/:index?', () => {
@@ -1233,39 +1055,6 @@ describe('external-router.js', () => {
         .get(`/subtitle/fix/${VALID_UID}/en/abc`)
         .set('x-test-user', u(ADMIN));
       expect(res.status).toBe(400);
-    });
-
-    test('external UID (you_) with valid adjust resolves path', async () => {
-      mockExistsSync.mockReturnValue(true);
-      rlLines = ['WEBVTT', '', '00:01:00.000 --> 00:02:00.000', 'Hello'];
-
-      const res = await request(app)
-        .get('/subtitle/fix/you_abc123/default/5')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOK: true });
-      expect(mockSendWs).toHaveBeenCalledWith(expect.objectContaining({ type: 'sub' }), 0, 0);
-    });
-
-    test('external UID (you_) with lang=en uses .en path', async () => {
-      mockExistsSync.mockReturnValue(true);
-      rlLines = ['WEBVTT', '', '00:00:10.000 --> 00:00:20.000', 'Text'];
-
-      const res = await request(app)
-        .get('/subtitle/fix/you_abc123/en/3')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOK: true });
-    });
-
-    test('Dailymotion UID (dym_) resolves to dailymotion type', async () => {
-      mockExistsSync.mockReturnValue(true);
-      rlLines = ['WEBVTT', '', '00:00:05.000 --> 00:00:10.000', 'Sub'];
-
-      const res = await request(app)
-        .get('/subtitle/fix/dym_test/default/2')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
     });
 
     test('storage UID with VTT not found returns 400', async () => {
@@ -1352,14 +1141,6 @@ describe('external-router.js', () => {
         .get(`/subtitle/fix/${VALID_UID}/default/2/1`)
         .set('x-test-user', u(ADMIN));
       expect(res.status).toBe(200);
-    });
-
-    test('invalid external name returns 400 (line 1083)', async () => {
-      const longId = 'you_' + 'x'.repeat(501);
-      const res = await request(app)
-        .get(`/subtitle/fix/${longId}/en/5`)
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(400);
     });
 
     test('invalid storage UID returns 400 (line 1091)', async () => {
@@ -1471,54 +1252,6 @@ describe('external-router.js', () => {
     });
   });
 
-  describe('GET /getSingle/:uid — additional switch cases', () => {
-    test('kuboyouku prefix (kyu_) calls kuboVideoUrl (lines 239-241)', async () => {
-      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kyu-resolved' });
-      const res = await request(app)
-        .get('/getSingle/kyu_XMTQ1_3')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kyu', 'http://v.youku.com/v_show/id_XMTQ1.html', 3);
-    });
-
-    test('kubodymyou prefix (kdy_) calls kuboVideoUrl (lines 243-246)', async () => {
-      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kdy-resolved' });
-      const res = await request(app)
-        .get('/getSingle/kdy_abc123_2')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kdy', 'http://www.58b.tv/168player/youtube.php?abc123', 2);
-    });
-
-    test('kubourl prefix (kur_) decodes base64 (lines 248-250)', async () => {
-      const encoded = Buffer.from('/some/path').toString('base64');
-      mockKuboVideoUrl.mockResolvedValueOnce({ url: 'kur-resolved' });
-      const res = await request(app)
-        .get(`/getSingle/kur_${encoded}`)
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockKuboVideoUrl).toHaveBeenCalledWith('kur', 'http://www.99kubo.tv/some/path', 1);
-    });
-
-    test('youku prefix (yuk_) calls youtubeVideoUrl (lines 256-257)', async () => {
-      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'yuk-resolved' });
-      const res = await request(app)
-        .get('/getSingle/yuk_XMTQ1234')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('yuk', 'http://v.youku.com/v_show/id_XMTQ1234.html');
-    });
-
-    test('iqiyi prefix (iqi_) calls youtubeVideoUrl (lines 263-264)', async () => {
-      mockYoutubeVideoUrl.mockResolvedValueOnce({ url: 'iqi-resolved' });
-      const res = await request(app)
-        .get('/getSingle/iqi_v12345')
-        .set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(mockYoutubeVideoUrl).toHaveBeenCalledWith('iqi', 'http://www.iqiyi.com/v12345.html');
-    });
-  });
-
   describe('POST /upload/url — additional coverage', () => {
     test('URL bookmark with default tag name appends suffix (line 286)', async () => {
       mockIsDefaultTag
@@ -1596,15 +1329,6 @@ describe('external-router.js', () => {
       expect([200, 400]).toContain(res.status);
     });
 
-    test('KUBO duplicate returns 400 (line 520)', async () => {
-      mockMongo.mockResolvedValueOnce([makeItem()]);
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://www.99kubo.tv/movie/123.html', type: '0' });
-      expect(res.status).toBe(400);
-    });
-
     test('DM5 duplicate returns 400 (line 540)', async () => {
       mockMongo.mockResolvedValueOnce([makeItem()]);
       const res = await request(app)
@@ -1622,25 +1346,6 @@ describe('external-router.js', () => {
         .send({ url: 'http://www.dm5.com/', type: '0' });
       expect([200, 400]).toContain(res.status);
     });
-
-    test('EZTV duplicate returns 400 (line 581)', async () => {
-      mockMongo.mockResolvedValueOnce([makeItem()]);
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect(res.status).toBe(400);
-    });
-
-    test('EZTV URL without shows path returns error (line 585)', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/other-page', type: '0' });
-      expect([200, 400]).toContain(res.status);
-    });
-
     test('Mega errhandle triggers pureDownload (lines 598, 606-612)', async () => {
       mockPlaylistApi.mockImplementationOnce((_action, _user, _url, _fp, opts) => {
         return opts.errhandle(new Error('mega fail'));
@@ -1656,154 +1361,6 @@ describe('external-router.js', () => {
         .send({ url: 'http://mega.nz/#!test', type: '0' });
       expect(res.status).toBe(200);
     });
-
-    test('pureDownload via catch with non-torrent file (lines 606-657)', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('save fail'));
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'downloaded.mp4']);
-      });
-      setupStreamCloseMocks();
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect(res.status).toBe(200);
-    });
-
-    test('pureDownload with torrent file processes magnet (lines 612-656)', async () => {
-      mockMongo
-        .mockResolvedValueOnce([]) // EZTV dedup
-        .mockResolvedValueOnce([]); // torrent magnet dedup
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('save fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((path, cb) => {
-        cb(null, { infoHash: 'abcdef0123456789abcde' });
-      });
-      mockPlaylistApi.mockResolvedValueOnce({
-        name: 'Torrent',
-        files: [{ name: 'video.mp4', path: 'Torrent/video.mp4' }],
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-      setupStreamCloseMocks();
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect(res.status).toBe(200);
-    });
-
-    test('pureDownload torrent without infoHash (line 615)', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((_path, cb) => {
-        cb(null, {}); // no infoHash → torrent2Magnet returns false
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect([200, 400, 500]).toContain(res.status);
-    });
-
-    test('pureDownload torrent with short infoHash (line 620)', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((_path, cb) => {
-        cb(null, { infoHash: 'abc' }); // too short for url regex
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect([200, 400, 500]).toContain(res.status);
-    });
-
-    test('pureDownload torrent magnet dup found (line 631)', async () => {
-      mockMongo
-        .mockResolvedValueOnce([]) // EZTV dedup
-        .mockResolvedValueOnce([makeItem()]); // torrent magnet dedup — found!
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((_path, cb) => {
-        cb(null, { infoHash: 'abcdef0123456789abcde' });
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect([200, 400, 500]).toContain(res.status);
-    });
-
-    test('pureDownload torrent files with extType truthy (lines 640-642)', async () => {
-      mockMongo
-        .mockResolvedValueOnce([]) // EZTV dedup
-        .mockResolvedValueOnce([]); // torrent magnet dedup
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((_path, cb) => {
-        cb(null, { infoHash: 'abcdef0123456789abcde' });
-      });
-      mockExtType.mockReturnValueOnce({ type: 'video' });
-      mockExtTag.mockReturnValueOnce({ def: ['vid'], opt: ['opt'] });
-      mockPlaylistApi.mockResolvedValueOnce({
-        name: 'Torrent',
-        files: [{ name: 'video.mp4', path: 'Torrent/video.mp4' }],
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-      setupStreamCloseMocks();
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect(res.status).toBe(200);
-    });
-
-    test('pureDownload torrent with empty files (line 647)', async () => {
-      mockMongo
-        .mockResolvedValueOnce([]) // EZTV dedup
-        .mockResolvedValueOnce([]); // torrent magnet dedup
-      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
-      mockIsTorrent.mockReturnValueOnce(true);
-      mockReadTorrent.mockImplementation((_path, cb) => {
-        cb(null, { infoHash: 'abcdef0123456789abcde' });
-      });
-      mockPlaylistApi.mockResolvedValueOnce({
-        name: 'Torrent',
-        files: [],
-      });
-      mockApi.mockImplementationOnce((_action, _user, _url, opts) => {
-        return opts.rest(['/path/to', 'file.torrent']);
-      });
-
-      const res = await request(app)
-        .post('/upload/url')
-        .set('x-test-user', u(ADMIN))
-        .send({ url: 'http://eztv.re/shows/test-show/episodes', type: '0' });
-      expect([200, 400, 500]).toContain(res.status);
-    });
-
     test('streamClose with default tag name (line 668)', async () => {
       mockMongo.mockResolvedValueOnce([]);
       mockExternalSaveSingle.mockResolvedValueOnce([
@@ -2035,16 +1592,6 @@ describe('external-router.js', () => {
       expect(mockOSSubtitles).toHaveBeenCalledWith(expect.objectContaining({
         episode_number: 15, season_number: 12,
       }));
-    });
-
-    test.each([
-      'bil', 'yuk', 'ope', 'kud', 'kyu', 'kdy', 'kur',
-    ])('subtitle search with %s_ prefix hits switch case (lines 853-872)', async (prefix) => {
-      const res = await request(app)
-        .post(`/subtitle/search/${prefix}_testid`)
-        .set('x-test-user', u(ADMIN))
-        .send({ name: 'test' });
-      expect(res.status).toBe(500);
     });
 
     test('status 9 without index finds first video (lines 899-902)', async () => {

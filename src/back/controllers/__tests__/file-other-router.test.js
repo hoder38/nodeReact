@@ -112,14 +112,14 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RE_WEBURL: /^https?:\/\//, RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
-  BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
+  RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: [],
   BOOKMARK_LIMIT: 100, ADULTONLY_PARENT: [],
   GAME_LIST: [], GAME_LIST_CH: [],
   MEDIA_LIST: [], MEDIA_LIST_CH: [],
   DM5_ORI_LIST: [], DM5_CH_LIST: [],
-  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [], KUBO_COUNTRY: [],
+  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [],
   QUERY_LIMIT: 20, ADULT_LIST: [], MUSIC_LIST: [], BITFINEX: '',
 }));
 
@@ -566,27 +566,6 @@ describe('file-other-router.js', () => {
   // GET /subtitle/:uid/:lang/:index/:fresh?
   // =================================================================
   describe('GET /subtitle/:uid/:lang/:index', () => {
-    // External IDs
-    test('external you_xxx → serves YouTube subtitle path', async () => {
-      mockExistsSync.mockImplementation((p) => p.endsWith('.vtt'));
-      const res = await request(app).get('/subtitle/you_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.headers['x-forwarded-type']).toBe('text/vtt');
-      expect(res.headers['x-forwarded-path']).toMatch(/\.vtt$/);
-    });
-
-    test('external bil_xxx lang=en → looks for .en.vtt', async () => {
-      mockExistsSync.mockImplementation((p) => p.endsWith('.en.vtt'));
-      const res = await request(app).get('/subtitle/bil_test123/en/0').set('x-test-user', u(ADMIN));
-      expect(res.headers['x-forwarded-path']).toMatch(/\.en\.vtt$/);
-    });
-
-    test('external dym_xxx, .vtt missing → serves fallback 123.vtt', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/dym_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.headers['x-forwarded-path']).toBe('/static/123.vtt');
-    });
-
     // Internal IDs
     test('internal status=3 → serves subtitle for single video', async () => {
       mockMongo.mockResolvedValueOnce([makeItem({ status: 3 })]);
@@ -647,53 +626,12 @@ describe('file-other-router.js', () => {
       expect(res.headers['x-forwarded-path']).toBe('/static/123.vtt');
     });
 
-    test('external yuk_xxx → serves youku subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/yuk_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external ope_xxx → serves openload subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/ope_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external lin_xxx → serves line subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/lin_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external iqi_xxx → serves iqiyi subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/iqi_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external kud_xxx → serves kubodrive subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/kud_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external kyu_xxx → serves kuboyouku subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/kyu_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
-    test('external kdy_xxx → serves kubodymyou subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/kdy_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
-
-    test('external kur_xxx → serves kubourl subtitle path', async () => {
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app).get('/subtitle/kur_test123/zh/0').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-    });
 
     test('external invalid name (contains *) → error', async () => {
       const res = await request(app).get('/subtitle/yif_te*st/zh/0').set('x-test-user', u(ADMIN));
@@ -1569,30 +1507,6 @@ describe('file-other-router.js', () => {
       expect(res.text).toMatch(/not valid subtitle/);
     });
 
-    test('external you_xxx → saves to YouTube path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/you_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ apiOK: true });
-      expect(mockSendWs).toHaveBeenCalledWith(expect.objectContaining({ type: 'sub' }), 0, 0);
-    });
-
-    test('external with lang=en → processes path with .en suffix', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/dym_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"en"' });
-      expect(res.status).toBe(200);
-    });
-
     test('internal status=3 → saves subtitle', async () => {
       mockIsSub.mockReturnValue('srt');
       mockMongo.mockResolvedValueOnce([makeItem({ status: 3, thumb: null })]);
@@ -1660,129 +1574,7 @@ describe('file-other-router.js', () => {
       expect(mockRenameSync).toHaveBeenCalledWith(expect.stringMatching(/\.srt$/), expect.stringMatching(/\.srt1$/));
     });
 
-    // GROUP 6: External source switch cases (lines 652-677)
-    test('external bil_xxx → saves to bilibili path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/bil_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
 
-    test('external yuk_xxx → saves to youku path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/yuk_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external ope_xxx → saves to openload path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/ope_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external lin_xxx → saves to line path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/lin_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external iqi_xxx → saves to iqiyi path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/iqi_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external kud_xxx → saves to kubodrive path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/kud_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external kyu_xxx → saves to kuboyouku path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/kyu_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external kdy_xxx → saves to kubodymyou path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/kdy_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    test('external kur_xxx → saves to kubourl path', async () => {
-      mockIsSub.mockReturnValue('srt');
-      mockExistsSync.mockReturnValue(false);
-      const res = await request(app)
-        .post('/upload/subtitle/kur_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(200);
-    });
-
-    // GROUP 6: Invalid external id (line 681)
-    test('external invalid name → error', async () => {
-      mockIsSub.mockReturnValue('srt');
-      const res = await request(app)
-        .post('/upload/subtitle/yuk_te*st')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '"zh"' });
-      expect(res.status).toBe(400);
-      expect(res.text).toMatch(/external is not vaild/);
-    });
-
-    // GROUP 6: Invalid JSON in req.body.lang for external (line 686)
-    test('external invalid JSON lang → json parse error', async () => {
-      mockIsSub.mockReturnValue('srt');
-      const res = await request(app)
-        .post('/upload/subtitle/you_test123')
-        .set('x-test-user', u(ADMIN))
-        .set('x-test-file', fileInfo('sub.srt', 500))
-        .send({ lang: '{bad' });
-      expect(res.status).toBe(400);
-      expect(res.text).toMatch(/json parse error/);
-    });
 
     // GROUP 6: Invalid storage uid (line 692)
     test('internal invalid uid → error', async () => {

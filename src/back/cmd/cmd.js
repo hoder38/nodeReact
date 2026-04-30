@@ -262,7 +262,6 @@ rl.on('line', line => {
         //console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
         console.log('checkdoc');
-        //console.log('external lovetv|eztv [clear]');
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');

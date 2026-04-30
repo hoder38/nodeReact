@@ -54,14 +54,14 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
-  BILI_TYPE: [], BILI_INDEX: [], RELATIVE_LIMIT: 100,
+  RELATIVE_LIMIT: 100,
   RELATIVE_UNION: 2, RELATIVE_INTER: 3,
   GENRE_LIST: [], GENRE_LIST_CH: ['動作', '冒險'],
   BOOKMARK_LIMIT: 100, ADULTONLY_PARENT: [],
   GAME_LIST: [], GAME_LIST_CH: [],
   MEDIA_LIST: [], MEDIA_LIST_CH: [],
   DM5_ORI_LIST: [], DM5_CH_LIST: [],
-  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [], KUBO_COUNTRY: [],
+  DM5_LIST: [], DM5_AREA_LIST: [], DM5_TAG_LIST: [],
   QUERY_LIMIT: 20, ADULT_LIST: [], MUSIC_LIST: [], BITFINEX: '',
 }));
 
@@ -399,12 +399,12 @@ describe('bookmark-router.js', () => {
       expect(res.text).toContain('uid is not vaild');
     });
 
-    test('POST /storage/subscript with external id (kub_) validates as name', async () => {
+    test('POST /storage/subscript with external id (yif_) validates as name', async () => {
       mockAddBookmark.mockResolvedValueOnce({ apiOK: true });
       mockMongo.mockResolvedValueOnce(1); // duplicate → skip newBookmarkItem creation
       mockSetLatest.mockResolvedValueOnce({});
       mockMongo.mockResolvedValueOnce({}); // count update
-      const res = await request(app).post('/storage/subscript/kub_abc123')
+      const res = await request(app).post('/storage/subscript/yif_abc123')
         .set('x-test-user', u(ADMIN)).send({ path: ['tag1'], exactly: [true], name: 'KuboSub' });
       expect(res.status).toBe(200);
     });

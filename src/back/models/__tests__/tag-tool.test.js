@@ -18,7 +18,7 @@ const STORAGEDB = 'storage';
 const PASSWORDDB = 'password';
 const STOCKDB = 'stock';
 const DEFAULT_TAGS = ['adultonly', 'handle', 'unactive', 'recycle', 'first', 'nofirst', 'important', 
-    'nolocal', 'yv', 'yp', 'ym', 'ymp', 'unplaylist', 'yify', 'dm5', 'bili', 'bilimovie', 
+    'nolocal', 'yv', 'yp', 'ym', 'ymp', 'unplaylist', 'yify', 'dm5', 'placeholder1', 'placeholder2', 
     'all item', 'movie', 'tvseries', 'tvshow', 'animation', 'search', 'hidemeta', 'showmeta', 
     'megavideo', 'megafolder', 'torrent', 'zip', 'drive'];
 const STORAGE_PARENT = [{name: 'video'}, {name: 'image'}, {name: 'archive'}];
@@ -39,9 +39,6 @@ const GAME_LIST = ['rpg', 'fps'];
 const GAME_LIST_CH = ['角色扮演', '射擊'];
 const MEDIA_LIST = ['movie', 'tv'];
 const MEDIA_LIST_CH = ['電影', '電視'];
-const BILI_TYPE = ['日本', '美國', '中國', '韓國', '港台'];
-const BILI_INDEX = [2, 1, 3, 6, 4];
-const KUBO_COUNTRY = ['日本', '美國', '韓國'];
 const DM5_LIST = ['連載', '完結'];
 const DM5_ORI_LIST = ['连载', '完结'];
 const DM5_CH_LIST = ['連載', '完結'];
@@ -92,9 +89,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
     GAME_LIST_CH,
     MEDIA_LIST,
     MEDIA_LIST_CH,
-    BILI_TYPE,
-    BILI_INDEX,
-    KUBO_COUNTRY,
     DM5_LIST,
     DM5_ORI_LIST,
     DM5_CH_LIST,
@@ -203,8 +197,6 @@ describe('isDefaultTag()', () => {
         expect(result3.index).toBe(2);
         const result4 = isDefaultTag('yify');
         expect(result4.index).toBe(13);
-        const result5 = isDefaultTag('bili');
-        expect(result5.index).toBe(15);
         // drive is at a different index, just check it exists
         const result6 = isDefaultTag('drive');
         expect(result6.index).toBeGreaterThanOrEqual(0);
@@ -562,35 +554,6 @@ describe('External Query Methods', () => {
         });
     });
 
-    describe('getBiliQuery()', () => {
-        test('queries with area search for TV shows', async () => {
-            try {
-                const result = await tool.getBiliQuery(['日本'], 'name', 1, false);
-                expect(true).toBe(true);
-            } catch (err) {
-                expect(mockMongoFn.mock.calls.length >= 0).toBe(true);
-            }
-        });
-
-        test('queries with area search for movies', async () => {
-            try {
-                const result = await tool.getBiliQuery(['美國'], 'name', 1, true);
-                expect(true).toBe(true);
-            } catch (err) {
-                expect(mockMongoFn.mock.calls.length >= 0).toBe(true);
-            }
-        });
-
-        test('handles multiple areas', async () => {
-            try {
-                const result = await tool.getBiliQuery(['日本', '韓國'], 'date', 1, false);
-                expect(true).toBe(true);
-            } catch (err) {
-                expect(mockMongoFn.mock.calls.length >= 0).toBe(true);
-            }
-        });
-    });
-
     describe('getMadQuery()', () => {
         test('queries with mad search', async () => {
             try {
@@ -602,25 +565,7 @@ describe('External Query Methods', () => {
         });
     });
 
-    describe('getKuboQuery()', () => {
-        test('queries with country search', async () => {
-            try {
-                const result = await tool.getKuboQuery(['日本'], 'name', 1);
-                expect(true).toBe(true);
-            } catch (err) {
-                expect(mockMongoFn.mock.calls.length >= 0).toBe(true);
-            }
-        });
 
-        test('handles multiple countries', async () => {
-            try {
-                const result = await tool.getKuboQuery(['日本', '美國'], 'date', 1);
-                expect(true).toBe(true);
-            } catch (err) {
-                expect(mockMongoFn.mock.calls.length >= 0).toBe(true);
-            }
-        });
-    });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1497,7 +1442,6 @@ describe('Collection-Specific Behavior', () => {
     test('STORAGEDB supports all features', () => {
         const tool = process(STORAGEDB);
         expect(typeof tool.getYifyQuery).toBe('function');
-        expect(typeof tool.getBiliQuery).toBe('function');
         expect(typeof tool.getMadQuery).toBe('function');
     });
 
@@ -1569,7 +1513,6 @@ describe('Constants and Utilities', () => {
     test('DEFAULT_TAGS array is complete', () => {
         expect(DEFAULT_TAGS).toContain('adultonly');
         expect(DEFAULT_TAGS).toContain('yify');
-        expect(DEFAULT_TAGS).toContain('bili');
         expect(DEFAULT_TAGS.length).toBeGreaterThan(20);
     });
 
@@ -1581,9 +1524,6 @@ describe('Constants and Utilities', () => {
         expect(GAME_LIST.length).toBe(GAME_LIST_CH.length);
     });
 
-    test('BILI_TYPE and BILI_INDEX have matching lengths', () => {
-        expect(BILI_TYPE.length).toBe(BILI_INDEX.length);
-    });
 
     test('All parent arrays have name property', () => {
         STORAGE_PARENT.forEach(p => expect(p).toHaveProperty('name'));
@@ -1809,45 +1749,6 @@ describe('delTag with URL-like tag', () => {
     });
 });
 
-describe('delTag admin with lovetv/eztv special fields', () => {
-    let tool, adminUser;
-
-    beforeEach(() => {
-        tool = process(STORAGEDB);
-        adminUser = { _id: 'admin123', perm: 1 };
-        mockCheckAdmin.mockReturnValue(true);
-        mockIsValidString.mockImplementation((val, type) => {
-            if (type === 'uid') return val;
-            if (type === 'name') return val;
-            return false;
-        });
-    });
-
-    test('delTag admin with item having lovetv field pulls tag from lovetv', async () => {
-        mockMongoFn.mockResolvedValueOnce([
-            { _id: 'item1', name: 'Test Item', tags: ['sometag'], filename: 'test.txt', adultonly: 0, lovetv: 'sometag' }
-        ]).mockResolvedValueOnce({ modifiedCount: 1 });
-
-        const result = await tool.delTag('item1', 'sometag', adminUser);
-        expect(result).toBeDefined();
-        if (result && result.tag) {
-            expect(result.tag).toBe('sometag');
-        }
-    });
-
-    test('delTag admin with item having eztv field pulls tag from eztv', async () => {
-        mockMongoFn.mockResolvedValueOnce([
-            { _id: 'item1', name: 'Test Item', tags: ['sometag'], filename: 'test.txt', adultonly: 0, eztv: 'sometag' }
-        ]).mockResolvedValueOnce({ modifiedCount: 1 });
-
-        const result = await tool.delTag('item1', 'sometag', adminUser);
-        expect(result).toBeDefined();
-        if (result && result.tag) {
-            expect(result.tag).toBe('sometag');
-        }
-    });
-});
-
 describe('normalize with complex Chinese numbers', () => {
     test('normalize 第十五集 converts to 第15集', () => {
         expect(normalize('第十五集')).toBe('第15集');
@@ -2055,257 +1956,6 @@ describe('getYifyQuery full branch coverage', () => {
         const result = tool.getYifyQuery(['thriller', 'comedy', 'yify'], 'name', 1);
         expect(result).toContain('genre=comedy');
         expect(result).not.toContain('query_term');
-    });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 28. COVERAGE: getBiliQuery branches (lines 312-401)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('getBiliQuery full branch coverage', () => {
-    let tool;
-    beforeEach(() => {
-        tool = process(STORAGEDB);
-    });
-
-    test('returns false when no bili/bilimovie tag', () => {
-        const result = tool.getBiliQuery(['action'], 'name', 1, false);
-        expect(result).toBe(false);
-    });
-
-    test('TV search with valid year (lines 311-314)', () => {
-        const result = tool.getBiliQuery(['2020', 'bili'], 'name', 1, false);
-        expect(result).toContain('startYear=2020');
-    });
-
-    test('TV search with invalid year as query_term (lines 317-319)', () => {
-        const result = tool.getBiliQuery(['9999', 'bili'], 'name', 1, false);
-        expect(result).toContain('keyword=9999');
-    });
-
-    test('TV search with BILI_TYPE area match (lines 321-324)', () => {
-        const result = tool.getBiliQuery(['日本', 'bili'], 'name', 1, false);
-        expect(result).toContain('seasonArea=2');
-    });
-
-    test('TV search with non-matching query_term (lines 326-328)', () => {
-        const result = tool.getBiliQuery(['randomtext', 'bili'], 'name', 1, false);
-        expect(result).toContain('keyword');
-    });
-
-    test('TV search with query_term and page>1 (line 342)', () => {
-        const result = tool.getBiliQuery(['randomtext', 'bili'], 'name', 2, false);
-        expect(result).toContain('page=2');
-    });
-
-    test('movie search with bilimovie (search=2) and query_term (lines 339-340)', () => {
-        const result = tool.getBiliQuery(['randomtext', 'bilimovie'], 'name', 1, true);
-        expect(result).toContain('keyword=randomtext');
-    });
-
-    test('movie search with bilimovie and count sort (sOrder)', () => {
-        const result = tool.getBiliQuery(['randomtext', 'bilimovie'], 'count', 1, true);
-        expect(result).toContain('keyword=randomtext');
-    });
-
-    test('movie search without query_term, no country (page%4 paths)', () => {
-        // page=1 → ch_type=147
-        const r1 = tool.getBiliQuery(['bilimovie'], 'name', 1, true);
-        expect(r1).toContain('bilibili.com/list');
-        // page=2 → ch_type=146
-        const r2 = tool.getBiliQuery(['bilimovie'], 'name', 2, true);
-        expect(r2).toContain('bilibili.com/list');
-        // page=3 → ch_type=145
-        const r3 = tool.getBiliQuery(['bilimovie'], 'name', 3, true);
-        expect(r3).toContain('bilibili.com/list');
-        // page=4 → ch_type=83
-        const r4 = tool.getBiliQuery(['bilimovie'], 'name', 4, true);
-        expect(r4).toContain('bilibili.com/list');
-    });
-
-    test('movie search with country s_country=0 (ch_type=147, lines 350-353)', () => {
-        const result = tool.getBiliQuery(['日本', 'bilimovie'], 'name', 1, true);
-        expect(result).toContain('bilibili.com/list');
-    });
-
-    test('movie search with country s_country=1 (ch_type=146, line 356)', () => {
-        const result = tool.getBiliQuery(['美國', 'bilimovie'], 'name', 1, true);
-        expect(result).toContain('bilibili.com/list');
-    });
-
-    test('movie search with country s_country=2 (ch_type=145, line 359)', () => {
-        const result = tool.getBiliQuery(['中國', 'bilimovie'], 'name', 1, true);
-        expect(result).toContain('bilibili.com/list');
-    });
-
-    test('movie search with country s_country=3 (default ch_type=83, line 362)', () => {
-        const result = tool.getBiliQuery(['韓國', 'bilimovie'], 'name', 1, true);
-        expect(result).toContain('bilibili.com/list');
-    });
-
-    test('TV search with s_country=12 (港台) special list URL (lines 385-388)', () => {
-        // Need 港台 at BILI_TYPE index 4 — but test has BILI_TYPE = ['日本', '美國', '中國', '韓國', '港台']
-        // index 4 = '港台'. But s_country=12 is checked. Looking at code: BILI_TYPE has 5 items.
-        // So s_country=4 for '港台'. The check is s_country === 12. That branch needs 13th entry.
-        // With our mock BILI_TYPE, this branch is unreachable. Skip.
-    });
-
-    test('TV search no query_term, no country, with year (line 394)', () => {
-        const result = tool.getBiliQuery(['2020', 'bili'], 'name', 1, false);
-        expect(result).toContain('startYear=2020');
-    });
-
-    test('TV search no query_term, with country, no year (line 392)', () => {
-        const result = tool.getBiliQuery(['美國', 'bili'], 'name', 1, false);
-        expect(result).toContain('seasonArea=1');
-    });
-
-    test('TV search no query_term, no country, no year — base URL (line 390)', () => {
-        const result = tool.getBiliQuery(['bili'], 'name', 1, false);
-        expect(result).toContain('api_proxy');
-    });
-
-    test('TV search with mtime sort (order=2)', () => {
-        const result = tool.getBiliQuery(['bili'], 'mtime', 1, false);
-        expect(result).toContain('indexType=2');
-    });
-
-    test('movie search with count sort (mOrder=hot)', () => {
-        const result = tool.getBiliQuery(['bilimovie'], 'count', 1, true);
-        expect(result).toContain('hot');
-    });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 29. COVERAGE: getMadQuery branches (lines 419-461)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('getMadQuery full branch coverage', () => {
-    let tool;
-    beforeEach(() => {
-        tool = process(STORAGEDB);
-    });
-
-    test('returns false when no dm5/search tag', () => {
-        const result = tool.getMadQuery(['something'], 'name', 1);
-        expect(result).toBe(false);
-    });
-
-    test('search with adultonly tag sets a18=1 (line 419)', () => {
-        const result = tool.getMadQuery(['adultonly', 'dm5'], 'name', 1);
-        expect(result).toContain('dm5.com/manhua-list');
-        expect(result).toContain('tag61');
-    });
-
-    test('search with important tag sets a18=0 (line 421)', () => {
-        const result = tool.getMadQuery(['important', 'dm5'], 'name', 1);
-        expect(result).toContain('dm5.com/manhua-list');
-    });
-
-    test('search with DM5_LIST tag match (mIndex < 21 → tag, lines 425-426)', () => {
-        // DM5_LIST = ['連載', '完結']. mIndex=0 < 21 → tag=0
-        const result = tool.getMadQuery(['連載', 'dm5'], 'name', 1);
-        expect(result).toContain('dm5.com/manhua-list');
-    });
-
-    test('search with query_term (line 444-447)', () => {
-        const result = tool.getMadQuery(['mycomic', 'dm5'], 'name', 1);
-        expect(result).toContain('search.ashx');
-        expect(result).toContain('mycomic');
-    });
-
-    test('search with search tag (index 22) via "search" tag (line 438)', () => {
-        const result = tool.getMadQuery(['search', 'mycomic'], 'name', 1);
-        expect(result).toContain('search.ashx');
-    });
-
-    test('a18 mode ignores query_term (line 443)', () => {
-        const result = tool.getMadQuery(['adultonly', 'mycomic', 'dm5'], 'name', 1);
-        expect(result).toContain('tag61');
-        expect(result).not.toContain('search.ashx');
-    });
-
-    test('mtime sort adds -s2 (line 457)', () => {
-        const result = tool.getMadQuery(['dm5'], 'mtime', 1);
-        expect(result).toContain('-s2');
-    });
-
-    test('page>1 adds -p (line 458)', () => {
-        const result = tool.getMadQuery(['dm5'], 'name', 2);
-        expect(result).toContain('-p2');
-    });
-
-    test('no special filters returns base manhua-list URL (line 459)', () => {
-        const result = tool.getMadQuery(['dm5'], 'name', 1);
-        expect(result).toContain('dm5.com/manhua-list');
-    });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 30. COVERAGE: getKuboQuery branches (lines 477-516)
-// ═══════════════════════════════════════════════════════════════════════
-
-describe('getKuboQuery full branch coverage', () => {
-    let tool;
-    beforeEach(() => {
-        tool = process(STORAGEDB);
-    });
-
-    test('returns false when no type set', () => {
-        const result = tool.getKuboQuery(['action'], 'name', 1);
-        expect(result).toBe(false);
-    });
-
-    test('movie type (index 18) with valid year (lines 477-479)', () => {
-        const result = tool.getKuboQuery(['2020', 'movie'], 'name', 1);
-        expect(result).toContain('99kubo');
-        expect(result).toContain('year-2020');
-    });
-
-    test('movie type with invalid year as searchWord (lines 482-484)', () => {
-        const result = tool.getKuboQuery(['9999', 'movie'], 'name', 1);
-        expect(result).toContain('innersearch');
-        expect(result).toContain('9999');
-    });
-
-    test('movie type with KUBO_COUNTRY match (lines 487-489)', () => {
-        const result = tool.getKuboQuery(['日本', 'movie'], 'name', 1);
-        expect(result).toContain('area-日本');
-    });
-
-    test('movie type with searchWord (lines 491-493)', () => {
-        const result = tool.getKuboQuery(['myfilm', 'movie'], 'name', 1);
-        expect(result).toContain('innersearch');
-    });
-
-    test('tvseries type (index 19, line 500)', () => {
-        const result = tool.getKuboQuery(['tvseries'], 'name', 1);
-        expect(result).toContain('id-2');
-    });
-
-    test('tvshow type (index 20, line 503)', () => {
-        const result = tool.getKuboQuery(['tvshow'], 'name', 1);
-        expect(result).toContain('id-41');
-    });
-
-    test('animation type (index 21, line 506)', () => {
-        const result = tool.getKuboQuery(['animation'], 'name', 1);
-        expect(result).toContain('id-3');
-    });
-
-    test('search type (index 22) triggers type=3 (line 505)', () => {
-        const result = tool.getKuboQuery(['search'], 'name', 1);
-        expect(result).toContain('id-3');
-    });
-
-    test('mtime sort (line 512)', () => {
-        const result = tool.getKuboQuery(['movie'], 'mtime', 1);
-        expect(result).toContain('vod_addtime');
-    });
-
-    test('count sort (line 513)', () => {
-        const result = tool.getKuboQuery(['movie'], 'count', 1);
-        expect(result).toContain('vod_hits_month');
     });
 });
 
@@ -3474,21 +3124,6 @@ describe('completeMimeTag full coverage', () => {
         expect(mockMongoFn).toHaveBeenCalled();
     });
 
-    test('completeMimeTag item with eztv/lovetv field (line 1652)', async () => {
-        mockMongoFn.mockResolvedValue([]);
-        mockMongoFn.mockResolvedValueOnce([
-            {
-                _id: 'item1',
-                name: 'Item1',
-                tags: ['action'],
-                eztv: 'action',
-                lovetv: 'action',
-            },
-        ]);
-        await completeMimeTag(false);
-        expect(mockMongoFn).toHaveBeenCalled();
-    });
-
     test('completeMimeTag item tag already has translation (line 1650)', async () => {
         mockMongoFn.mockResolvedValue([]);
         mockMongoFn.mockResolvedValueOnce([
@@ -3557,14 +3192,6 @@ describe('cn2ArabNum deeper paths via normalize', () => {
 // 45. COVERAGE: denormalize (lines 1632-1634)
 // ═══════════════════════════════════════════════════════════════════════
 
-describe('denormalize coverage via getBiliQuery', () => {
-    test('getBiliQuery with non-matching query_term calls denormalize (line 327)', () => {
-        const tool = process(STORAGEDB);
-        // Query term with Chinese that has numbers embedded between non-ASCII chars
-        const result = tool.getBiliQuery(['第1集', 'bili'], 'name', 1, false);
-        expect(result).toContain('keyword');
-    });
-});
 
 // ═══════════════════════════════════════════════════════════════════════
 // 46. COVERAGE: getLatest (line 59) and returnPath bookmark path
@@ -3852,5 +3479,69 @@ describe('Additional coverage for remaining lines', () => {
         // Hmm, still can't trigger it. Let me try differently.
         // Actually this line is defensive code that's very hard to reach.
         expect(true).toBe(true);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// COVERAGE: getMadQuery branches
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('getMadQuery full branch coverage', () => {
+    let tool;
+    beforeEach(() => {
+        tool = process(STORAGEDB);
+    });
+
+    test('returns false when no dm5/search tag', () => {
+        const result = tool.getMadQuery(['something'], 'name', 1);
+        expect(result).toBe(false);
+    });
+
+    test('search with adultonly tag sets a18=1', () => {
+        const result = tool.getMadQuery(['adultonly', 'dm5'], 'name', 1);
+        expect(result).toContain('dm5.com/manhua-list');
+        expect(result).toContain('tag61');
+    });
+
+    test('search with important tag sets a18=0', () => {
+        const result = tool.getMadQuery(['important', 'dm5'], 'name', 1);
+        expect(result).toContain('dm5.com/manhua-list');
+    });
+
+    test('search with DM5_LIST tag match', () => {
+        const result = tool.getMadQuery(['連載', 'dm5'], 'name', 1);
+        expect(result).toContain('dm5.com/manhua-list');
+    });
+
+    test('search with query_term', () => {
+        const result = tool.getMadQuery(['mycomic', 'dm5'], 'name', 1);
+        expect(result).toContain('search.ashx');
+        expect(result).toContain('mycomic');
+    });
+
+    test('search with search tag', () => {
+        const result = tool.getMadQuery(['search', 'mycomic'], 'name', 1);
+        expect(result).toContain('search.ashx');
+    });
+
+    test('a18 mode ignores query_term', () => {
+        const result = tool.getMadQuery(['adultonly', 'mycomic', 'dm5'], 'name', 1);
+        expect(result).toContain('tag61');
+        expect(result).not.toContain('search.ashx');
+    });
+
+    test('mtime sort adds -s2', () => {
+        const result = tool.getMadQuery(['dm5'], 'mtime', 1);
+        expect(result).toContain('-s2');
+    });
+
+    test('page>1 adds -p', () => {
+        const result = tool.getMadQuery(['dm5'], 'name', 2);
+        expect(result).toContain('-p2');
+    });
+
+    test('no special filters returns base manhua-list URL', () => {
+        const result = tool.getMadQuery(['dm5'], 'name', 1);
+        expect(result).toContain('dm5.com/manhua-list');
     });
 });

@@ -154,7 +154,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs })
 
 const mod = await import('../api-tool-google.js');
 const api = mod.default;
-const { googleBackup, googleDownloadSubtitle, userDrive, autoDoc, isApiing,
+const { googleBackup, userDrive, autoDoc, isApiing,
     sendPresentName, sendLotteryName, googleBackupWhole, googleBackupDb,
     _resetState, _getState, _setState } = mod;
 
@@ -799,35 +799,6 @@ describe('api-tool-google.js', () => {
         test('recycle=2 none', async () => { mockFsExistsSync.mockReturnValue(false); expect(await googleBackup(user, 'id', 'v.mp4', '/p', ['t'], 2)).toBeUndefined(); });
         test('recycle=3 tags', async () => { expect(await googleBackup(user, 'id', 'v.mp4', '/p', ['t1', 't2'], 3)).toBeUndefined(); });
         test('recycle=99 error', async () => { await expect(googleBackup(user, 'id', 'v.mp4', '/p', ['t'], 99)).rejects.toThrow('recycle 99 denied'); });
-    });
-
-    // 16. googleDownloadSubtitle
-    describe('googleDownloadSubtitle', () => {
-        test('zh-TW', async () => {
-            mockFsExistsSync.mockReturnValue(false);
-            mockFsReaddirSync.mockReturnValue(['s.zh-TW.srt', 's.en.srt']);
-            mockIsSub.mockReturnValue('srt');
-            await googleDownloadSubtitle('http://y', '/f');
-            expect(mockSRT2VTT).toHaveBeenCalled(); expect(mockDeleteFolderRecursive).toHaveBeenCalled();
-        });
-        test('zh-Hant', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-Hant.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
-        test('zh-CN', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-CN.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
-        test('zh-Hans', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-Hans.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
-        test('zh-HK', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-HK.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
-        test('zh-SG', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-SG.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
-        test('en only', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.en.srt']); mockIsSub.mockImplementation((f) => f ? 'srt' : false); await googleDownloadSubtitle('http://y', '/f'); expect(mockSRT2VTT).toHaveBeenCalled(); });
-        test('no chinese no english', async () => { mockFsReaddirSync.mockReturnValue(['s.ja.srt']); await expect(googleDownloadSubtitle('http://y', '/f')).rejects.toThrow('sub donot have chinese and english'); });
-        test('preSub renames existing', async () => {
-            mockFsExistsSync.mockReturnValue(true);
-            mockFsReaddirSync.mockReturnValue(['s.zh-TW.srt']);
-            mockIsSub.mockReturnValue('srt');
-            await googleDownloadSubtitle('http://y', '/f');
-            expect(mockFsRenameSync).toHaveBeenCalledWith(expect.stringContaining('.srt'), expect.stringContaining('.srt1'));
-        });
-        test('vtt → no SRT2VTT', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-TW.vtt']); mockIsSub.mockReturnValue('vtt'); await googleDownloadSubtitle('http://y', '/f'); expect(mockSRT2VTT).not.toHaveBeenCalled(); });
-        test('isSub false → sub ext not support', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['s.zh-TW.xyz', 's.en.abc']); mockIsSub.mockReturnValue(false); await expect(googleDownloadSubtitle('http://y', '/f')).rejects.toThrow('sub ext not support'); });
-        test('sub_location exists → no mkdirp', async () => { mockFsExistsSync.mockReturnValue(true); mockFsReaddirSync.mockReturnValue(['s.zh-TW.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); expect(mockMkdirp).not.toHaveBeenCalled(); });
-        test('file no match → skipped', async () => { mockFsExistsSync.mockReturnValue(false); mockFsReaddirSync.mockReturnValue(['readme.txt', 's.zh-TW.srt']); mockIsSub.mockReturnValue('srt'); await googleDownloadSubtitle('http://y', '/f'); });
     });
 
     // 17. userDrive

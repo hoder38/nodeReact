@@ -212,7 +212,7 @@ router.post(`/${STORAGEDB}/subscript/:id`, function(req, res, next) {
     if (!name) {
         return handleError(new HoError('name is not vaild'), next);
     }
-    const id = req.params.id.match(/^(you|ypl|kub|yif|mad|bbl|c99)_(.*)$/) ? isValidString(req.params.id, 'name') : isValidString(req.params.id, 'uid');
+    const id = req.params.id.match(/^(yif|mad)_(.*)$/) ? isValidString(req.params.id, 'name') : isValidString(req.params.id, 'uid');
     if (!id) {
         return handleError(new HoError('uid is not vaild'), next);
     }
