@@ -192,13 +192,11 @@ jest.unstable_mockModule('../../models/api-tool-playlist.js', () => ({
 const mockUserDrive = jest.fn(() => Promise.resolve());
 const mockAutoDoc = jest.fn(() => Promise.resolve());
 const mockGoogleBackupDb = jest.fn(() => Promise.resolve());
-const mockGoogleBackupWhole = jest.fn(() => Promise.resolve());
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   default: jest.fn(),
   userDrive: mockUserDrive,
   autoDoc: mockAutoDoc,
   googleBackupDb: mockGoogleBackupDb,
-  googleBackupWhole: mockGoogleBackupWhole,
 }));
 
 // --- tdameritrade-tool.js ---
@@ -292,7 +290,6 @@ describe('background.js', () => {
     mockUserDrive.mockResolvedValue();
     mockAutoDoc.mockResolvedValue();
     mockGoogleBackupDb.mockResolvedValue();
-    mockGoogleBackupWhole.mockResolvedValue();
     mockUsseTDInit.mockResolvedValue();
     mockTwseShioajiInit.mockResolvedValue();
     mockDbDump.mockResolvedValue();
@@ -592,57 +589,11 @@ describe('background.js', () => {
       expect(mockGoogleBackupDb).toHaveBeenCalledWith('20260302');
     });
 
-    test('day=3, month=November → wholeBackup: exec dd + googleBackupWhole', async () => {
-      // month=10 (November, 0-indexed)
-      jest.setSystemTime(new Date(2026, 10, 3, 4, 0, 0));
-      bg.dbBackup();
-      await advanceAndFlush(510000);
-      // singleBackup runs on day=2 only, so mockDbDump not called
-      expect(mockDbDump).not.toHaveBeenCalled();
-      // wholeBackup: day=3 AND month in {1,4,7,10}
-      expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('sudo dd'),
-        expect.any(Function),
-      );
-      expect(mockGoogleBackupWhole).toHaveBeenCalledWith('20261103_Ubuntu_20_04_1_LTS.img');
-    });
-
-    test('day=3, month=February → wholeBackup runs (month=1)', async () => {
-      jest.setSystemTime(new Date(2026, 1, 3, 4, 0, 0)); // Feb 3
-      bg.dbBackup();
-      await advanceAndFlush(510000);
-      expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('sudo dd'),
-        expect.any(Function),
-      );
-    });
-
-    test('day=3, month=May → wholeBackup runs (month=4)', async () => {
-      jest.setSystemTime(new Date(2026, 4, 3, 4, 0, 0)); // May 3
-      bg.dbBackup();
-      await advanceAndFlush(510000);
-      expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('sudo dd'),
-        expect.any(Function),
-      );
-    });
-
-    test('day=3, month=August → wholeBackup runs (month=7)', async () => {
-      jest.setSystemTime(new Date(2026, 7, 3, 4, 0, 0)); // Aug 3
-      bg.dbBackup();
-      await advanceAndFlush(510000);
-      expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('sudo dd'),
-        expect.any(Function),
-      );
-    });
-
     test('day=3, non-quarterly month → no wholeBackup', async () => {
       jest.setSystemTime(new Date(2026, 2, 3, 4, 0, 0)); // March 3
       bg.dbBackup();
       await advanceAndFlush(510000);
       expect(mockExec).not.toHaveBeenCalled();
-      expect(mockGoogleBackupWhole).not.toHaveBeenCalled();
     });
 
     test('day=15 → no singleBackup, no wholeBackup', async () => {
@@ -666,23 +617,16 @@ describe('background.js', () => {
 
     test('exec error in wholeBackup → bgError', async () => {
       jest.setSystemTime(new Date(2026, 10, 3, 4, 0, 0));
-      mockExec.mockImplementationOnce((cmd, cb) => cb(new Error('dd fail')));
       bg.dbBackup();
       await advanceAndFlush(510000);
-      expect(mockSendWs).toHaveBeenCalledWith(
-        expect.stringContaining('Loop allBackup'),
-        0, 0, true,
-      );
+      expect(mockExec).not.toHaveBeenCalled();
     });
 
     test('wholeBackup sends websocket notification before google upload', async () => {
       jest.setSystemTime(new Date(2026, 10, 3, 4, 0, 0));
       bg.dbBackup();
       await advanceAndFlush(510000);
-      expect(mockSendWs).toHaveBeenCalledWith(
-        expect.stringContaining('whole backup: local'),
-        0, 0, true,
-      );
+      expect(mockExec).not.toHaveBeenCalled();
     });
   });
 

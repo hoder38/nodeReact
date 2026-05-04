@@ -1,4 +1,4 @@
-import { ENV_TYPE, DEVICE_PATH } from '../../../ver.js'
+import { ENV_TYPE } from '../../../ver.js'
 import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER, BACKUP_PATH } from '../config.js'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAL, DOC_INTERVAL, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR, MAX_RETRY } from '../constants.js'
 import Child_process from 'child_process'
@@ -7,7 +7,7 @@ import StockTool, { getStockListV2, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
 import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
-import { userDrive, autoDoc, googleBackupDb, googleBackupWhole } from '../models/api-tool-google.js'
+import { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google.js'
 import { usseTDInit, resetTD } from '../models/tdameritrade-tool.js'
 import { twseShioajiInit, resetShioaji } from '../models/shioaji-tool.js'
 import { dbDump } from './cmd.js'
@@ -210,16 +210,8 @@ export const dbBackup = () => {
                 console.log(BACKUP_COLLECTION[index]);
                 return dbDump(BACKUP_COLLECTION[index], backupDate).then(() => singleBackup(index + 1));
             }
-            const wholeBackup = () => {
-                const backupName = `${backupDate}_Ubuntu_20_04_1_LTS.img`;
-                return new Promise((resolve, reject) => Child_process.exec(`sudo dd if=${DEVICE_PATH} of=${BACKUP_PATH(ENV_TYPE)}/${backupName}`, (err, output) => err ? reject(err) : resolve(output))).then(() => {
-                    sendWs(`whole backup: local ${BACKUP_PATH(ENV_TYPE)}/${backupName}`, 0, 0, true);
-                    return googleBackupWhole(backupName);
-                });
-            }
             const sdf = () => (sd.getDate() === 2) ? singleBackup(0) : Promise.resolve();
-            const wdf = () => (sd.getDate() === 3 && (sd.getMonth() === 10 || sd.getMonth() === 1 || sd.getMonth() === 4 || sd.getMonth() === 7)) ? wholeBackup() : Promise.resolve();
-            sdf().then(() => wdf()).catch(err => bgError(err, 'Loop allBackup'));
+            sdf().catch(err => bgError(err, 'Loop allBackup'));
             return new Promise((resolve, reject) => setTimeout(() => resolve(), BACKUP_INTERVAL * 1000)).then(() => allBackup());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 510000)).then(() => allBackup());

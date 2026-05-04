@@ -40,6 +40,8 @@ services:
 
 新環境要有的git nvm docker certbot p7zip-full(data.7z用)
 
+7z a -p -mhe=on data.7z .env .env.dev csr/
+
 連線db要用docker exec -it mongodb mongo
 
 docker exec -it reactnode-file-server node ./src/back/cmd/cmd.js

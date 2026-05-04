@@ -155,7 +155,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs })
 const mod = await import('../api-tool-google.js');
 const api = mod.default;
 const { googleBackup, userDrive, autoDoc, isApiing,
-    sendPresentName, sendLotteryName, googleBackupWhole, googleBackupDb,
+    sendPresentName, sendLotteryName, googleBackupDb,
     _resetState, _getState, _setState } = mod;
 
 const WAIT = (ms = 700) => new Promise(r => setTimeout(r, ms));
@@ -919,9 +919,6 @@ describe('api-tool-google.js', () => {
         test('sendPresentName', async () => { await sendPresentName(Buffer.from('N').toString('base64'), 'u@t.com'); expect(mockGoogleGmail.users.messages.send).toHaveBeenCalled(); });
         test('sendPresentName append', async () => { await sendPresentName(Buffer.from('N').toString('base64'), 'u@t.com', 'ex'); expect(mockGoogleGmail.users.messages.send).toHaveBeenCalled(); });
         test('sendLotteryName', async () => { await sendLotteryName('L', Buffer.from('W').toString('base64'), 'w@t.com'); expect(mockGoogleGmail.users.messages.send).toHaveBeenCalled(); });
-    });
-    describe('googleBackupWhole', () => {
-        test('uploads and notifies', async () => { await googleBackupWhole('bk.tar.gz'); await WAIT(); });
     });
     describe('googleBackupDb', () => {
         test('creates and uploads', async () => {
