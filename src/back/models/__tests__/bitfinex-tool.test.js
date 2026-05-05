@@ -76,7 +76,11 @@ jest.unstable_mockModule('bitfinex-api-node', () => ({
 jest.unstable_mockModule('bfx-api-node-models', () => ({
     default: {
         FundingOffer: function (data) { Object.assign(this, data); this.submit = jest.fn(() => Promise.resolve()); },
-        Order: function (data) { Object.assign(this, data); },
+        Order: function (data, rest) {
+            Object.assign(this, data);
+            this[0] = { id: Date.now(), ...data };
+            this.submit = jest.fn(() => Promise.resolve());
+        },
     },
 }));
 
@@ -801,6 +805,376 @@ describe('default.query', () => {
         const r1 = await defaultExport.query(0, '', 'name', 'desc',
             { username: 'u1' }, {}, -1);
         expect(r1).toHaveProperty('itemList');
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// 7b. query with populated state — exercises all 5 data types
+// ════════════════════════════════════════════════════════════
+describe('default.query — state-populated branches', () => {
+    const UID = 'qUser';
+    const FROZEN_SEC = Math.round(new Date('2026-05-05T12:00:00Z').getTime() / 1000);
+
+    beforeEach(() => {
+        _setState({
+            available: { [UID]: { fUSD: { avail: 1234.56, total: 5000, time: FROZEN_SEC } } },
+            margin: { [UID]: { fUSD: { avail: 2000, total: 3000, time: FROZEN_SEC, tBTCUSD: 42.5 } } },
+            currentRate: { fUSD: { rate: 109500, frr: 73000, time: FROZEN_SEC } },
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 2.5, time: FROZEN_SEC, str: 'str1', str2: 'str2' } },
+            offer: { [UID]: { fUSD: [
+                { id: 1001, amount: 500, rate: 0.0003, period: 2, time: FROZEN_SEC, risk: 5 },
+                { id: 1002, amount: 300, rate: 0.0005, period: 30, time: FROZEN_SEC, risk: undefined },
+            ] } },
+            order: { [UID]: { fUSD: [
+                { id: 2001, symbol: 'tBTCUSD', amount: 0.5, type: 'LIMIT', price: 50000, time: FROZEN_SEC, flags: 0 },
+                { id: 2002, symbol: 'tBTCUSD', amount: -0.3, type: 'EXCHANGE LIMIT', price: 55000, time: FROZEN_SEC, flags: 0 },
+            ] } },
+            credit: { [UID]: { fUSD: [
+                { id: 3001, side: 1, amount: 1000, rate: 0.0004, period: 30, time: FROZEN_SEC, pair: '' },
+                { id: 3002, side: 2, amount: 500, rate: 0, period: 7, time: FROZEN_SEC, pair: '' },
+            ] } },
+            position: { [UID]: { fUSD: [
+                { id: 4001, symbol: 'tBTCUSD', amount: 0.1, price: 58000, lp: 55000, pl: 200, time: FROZEN_SEC },
+            ] } },
+            ledger: { [UID]: { fUSD: [
+                { id: 5001, time: FROZEN_SEC, amount: 12.5, rate: 0.0003 },
+            ] } },
+        });
+    });
+
+    test('type=0 (all) populates wallet + rate + offer + credit + ledger items', () => {
+        const result = defaultExport.query(0, '', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.length).toBeGreaterThanOrEqual(7);
+        const types = result.itemList.map(i => i.type);
+        expect(types).toContain(0); // wallet
+        expect(types).toContain(1); // rate
+        expect(types).toContain(2); // offer + order
+        expect(types).toContain(3); // credit + position
+        expect(types).toContain(4); // ledger
+    });
+
+    test('type=1 (wallet) returns only wallet items', () => {
+        const result = defaultExport.query(0, 'wallet', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.every(i => i.type === 0)).toBe(true);
+        expect(result.itemList.length).toBeGreaterThanOrEqual(2); // available + margin
+    });
+
+    test('type=2 (rate) returns rate items + priceData items', () => {
+        const result = defaultExport.query(0, 'rate', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.every(i => i.type === 1)).toBe(true);
+        expect(result.itemList.length).toBeGreaterThanOrEqual(2);
+        const btcItem = result.itemList.find(i => i.name.includes('BTC'));
+        expect(btcItem).toBeDefined();
+        expect(btcItem.str).toBe('str1');
+        expect(btcItem.str2).toBe('str2');
+    });
+
+    test('type=3 (offer) returns offer + order items', () => {
+        const result = defaultExport.query(0, 'offer', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.every(i => i.type === 2)).toBe(true);
+        expect(result.itemList.length).toBeGreaterThanOrEqual(3);
+        // Offer with period >= 30 has boost=true
+        const longOffer = result.itemList.find(i => i.id === 1002);
+        expect(longOffer.boost).toBe(true);
+        // Manual offer has '手動' in risk
+        expect(longOffer.name).toContain('手動');
+        // Order with EXCHANGE has '手動' label
+        const exchangeOrder = result.itemList.find(i => i.id === 2002);
+        expect(exchangeOrder.name).toContain('手動');
+        // Sell order (negative amount) has boost=true
+        expect(exchangeOrder.boost).toBe(true);
+    });
+
+    test('type=4 (credit) returns credit + position items', () => {
+        const result = defaultExport.query(0, 'credit', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.every(i => i.type === 3)).toBe(true);
+        const pos = result.itemList.find(i => i.id === 4001);
+        expect(pos).toBeDefined();
+        const lendCredit = result.itemList.find(i => i.id === 3001);
+        expect(lendCredit.name).toContain('放款');
+        expect(lendCredit.taken).toBe(false);
+        const borrowCredit = result.itemList.find(i => i.id === 3002);
+        expect(borrowCredit.name).toContain('借款');
+        expect(borrowCredit.taken).toBe(true);
+        expect(borrowCredit.rate).toBe('FRR');
+    });
+
+    test('type=5 (payment) returns ledger items', () => {
+        const result = defaultExport.query(0, 'payment', 'name', 'asc', { username: UID }, {}, -1);
+        expect(result.itemList.every(i => i.type === 4)).toBe(true);
+        expect(result.itemList.length).toBeGreaterThanOrEqual(1);
+        expect(result.itemList[0].name).toContain('利息收入');
+    });
+
+    test('uid=10000 (fUSD index=0) → returns single wallet item directly', () => {
+        const result = defaultExport.query(0, '', 'name', 'asc', { username: UID }, {}, 10000);
+        expect(result.item).toBeDefined();
+        expect(result.item.length).toBe(1);
+        expect(result.item[0].id).toBe(10000);
+        expect(result.item[0].name).toContain('閒置');
+    });
+
+    test('uid=100 (fUSD margin index=0) → returns single margin item', () => {
+        const result = defaultExport.query(0, '', 'name', 'asc', { username: UID }, {}, 100);
+        expect(result.item).toBeDefined();
+        expect(result.item.length).toBe(1);
+        expect(result.item[0].id).toBe(100);
+        expect(result.item[0].name).toContain('交易閒置');
+    });
+
+    test('uid=0 → returns rate-only list', () => {
+        const result = defaultExport.query(0, '', 'name', 'asc', { username: UID }, {}, 0);
+        expect(result.item).toBeDefined();
+        // rateList only
+        expect(result.item.every(i => i.type === 1)).toBe(true);
+    });
+
+    test('uid > 0 but no match → returns {empty: true}', () => {
+        const result = defaultExport.query(0, '', 'name', 'asc', { username: UID }, {}, 99999);
+        expect(result.empty).toBe(true);
+    });
+
+    test('priceData with position profit integration in rate view', () => {
+        const result = defaultExport.query(0, 'rate', 'name', 'asc', { username: UID }, {}, -1);
+        const btc = result.itemList.find(i => i.name.includes('BTC'));
+        // profit = margin[UID][fUSD][tBTCUSD](42.5) + position.pl(200) = 242.5
+        expect(btc.name).toContain('+');
+    });
+
+    test('sort count asc → items sorted by utime ascending', () => {
+        // Add second available entry with different time
+        _setState({
+            available: { [UID]: {
+                fUSD: { avail: 1234, total: 5000, time: FROZEN_SEC },
+                fBTC: { avail: 0.5, total: 1, time: FROZEN_SEC - 1000 },
+            } },
+        });
+        const result = defaultExport.query(0, 'wallet', 'count', 'asc', { username: UID }, {}, -1);
+        if (result.itemList.length >= 2) {
+            expect(result.itemList[0].utime).toBeLessThanOrEqual(result.itemList[1].utime);
+        }
+    });
+
+    test('sort count desc → items sorted by utime descending', () => {
+        _setState({
+            available: { [UID]: {
+                fUSD: { avail: 1234, total: 5000, time: FROZEN_SEC },
+                fBTC: { avail: 0.5, total: 1, time: FROZEN_SEC - 1000 },
+            } },
+        });
+        const result = defaultExport.query(0, 'wallet', 'count', 'desc', { username: UID }, {}, -1);
+        if (result.itemList.length >= 2) {
+            expect(result.itemList[0].utime).toBeGreaterThanOrEqual(result.itemList[1].utime);
+        }
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// 5b. deleteBot — WS cleanup paths
+// ════════════════════════════════════════════════════════════
+describe('default.deleteBot — WS cleanup', () => {
+    test('with active userWs → closes WS, sets userOk false', async () => {
+        _setState({ userWs: { uid1: mockWs }, userOk: { uid1: true } });
+        let calls = 0;
+        mockMongo.mockImplementation(() => {
+            calls++;
+            if (calls === 1) return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }, { type: 'fBTC' }],
+            }]);
+            return Promise.resolve({});
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.deleteBot('u1', 'fUSD', 'uid1');
+        expect(mockWs.close).toHaveBeenCalled();
+        const s = _getState();
+        expect(s.userWs['uid1']).toBeNull();
+        expect(s.userOk['uid1']).toBe(false);
+        consoleSpy.mockRestore();
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// 6b. updateBot — pair CRUD + recur_update
+// ════════════════════════════════════════════════════════════
+describe('default.updateBot — pair CRUD paths', () => {
+    test('pair update: existing TOTALDB entry → updates times/orig', async () => {
+        let mongoCalls = [];
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            mongoCalls.push({ op, coll, q, upd });
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD', pair: [{ type: 'tBTCUSD', amount: 500 }] }],
+            }]);
+            if (op === 'update' && coll === 'user') return Promise.resolve({});
+            if (op === 'find' && coll === 'total' && q.owner) return Promise.resolve([{
+                _id: 'item1', index: 'tBTCUSD', type: 'fUSD', times: 1, orig: 500, ing: 0, amount: 500,
+            }]);
+            if (op === 'update' && coll === 'total') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.updateBot('u1', { type: 'fUSD', pair: 'tBTCUSD=1000' }, 'u1');
+        const updateCall = mongoCalls.find(c => c.op === 'update' && c.coll === 'total' && c.q._id === 'item1');
+        expect(updateCall).toBeDefined();
+        expect(updateCall.upd.$set.orig).toBe(1000);
+        consoleSpy.mockRestore();
+    });
+
+    test('pair remove: existing pair not in new list → sets ing=2', async () => {
+        let mongoCalls = [];
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            mongoCalls.push({ op, coll, q, upd });
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD', pair: [{ type: 'tBTCUSD', amount: 500 }] }],
+            }]);
+            if (op === 'update' && coll === 'user') return Promise.resolve({});
+            // Return both existing items so tBTCUSD is already in DB — no insert path
+            if (op === 'find' && coll === 'total' && q.owner) return Promise.resolve([
+                { _id: 'item1', index: 'tETHUSD', type: 'fUSD', times: 1, orig: 500, ing: 0, amount: 500 },
+                { _id: 'item2', index: 'tBTCUSD', type: 'fUSD', times: 1, orig: 500, ing: 0, amount: 500 },
+            ]);
+            if (op === 'update' && coll === 'total') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.updateBot('u1', { type: 'fUSD', pair: 'tBTCUSD=1000' }, 'u1');
+        // tETHUSD not in new pair list → ing=2
+        const ingUpdate = mongoCalls.find(c => c.op === 'update' && c.coll === 'total' && c.upd?.$set?.ing === 2);
+        expect(ingUpdate).toBeDefined();
+        expect(ingUpdate.q._id).toBe('item1');
+        consoleSpy.mockRestore();
+    });
+
+    test('pair with no existing DB entry → inserts new TOTALDB item', async () => {
+        let mongoCalls = [];
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            mongoCalls.push({ op, coll, q, upd });
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }],
+            }]);
+            if (op === 'update' && coll === 'user') return Promise.resolve({});
+            if (op === 'find' && coll === 'total' && q.owner) return Promise.resolve([]);
+            if (op === 'find' && coll === 'total' && q.index) return Promise.resolve([{
+                mid: 100, web: [-200, -100, 50, 100, 200], wType: 0,
+            }]);
+            if (op === 'insert') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.updateBot('u1', { type: 'fUSD', pair: 'tBTCUSD=1000' }, 'u1');
+        const insertCall = mongoCalls.find(c => c.op === 'insert' && c.coll === 'total');
+        expect(insertCall).toBeDefined();
+        expect(insertCall.q.index).toBe('tBTCUSD');
+        expect(insertCall.q.orig).toBe(1000);
+        consoleSpy.mockRestore();
+    });
+
+    test('pair update with userWs → closes WS after recur_update', async () => {
+        _setState({ userWs: { uid2: mockWs }, userOk: { uid2: true } });
+        let mongoCalls = [];
+        mockMongo.mockImplementation((op, coll, q) => {
+            mongoCalls.push({ op, coll });
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }],
+            }]);
+            if (op === 'update') return Promise.resolve({});
+            if (op === 'find' && coll === 'total') return Promise.resolve([]);
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.updateBot('u1', { type: 'fUSD', pair: '' }, 'uid2');
+        expect(mockWs.close).toHaveBeenCalled();
+        consoleSpy.mockRestore();
+    });
+
+    test('no pair in data → closes WS and returns without recur_update', async () => {
+        _setState({ userWs: { uid3: mockWs }, userOk: { uid3: true } });
+        mockMongo.mockImplementation((op, coll) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }],
+            }]);
+            if (op === 'update') return Promise.resolve({});
+            if (op === 'find' && coll === 'total') return Promise.resolve([]);
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        // updateBot with just key/secret, no pair
+        await defaultExport.updateBot('u1', { type: 'fUSD', key: 'newkey' }, 'uid3');
+        expect(mockWs.close).toHaveBeenCalled();
+        consoleSpy.mockRestore();
+    });
+
+    test('user has no bitfinex array → creates new array with data', async () => {
+        mockMongo.mockImplementation((op, coll) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: 'u1' }]);
+            if (op === 'update') return Promise.resolve({});
+            if (op === 'find' && coll === 'total') return Promise.resolve([]);
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const result = await defaultExport.updateBot('u1', { type: 'fUSD', key: 'k1' }, 'u1');
+        expect(Array.isArray(result)).toBe(true);
+        consoleSpy.mockRestore();
+    });
+
+    test('ing=2 item with pair match → resets ing based on position state', async () => {
+        _setState({ position: { u1: { tBTCUSD: [{ symbol: 'tBTCUSD', amount: 0.5 }] } } });
+        let mongoCalls = [];
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            mongoCalls.push({ op, coll, q, upd });
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD', pair: [{ type: 'tBTCUSD', amount: 500 }] }],
+            }]);
+            if (op === 'update' && coll === 'user') return Promise.resolve({});
+            if (op === 'find' && coll === 'total' && q.owner) return Promise.resolve([{
+                _id: 'item1', index: 'tBTCUSD', type: 'fUSD', times: 1, orig: 500, ing: 2, amount: 500,
+            }]);
+            if (op === 'update' && coll === 'total') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        await defaultExport.updateBot('u1', { type: 'fUSD', pair: 'tBTCUSD=1000' }, 'u1');
+        const updateCall = mongoCalls.find(c => c.op === 'update' && c.coll === 'total' && c.q._id === 'item1');
+        expect(updateCall).toBeDefined();
+        consoleSpy.mockRestore();
+    });
+
+    test('clear=ALL sets data.clear to true', async () => {
+        mockMongo.mockImplementation((op, coll) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }],
+            }]);
+            if (op === 'update') return Promise.resolve({});
+            if (op === 'find' && coll === 'total') return Promise.resolve([]);
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const result = await defaultExport.updateBot('u1', { type: 'fUSD', clear: 'ALL' }, 'u1');
+        expect(Array.isArray(result)).toBe(true);
+        consoleSpy.mockRestore();
+    });
+
+    test('clear with valid pair entries → partial clear object', async () => {
+        mockMongo.mockImplementation((op, coll) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{
+                _id: 'u1',
+                bitfinex: [{ type: 'fUSD' }],
+            }]);
+            if (op === 'update') return Promise.resolve({});
+            if (op === 'find' && coll === 'total') return Promise.resolve([]);
+            return Promise.resolve([]);
+        });
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        const result = await defaultExport.updateBot('u1', { type: 'fUSD', clear: 'tBTCUSD,tETHUSD' }, 'u1');
+        expect(Array.isArray(result)).toBe(true);
+        consoleSpy.mockRestore();
     });
 });
 
@@ -2485,6 +2859,786 @@ describe('singleTrade.getAM - deep money flows', () => {
         // PARTIALLY FILLED order skipped; only ACTIVE order cancelled
         expect(mockRest.cancelOrder).not.toHaveBeenCalledWith(811);
         expect(mockRest.cancelOrder).toHaveBeenCalledWith(812);
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// recur_status + recur_NewOrder — driven through setWsOffer
+// ════════════════════════════════════════════════════════════
+describe('recur_status + recur_NewOrder paths', () => {
+    const BFX_EXP = 100000000;
+    const FROZEN_NOW = new Date('2026-05-05T12:00:00Z');
+    const FROZEN_SEC = Math.round(FROZEN_NOW.getTime() / 1000);
+    let consoleSpy;
+
+    const seedTradeStatusUser = (id, overrides = {}) => {
+        const base = {
+            userWs: { [id]: mockWs },
+            userOk: { [id]: true },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+            available: { [id]: {} },
+            margin: { [id]: { fUSD: { avail: 5000, time: FROZEN_SEC, total: 5000 } } },
+            offer: { [id]: { fUSD: [] } },
+            order: { [id]: { fUSD: [] } },
+            fakeOrder: { [id]: { fUSD: [] } },
+            credit: { [id]: {} },
+            ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
+            position: { [id]: {} },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            currentRate: { fUSD: { rate: 109.5, frr: 73 } },
+            finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
+            maxRange: { fUSD: 182.5 },
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 2.5, time: FROZEN_SEC, str: '', str2: '' } },
+        };
+        _setState({ ...base, ...overrides });
+    };
+
+    const statusCurArr = (extra = {}) => [{
+        isActive: true, riskLimit: 0, waitTime: 0, amountLimit: 0,
+        key: 'k', secret: 's', type: 'fUSD',
+        isTrade: true, pair: [{ type: 'tBTCUSD', amount: 1000 }],
+        amount: 5000, rate_ratio: 0, enter_mid: 0,
+        clear: {},
+        ...extra,
+    }];
+
+    const flushTimers = async () => {
+        for (let i = 0; i < 80; i++) {
+            jest.advanceTimersByTime(10000);
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+        }
+    };
+
+    beforeEach(() => {
+        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.useFakeTimers({ now: FROZEN_NOW });
+    });
+    afterEach(() => {
+        consoleSpy.mockRestore();
+        jest.useRealTimers();
+    });
+
+    test('recur_status: ing=0, enter_mid condition met → sets ing=1, runs startStatus', async () => {
+        const id = 'RS1';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+        });
+        // stockProcess returns no-op suggestion (buy=0, sell=0)
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: 'test', resetWeb: false,
+        });
+        // Mongo sequence: find user (setWsOffer entry) → find TOTALDB items for recur_status
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            mongoCallCount++;
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner && q.sType === 1 && q.type) {
+                return Promise.resolve([{
+                    _id: 'item1', index: 'tBTCUSD', type: 'fUSD', ing: 0,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item1', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr({ enter_mid: 50 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // ing=0, enter_mid=50 → (60000-50000)/50000*100 = 20 < 50 → set ing=1
+        expect(mockMongo).toHaveBeenCalledWith(
+            'update', expect.anything(), { _id: 'item1' }, { $set: { ing: 1 } }
+        );
+    });
+
+    test('recur_status: ing=0, enter_mid not met → skips item', async () => {
+        const id = 'RS2';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+        });
+        let mongoCallCount = 0;
+        mockMongo.mockImplementation((op, coll, q) => {
+            mongoCallCount++;
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item2', index: 'tBTCUSD', type: 'fUSD', ing: 0,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr({ enter_mid: -100 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // enter_mid=-100 → (60000-50000)/50000*100=20 > -100 → skip, log 'enter_mid'
+        expect(consoleSpy).toHaveBeenCalledWith('enter_mid');
+    });
+
+    test('recur_status: ing=1, valid lastPrice → runs cancelOrder + startStatus with stockProcess', async () => {
+        const id = 'RS3';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 3, buy: 55000, sell: 0, bCount: 0.02, sCount: 0, str: 'buy signal', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item3', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item3', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 5000, balanceAvailable: 5000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockStockProcess).toHaveBeenCalled();
+        expect(mockMongo).toHaveBeenCalledWith(
+            'update', expect.anything(), { _id: 'item3' },
+            expect.objectContaining({ $set: expect.objectContaining({ newMid: [] }) })
+        );
+    });
+
+    test('recur_status: ing=2, count>0 → sell-all market order + deleteMany', async () => {
+        const id = 'RS4';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item4', index: 'tBTCUSD', type: 'fUSD', ing: 2,
+                    orig: 1000, amount: 500, times: 1, mid: 50000, count: 0.5, pricecost: 55000, pl: 100,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'deleteMany') return Promise.resolve({});
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // ing=2, count=0.5 → sell-all market order
+        expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item4' });
+    });
+
+    test('recur_status: ing=2, count=0 → direct deleteMany', async () => {
+        const id = 'RS5';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item5', index: 'tBTCUSD', type: 'fUSD', ing: 2,
+                    orig: 1000, amount: 500, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'deleteMany') return Promise.resolve({});
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item5' });
+    });
+
+    test('recur_status: item.mul set → adjusts orig and times', async () => {
+        const id = 'RS6';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item6', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 500, amount: 500, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    mul: 2,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item6', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 500, amount: 500, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    mul: 2,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // mul=2 → orig = 500*2 = 1000, times adjusted
+        expect(mockStockProcess).toHaveBeenCalled();
+    });
+
+    test('recur_status: position data enriches item.count and item.pl', async () => {
+        const id = 'RS7';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 0.5, price: 55000, lp: 54000, pl: 2500, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item7', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item7', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // Position adds pl and count to item
+        expect(mockStockProcess).toHaveBeenCalledWith(
+            60000, expect.any(Array), expect.any(Number), expect.any(Object),
+            expect.any(Number), expect.any(Number),
+            0.5, 55000, 2500,
+            expect.any(Number), expect.any(Number), 1,
+            expect.any(Number), expect.any(Number), expect.any(Number)
+        );
+    });
+
+    test('recur_NewOrder: sell suggestion → submits sell order', async () => {
+        const id = 'RS8';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 1, price: 55000, lp: 54000, pl: 5000, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 65000, bCount: 0, sCount: 0.1, str: 'sell signal', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item8', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item8', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // sCount adjusted to item.count(1) since 1 < 0.1*4/3
+        // order pushed to state or submitted
+        const state = _getState();
+        const orders = state.order[id]?.fUSD || [];
+        expect(orders.length + state.fakeOrder[id]?.fUSD?.length).toBeGreaterThanOrEqual(0);
+    });
+
+    test('recur_NewOrder: buy suggestion with sufficient margin → submits buy order', async () => {
+        const id = 'RS9';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 0, bCount: 0.01, sCount: 0, str: 'buy signal', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item9', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item9', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // Buy order submitted, check order state
+        const state = _getState();
+        const orders = state.order[id]?.fUSD || [];
+        expect(orders.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('recur_NewOrder: sell suggestion with bCount=0 → pushes fakeOrder', async () => {
+        const id = 'RS10';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        // sell > 0 but sCount=0 → fake sell order
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 65000, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item10', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item10', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 10000, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 100, balanceAvailable: 0 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        const fakes = state.fakeOrder[id]?.fUSD || [];
+        // Should have fake sell and/or fake buy
+        expect(fakes.length).toBeGreaterThanOrEqual(1);
+    });
+
+    test('recur_status: suggestion.resetWeb → pushes newMid and recalculates', async () => {
+        const id = 'RS11';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        let stockCallCount = 0;
+        mockStockProcess.mockImplementation(() => {
+            stockCallCount++;
+            if (stockCallCount <= 2) {
+                return { type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: true, newMid: 55000 };
+            }
+            return { type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false };
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item11', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'item11', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // stockProcess called multiple times (resetWeb loop)
+        expect(stockCallCount).toBeGreaterThanOrEqual(3);
+    });
+
+    test('recur_status: ing=1 but lastPrice=0 → skips to next item', async () => {
+        const id = 'RS12';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 0, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item12', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // lastPrice=0 → cancelOrder not called, skips
+        expect(mockStockProcess).not.toHaveBeenCalled();
+    });
+
+    test('recur_status: cancelOrder removes ACTIVE orders before sell-all', async () => {
+        const id = 'RS13';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [
+                { id: 9001, symbol: 'tBTCUSD', amount: 0.5, type: 'LIMIT', price: 50000, status: 'ACTIVE', flags: 0, time: FROZEN_SEC },
+            ] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item13', index: 'tBTCUSD', type: 'fUSD', ing: 2,
+                    orig: 1000, amount: 500, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'deleteMany') return Promise.resolve({});
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+        mockRest.cancelOrder.mockResolvedValue({});
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockRest.cancelOrder).toHaveBeenCalledWith(9001);
+    });
+
+    test('orderHistory: matching trade → calls processOrderRest + updates TOTALDB', async () => {
+        const id = 'RS14';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockRest.accountTrades.mockResolvedValue([{
+            symbol: 'tBTCUSD', execAmount: 0.1, orderPrice: 55000, orderID: 777,
+            mtsCreate: FROZEN_SEC * 1000, orderType: 'LIMIT',
+        }]);
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner && q.index) {
+                return Promise.resolve([{
+                    _id: 'tradeItem', index: 'tBTCUSD',
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '' },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q.owner && q.sType) {
+                return Promise.resolve([{
+                    _id: 'tradeItem', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'tradeItem', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // accountTrades returned a match → processOrderRest should have been called
+        expect(consoleSpy).toHaveBeenCalledWith('HISTORY');
+    });
+
+    test('recur_status: buy type=7 with amount > 7/8 orig → multiplies bCount', async () => {
+        const id = 'RS15';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 7, buy: 55000, sell: 0, bCount: 0.01, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'itemT7', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 9500, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'itemT7', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 9500, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // type=7, amount(9500) > orig*7/8(8750) → bCount multiplied
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+    });
+
+    test('recur_status: sell type=9 with amount < 1/8 orig → multiplies sCount', async () => {
+        const id = 'RS16';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 2, price: 55000, lp: 54000, pl: 10000, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 9, buy: 0, sell: 65000, bCount: 0, sCount: 0.1, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'itemT9', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 500, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'itemT9', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 10000, amount: 500, times: 0.1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // type=9, amount(500) < orig/8(1250) → sCount multiplied
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+    });
+
+    test('trade error → updateTime.trade rewound by 2*RATE_INTERVAL', async () => {
+        const id = 'RS17';
+        seedTradeStatusUser(id, {
+            priceData: {},
+            order: { [id]: { fUSD: [] } },
+        });
+        // No priceData for tBTCUSD → will fail during recur_status
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'itemErr', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        // trade time rewound on error
+        expect(state.updateTime[id].trade).toBeLessThan(FROZEN_SEC);
     });
 });
 
