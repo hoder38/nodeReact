@@ -113,15 +113,9 @@ export const DEFAULT_TAGS = [
     'all item',
     'important',
     'no local',
-    'youtube video',
-    'youtube playlist',
-    'youtube music',
-    'youtube music playlist',
     'playlist unactive',
     'yify movie',
     'dm5 comic',
-    '18-',
-    'all external',
 ]
 
 //parent list

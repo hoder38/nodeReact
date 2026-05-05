@@ -18,9 +18,7 @@ const STORAGEDB = 'storage';
 const PASSWORDDB = 'password';
 const STOCKDB = 'stock';
 const DEFAULT_TAGS = ['adultonly', 'handle', 'unactive', 'recycle', 'first', 'nofirst', 'important', 
-    'nolocal', 'yv', 'yp', 'ym', 'ymp', 'unplaylist', 'yify', 'dm5', 'placeholder1', 'placeholder2', 
-    'all item', 'movie', 'tvseries', 'tvshow', 'animation', 'search', 'hidemeta', 'showmeta', 
-    'megavideo', 'megafolder', 'torrent', 'zip', 'drive'];
+    'nolocal', 'unplaylist', 'yify', 'dm5'];
 const STORAGE_PARENT = [{name: 'video'}, {name: 'image'}, {name: 'archive'}];
 const PASSWORD_PARENT = [{name: 'web'}, {name: 'app'}];
 const STOCK_PARENT = [{name: 'twse'}, {name: 'usse'}];
@@ -196,10 +194,7 @@ describe('isDefaultTag()', () => {
         const result3 = isDefaultTag('unactive');
         expect(result3.index).toBe(2);
         const result4 = isDefaultTag('yify');
-        expect(result4.index).toBe(13);
-        // drive is at a different index, just check it exists
-        const result6 = isDefaultTag('drive');
-        expect(result6.index).toBeGreaterThanOrEqual(0);
+        expect(result4.index).toBe(9);
     });
 
     test('returns {index: 30} for youtube patterns (you_*, ych_*, ypl_*)', () => {
@@ -1513,7 +1508,7 @@ describe('Constants and Utilities', () => {
     test('DEFAULT_TAGS array is complete', () => {
         expect(DEFAULT_TAGS).toContain('adultonly');
         expect(DEFAULT_TAGS).toContain('yify');
-        expect(DEFAULT_TAGS.length).toBeGreaterThan(20);
+        expect(DEFAULT_TAGS.length).toBe(11);
     });
 
     test('GENRE_LIST and GENRE_LIST_CH have matching lengths', () => {
@@ -1809,7 +1804,7 @@ describe('STOCKDB addTag and delTag with important tag', () => {
     });
 });
 
-describe('STORAGEDB tagQuery with unplaylist tag (index 12)', () => {
+describe('STORAGEDB tagQuery with unplaylist tag (index 8)', () => {
     let tool, session, user;
 
     beforeEach(() => {

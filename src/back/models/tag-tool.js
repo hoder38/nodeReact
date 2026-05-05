@@ -150,64 +150,6 @@ export default function process(collection) {
                 parentList: parentList,
             };
         },
-        /*getYoutubeQuery: function(search_arr, sortName, pageToken) {
-            let query = {
-                type: 0,
-                maxResults: QUERY_LIMIT,
-                order: (sortName === 'count') ? 'viewCount' : (sortName === 'mtime') ? 'date' : 'relevance',
-            };
-            let query_arr = [];
-            let id_arr = [];
-            let pl_arr = [];
-            for (let i of search_arr) {
-                const index = isDefaultTag(normalize(i));
-                if (!index || index.index === 0 || index.index === 6 || index.index === 17){
-                    query_arr.push(denormalize(i));
-                //ymp
-                } else if (index.index === 11) {
-                    query.type = 20 + query.type%10;
-                //ym
-                } else if (index.index === 10) {
-                    query.type = Math.floor(query.type/10)*10 + 2;
-                //yp
-                } else if (index.index === 9) {
-                    query.type = 10 + query.type%10;
-                //yv
-                } else if (index.index === 8 || index.index === 22) {
-                    query.type = Math.floor(query.type/10)*10 + 1;
-                } else if (index.index === 30) {
-                    const index1 = isDefaultTag(i);
-                    if (index1[1] === 'ou') {
-                        id_arr.push(index1[2]);
-                    } else if (index1[1] === 'pl') {
-                        pl_arr.push(index1[2]);
-                    } else if (index1[1] === 'ch') {
-                        query.channelId = index1[2];
-                    } else {
-                        query_arr.push(i);
-                    }
-                }
-            }
-            if (!query.type) {
-                return false;
-            }
-            if (!query.channelId) {
-                if (query_arr.length > 0) {
-                    query.keyword = query_arr.join(' ');
-                }
-            }
-            if (pageToken) {
-                query.pageToken = pageToken;
-            } else {
-                if (id_arr.length > 0) {
-                    query.id_arr = id_arr;
-                }
-                if (pl_arr.length > 0) {
-                    query.pl_arr = pl_arr;
-                }
-            }
-            return query;
-        },*/
         getYifyQuery: function(search_arr, sortName, page) {
             let search = false;
             let genre = null;
@@ -215,7 +157,7 @@ export default function process(collection) {
             search_arr.forEach(s => {
                 const normal = normalize(s);
                 const index = isDefaultTag(normal);
-                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
+                if (!index || index.index === 0 || index.index === 6) {
                     if (GENRE_LIST.includes(normal)) {
                         genre = normal;
                         query_term = null;
@@ -226,7 +168,7 @@ export default function process(collection) {
                         query_term = s;
                         genre = null;
                     }
-                } else if (index.index === 13 || index.index === 22) {
+                } else if (index.index === 9) {
                     search = true;
                 }
             });
@@ -258,11 +200,9 @@ export default function process(collection) {
             search_arr.forEach(s => {
                 const normal = normalize(s);
                 const index = isDefaultTag(normal);
-                if (!index || index.index === 0 || index.index === 6 || index.index === 17) {
+                if (!index || index.index === 0 || index.index === 6) {
                     if (index.index === 0) {
                         a18 = 1;
-                    } else if (index.index === 6) {
-                        a18 = 0;
                     } else {
                         const mIndex = DM5_LIST.indexOf(normal);
                         if (mIndex !== -1) {
@@ -279,7 +219,7 @@ export default function process(collection) {
                             query_term = s;
                         }
                     }
-                } else if (index.index === 14 || index.index === 22) {
+                } else if (index.index === 10) {
                     search = true;
                 }
             });
@@ -972,7 +912,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                     console.log(ret.nosql);
                     return ret;
                 }
-            } else if (index.index === 12) {
+            } else if (index.index === 8) {
                 if (checkAdmin(1, user)) {
                     const unDay = user.unDay? user.unDay: UNACTIVE_DAY;
                     const ret = {nosql: {
@@ -992,7 +932,7 @@ const getStorageQuerySql = function(user, tagList, exactly) {
                     console.log(ret.nosql);
                     return ret;
                 }
-            } else if (index.index === 4 || index.index === 6 || index.index === 8 || index.index === 9 || index.index === 10 || index.index === 11 || index.index === 13 || index.index === 14 || index.index === 15 || index.index === 16 || index.index === 18 || index.index === 19 || index.index === 20 || index.index === 21 || index.index === 22) {
+            } else if (index.index === 4 || index.index === 6 || index.index === 9 || index.index === 10) {
             } else if (index.index === 5) {
                 is_first = false;
             } else if (index.index === 7) {
