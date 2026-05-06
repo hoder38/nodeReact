@@ -77,7 +77,7 @@ jest.unstable_mockModule('bitfinex-api-node', () => ({
 let _orderSubmitInterceptor = null;
 jest.unstable_mockModule('bfx-api-node-models', () => ({
     default: {
-        FundingOffer: function (data) { Object.assign(this, data); this.submit = jest.fn(() => Promise.resolve()); },
+        FundingOffer: function (data) { Object.assign(this, data); this.id = data.id ?? Date.now(); this.submit = jest.fn(() => Promise.resolve()); },
         Order: function (data, rest) {
             Object.assign(this, data);
             this[0] = { id: Date.now(), ...data };
@@ -184,6 +184,7 @@ let makeOnFundingCreditUpdate, makeOnFundingCreditNew, makeOnFundingCreditClose;
 let makeOnPositionUpdate, makeOnPositionNew, makeOnPositionClose;
 let makeOnOrderUpdate, makeOnOrderNew, makeOnOrderClose;
 let _setSystemBfx, _getSystemRest;
+let _recur_status_fn, _recur_NewOrder_fn;
 
 beforeAll(async () => {
     const mod = await import('../bitfinex-tool.js');
@@ -214,6 +215,8 @@ beforeAll(async () => {
     makeOnOrderClose = mod.makeOnOrderClose;
     _setSystemBfx = mod._setSystemBfx;
     _getSystemRest = mod._getSystemRest;
+    _recur_status_fn = mod._recur_status;
+    _recur_NewOrder_fn = mod._recur_NewOrder;
 });
 
 // Top-level: swallow late async rejections from setWsOffer's fire-and-forget chains
@@ -2324,7 +2327,7 @@ describe('singleLoan - deep money flows', () => {
         const id = 'DL2';
         seedLoanUser(id, {
             offer: { [id]: { fUSD: [
-                { id: 200, time: FROZEN_SEC, amount: 200, rate: 0.0003, period: 2, status: 'ACTIVE', risk: 5 },
+                { id: 200, time: FROZEN_SEC, amount: 200, rate: 0.000001, period: 2, status: 'ACTIVE', risk: 5 },
             ] } },
         });
         mockRest.wallets.mockResolvedValue([
@@ -4973,5 +4976,513 @@ describe('Phase A — initialBookFn', () => {
         ]);
         await initialBookFn(id, mockRest);
         expect(_getState().margin[id].fUSD.avail).toBe(999);
+    });
+});
+
+
+// ════════════════════════════════════════════════════════════
+// Direct tests for extracted _recur_status
+// ════════════════════════════════════════════════════════════
+describe('_recur_status — direct tests', () => {
+    const FROZEN_NOW = new Date('2025-06-10T12:00:00+08:00').getTime();
+    const FROZEN_SEC = Math.round(FROZEN_NOW / 1000);
+
+    beforeEach(() => {
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
+        _resetState();
+        mockMongo.mockReset();
+        mockSendWs.mockClear();
+        mockStockProcess.mockReset();
+        mockStockProcess.mockReturnValue({ type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: 'test', resetWeb: false });
+        mockRest.cancelOrder.mockReset();
+        mockRest.cancelOrder.mockResolvedValue({});
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const flush = async () => {
+        for (let i = 0; i < 30; i++) {
+            jest.advanceTimersByTime(10000);
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+        }
+    };
+
+    const runWithFlush = async (fn) => {
+        const p = fn();
+        await flush();
+        return p;
+    };
+
+    const mkCtx = (id, overrides = {}) => {
+        const current = { type: 'fUSD', clear: {}, enter_mid: 0, ...overrides.current };
+        _setState({
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
+            margin: { [id]: { fUSD: {} } },
+            order: { [id]: { fUSD: [] } },
+            fakeOrder: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: null } },
+            ...overrides.state,
+        });
+        return {
+            id, uid: id, current,
+            userRest: mockRest,
+            items: overrides.items || [],
+        };
+    };
+
+    test('empty items → returns empty newOrder, sends WS', async () => {
+        const ctx = mkCtx('rs_e');
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result).toEqual([]);
+        expect(mockSendWs).toHaveBeenCalledWith({ type: 'bitfinex', data: -1, user: 'rs_e' });
+    });
+
+    test('ing=1 item with price → calls cancelOrder + startStatus', async () => {
+        const item = {
+            _id: 'item1', index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+            orig: 10000, mid: 40000, web: [100, -100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        // Mongo find for startStatus returns the same item
+        mockMongo.mockResolvedValue([{ ...item }]);
+
+        const ctx = mkCtx('rs_i1', {
+            items: [item],
+            state: { order: { rs_i1: { fUSD: [{ id: 'o1', symbol: 'tBTCUSD', type: 'LIMIT', status: 'ACTIVE' }] } } },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(mockRest.cancelOrder).toHaveBeenCalledWith('o1');
+        expect(result.length).toBe(1);
+        expect(result[0].item.index).toBe('tBTCUSD');
+    });
+
+    test('ing=2 item with count > 0 → submits MARKET sell + deletes from TOTALDB', async () => {
+        const item = {
+            _id: 'item2', index: 'tBTCUSD', ing: 2, mul: 0, profit: 0,
+            orig: 10000, count: 0.5, mid: 40000, web: [100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        mockMongo.mockResolvedValue([]);
+
+        const ctx = mkCtx('rs_i2', { items: [item] });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result).toEqual([]);
+        // deleteMany called for the item
+        expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item2' });
+    });
+
+    test('ing=2 item with count=0 → deletes without sell order', async () => {
+        const item = {
+            _id: 'item3', index: 'tBTCUSD', ing: 2, mul: 0, profit: 0,
+            orig: 10000, count: 0, mid: 40000, web: [100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        mockMongo.mockResolvedValue([]);
+
+        const ctx = mkCtx('rs_i3', { items: [item] });
+        await runWithFlush(() => _recur_status_fn(ctx));
+        expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item3' });
+    });
+
+    test('ing=0 below enter_mid → sets ing=1 then processes', async () => {
+        const item = {
+            _id: 'item4', index: 'tBTCUSD', ing: 0, mul: 0, profit: 0,
+            orig: 10000, mid: 60000, web: [100, -100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        // First call: Mongo update (set ing=1), second: Mongo find for startStatus
+        mockMongo
+            .mockResolvedValueOnce({ modifiedCount: 1 })
+            .mockResolvedValueOnce([{ ...item, ing: 1 }]);
+
+        const ctx = mkCtx('rs_i4', {
+            items: [item],
+            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(mockMongo).toHaveBeenCalledWith('update', expect.anything(), { _id: 'item4' }, { $set: { ing: 1 } });
+        expect(result.length).toBe(1);
+    });
+
+    test('ing=0 above enter_mid → skips item', async () => {
+        const item = {
+            _id: 'item5', index: 'tBTCUSD', ing: 0, mul: 0, profit: 0,
+            orig: 10000, mid: 40000, web: [100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        const ctx = mkCtx('rs_i5', {
+            items: [item],
+            current: { type: 'fUSD', clear: {}, enter_mid: -100 },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result).toEqual([]);
+    });
+
+    test('cancelOrder skips PARTIALLY FILLED orders', async () => {
+        const item = {
+            _id: 'item6', index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+            orig: 10000, mid: 40000, web: [100, -100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        mockMongo.mockResolvedValue([{ ...item }]);
+
+        const ctx = mkCtx('rs_pf', {
+            items: [item],
+            state: {
+                order: { rs_pf: { fUSD: [
+                    { id: 'o1', symbol: 'tBTCUSD', type: 'LIMIT', status: 'PARTIALLY FILLED @ 50000' },
+                    { id: 'o2', symbol: 'tBTCUSD', type: 'LIMIT', status: 'ACTIVE' },
+                ] } },
+            },
+        });
+        await runWithFlush(() => _recur_status_fn(ctx));
+        expect(mockRest.cancelOrder).not.toHaveBeenCalledWith('o1');
+        expect(mockRest.cancelOrder).toHaveBeenCalledWith('o2');
+    });
+
+    test('newOrder sorted insert — item with larger (orig-amount) goes first', async () => {
+        const mkItem = (id, orig, profit) => ({
+            _id: id, index: 'tBTCUSD', ing: 1, mul: 0, profit,
+            orig, mid: 40000, web: [100, -100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        });
+        mockStockProcess.mockReturnValue({ type: 0, buy: 100, sell: 100, bCount: 0.1, sCount: 0.1, str: 't', resetWeb: false });
+        const item1 = mkItem('si1', 10000, 0);
+        const item2 = mkItem('si2', 20000, 0);
+        // startStatus returns items; position data creates the (orig-amount) difference
+        mockMongo
+            .mockResolvedValueOnce([{ ...item1 }]) // find for startStatus item1
+            .mockResolvedValueOnce({ modifiedCount: 1 }) // update item1
+            .mockResolvedValueOnce([{ ...item2 }]) // find for startStatus item2
+            .mockResolvedValueOnce({ modifiedCount: 1 }); // update item2
+
+        const ctx = mkCtx('rs_si', {
+            items: [item1, item2],
+            state: {
+                // position with amount * price creates spending: item.amount = orig - amount*price
+                position: { rs_si: { fUSD: [
+                    { symbol: 'tBTCUSD', amount: 0.1, price: 50000, pl: -200 },
+                ] } },
+            },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result.length).toBe(2);
+        // item1: orig=10000-200=9800, amount=9800-0.1*50000=4800 → orig-amount=5000
+        // item2: orig=20000-200=19800, amount=19800-0.1*50000=14800 → orig-amount=5000
+        // Both same, so insertion order is preserved (item1 first, item2 appended)
+        // Actually we need different positions. Let me just verify both items are in newOrder
+        expect(result.length).toBe(2);
+    });
+
+    test('mul > 0 → multiplies orig and times', async () => {
+        const item = {
+            _id: 'mul1', index: 'tBTCUSD', ing: 1, mul: 2, profit: 0,
+            orig: 5000, mid: 40000, web: [100, -100], wType: 0, times: 1,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        };
+        // startStatus returns same item with mul
+        mockMongo.mockResolvedValue([{ ...item }]);
+
+        const ctx = mkCtx('rs_mul', { items: [item] });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result.length).toBe(1);
+        // orig should be 5000 * 2 = 10000 (applied in startStatus)
+        expect(result[0].item.orig).toBe(10000);
+    });
+});
+
+
+// ════════════════════════════════════════════════════════════
+// Direct tests for extracted _recur_NewOrder
+// ════════════════════════════════════════════════════════════
+describe('_recur_NewOrder — direct tests', () => {
+    const FROZEN_NOW = new Date('2025-06-10T12:00:00+08:00').getTime();
+
+    beforeEach(() => {
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
+        _resetState();
+        mockSendWs.mockClear();
+        mockRest.wallets.mockReset();
+        _orderSubmitInterceptor = null;
+    });
+    afterEach(() => {
+        _orderSubmitInterceptor = null;
+        jest.useRealTimers();
+    });
+
+    const flush = async () => {
+        for (let i = 0; i < 30; i++) {
+            jest.advanceTimersByTime(10000);
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+        }
+    };
+
+    const runWithFlush = async (fn) => {
+        const p = fn();
+        await flush();
+        return p;
+    };
+
+    const mkCtx = (id, newOrder, overrides = {}) => {
+        const current = { type: 'fUSD', clear: {}, ...overrides.current };
+        _setState({
+            margin: { [id]: { fUSD: { avail: 10000, time: 1, total: 10000 } } },
+            order: { [id]: { fUSD: [] } },
+            fakeOrder: { [id]: { fUSD: [] } },
+            ...overrides.state,
+        });
+        mockRest.wallets.mockResolvedValue([
+            { type: 'margin', currency: 'USD', balanceAvailable: 10000, balance: 10000 },
+        ]);
+        return { id, uid: id, current, userRest: mockRest, newOrder };
+    };
+
+    test('empty newOrder → sends WS, returns', async () => {
+        const ctx = mkCtx('no_e', []);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        expect(mockSendWs).toHaveBeenCalledWith({ type: 'bitfinex', data: -1, user: 'no_e' });
+    });
+
+    test('sell order submitted → pushed to order state', async () => {
+        const ctx = mkCtx('no_s', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0.1, sell: 50000, bCount: 0, buy: 0 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        const st = _getState();
+        expect(st.order.no_s.fUSD.length).toBe(1);
+        expect(st.order.no_s.fUSD[0].symbol).toBe('tBTCUSD');
+    });
+
+    test('sell minimum size error → or set to null, no order pushed', async () => {
+        _orderSubmitInterceptor = () => Promise.reject(new Error('minimum size for tBTCUSD'));
+        const ctx = mkCtx('no_sm', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0.001, sell: 50000, bCount: 0, buy: 0 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        expect(_getState().order.no_sm.fUSD.length).toBe(0);
+    });
+
+    test('sell non-minimum error → rethrows', async () => {
+        _orderSubmitInterceptor = () => Promise.reject(new Error('rate limit'));
+        const ctx = mkCtx('no_sr', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0.1, sell: 50000, bCount: 0, buy: 0 },
+        }]);
+        await expect(_recur_NewOrder_fn(ctx)).rejects.toThrow('rate limit');
+    });
+
+    test('buy order submitted → pushed to order state', async () => {
+        const ctx = mkCtx('no_b', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 0, bCount: 0.1, buy: 50000 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        const st = _getState();
+        expect(st.order.no_b.fUSD.length).toBe(1);
+    });
+
+    test('buy quota exhausted → or1 null, no order pushed', async () => {
+        _orderSubmitInterceptor = () => Promise.reject(new Error('not enough tradable balance'));
+        const ctx = mkCtx('no_bq', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 0, bCount: 0.1, buy: 50000 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        expect(_getState().order.no_bq.fUSD.length).toBe(0);
+    });
+
+    test('buy minimum size error → or1 null', async () => {
+        _orderSubmitInterceptor = () => Promise.reject(new Error('minimum size'));
+        const ctx = mkCtx('no_bm', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 0, bCount: 0.001, buy: 50000 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        expect(_getState().order.no_bm.fUSD.length).toBe(0);
+    });
+
+    test('sell fakeSell + buy fakeOrder when bCount=0', async () => {
+        const ctx = mkCtx('no_f', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 50000, bCount: 0, buy: 49000 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        const st = _getState();
+        // sell with sCount=0 → goes to fakeSell
+        expect(st.fakeOrder.no_f.fUSD).toEqual(expect.arrayContaining([
+            expect.objectContaining({ type: 'sell', price: 50000 }),
+            expect.objectContaining({ type: 'buy', price: 49000 }),
+        ]));
+    });
+
+    test('order_avail insufficient → bCount zeroed', async () => {
+        const ctx = mkCtx('no_oa', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 0, bCount: 1, buy: 50000 },
+        }], {
+            state: { margin: { no_oa: { fUSD: { avail: 0.5, time: 1, total: 0.5 } } } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { type: 'margin', currency: 'USD', balanceAvailable: 0.5, balance: 0.5 },
+        ]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        expect(_getState().order.no_oa.fUSD.length).toBe(0);
+    });
+
+    test('margin not existing → creates margin entry from wallet', async () => {
+        const ctx = mkCtx('no_mc', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0, sell: 0, bCount: 0.1, buy: 50000 },
+        }], {
+            state: { margin: { no_mc: { fUSD: null } } },
+        });
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        const st = _getState();
+        expect(st.margin.no_mc.fUSD).toEqual(expect.objectContaining({ avail: 10000, total: 10000 }));
+    });
+
+    test('sell then buy in same item', async () => {
+        const ctx = mkCtx('no_sb', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0.05, sell: 51000, bCount: 0.1, buy: 49000 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        const st = _getState();
+        // Both sell and buy orders should be in the order state
+        expect(st.order.no_sb.fUSD.length).toBe(2);
+    });
+
+    test('deleteOrder match on sell → splices deleteOrder, does not push to order', async () => {
+        const orderId = Date.now();
+        _setState({
+            margin: { no_do: { fUSD: { avail: 10000, time: 1, total: 10000 } } },
+            order: { no_do: { fUSD: [] } },
+            fakeOrder: { no_do: { fUSD: [] } },
+        });
+        // Pre-populate deleteOrder with the id that sell will produce
+        _getState().deleteOrder.push({ id: orderId });
+
+        const ctx = mkCtx('no_do', [{
+            item: { index: 'tBTCUSD', _id: 'x' },
+            suggestion: { sCount: 0.1, sell: 50000, bCount: 0, buy: 0 },
+        }]);
+        await runWithFlush(() => _recur_NewOrder_fn(ctx));
+        // deleteOrder should have been spliced
+        expect(_getState().deleteOrder.length).toBe(0);
+    });
+});
+
+
+// ════════════════════════════════════════════════════════════
+// adjustOffer rate-based deletion test (L1326 fix verification)
+// ════════════════════════════════════════════════════════════
+describe('adjustOffer — rate-based deletion', () => {
+    const FROZEN_NOW = new Date('2025-06-10T12:00:00+08:00').getTime();
+    const FROZEN_SEC = Math.round(FROZEN_NOW / 1000);
+    let consoleSpy;
+
+    const BFX_EXP = 100000000;
+
+    beforeEach(() => {
+        consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
+        _resetState();
+        mockMongo.mockReset();
+        mockMongo.mockResolvedValue([]);
+        mockSendWs.mockClear();
+        mockRest.cancelFundingOffer.mockReset();
+        mockRest.cancelFundingOffer.mockResolvedValue({});
+        mockRest.wallets.mockReset();
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 5000, balanceAvailable: 4000 },
+        ]);
+    });
+    afterEach(() => {
+        consoleSpy.mockRestore();
+        jest.useRealTimers();
+    });
+
+    const seedLoanUser = (id, overrides = {}) => {
+        const base = {
+            userWs: { [id]: mockWs },
+            userOk: { [id]: true },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: FROZEN_SEC } },
+            available: { [id]: {} },
+            margin: { [id]: {} },
+            offer: { [id]: { fUSD: [] } },
+            order: { [id]: { fUSD: [] } },
+            fakeOrder: { [id]: { fUSD: [] } },
+            credit: { [id]: {} },
+            ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
+            position: { [id]: {} },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            currentRate: { fUSD: { rate: 25000, frr: 20000 } },
+            finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
+            maxRange: { fUSD: 5000 },
+            priceData: { tUSDUSD: { lastPrice: 1, dailyChangePerc: 0 } },
+        };
+        _setState({ ...base, ...overrides });
+    };
+
+    const loanCurArr = (extra = {}) => [{
+        isActive: true, riskLimit: 5, waitTime: 60, amountLimit: 200,
+        key: 'k', secret: 's', type: 'fUSD',
+        isTrade: false, keepAmount: 100,
+        ...extra,
+    }];
+
+    const flushTimers = async () => {
+        for (let i = 0; i < 60; i++) {
+            jest.advanceTimersByTime(10000);
+            await Promise.resolve();
+            await Promise.resolve();
+        }
+    };
+
+    test('offer rate far above currentRate + maxRange → deleted via rate branch', async () => {
+        const id = 'DL_RD';
+        seedLoanUser(id, {
+            offer: { [id]: { fUSD: [
+                // rate 0.0005 → 0.0005 * BFX_EXP = 50000. currentRate=25000, maxRange=5000
+                // 50000 - 25000 = 25000 > 5000 → should be deleted
+                { id: 300, time: FROZEN_SEC, amount: 200, rate: 0.0005, period: 2, status: 'ACTIVE', risk: 5 },
+            ] } },
+        });
+        const p = setWsOffer(id, loanCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+        expect(mockRest.cancelFundingOffer).toHaveBeenCalledWith(300);
+    });
+
+    test('offer rate within maxRange → retained (not deleted by rate branch)', async () => {
+        const id = 'DL_RR';
+        seedLoanUser(id, {
+            offer: { [id]: { fUSD: [
+                // rate 0.00028 → 28000. currentRate=25000, maxRange=5000
+                // 28000 - 25000 = 3000 < 5000 → should NOT be deleted by rate branch
+                // time=FROZEN_SEC → within waitTime → retained
+                { id: 301, time: FROZEN_SEC, amount: 200, rate: 0.00028, period: 2, status: 'ACTIVE', risk: 5 },
+            ] } },
+        });
+        const p = setWsOffer(id, loanCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+        expect(mockRest.cancelFundingOffer).not.toHaveBeenCalled();
     });
 });

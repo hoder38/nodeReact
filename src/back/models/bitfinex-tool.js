@@ -1017,6 +1017,508 @@ export const initialBookFn = (id, userRest) => {
     }
 };
 
+// ── Extracted recur_status: processes TOTALDB items, returns newOrder[] ──
+export const _recur_status = async ({ id, uid, current, userRest, items }) => {
+    const newOrder = [];
+    fakeOrder[id][current.type] = [];
+
+    for (let idx = 0; idx < items.length; idx++) {
+        let item = items[idx];
+        if (item.mul) {
+            item.orig = item.orig * item.mul;
+            item.times = Math.floor(item.times * item.mul * 10000) / 10000;
+        }
+        margin[id][current.type][item.index] = item.profit;
+        console.log('margin');
+        console.log(margin[id]);
+        const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
+        item.count = 0;
+        item.pricecost = 0;
+        item.pl = 0;
+        if (item.profit) {
+            item.orig += item.profit;
+        }
+        item.amount = item.orig;
+        if (position[id][current.type]) {
+            position[id][current.type].forEach(v => {
+                if (v.symbol === item.index) {
+                    item.orig += v.pl;
+                    item.pl += v.pl;
+                }
+            });
+        }
+        if (position[id][current.type]) {
+            position[id][current.type].forEach(v => {
+                if (v.symbol === item.index) {
+                    item.count += v.amount;
+                    item.amount = item.amount - v.amount * v.price;
+                    item.pricecost = v.price;
+                }
+            });
+        }
+        console.log(item);
+
+        const cancelOrder = async () => {
+            if (order[id][current.type]) {
+                const real_id = order[id][current.type].filter(v => (v.symbol === item.index && !v.type.includes('EXCHANGE')));
+                console.log(real_id);
+                for (const entry of real_id) {
+                    if (entry.status && entry.status.includes('PARTIALLY FILLED')) continue;
+                    await userRest.cancelOrder(entry.id);
+                    await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                }
+            } else {
+                order[id][current.type] = [];
+            }
+        };
+
+        const startStatus = async () => {
+            const nitem = await Mongo('find', TOTALDB, {_id: item._id});
+            if (nitem.length < 1) {
+                return handleError(new HoError(`miss ${item.index}`));
+            }
+            item = nitem[0];
+            if (item.mul) {
+                item.orig = item.orig * item.mul;
+                item.times = Math.floor(item.times * item.mul * 10000) / 10000;
+            }
+            item.count = 0;
+            item.pricecost = 0;
+            item.pl = 0;
+            if (item.profit) {
+                item.orig += item.profit;
+            }
+            item.amount = item.orig;
+            if (position[id][current.type]) {
+                position[id][current.type].forEach(v => {
+                    if (v.symbol === item.index) {
+                        item.orig += v.pl;
+                        item.pl += v.pl;
+                    }
+                });
+            }
+            if (position[id][current.type]) {
+                position[id][current.type].forEach(v => {
+                    if (v.symbol === item.index) {
+                        item.count += v.amount;
+                        item.amount = item.amount - v.amount * v.price;
+                        item.pricecost = v.price;
+                    }
+                });
+            }
+            let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+            let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+             while ((item.newMid.length > 0) &&
+                (((item.newMid[item.newMid.length - 1] > checkMid) && ((+priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
+                 || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((+priceData[item.index].lastPrice > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
+             {
+                console.log(item.newMid[item.newMid.length - 1]);
+                item.newMid.pop();
+                if (/*item.newMid.length === 0 && */Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
+                    item.previous.price = item.tmpPT.price;
+                    item.previous.time = item.tmpPT.time;
+                    item.previous.type = item.tmpPT.type;
+                    item.previous.tprice = item.tmpPT.tprice;
+                    item.tmpPT = {
+                        price: 0,
+                        time: 0,
+                        type: '',
+                        tprice: 0,
+                    };
+                }
+                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+                checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
+            }
+            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+            while(suggestion.resetWeb) {
+                item.tmpPT = {
+                    price: item.previous.price,
+                    time: item.previous.time,
+                    type: item.previous.type,
+                    tprice: item.previous.tprice,
+                };
+                item.previous.time = 0;
+                item.previous.price = '';
+                item.previous.type = '';
+                item.previous.tprice = 0;
+                item.newMid.push(suggestion.newMid);
+                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+            }
+            let count = 0;
+            let amount = clearP ? 0 : item.amount;
+            if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+                if (suggestion.buy > 0) {
+                    if (suggestion.type === 7) {
+                        if (amount > item.orig * 7 / 8) {
+                            let tmpAmount = amount - item.orig * 3 / 4;
+                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                amount -= (suggestion.buy * item.times);
+                                tmpAmount = amount - item.orig * 3 / 4;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.bCount) {
+                                suggestion.bCount = count * item.times;
+                            }
+                        }
+                    } else if (suggestion.type === 3) {
+                        if (amount > item.orig * 5 / 8) {
+                            let tmpAmount = amount - item.orig / 2;
+                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                amount -= (suggestion.buy * item.times);
+                                tmpAmount = amount - item.orig / 2;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.bCount) {
+                                suggestion.bCount = count * item.times;
+                            }
+                        }
+                    } else if (suggestion.type === 6) {
+                        if (amount > item.orig * 3 / 8) {
+                            let tmpAmount = amount - item.orig / 4;
+                            while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                                amount -= (suggestion.buy * item.times);
+                                tmpAmount = amount - item.orig / 4;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.bCount) {
+                                suggestion.bCount = count * item.times;
+                            }
+                        }
+                    }
+                }
+            }
+            count = 0;
+            amount = item.amount;
+            if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+                if (suggestion.sell > 0) {
+                    if (suggestion.type === 9) {
+                        if (amount < item.orig / 8) {
+                            let tmpAmount = item.orig / 4 - amount;
+                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                tmpAmount = item.orig / 4 - amount;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.sCount) {
+                                suggestion.sCount = count * item.times;
+                            }
+                        }
+                    } else if (suggestion.type === 5) {
+                        if (amount < item.orig * 3 / 8) {
+                            let tmpAmount = item.orig / 2 - amount;
+                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                tmpAmount = item.orig / 2 - amount;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.sCount) {
+                                suggestion.sCount = count * item.times;
+                            }
+                        }
+                    } else if (suggestion.type === 8) {
+                        if (amount < item.orig * 5 / 8) {
+                            let tmpAmount = item.orig * 3 / 4 - amount;
+                            while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                                amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                                tmpAmount = item.orig * 3 / 4 - amount;
+                                count++;
+                            }
+                            if (count * item.times > suggestion.sCount) {
+                                suggestion.sCount = count * item.times;
+                            }
+                        }
+                    }
+                }
+            }
+            console.log(suggestion);
+            priceData[item.index].str2 = suggestion.str;
+            if (item.count < suggestion.sCount * 4 / 3) {
+                suggestion.sCount = item.count;
+            }
+            if (item.amount < suggestion.bCount * suggestion.buy * 4 / 3) {
+                if (item.amount < suggestion.bCount * suggestion.buy * 2 / 3) {
+                    suggestion.bCount = 0;
+                    suggestion.buy = 0;
+                } else {
+                    suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
+                }
+            }
+            await Mongo('update', TOTALDB, {_id: item._id}, {$set : {
+                newMid: item.newMid,
+                tmpPT: item.tmpPT,
+                previous: item.previous,
+            }});
+            let is_insert = false;
+            for (let i = 0; i < newOrder.length; i++) {
+                if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
+                    newOrder.splice(i, 0, {item, suggestion});
+                    is_insert = true;
+                    break;
+                }
+            }
+            if (!is_insert) {
+                newOrder.push({item, suggestion});
+            }
+        };
+
+        if (item.ing === 2) {
+            const delTotal = async () => {
+                await Mongo('deleteMany', TOTALDB, {_id: item._id});
+            };
+            await cancelOrder();
+            if (item.count > 0) {
+                const or = new Order({
+                    cid: Date.now(),
+                    type: 'MARKET',
+                    symbol: item.index,
+                    amount: -item.count,
+                    flags: 1024,
+                }, userRest);
+                await or.submit();
+                await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                let isExist = false;
+                for (let i = 0; i < order[id][current.type].length; i++) {
+                    if (or[0].id === order[id][current.type][i].id) {
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    let isDelete = false;
+                    for (let i = 0; i < deleteOrder.length; i++) {
+                        if (deleteOrder[i].id === or[0].id) {
+                            isDelete = true;
+                            deleteOrder.splice(i, 1);
+                            break;
+                        }
+                    }
+                    if (!isDelete) {
+                        order[id][current.type].push({
+                            id: or[0].id,
+                            time: Math.round(new Date().getTime() / 1000),
+                            amount: or[0].amount,
+                            type: or[0].type,
+                            symbol: or[0].symbol,
+                            price: or[0].price,
+                            flags: or[0].flags,
+                        });
+                    }
+                }
+            }
+            await delTotal();
+        } else if (item.ing === 1) {
+            if (+priceData[item.index].lastPrice) {
+                await cancelOrder();
+                await startStatus();
+            }
+        } else {
+            current.enter_mid = current.enter_mid ? current.enter_mid : 0;
+            if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
+                await Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}});
+                if (+priceData[item.index].lastPrice) {
+                    await cancelOrder();
+                    await startStatus();
+                }
+            } else {
+                console.log('enter_mid');
+                console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
+            }
+        }
+    }
+
+    sendWs({
+        type: 'bitfinex',
+        data: -1,
+        user: id,
+    });
+    return newOrder;
+};
+
+// ── Extracted recur_NewOrder: submits sell/buy orders from newOrder[] ──
+export const _recur_NewOrder = async ({ id, uid, current, userRest, newOrder }) => {
+    for (let idx = 0; idx < newOrder.length; idx++) {
+        const item = newOrder[idx].item;
+        const suggestion = newOrder[idx].suggestion;
+
+        // ── sell leg ──
+        if (suggestion.sCount > 0 && suggestion.sell) {
+            console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
+            let or = new Order({
+                cid: Date.now(),
+                type: 'LIMIT',
+                symbol: item.index,
+                amount: -suggestion.sCount,
+                price: suggestion.sell,
+                flags: 1024,
+            }, userRest);
+            try {
+                await or.submit();
+            } catch (err) {
+                const msg = err.message || err.msg;
+                if (msg.includes('minimum size')) {
+                    or = null;
+                } else {
+                    throw err;
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+            if (or) {
+                let isExist = false;
+                for (let i = 0; i < order[id][current.type].length; i++) {
+                    if (or[0].id === order[id][current.type][i].id) {
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    let isDelete = false;
+                    for (let i = 0; i < deleteOrder.length; i++) {
+                        if (deleteOrder[i].id === or[0].id) {
+                            isDelete = true;
+                            const delobj = deleteOrder.splice(i, 1);
+                            break;
+                        }
+                    }
+                    if (!isDelete) {
+                        order[id][current.type].push({
+                            id: or[0].id,
+                            time: Math.round(new Date().getTime() / 1000),
+                            amount: or[0].amount,
+                            type: or[0].type,
+                            symbol: or[0].symbol,
+                            price: or[0].price,
+                            flags: or[0].flags,
+                        });
+                    }
+                }
+            }
+        } else if (suggestion.sell) {
+            fakeOrder[id][current.type].push({
+                type: 'sell',
+                time: Math.round(new Date().getTime() / 1000),
+                price: suggestion.sell,
+                symbol: item.index,
+            });
+        }
+
+        // ── buy leg ──
+        if (suggestion.bCount > 0 && suggestion.buy) {
+            const wallets = await userRest.wallets();
+            for (let i = 0; i < wallets.length; i++){
+                if (wallets[i].type === 'margin' && wallets[i].currency === current.type.substr(1)) {
+                    if (margin[id][current.type]) {
+                        margin[id][current.type]['avail'] = wallets[i].balanceAvailable;
+                        margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
+                        margin[id][current.type]['total'] = wallets[i].balance;
+                    } else {
+                        margin[id][current.type] = {
+                            avail: wallets[i].balanceAvailable,
+                            time: Math.round(new Date().getTime() / 1000),
+                            total: wallets[i].balance,
+                        };
+                    }
+                    break;
+                }
+            }
+            console.log(margin[id]);
+            const order_avail = (margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
+            if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
+                if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
+                    suggestion.bCount = 0;
+                    suggestion.buy = 0;
+                } else {
+                    suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
+                }
+            }
+            if (suggestion.bCount > 0 && suggestion.buy) {
+                console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
+                let or1 = null;
+                const submitOrderBuy = async (quotaChk) => {
+                    if (quotaChk <= 0) {
+                        or1 = null;
+                        return;
+                    }
+                    or1 = new Order({
+                        cid: Date.now(),
+                        type: 'LIMIT',
+                        symbol: item.index,
+                        amount: suggestion.bCount * quotaChk / 10,
+                        price: suggestion.buy,
+                    }, userRest);
+                    try {
+                        await or1.submit();
+                    } catch (err) {
+                        const msg = err.message || err.msg;
+                        if (msg.includes('not enough tradable balance')) {
+                            handleError(err, `${id} Total Updata Error`);
+                            await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                            return submitOrderBuy(quotaChk - 1);
+                        } else if (msg.includes('minimum size')) {
+                            or1 = null;
+                            return;
+                        } else {
+                            throw err;
+                        }
+                    }
+                };
+                await submitOrderBuy(10);
+                await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                if (or1) {
+                    let isExist = false;
+                    for (let i = 0; i < order[id][current.type].length; i++) {
+                        if (or1[0].id === order[id][current.type][i].id) {
+                            isExist = true;
+                            break;
+                        }
+                    }
+                    if (!isExist) {
+                        let isDelete = false;
+                        for (let i = 0; i < deleteOrder.length; i++) {
+                            if (deleteOrder[i].id === or1[0].id) {
+                                isDelete = true;
+                                const delobj = deleteOrder.splice(i, 1);
+                                break;
+                            }
+                        }
+                        if (!isDelete) {
+                            order[id][current.type].push({
+                                id: or1[0].id,
+                                time: Math.round(new Date().getTime() / 1000),
+                                amount: or1[0].amount,
+                                type: or1[0].type,
+                                symbol: or1[0].symbol,
+                                price: or1[0].price,
+                                flags: or1[0].flags,
+                            });
+                        }
+                    }
+                }
+            } else if (suggestion.buy) {
+                fakeOrder[id][current.type].push({
+                    type: 'buy',
+                    time: Math.round(new Date().getTime() / 1000),
+                    price: suggestion.buy,
+                    symbol: item.index,
+                });
+            }
+        } else if (suggestion.buy) {
+            fakeOrder[id][current.type].push({
+                type: 'buy',
+                time: Math.round(new Date().getTime() / 1000),
+                price: suggestion.buy,
+                symbol: item.index,
+            });
+        }
+    }
+
+    sendWs({
+        type: 'bitfinex',
+        data: -1,
+        user: id,
+    });
+};
+
 export const setWsOffer = (id, curArr=[], uid) => {
     //檢查跟設定active
     curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.pair))) ? true : false);
@@ -1323,7 +1825,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                             console.log(keep_available);
                             console.log(newAmount);
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id, newAmount});
-                        } else if ((v.rate - currentRate[current.type].rate) > maxRange[current.type]) {
+                        } else if ((v.rate * BITFINEX_EXP - currentRate[current.type].rate) > maxRange[current.type]) {
                             needDelete.push({risk: v.risk, amount: v.amount, rate: v.rate * BITFINEX_EXP, id: v.id});
                         } else {
                             const DRT = getDR(v.rate * BITFINEX_EXP);
@@ -1882,553 +2384,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
                 return order_recur(oss.length - 1);
             });
-            return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur().then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(items => {
-                const newOrder = [];
-                fakeOrder[id][current.type] = [];
-                const recur_status = index => {
-                    if (index >= items.length) {
-                        sendWs({
-                            type: 'bitfinex',
-                            data: -1,
-                            user: id,
-                        });
-                        return Promise.resolve();
-                    } else {
-                        let item = items[index];
-                        //market cap multiple
-                        if (item.mul) {
-                            item.orig = item.orig * item.mul;
-                            item.times = Math.floor(item.times * item.mul * 10000) / 10000;
-                        }
-                        margin[id][current.type][item.index] = item.profit;
-                        console.log('margin');
-                        console.log(margin[id]);
-                        const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
-                        item.count = 0;
-                        item.pricecost = 0;
-                        item.pl = 0;
-                        if (item.profit) {
-                            item.orig += item.profit;
-                        }
-                        item.amount = item.orig;
-                        if (position[id][current.type]) {
-                            position[id][current.type].forEach(v => {
-                                if (v.symbol === item.index) {
-                                    item.orig += v.pl;
-                                    item.pl += v.pl;
-                                }
-                            });
-                        }
-                        if (position[id][current.type]) {
-                            position[id][current.type].forEach(v => {
-                                if (v.symbol === item.index) {
-                                    item.count += v.amount;
-                                    item.amount = item.amount - v.amount * v.price;
-                                    item.pricecost = v.price;
-                                }
-                            });
-                        }
-                        console.log(item);
-                        const cancelOrder = rest => {
-                            if (order[id][current.type]) {
-                                const real_id = order[id][current.type].filter(v => (v.symbol === item.index && !v.type.includes('EXCHANGE')));
-                                console.log(real_id);
-                                const real_delete = async () => {
-                                    for (let index = 0; index < real_id.length; index++) {
-                                        if (real_id[index].status && real_id[index].status.includes('PARTIALLY FILLED')) {
-                                            continue;
-                                        }
-                                        await userRest.cancelOrder(real_id[index].id);
-                                        await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
-                                    }
-                                    return rest ? rest() : Promise.resolve();
-                                };
-                                return real_delete();
-                            } else {
-                                order[id][current.type] = [];
-                                return rest ? rest() : Promise.resolve();
-                            }
-                        }
-                        const startStatus = () => {
-                            return Mongo('find', TOTALDB, {_id: item._id}).then(nitem => {
-                                if (nitem.length < 1) {
-                                    return handleError(new HoError(`miss ${item.index}`));
-                                }
-                                item = nitem[0];
-                                //market cap multiple
-                                if (item.mul) {
-                                    item.orig = item.orig * item.mul;
-                                    item.times = Math.floor(item.times * item.mul * 10000) / 10000;
-                                }
-                                item.count = 0;
-                                item.pricecost = 0;
-                                item.pl = 0;
-                                if (item.profit) {
-                                    item.orig += item.profit;
-                                }
-                                item.amount = item.orig;
-                                if (position[id][current.type]) {
-                                    position[id][current.type].forEach(v => {
-                                        if (v.symbol === item.index) {
-                                            item.orig += v.pl;
-                                            item.pl += v.pl;
-                                        }
-                                    });
-                                }
-                                if (position[id][current.type]) {
-                                    position[id][current.type].forEach(v => {
-                                        if (v.symbol === item.index) {
-                                            item.count += v.amount;
-                                            item.amount = item.amount - v.amount * v.price;
-                                            item.pricecost = v.price;
-                                        }
-                                    });
-                                }
-                                let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                                let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                                 while ((item.newMid.length > 0) &&
-                                    (((item.newMid[item.newMid.length - 1] > checkMid) && ((+priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
-                                     || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((+priceData[item.index].lastPrice > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
-                                 {
-                                    console.log(item.newMid[item.newMid.length - 1]);
-                                    item.newMid.pop();
-                                    if (/*item.newMid.length === 0 && */Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
-                                        item.previous.price = item.tmpPT.price;
-                                        item.previous.time = item.tmpPT.time;
-                                        item.previous.type = item.tmpPT.type;
-                                        item.previous.tprice = item.tmpPT.tprice;
-                                        //item.previous.real = item.tmpPT.real;
-                                        item.tmpPT = {
-                                            price: 0,
-                                            time: 0,
-                                            type: '',
-                                            tprice: 0,
-                                            //real: item.previous.real,
-                                        };
-                                    }
-                                    newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                                    checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                                }
-                                let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
-                                while(suggestion.resetWeb) {
-                                    //if (item.newMid.length === 0) {
-                                        item.tmpPT = {
-                                            price: item.previous.price,
-                                            time: item.previous.time,
-                                            type: item.previous.type,
-                                            tprice: item.previous.tprice,
-                                            //real: item.previous.real,
-                                        };
-                                    //}
-                                    item.previous.time = 0;
-                                    item.previous.price = '';
-                                    item.previous.type = '';
-                                    item.previous.tprice = 0;
-                                    //item.previous.real = false;
-                                    item.newMid.push(suggestion.newMid);
-                                    newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                                    suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
-                                }
-                                //console.log(suggestion);
-                                let count = 0;
-                                let amount = clearP ? 0 : item.amount;
-                                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
-                                    if (suggestion.buy > 0) {
-                                        if (suggestion.type === 7) {
-                                            if (amount > item.orig * 7 / 8) {
-                                                let tmpAmount = amount - item.orig * 3 / 4;
-                                                while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                                    amount -= (suggestion.buy * item.times);
-                                                    tmpAmount = amount - item.orig * 3 / 4;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.bCount) {
-                                                    suggestion.bCount = count * item.times;
-                                                }
-                                            }
-                                        } else if (suggestion.type === 3) {
-                                            if (amount > item.orig * 5 / 8) {
-                                                let tmpAmount = amount - item.orig / 2;
-                                                while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                                    amount -= (suggestion.buy * item.times);
-                                                    tmpAmount = amount - item.orig / 2;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.bCount) {
-                                                    suggestion.bCount = count * item.times;
-                                                }
-                                            }
-                                        } else if (suggestion.type === 6) {
-                                            if (amount > item.orig * 3 / 8) {
-                                                let tmpAmount = amount - item.orig / 4;
-                                                while ((tmpAmount - suggestion.buy * item.times) > 0) {
-                                                    amount -= (suggestion.buy * item.times);
-                                                    tmpAmount = amount - item.orig / 4;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.bCount) {
-                                                    suggestion.bCount = count * item.times;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                count = 0;
-                                amount = item.amount;
-                                if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
-                                    if (suggestion.sell > 0) {
-                                        if (suggestion.type === 9) {
-                                            if (amount < item.orig / 8) {
-                                                let tmpAmount = item.orig / 4 - amount;
-                                                while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                                    amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                                    tmpAmount = item.orig / 4 - amount;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.sCount) {
-                                                    suggestion.sCount = count * item.times;
-                                                }
-                                            }
-                                        } else if (suggestion.type === 5) {
-                                            if (amount < item.orig * 3 / 8) {
-                                                let tmpAmount = item.orig / 2 - amount;
-                                                while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                                    amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                                    tmpAmount = item.orig / 2 - amount;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.sCount) {
-                                                    suggestion.sCount = count * item.times;
-                                                }
-                                            }
-                                        } else if (suggestion.type === 8) {
-                                            if (amount < item.orig * 5 / 8) {
-                                                let tmpAmount = item.orig * 3 / 4 - amount;
-                                                while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
-                                                    amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
-                                                    tmpAmount = item.orig * 3 / 4 - amount;
-                                                    count++;
-                                                }
-                                                if (count * item.times > suggestion.sCount) {
-                                                    suggestion.sCount = count * item.times;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                console.log(suggestion);
-                                priceData[item.index].str2 = suggestion.str;
-                                /*let item_count = 0;
-                                if (position[id][current.type]) {
-                                    position[id][current.type].forEach(v => {
-                                        if (v.symbol === item.index) {
-                                            item_count += v.amount;
-                                        }
-                                    });
-                                }*/
-                                if (item.count < suggestion.sCount * 4 / 3) {
-                                    suggestion.sCount = item.count;
-                                }
-                                if (item.amount < suggestion.bCount * suggestion.buy * 4 / 3) {
-                                    if (item.amount < suggestion.bCount * suggestion.buy * 2 / 3) {
-                                        suggestion.bCount = 0;
-                                        suggestion.buy = 0;
-                                    } else {
-                                        suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
-                                    }
-                                }
-                                return Mongo('update', TOTALDB, {_id: item._id}, {$set : {
-                                    newMid: item.newMid,
-                                    tmpPT: item.tmpPT,
-                                    previous: item.previous,
-                                }}).then(result => {
-                                    console.log(result);
-                                    let is_insert = false;
-                                    for (let i = 0; i < newOrder.length; i++) {
-                                        if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
-                                            newOrder.splice(i, 0, {item, suggestion});
-                                            is_insert = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!is_insert) {
-                                        newOrder.push({item, suggestion});
-                                    }
-                                    return recur_status(index + 1);
-                                });
-                            });
-                        }
-                        if (item.ing === 2) {
-                            const sellAll = () => {
-                                /*let item_count = 0;
-                                if (position[id][current.type]) {
-                                    position[id][current.type].forEach(v => {
-                                        if (v.symbol === item.index) {
-                                            item_count += v.amount;
-                                        }
-                                    });
-                                }
-                                item_count = (item.count < item_count) ? item.count : item_count;*/
-                                const delTotal = () => Mongo('deleteMany', TOTALDB, {_id: item._id}).then(() => recur_status(index + 1));
-                                if (item.count > 0) {
-                                    const or = new Order({
-                                        cid: Date.now(),
-                                        type: 'MARKET',
-                                        symbol: item.index,
-                                        amount: -item.count,
-                                        flags: 1024,
-                                    }, userRest);
-                                    return or.submit().then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
-                                        let isExist = false;
-                                        for (let i = 0; i < order[id][current.type].length; i++) {
-                                            if (or[0].id === order[id][current.type][i].id) {
-                                                isExist = true;
-                                                break;
-                                            }
-                                        }
-                                        if (!isExist) {
-                                            let isDelete = false;
-                                            for (let i = 0; i < deleteOrder.length; i++) {
-                                                if (deleteOrder[i].id === or[0].id) {
-                                                    isDelete = true;
-                                                    deleteOrder.splice(i, 1);
-                                                    break;
-                                                }
-                                            }
-                                            if (!isDelete) {
-                                                order[id][current.type].push({
-                                                    id: or[0].id,
-                                                    time: Math.round(new Date().getTime() / 1000),
-                                                    amount: or[0].amount,
-                                                    type: or[0].type,
-                                                    symbol: or[0].symbol,
-                                                    price: or[0].price,
-                                                    flags: or[0].flags,
-                                                });
-                                            }
-                                        }
-                                        return delTotal()
-                                    });
-                                } else {
-                                    return delTotal();
-                                }
-                            }
-                            return cancelOrder(sellAll);
-                        } else if (item.ing === 1) {
-                            if (+priceData[item.index].lastPrice) {
-                                return cancelOrder().then(() => startStatus());
-                            } else {
-                                return recur_status(index + 1);
-                            }
-                        } else {
-                            current.enter_mid = current.enter_mid ? current.enter_mid : 0;
-                            if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
-                                return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
-                                    if (+priceData[item.index].lastPrice) {
-                                        return cancelOrder().then(() => startStatus());
-                                    } else {
-                                        return recur_status(index + 1);
-                                    }
-                                });
-                            } else {
-                                console.log('enter_mid');
-                                console.log((+priceData[item.index].lastPrice - item.mid) / item.mid * 100);
-                                return recur_status(index + 1);
-                            }
-                        }
-                    }
-                }
-                const recur_NewOrder = index => {
-                    if (index >= newOrder.length) {
-                        sendWs({
-                            type: 'bitfinex',
-                            data: -1,
-                            user: id,
-                        });
-                        return Promise.resolve();
-                    } else {
-                        const item = newOrder[index].item;
-                        const suggestion = newOrder[index].suggestion;
-                        const submitBuy = () => {
-                            /*if (current.clear === true || current.clear[item.index] === true) {
-                                return recur_NewOrder(index + 1);
-                            }
-                            if (item.amount < suggestion.bCount * suggestion.buy) {
-                                suggestion.bCount = Math.floor(item.amount / suggestion.buy * 10000) / 10000;
-                            }*/
-                            return userRest.wallets().then(wallet => {
-                                for (let i = 0; i < wallet.length; i++){
-                                    if (wallet[i].type === 'margin' && wallet[i].currency === current.type.substr(1)) {
-                                        if (margin[id][current.type]) {
-                                            margin[id][current.type]['avail'] = wallet[i].balanceAvailable;
-                                            margin[id][current.type]['time'] = Math.round(new Date().getTime() / 1000);
-                                            margin[id][current.type]['total'] = wallet[i].balance;
-                                        } else {
-                                            margin[id][current.type] = {
-                                                avail: wallet[i].balanceAvailable,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                total: wallet[i].balance,
-                                            }
-                                        }
-                                        break;
-                                    }
-                                }
-                                console.log(margin[id]);
-                                const order_avail = (margin[id][current.type] && margin[id][current.type].avail && (margin[id][current.type].avail - 1) > 0) ? SUPPORT_LEVERAGE[item.index] ? SUPPORT_LEVERAGE[item.index] * (margin[id][current.type].avail - 1) : margin[id][current.type].avail - 1 : 0;
-                                if (order_avail < suggestion.bCount * suggestion.buy * 4 / 3) {
-                                    if (order_avail < suggestion.bCount * suggestion.buy * 2 / 3) {
-                                        suggestion.bCount = 0;
-                                        suggestion.buy = 0;
-                                    } else {
-                                        suggestion.bCount = Math.floor(order_avail / suggestion.buy * 10000) / 10000;
-                                    }
-                                }
-                                if (suggestion.bCount > 0 && suggestion.buy) {
-                                    console.log(`buy ${item.index} ${suggestion.bCount} ${suggestion.buy}`);
-                                    let or1 = null;
-                                    const submitOrderBuy = quotaChk => {
-                                        if (quotaChk <= 0) {
-                                            or1 = null;
-                                            return Promise.resolve();
-                                        }
-                                        or1 = new Order({
-                                            cid: Date.now(),
-                                            type: 'LIMIT',
-                                            symbol: item.index,
-                                            amount: suggestion.bCount * quotaChk / 10,
-                                            price: suggestion.buy,
-                                        }, userRest);
-                                        return or1.submit().catch(err => {
-                                            const msg = err.message || err.msg;
-                                            if (msg.includes('not enough tradable balance')) {
-                                                //sendWs(`${id} Total Updata Error: ${err.message||err.msg}`, 0, 0, true);
-                                                handleError(err, `${id} Total Updata Error`);
-                                                return new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000)).then(() => submitOrderBuy(quotaChk - 1));
-                                            } else if (msg.includes('minimum size')) {
-                                                or1 = null;
-                                                return Promise.resolve();
-                                            } else {
-                                                throw err;
-                                            }
-                                        });
-                                    }
-                                    return submitOrderBuy(10).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
-                                        if (or1) {
-                                            let isExist = false;
-                                            for (let i = 0; i < order[id][current.type].length; i++) {
-                                                if (or1[0].id === order[id][current.type][i].id) {
-                                                    isExist = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!isExist) {
-                                                let isDelete = false;
-                                                for (let i = 0; i < deleteOrder.length; i++) {
-                                                    if (deleteOrder[i].id === or1[0].id) {
-                                                        isDelete = true;
-                                                        const delobj = deleteOrder.splice(i, 1);
-                                                        /*if (delobj.process){
-                                                            return processOrderRest(delobj.amount, delobj.price, item).then(() => recur_NewOrder(index + 1));
-                                                        }*/
-                                                        break;
-                                                    }
-                                                }
-                                                if (!isDelete) {
-                                                    order[id][current.type].push({
-                                                        id: or1[0].id,
-                                                        time: Math.round(new Date().getTime() / 1000),
-                                                        amount: or1[0].amount,
-                                                        type: or1[0].type,
-                                                        symbol: or1[0].symbol,
-                                                        price: or1[0].price,
-                                                        flags: or1[0].flags,
-                                                    });
-                                                }
-                                            }
-                                        }
-                                        return recur_NewOrder(index + 1);
-                                    });
-                                } else if (suggestion.buy) {
-                                    fakeOrder[id][current.type].push({
-                                        type: 'buy',
-                                        time: Math.round(new Date().getTime() / 1000),
-                                        price: suggestion.buy,
-                                        symbol: item.index,
-                                    });
-                                    return recur_NewOrder(index + 1);
-                                } else {
-                                    return recur_NewOrder(index + 1);
-                                }
-                            });
-                        }
-                        if (suggestion.sCount > 0 && suggestion.sell) {
-                            console.log(`sell ${item.index} ${suggestion.sCount} ${suggestion.sell}`);
-                            let or = new Order({
-                                cid: Date.now(),
-                                type: 'LIMIT',
-                                symbol: item.index,
-                                amount: -suggestion.sCount,
-                                price: suggestion.sell,
-                                flags: 1024,
-                            }, userRest);
-                            return or.submit().catch(err => {
-                                const msg = err.message || err.msg;
-                                if (msg.includes('minimum size')) {
-                                    or = null;
-                                    return Promise.resolve();
-                                } else {
-                                    throw err;
-                                }
-                            }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(), API_WAIT * 1000))).then(() => {
-                                if (or) {
-                                    let isExist = false;
-                                    for (let i = 0; i < order[id][current.type].length; i++) {
-                                        if (or[0].id === order[id][current.type][i].id) {
-                                            isExist = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!isExist) {
-                                        let isDelete = false;
-                                        for (let i = 0; i < deleteOrder.length; i++) {
-                                            if (deleteOrder[i].id === or[0].id) {
-                                                isDelete = true;
-                                                const delobj = deleteOrder.splice(i, 1);
-                                                /*if (delobj.process){
-                                                    return processOrderRest(delobj.amount, delobj.price, item).then(() => submitBuy());
-                                                }*/
-                                                break;
-                                            }
-                                        }
-                                        if (!isDelete) {
-                                            order[id][current.type].push({
-                                                id: or[0].id,
-                                                time: Math.round(new Date().getTime() / 1000),
-                                                amount: or[0].amount,
-                                                type: or[0].type,
-                                                symbol: or[0].symbol,
-                                                price: or[0].price,
-                                                flags: or[0].flags,
-                                            });
-                                        }
-                                    }
-                                }
-                                return submitBuy();
-                            });
-                        } else if (suggestion.sell) {
-                            fakeOrder[id][current.type].push({
-                                type: 'sell',
-                                time: Math.round(new Date().getTime() / 1000),
-                                price: suggestion.sell,
-                                symbol: item.index,
-                            });
-                            return submitBuy();
-                        } else {
-                            return submitBuy();
-                        }
-                    }
-                }
-                return recur_status(0).then(() => recur_NewOrder(0));
+            return dynamicAmount().then(() => orderHistory().then(() => closecredit_recur().then(() => Mongo('find', TOTALDB, {owner: uid, sType: 1, type: current.type}).then(async items => {
+                const newOrder = await _recur_status({ id, uid, current, userRest, items });
+                await _recur_NewOrder({ id, uid, current, userRest, newOrder });
             }).catch(err => {
                 updateTime[id]['trade'] = updateTime[id]['trade'] - 2 * RATE_INTERVAL;
                 return Promise.reject(err);
@@ -2668,10 +2626,6 @@ export default {
                     const pair = set.pair.trim()
                     if (pair !== '.' && pair !== '..') {
                         if (pair.match(/^[^\\\/\|\*\?"<>]{1,500}$/)) {
-                            if (pair.replace(/[\s　]+/g, '') !== '') {
-                            } else {
-                                return handleError(new HoError('Trade Pair is not valid'));
-                            }
                         } else {
                             return handleError(new HoError('Trade Pair is not valid'));
                         }
@@ -2710,10 +2664,6 @@ export default {
                     const clear = set.clear.trim()
                     if (clear !== '.' && clear !== '..') {
                         if (clear.match(/^[^\\\/\|\*\?"<>]{1,500}$/)) {
-                            if (clear.replace(/[\s　]+/g, '') !== '') {
-                            } else {
-                                return handleError(new HoError('Trade Clear is not valid'));
-                            }
                         } else {
                             return handleError(new HoError('Trade Clear is not valid'));
                         }
