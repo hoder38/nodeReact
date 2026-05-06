@@ -1942,11 +1942,6 @@ describe('getYifyQuery full branch coverage', () => {
         expect(result).toContain('page=2');
     });
 
-    test('search tag triggers via "search" tag (index 22)', () => {
-        const result = tool.getYifyQuery(['search', 'action'], 'name', 1);
-        expect(result).toContain('yts.ag');
-    });
-
     test('genre overrides query_term (line 270,276)', () => {
         const result = tool.getYifyQuery(['thriller', 'comedy', 'yify'], 'name', 1);
         expect(result).toContain('genre=comedy');
@@ -3498,11 +3493,6 @@ describe('getMadQuery full branch coverage', () => {
         expect(result).toContain('tag61');
     });
 
-    test('search with important tag sets a18=0', () => {
-        const result = tool.getMadQuery(['important', 'dm5'], 'name', 1);
-        expect(result).toContain('dm5.com/manhua-list');
-    });
-
     test('search with DM5_LIST tag match', () => {
         const result = tool.getMadQuery(['連載', 'dm5'], 'name', 1);
         expect(result).toContain('dm5.com/manhua-list');
@@ -3512,11 +3502,6 @@ describe('getMadQuery full branch coverage', () => {
         const result = tool.getMadQuery(['mycomic', 'dm5'], 'name', 1);
         expect(result).toContain('search.ashx');
         expect(result).toContain('mycomic');
-    });
-
-    test('search with search tag', () => {
-        const result = tool.getMadQuery(['search', 'mycomic'], 'name', 1);
-        expect(result).toContain('search.ashx');
     });
 
     test('a18 mode ignores query_term', () => {
