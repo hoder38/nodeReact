@@ -1695,5 +1695,169 @@ describe('external-router.js', () => {
       expect(res.status).toBe(200);
       expect(mockRenameSync).toHaveBeenCalled();
     });
+
+    test('subtitle search for item with no name (L772, L848-852)', async () => {
+      // Item with empty name → fileName is falsy → goes to L772 (return [id, filePath])
+      // Then L847 else branch → L848 getOSsub(name) without fileName
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3, name: '' })]);
+      mockOSSubtitles.mockResolvedValueOnce({
+        data: [{ attributes: { language: 'en', files: [{ file_id: 42 }] } }],
+      });
+      mockOSDownload.mockResolvedValueOnce({ link: 'http://sub.srt' });
+      mockApi.mockResolvedValue();
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'test movie' });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ apiOK: true });
+    });
+
+    test('subtitle search for item with no name and no result returns 400 (L852)', async () => {
+      mockMongo.mockResolvedValueOnce([makeItem({ status: 3, name: '' })]);
+      mockOSSubtitles.mockResolvedValueOnce({ data: [] });
+
+      const res = await request(app)
+        .post(`/subtitle/search/${VALID_UID}`)
+        .set('x-test-user', u(ADMIN))
+        .send({ name: 'nothing' });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // POST /upload/url — pureDownload torrent path (L495-529, L538)
+  // ---------------------------------------------------------------
+  describe('POST /upload/url — pureDownload torrent path', () => {
+    test('torrent file in pureDownload processes magnet and returns data (L495-529)', async () => {
+      // yify URL → External.saveSingle rejects → pureDownload → Api('download') calls rest
+      mockMongo.mockResolvedValueOnce([]); // no dup for yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('yify fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      const torrentObj = { infoHash: 'abcdef0123456789abcde' };
+      mockReadTorrent.mockImplementationOnce((_path, cb) => cb(null, torrentObj));
+      mockUnlink.mockImplementationOnce((_p, cb) => cb(null));
+      mockMongo.mockResolvedValueOnce([]); // no dup magnet
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'TestTorrent',
+        files: [
+          { name: 'video.mp4', path: 'TestTorrent/video.mp4' },
+          { name: 'readme.txt', path: 'TestTorrent/readme.txt' },
+        ],
+      });
+      setupStreamCloseMocks();
+
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.rest(['/tmp/file.torrent', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(200);
+      expect(mockReadTorrent).toHaveBeenCalled();
+      expect(mockPlaylistApi).toHaveBeenCalledWith('torrent info', expect.any(String), expect.any(String));
+    });
+
+    test('pureDownload errHandle callback triggers handleError (L538)', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no dup for yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('yify fail'));
+      // Make Api('download') call errHandle and return the rejection
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.errHandle(new Error('download fail'));
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(500);
+    });
+
+    test('pureDownload torrent with empty files returns error (L525-526)', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no dup yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementationOnce((_path, cb) => cb(null, { infoHash: 'abcdef01234567890abc' }));
+      mockUnlink.mockImplementationOnce((_p, cb) => cb(null));
+      mockMongo.mockResolvedValueOnce([]); // no dup magnet
+      mockPlaylistApi.mockResolvedValueOnce({ name: 'Empty', files: [] });
+
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.rest(['/tmp/file.torrent', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('pureDownload torrent duplicate magnet returns error (L509-510)', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no dup yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementationOnce((_path, cb) => cb(null, { infoHash: 'abcdef01234567890abc' }));
+      mockUnlink.mockImplementationOnce((_p, cb) => cb(null));
+      mockMongo.mockResolvedValueOnce([makeItem()]); // duplicate found
+
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.rest(['/tmp/file.torrent', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('pureDownload torrent with no magnet returns error (L496-497)', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no dup yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      // torrent without infoHash → torrent2Magnet returns false
+      mockReadTorrent.mockImplementationOnce((_path, cb) => cb(null, {}));
+
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.rest(['/tmp/file.torrent', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(400);
+    });
+
+    test('pureDownload torrent with extType on files processes tags (L517-522)', async () => {
+      mockMongo.mockResolvedValueOnce([]); // no dup yify
+      mockExternalSaveSingle.mockRejectedValueOnce(new Error('fail'));
+      mockIsTorrent.mockReturnValueOnce(true);
+      mockReadTorrent.mockImplementationOnce((_path, cb) => cb(null, { infoHash: 'abcdef01234567890abc' }));
+      mockUnlink.mockImplementationOnce((_p, cb) => cb(null));
+      mockMongo.mockResolvedValueOnce([]); // no dup
+      mockExtType.mockReturnValueOnce({ type: 'video' });
+      mockExtTag.mockReturnValueOnce({ def: ['vid-tag'], opt: ['opt-tag'] });
+      mockPlaylistApi.mockResolvedValueOnce({
+        name: 'MediaTorrent',
+        files: [{ name: 'movie.mkv', path: 'MediaTorrent/movie.mkv' }],
+      });
+      setupStreamCloseMocks();
+
+      mockApi.mockImplementationOnce((_method, _user, _url, opts) => {
+        return opts.rest(['/tmp/file.torrent', 'file.torrent']);
+      });
+
+      const res = await request(app)
+        .post('/upload/url')
+        .set('x-test-user', u(ADMIN))
+        .send({ url: 'http://yts.ag/movie/test-movie', type: '0' });
+      expect(res.status).toBe(200);
+      expect(mockExtType).toHaveBeenCalledWith('movie.mkv');
+    });
   });
 });

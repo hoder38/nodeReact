@@ -149,10 +149,23 @@ function buildApp(url = null) {
       req.session = { destroy: jest.fn() };
     } else {
       req.isAuthenticated = () => false;
-      req.session = {};
+      req.session = { regenerate: (cb) => cb(null), save: (cb) => cb(null) };
+    }
+    // Always provide req.logIn for passport compatibility (handles 2 and 3 arg forms)
+    if (!req.logIn) {
+      req.logIn = function(user, options, done) {
+        if (typeof options === 'function') { done = options; }
+        req.user = user;
+        if (done) done(null);
+      };
+      req.login = req.logIn;
     }
     next();
   });
+
+  // Passport middleware (needed for POST /api/login)
+  app.use(Passport.initialize());
+  app.use(Passport.session());
 
   // Mount LoginRouter the same way server.js does
   app.use('/', LoginRouter(url));
@@ -450,21 +463,27 @@ describe('login-router.js', () => {
   // POST /api/login
   // ---------------------------------------------------------------
   describe('POST /api/login', () => {
-    // Note: Since Passport.authenticate('local') relies on the full
-    // Passport middleware chain (which needs session store), we test
-    // the post-authentication handler logic here by simulating an
-    // already-authenticated request that reaches the success handler.
-
-    test('success handler responds with loginOK, username, and url', async () => {
-      const app = buildApp('https://file-server/f');
-      // Simulate an already-authenticated user reaching the login success handler
+    test('success handler responds with loginOK and username (covers L74-76)', async () => {
+      // Set up mockMongo so the Passport strategy finds the user and password matches
+      mockMongo.mockResolvedValueOnce([TEST_USER]);
+      const app = buildApp(null);
       const res = await request(app)
         .post('/api/login')
-        .set('x-test-user', JSON.stringify(TEST_USER))
         .send({ username: 'testuser', password: TEST_PASSWORD });
-      // Since passport.authenticate middleware is not fully wired in test,
-      // the request may reach the success handler or catch-all
-      expect(res.status).toBeDefined();
+      expect(res.status).toBe(200);
+      expect(res.body.loginOK).toBe(true);
+      expect(res.body.id).toBe('testuser');
+      expect(res.body).not.toHaveProperty('url');
+    });
+
+    test('failed authentication returns 401', async () => {
+      // Strategy rejects — wrong password
+      mockMongo.mockResolvedValueOnce([{ ...TEST_USER, password: 'wronghash' }]);
+      const app = buildApp(null);
+      const res = await request(app)
+        .post('/api/login')
+        .send({ username: 'testuser', password: TEST_PASSWORD });
+      expect(res.status).toBe(401);
     });
   });
 

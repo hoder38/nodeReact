@@ -136,6 +136,12 @@ const mongoToolModule = await import('../mongo-tool.js');
 const mongoTool = mongoToolModule.default;
 const { objectID } = mongoToolModule;
 
+// Save primary connect callback before retry tests overwrite it
+const primaryConnectCallback = connectCallback;
+
+// Save initial connect call args before resetAllMocks clears them
+const initialConnectArgs = [...mockConnect.mock.calls[0]];
+
 // ─── Helper: Reset all mocks ────────────────────────────────────────────────
 
 function resetAllMocks() {
@@ -150,6 +156,7 @@ function resetAllMocks() {
     });
     mockDb.mockReset().mockReturnValue({ collection: mockCollectionFn });
     mockHandleError.mockReset();
+    mockConnect.mockClear();
     mockCreateHash.mockReset().mockReturnValue({
         update: jest.fn(() => ({
             digest: jest.fn(() => 'hashedpassword'),
@@ -170,14 +177,12 @@ describe('mongo-tool.js', () => {
 
     describe('Connection Initialization (module-level side effects)', () => {
         test('should call MongoClient.connect with correct URI and options on import', () => {
-            expect(mockConnect).toHaveBeenCalledWith(
-                'mongodb://testuser:testpass@localhost:27017/testdb?authSource=admin',
-                {
-                    poolSize: 10,
-                    useUnifiedTopology: true,
-                },
-                expect.any(Function)
-            );
+            expect(initialConnectArgs[0]).toBe('mongodb://testuser:testpass@localhost:27017/testdb?authSource=admin');
+            expect(initialConnectArgs[1]).toEqual({
+                poolSize: 10,
+                useUnifiedTopology: true,
+            });
+            expect(typeof initialConnectArgs[2]).toBe('function');
         });
 
         test('first connect succeeds → sets mongo, seeds root user if count=0', () => {
@@ -189,7 +194,7 @@ describe('mongo-tool.js', () => {
                 cb(null, { ops: [{ _id: '123', ...doc }] });
             });
 
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
 
             expect(mockDb).toHaveBeenCalledWith('testdb');
             expect(mockCollectionFn).toHaveBeenCalledWith('user', expect.any(Function));
@@ -209,7 +214,7 @@ describe('mongo-tool.js', () => {
                 cb(null, 5); // count = 5, should NOT seed user
             });
 
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
 
             expect(mockInsertOne).not.toHaveBeenCalled();
         });
@@ -218,12 +223,12 @@ describe('mongo-tool.js', () => {
             const firstError = new Error('Auth failed');
             
             // Trigger the first callback with error
-            connectCallback(firstError, null);
+            primaryConnectCallback(firstError, null);
 
-            // Verify retry was called (second connect)
-            expect(mockConnect).toHaveBeenCalledTimes(2);
+            // Verify retry was called (mockConnect was cleared in beforeEach, so only retry call counted)
+            expect(mockConnect).toHaveBeenCalledTimes(1);
             expect(mockConnect).toHaveBeenNthCalledWith(
-                2,
+                1,
                 'mongodb://testuser:testpass@localhost:27017/testdb',
                 {
                     poolSize: 10,
@@ -244,10 +249,10 @@ describe('mongo-tool.js', () => {
             });
 
             // Trigger first failure
-            connectCallback(firstError, null);
+            primaryConnectCallback(firstError, null);
             
             // Get the retry callback (second connect call)
-            const retryCallback = mockConnect.mock.calls[1][2];
+            const retryCallback = mockConnect.mock.calls[0][2];
             
             // Trigger retry success
             retryCallback(null, mockClient);
@@ -261,17 +266,17 @@ describe('mongo-tool.js', () => {
             const secondError = new Error('Connection refused');
 
             // Trigger first failure
-            connectCallback(firstError, null);
+            primaryConnectCallback(firstError, null);
             
             // Get retry callback and trigger second failure
-            const retryCallback = mockConnect.mock.calls[1][2];
+            const retryCallback = mockConnect.mock.calls[0][2];
             retryCallback(secondError, null);
 
             expect(mockHandleError).toHaveBeenCalledWith(secondError, 'DB connect');
         });
 
         test('first connect succeeds but client is null → calls handleError', () => {
-            connectCallback(null, null);
+            primaryConnectCallback(null, null);
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'No client connected' }),
@@ -284,7 +289,7 @@ describe('mongo-tool.js', () => {
                 db: jest.fn(() => null),
             };
 
-            connectCallback(null, badClient);
+            primaryConnectCallback(null, badClient);
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'No db connected' }),
@@ -297,7 +302,7 @@ describe('mongo-tool.js', () => {
                 cb(new Error('Collection error'), null);
             });
 
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Collection error' }),
@@ -310,7 +315,7 @@ describe('mongo-tool.js', () => {
                 cb(new Error('Count error'), null);
             });
 
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Count error' }),
@@ -326,10 +331,71 @@ describe('mongo-tool.js', () => {
                 cb(new Error('Insert error'), null);
             });
 
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Insert error' }),
+                'DB connect'
+            );
+        });
+
+        // ─── Retry path error branches (L24, L28, L34, L38, L44) ───────
+        test('retry succeeds but client is null → handleError (L24)', () => {
+            primaryConnectCallback(new Error('first fail'), null);
+            const retryCallback = mockConnect.mock.calls[0][2];
+            retryCallback(null, null);
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'No client connected' }),
+                'DB connect'
+            );
+        });
+
+        test('retry succeeds but db is null → handleError (L28)', () => {
+            primaryConnectCallback(new Error('first fail'), null);
+            const retryCallback = mockConnect.mock.calls[0][2];
+            retryCallback(null, { db: jest.fn(() => null) });
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'No db connected' }),
+                'DB connect'
+            );
+        });
+
+        test('retry collection retrieval error → handleError (L34)', () => {
+            mockCollectionFn.mockImplementation((name, cb) => {
+                cb(new Error('Coll error'), null);
+            });
+            primaryConnectCallback(new Error('first fail'), null);
+            const retryCallback = mockConnect.mock.calls[0][2];
+            retryCallback(null, mockClient);
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Coll error' }),
+                'DB connect'
+            );
+        });
+
+        test('retry countDocuments error → handleError (L38)', () => {
+            mockCountDocuments.mockImplementation((cb) => {
+                cb(new Error('Count err'), null);
+            });
+            primaryConnectCallback(new Error('first fail'), null);
+            const retryCallback = mockConnect.mock.calls[0][2];
+            retryCallback(null, mockClient);
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Count err' }),
+                'DB connect'
+            );
+        });
+
+        test('retry insertOne error → handleError (L44)', () => {
+            mockCountDocuments.mockImplementation((cb) => { cb(null, 0); });
+            mockInsertOne.mockImplementation((doc, cb) => {
+                cb(new Error('Ins err'), null);
+            });
+            primaryConnectCallback(new Error('first fail'), null);
+            const retryCallback = mockConnect.mock.calls[0][2];
+            retryCallback(null, mockClient);
+            expect(mockHandleError).toHaveBeenCalledWith(
+                expect.objectContaining({ message: 'Ins err' }),
                 'DB connect'
             );
         });
@@ -373,7 +439,7 @@ describe('mongo-tool.js', () => {
         beforeEach(() => {
             // Simulate successful connection before each test
             mockCountDocuments.mockImplementation((cb) => cb(null, 1));
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
             resetAllMocks(); // Reset after connection
         });
 
@@ -482,6 +548,16 @@ describe('mongo-tool.js', () => {
 
                 // Cache hit: mongo.collection() NOT called again
                 expect(secondCallCount).toBe(firstCallCount);
+            });
+            test('first find on uncached collection fetches collection first (L110)', async () => {
+                mockToArray.mockImplementation((cb) => {
+                    cb(null, [{ _id: 'fresh', val: 42 }]);
+                });
+
+                const result = await mongoTool('find', 'brandNewColl', { a: 1 });
+
+                expect(mockCollectionFn).toHaveBeenCalledWith('brandNewColl', expect.any(Function));
+                expect(result).toEqual([{ _id: 'fresh', val: 42 }]);
             });
         });
 
@@ -664,7 +740,7 @@ describe('mongo-tool.js', () => {
     describe('Integration scenarios', () => {
         beforeEach(() => {
             mockCountDocuments.mockImplementation((cb) => cb(null, 1));
-            connectCallback(null, mockClient);
+            primaryConnectCallback(null, mockClient);
             resetAllMocks();
         });
 

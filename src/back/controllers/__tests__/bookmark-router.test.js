@@ -123,6 +123,7 @@ jest.unstable_mockModule('../../util/mime.js', () => ({
 const { default: Express } = await import('express');
 const { default: request } = await import('supertest');
 const { default: BookmarkRouter } = await import('../bookmark-router.js');
+const { isDefaultTag: mockIsDefaultTag } = await import('../../models/tag-tool.js');
 
 // =====================================================================
 // HELPERS
@@ -312,6 +313,56 @@ describe('bookmark-router.js', () => {
       expect(mockSendWs).toHaveBeenCalledWith({ type: 'file', data: 'newBid' }, 0);
     });
 
+    test('POST /storage/add: adultonly bpath tag sets adultonly=1 (L88-89,102-103,134-135)', async () => {
+      mockIsDefaultTag.mockImplementation((tag) => {
+        if (tag === '18plus') return Object.assign(['18plus'], { index: 0 });
+        return false;
+      });
+      mockAddBookmark.mockResolvedValueOnce({ apiOK: true });
+      mockGetArray.mockReturnValue({ cur: ['18plus', 'normaltag'], exactly: [true, true] });
+      mockMongo.mockResolvedValueOnce(0); // count=0, new bookmark
+      mockGetRelativeTag.mockResolvedValueOnce(['18plus']); // inject adult into relative tags
+      mockMongo.mockResolvedValueOnce([{ _id: 'adultBid', adultonly: 1, first: 0 }]); // insert
+      mockGetRelativeTag.mockResolvedValueOnce([]); // option
+      const res = await request(app).post('/storage/add')
+        .set('x-test-user', u(CADMIN)).send({ name: 'AdultBM' });
+      expect(res.status).toBe(200);
+      expect(mockMongo).toHaveBeenCalledWith('insert', 'storage', expect.objectContaining({ adultonly: 1 }));
+    });
+
+    test('POST /storage/add: default tag name triggers addPost suffix (L63)', async () => {
+      mockIsDefaultTag.mockImplementation((tag) => {
+        if (tag === 'DefaultName') return { index: 5 };
+        return false;
+      });
+      mockAddBookmark.mockResolvedValueOnce({ apiOK: true });
+      mockGetArray.mockReturnValue({ cur: ['tag1'], exactly: [true] });
+      mockMongo.mockResolvedValueOnce(0); // count=0
+      mockGetRelativeTag.mockResolvedValueOnce([]); // getChannel
+      mockMongo.mockResolvedValueOnce([{ _id: 'dfBid', adultonly: 0, first: 1 }]); // insert
+      mockGetRelativeTag.mockResolvedValueOnce([]); // option
+      const res = await request(app).post('/storage/add')
+        .set('x-test-user', u(ADMIN)).send({ name: 'DefaultName' });
+      expect(res.status).toBe(200);
+    });
+
+    test('POST /storage/add: channel tag in bpath sets channel var (L90-93)', async () => {
+      mockIsDefaultTag.mockImplementation((tag) => {
+        if (tag === 'ChannelTag') return Object.assign(['ChannelTag', 'ch', 'UC123'], { index: 30 });
+        return false;
+      });
+      mockAddBookmark.mockResolvedValueOnce({ apiOK: true });
+      mockGetArray.mockReturnValue({ cur: ['ChannelTag', 'normaltag'], exactly: [true, true] });
+      mockMongo.mockResolvedValueOnce(0); // count=0
+      mockGetRelativeTag.mockResolvedValueOnce([]); // getChannel (channel path is commented out)
+      mockMongo.mockResolvedValueOnce([{ _id: 'chBid', adultonly: 0, first: 1 }]); // insert
+      mockGetRelativeTag.mockResolvedValueOnce([]); // option
+      const res = await request(app).post('/storage/add')
+        .set('x-test-user', u(ADMIN)).send({ name: 'ChBookmark' });
+      expect(res.status).toBe(200);
+      expect(res.body.bid).toBe('chBid');
+    });
+
     test('POST /storage/add error returns 500', async () => {
       mockAddBookmark.mockRejectedValueOnce(new Error('fail'));
       const res = await request(app).post('/storage/add')
@@ -473,6 +524,12 @@ describe('bookmark-router.js', () => {
       expect(res.status).toBe(400);
     });
 
+    test('GET /password/get error returns 500 (L250)', async () => {
+      mockGetBookmark.mockRejectedValueOnce(new Error('fail'));
+      const res = await request(app).get('/password/get/b1/name/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
+    });
+
     test('DELETE /password/del returns id', async () => {
       mockDelBookmark.mockResolvedValueOnce({ id: 'pb1' });
       const res = await request(app).delete('/password/del/pb1').set('x-test-user', u(ADMIN));
@@ -512,6 +569,19 @@ describe('bookmark-router.js', () => {
       const res = await request(app).post('/stock/add')
         .set('x-test-user', u(ADMIN)).send({ name: 'StBM' });
       expect(res.status).toBe(200);
+    });
+
+    test('POST /stock/add with invalid name returns 400 (L287)', async () => {
+      const res = await request(app).post('/stock/add')
+        .set('x-test-user', u(ADMIN)).send({ name: '' });
+      expect(res.status).toBe(400);
+      expect(res.text).toContain('name is not vaild');
+    });
+
+    test('GET /stock/get error returns 500 (L280)', async () => {
+      mockGetBookmark.mockRejectedValueOnce(new Error('fail'));
+      const res = await request(app).get('/stock/get/b1/name/desc').set('x-test-user', u(ADMIN));
+      expect(res.status).toBe(500);
     });
 
     test('DELETE /stock/del works', async () => {
