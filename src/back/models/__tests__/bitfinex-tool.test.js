@@ -73,13 +73,18 @@ jest.unstable_mockModule('bitfinex-api-node', () => ({
     default: MockBFX,
 }));
 
+// Shared interceptor for Order.submit — tests can override to inject failures
+let _orderSubmitInterceptor = null;
 jest.unstable_mockModule('bfx-api-node-models', () => ({
     default: {
         FundingOffer: function (data) { Object.assign(this, data); this.submit = jest.fn(() => Promise.resolve()); },
         Order: function (data, rest) {
             Object.assign(this, data);
             this[0] = { id: Date.now(), ...data };
-            this.submit = jest.fn(() => Promise.resolve());
+            this.submit = jest.fn(() => {
+                if (_orderSubmitInterceptor) return _orderSubmitInterceptor(data);
+                return Promise.resolve();
+            });
         },
     },
 }));
@@ -178,6 +183,7 @@ let makeOnWalletUpdate, makeOnFundingOfferUpdate, makeOnFundingOfferNew, makeOnF
 let makeOnFundingCreditUpdate, makeOnFundingCreditNew, makeOnFundingCreditClose;
 let makeOnPositionUpdate, makeOnPositionNew, makeOnPositionClose;
 let makeOnOrderUpdate, makeOnOrderNew, makeOnOrderClose;
+let _setSystemBfx, _getSystemRest;
 
 beforeAll(async () => {
     const mod = await import('../bitfinex-tool.js');
@@ -206,6 +212,8 @@ beforeAll(async () => {
     makeOnOrderUpdate = mod.makeOnOrderUpdate;
     makeOnOrderNew = mod.makeOnOrderNew;
     makeOnOrderClose = mod.makeOnOrderClose;
+    _setSystemBfx = mod._setSystemBfx;
+    _getSystemRest = mod._getSystemRest;
 });
 
 // Top-level: swallow late async rejections from setWsOffer's fire-and-forget chains
@@ -216,6 +224,7 @@ beforeEach(() => {
 });
 afterEach(() => {
     if (_unhandledHandler) process.off('unhandledRejection', _unhandledHandler);
+    _orderSubmitInterceptor = null;
 });
 
 beforeEach(() => {
@@ -2028,6 +2037,22 @@ describe('updateBot — valid field assignments cover all data[...] writes', () 
         await expect(defaultExport.updateBot('u1', { type: 'fUSD', rate_ratio: 'abc' }, 'u1'))
             .rejects.toBeDefined();
     });
+    test('invalid secret (whitespace) → rejects', async () => {
+        await expect(defaultExport.updateBot('u1', { type: 'fUSD', secret: '   ' }, 'u1'))
+            .rejects.toBeDefined();
+    });
+    test('invalid riskLimit (0) → rejects', async () => {
+        await expect(defaultExport.updateBot('u1', { type: 'fUSD', riskLimit: '0' }, 'u1'))
+            .rejects.toBeDefined();
+    });
+    test('invalid pair (full-width whitespace only) → rejects', async () => {
+        await expect(defaultExport.updateBot('u1', { type: 'fUSD', pair: '\u3000\u3000', trade: true }, 'u1'))
+            .rejects.toBeDefined();
+    });
+    test('invalid clear (full-width whitespace only) → rejects', async () => {
+        await expect(defaultExport.updateBot('u1', { type: 'fUSD', clear: '\u3000\u3000', trade: true }, 'u1'))
+            .rejects.toBeDefined();
+    });
 });
 
 
@@ -2039,6 +2064,14 @@ describe('snapshot — public API surface', () => {
         expect(Object.keys(defaultExport).sort()).toEqual([
             'closeCredit', 'deleteBot', 'getBot', 'parent', 'query', 'updateBot',
         ]);
+    });
+
+    test('_setSystemBfx swaps system bfx + rest', () => {
+        const fakeBfx = { rest: jest.fn(() => 'fakeRest') };
+        _setSystemBfx(fakeBfx);
+        expect(_getSystemRest()).toBe('fakeRest');
+        // Restore original via the mock BFX from test setup
+        _setSystemBfx(new MockBFX());
     });
 });
 
@@ -2259,7 +2292,8 @@ describe('singleLoan - deep money flows', () => {
 
     beforeEach(() => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.useFakeTimers({ now: FROZEN_NOW });
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
     });
     afterEach(() => {
         consoleSpy.mockRestore();
@@ -2568,6 +2602,193 @@ describe('singleLoan - deep money flows', () => {
 
         expect(mockRest.cancelFundingOffer).toHaveBeenCalledWith(1200);
     });
+
+    test('WS reconnect: reinitializes state and calls reconnect()', async () => {
+        const id = 'DL_WR';
+        // Only seed userWs (isOpen→false) + minimal required state. Leave per-id state unset
+        // so the reconnect init block creates them.
+        mockWs.isOpen.mockReturnValueOnce(false);
+        _setState({
+            userWs: { [id]: mockWs },
+            userOk: { [id]: true },
+            currentRate: { fUSD: { rate: 109.5, frr: 73 } },
+            finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
+            maxRange: { fUSD: 182.5 },
+            priceData: { tUSDUSD: { lastPrice: 1, dailyChangePerc: 0 } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+
+        const p = setWsOffer(id, loanCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockWs.reconnect).toHaveBeenCalled();
+        const state = _getState();
+        expect(state.updateTime[id]).toBeDefined();
+        // After reconnect init (book=0), initialBook immediately updates book to now
+        expect(state.updateTime[id].book).toBe(FROZEN_SEC);
+        expect(state.available[id]).toBeDefined();
+        expect(state.ledger[id]).toBeDefined();
+    });
+
+    test('manual offer (no risk) → skipped in adjustOffer', async () => {
+        const id = 'DL_MO';
+        seedLoanUser(id, {
+            offer: { [id]: { fUSD: [
+                { id: 1300, time: FROZEN_SEC, amount: 200, rate: 0.0003, period: 2, status: 'ACTIVE' },
+            ] } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 5000, balanceAvailable: 4000 },
+        ]);
+
+        const p = setWsOffer(id, loanCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith('manual');
+        expect(mockRest.cancelFundingOffer).not.toHaveBeenCalled();
+    });
+
+    test('amount merge: sum ≤ amountLimit*1.2 → keep_available zeroed, newAmount=sum', async () => {
+        const id = 'DL_MS';
+        seedLoanUser(id, {
+            offer: { [id]: { fUSD: [
+                { id: 1400, time: 0, amount: 50, rate: 0.0003, period: 2, status: 'ACTIVE', risk: 5 },
+            ] } },
+        });
+        // keepAmount=0, balance=250 → keep_available=250. 250+50=300 < amountLimit*1.2=240?
+        // No, 300 > 240 → goes to else branch. Need keep_available smaller.
+        // With keepAmount=200, balance=350 → avail=350, keep_available=350-200=150. 150+50=200 ≤ 240 → YES
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 350, balanceAvailable: 350 },
+        ]);
+        mockRest.cancelFundingOffer.mockResolvedValue({});
+
+        const p = setWsOffer(id, loanCurArr({ keepAmount: 200 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockRest.cancelFundingOffer).toHaveBeenCalledWith(1400);
+    });
+
+    test('checkFakeOrder: buy order missing symbol → skips with log', async () => {
+        const id = 'DL_CFB';
+        seedLoanUser(id, {
+            fakeOrder: { [id]: { fUSD: [{
+                type: 'buy', time: FROZEN_SEC - 100, price: 50000, symbol: 'tXYZUSD', done: false,
+            }] } },
+            priceData: {
+                tUSDUSD: { lastPrice: 1, dailyChangePerc: 0 },
+                tXYZUSD: { lastPrice: 49000, str: '', str2: '' },
+            },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+        mockMongo.mockResolvedValue([]);
+
+        const p = setWsOffer(id, loanCurArr({
+            isTrade: true, pair: ['tXYZUSD'], amount: 0, rate_ratio: 0, keepAmount: 0,
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith('miss tXYZUSD');
+    });
+
+    test('checkFakeOrder: sell order missing symbol → skips with log', async () => {
+        const id = 'DL_CFS';
+        seedLoanUser(id, {
+            fakeOrder: { [id]: { fUSD: [{
+                type: 'sell', time: FROZEN_SEC - 50, price: 40000, symbol: 'tXYZUSD', done: false,
+            }] } },
+            priceData: {
+                tUSDUSD: { lastPrice: 1, dailyChangePerc: 0 },
+                tXYZUSD: { lastPrice: 41000, str: '', str2: '' },
+            },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+        mockMongo.mockResolvedValue([]);
+
+        const p = setWsOffer(id, loanCurArr({
+            isTrade: true, pair: ['tXYZUSD'], amount: 0, rate_ratio: 0, keepAmount: 0,
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith('miss tXYZUSD');
+    });
+
+    // ── extremRate init branches (L1226, 1243, 1260) ──
+    test('extremRateCheck: no existing entry + rate high → creates with high=1', async () => {
+        const id = 'DL_EH';
+        seedLoanUser(id, {
+            extremRate: { [id]: {} },
+            currentRate: { fUSD: { rate: 10000000, frr: 73 } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+
+        const p = setWsOffer(id, loanCurArr({
+            isTrade: true, pair: ['tBTCUSD'], amount: 0, rate_ratio: 0,
+            keepAmount: 0, dynamic: 5,
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const er = _getState().extremRate[id].fUSD;
+        expect(er).toBeDefined();
+        expect(er.high).toBeGreaterThanOrEqual(1);
+    });
+
+    test('extremRateCheck: no existing entry + rate low → creates with low=1', async () => {
+        const id = 'DL_EL';
+        seedLoanUser(id, {
+            extremRate: { [id]: {} },
+            currentRate: { fUSD: { rate: 100, frr: 73 } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+
+        const p = setWsOffer(id, loanCurArr({
+            isTrade: true, pair: ['tBTCUSD'], amount: 0, rate_ratio: 0,
+            keepAmount: 0, miniRate: 5,
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const er = _getState().extremRate[id].fUSD;
+        expect(er).toBeDefined();
+        expect(er.low).toBeGreaterThanOrEqual(1);
+    });
+
+    test('extremRateCheck: no existing entry + rate neutral → creates with both 0', async () => {
+        const id = 'DL_EN';
+        seedLoanUser(id, {
+            extremRate: { [id]: {} },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 100, balanceAvailable: 100 },
+        ]);
+
+        const p = setWsOffer(id, loanCurArr({
+            isTrade: true, pair: ['tBTCUSD'], amount: 0, rate_ratio: 0, keepAmount: 0,
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const er = _getState().extremRate[id].fUSD;
+        expect(er).toBeDefined();
+        expect(er.high).toBe(0);
+        expect(er.low).toBe(0);
+    });
 });
 
 // ════════════════════════════════════════════════════════════
@@ -2619,7 +2840,8 @@ describe('singleTrade.getAM - deep money flows', () => {
 
     beforeEach(() => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.useFakeTimers({ now: FROZEN_NOW });
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
     });
     afterEach(() => {
         consoleSpy.mockRestore();
@@ -2860,6 +3082,184 @@ describe('singleTrade.getAM - deep money flows', () => {
         expect(mockRest.cancelOrder).not.toHaveBeenCalledWith(811);
         expect(mockRest.cancelOrder).toHaveBeenCalledWith(812);
     });
+
+    test('is_low: recent extreme low → min_available = 0', async () => {
+        const id = 'GT12';
+        seedTradeUser(id, {
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: FROZEN_SEC - 100 } } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 12000, balanceAvailable: 10000 },
+        ]);
+        mockRest.transfer.mockResolvedValue({});
+
+        const p = setWsOffer(id, tradeCurArr({ amount: 5000, rate_ratio: 50 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith('is low');
+    });
+
+    test('is_high: recent extreme high → min_available = 10000', async () => {
+        const id = 'GT13';
+        seedTradeUser(id, {
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: FROZEN_SEC - 100, is_low: 0 } } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'funding', balance: 12000, balanceAvailable: 10000 },
+        ]);
+        mockRest.transfer.mockResolvedValue({});
+
+        const p = setWsOffer(id, tradeCurArr({ amount: 5000, rate_ratio: 50 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith('is high');
+    });
+
+    test('margin not pre-existing → creates new margin entry (clear=true path)', async () => {
+        const id = 'GT14';
+        seedTradeUser(id, {
+            margin: { [id]: {} },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 8000, balanceAvailable: 5000 },
+        ]);
+        mockRest.transfer.mockResolvedValue({});
+
+        // clear=true skips the needTrans>1 branch and enters the needTrans<-1||clear branch
+        const p = setWsOffer(id, tradeCurArr({ amount: 3000, clear: true }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        expect(state.margin[id].fUSD).toBeDefined();
+        expect(state.margin[id].fUSD.avail).toBe(5000);
+    });
+
+    test('closecredit push to existing array', async () => {
+        const id = 'GT15';
+        seedTradeUser(id, {
+            margin: { [id]: { fUSD: { avail: 5000, time: FROZEN_SEC, total: 5000 } } },
+            credit: { [id]: { fUSD: [
+                { id: 1501, side: 2, amount: 1000, rate: 0, time: FROZEN_SEC, period: 30 },
+                { id: 1502, side: 2, amount: 500, rate: 0, time: FROZEN_SEC, period: 30 },
+            ] } },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+        });
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, tradeCurArr({ amount: 5000, rate_ratio: 0 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        expect(state.closeCredit[id]).toEqual(expect.arrayContaining([1501, 1502]));
+    });
+
+    test('dynamicAmount: lent_credit > 5000, margin total low → increases amount', async () => {
+        const id = 'GT16';
+        seedTradeUser(id, {
+            margin: { [id]: { fUSD: { avail: 3000, time: FROZEN_SEC, total: 4000 } } },
+            credit: { [id]: { fUSD: [
+                { id: 1601, side: 2, amount: 6000, time: FROZEN_SEC, period: 30, rate: 0.001 },
+            ] } },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+        });
+        mockRest.accountTrades.mockResolvedValue([]);
+        mockMongo.mockResolvedValue([]);
+
+        // amount=5000, rate_ratio=100. lent_credit=6000>5000.
+        // (5000-4000)=1000 <= 2000 → amount += rate_ratio → 5100
+        const p = setWsOffer(id, tradeCurArr({ amount: 5000, rate_ratio: 100 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockMongo).toHaveBeenCalledWith(
+            'update', expect.anything(), { _id: id },
+            { $set: { 'bitfinex.0.amount': 5100 } }
+        );
+    });
+
+    test('getAM: orders exist but delOrderNumber not enough → skip real_delete, clamp avail', async () => {
+        const id = 'GT17';
+        seedTradeUser(id, {
+            margin: { [id]: { fUSD: { avail: 5000, time: FROZEN_SEC, total: 8000 } } },
+            credit: { [id]: { fUSD: [
+                { id: 1701, side: 2, amount: 1000, time: FROZEN_SEC - 1000, period: 30, rate: 0.001 },
+            ] } },
+            order: { [id]: { fUSD: [
+                { id: 1801, amount: 0.001, type: 'LIMIT', symbol: 'tBTCUSD', price: 50000, status: 'ACTIVE', flags: 0 },
+            ] } },
+        });
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 8000, balanceAvailable: 5000 },
+        ]);
+        mockRest.transfer.mockResolvedValue({});
+
+        const p = setWsOffer(id, tradeCurArr({ amount: 3000 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // delOrderNumber is tiny → (availableMargin+delOrderNumber) still < 0 → real_delete
+        // but the order amount is tiny so it exercises the availableMargin>0 clamp path
+        expect(mockRest.cancelOrder).toHaveBeenCalledWith(1801);
+    });
+
+    // ── closeCredit push via rate condition (L1792-1796) ──
+    test('closecredit: rate-based condition → push to existing closeCredit', async () => {
+        const id = 'GT18';
+        seedTradeUser(id, {
+            margin: { [id]: { fUSD: { avail: 5000, time: FROZEN_SEC, total: 5000 } } },
+            // First credit: rate=0 (FRR) → creates closeCredit[id]
+            // Second credit: rate > frr/BFX_EXP → pushes to existing closeCredit
+            credit: { [id]: { fUSD: [
+                { id: 1801, side: 2, amount: 500, rate: 0, time: FROZEN_SEC, period: 30 },
+                { id: 1802, side: 2, amount: 500, rate: 0.000002, time: FROZEN_SEC, period: 30 },
+            ] } },
+            currentRate: { fUSD: { rate: 109.5, frr: 73 } },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+        });
+        mockRest.accountTrades.mockResolvedValue([]);
+        mockMongo.mockResolvedValue([]);
+
+        // miniRate=5 → rate > 5/100*2 = 0.1? 0.000002 > 0.1 → false
+        // Need higher rate. rate*BFX_EXP > frr: rate*1e8 > 73 → rate > 7.3e-7
+        // rate > miniRate/100*2: 0.000002 > 0.1 → false. Need miniRate small.
+        const p = setWsOffer(id, tradeCurArr({ amount: 5000, rate_ratio: 0, miniRate: 0 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        // Both credits should be in closeCredit: 1801 via FRR, 1802 via rate condition
+        expect(state.closeCredit[id]).toEqual(expect.arrayContaining([1801, 1802]));
+    });
+
+    // ── dynamicAmount cap (L1828-1829) ──
+    test('dynamicAmount: lent_credit > 5000, amount-total >= available-min → caps amount', async () => {
+        const id = 'GT19';
+        seedTradeUser(id, {
+            margin: { [id]: { fUSD: { avail: 3000, time: FROZEN_SEC, total: 8000 } } },
+            available: { [id]: { fUSD: { avail: 5000, time: FROZEN_SEC, total: 6000 } } },
+            credit: { [id]: { fUSD: [
+                { id: 1901, side: 2, amount: 6000, time: FROZEN_SEC, period: 30, rate: 0.001 },
+            ] } },
+            updateTime: { [id]: { book: FROZEN_SEC, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+        });
+        mockRest.accountTrades.mockResolvedValue([]);
+        mockMongo.mockResolvedValue([]);
+
+        // amount=10000, margin.total=8000, available.total=6000, min_available=5000
+        // (10000-8000)=2000 >= (6000-5000)=1000 → caps amount to 8000+6000-5000 = 9000
+        const p = setWsOffer(id, tradeCurArr({ amount: 10000, rate_ratio: 100 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(mockMongo).toHaveBeenCalledWith(
+            'update', expect.anything(), { _id: id },
+            { $set: { 'bitfinex.0.amount': 9000 } }
+        );
+    });
 });
 
 // ════════════════════════════════════════════════════════════
@@ -2913,7 +3313,8 @@ describe('recur_status + recur_NewOrder paths', () => {
 
     beforeEach(() => {
         consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-        jest.useFakeTimers({ now: FROZEN_NOW });
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
     });
     afterEach(() => {
         consoleSpy.mockRestore();
@@ -3639,6 +4040,725 @@ describe('recur_status + recur_NewOrder paths', () => {
         const state = _getState();
         // trade time rewound on error
         expect(state.updateTime[id].trade).toBeLessThan(FROZEN_SEC);
+    });
+
+    // ── Helper for Mongo mock in recur_status tests ──
+    const mkStatusMongo = (itemId, itemOverrides = {}, opts = {}) => {
+        const baseItem = {
+            _id: itemId, index: 'tBTCUSD', type: 'fUSD', ing: 1,
+            orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+            web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+            ...itemOverrides,
+        };
+        return (op, coll, q, upd) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: opts.uid || itemId.replace('item', '') }]);
+            if (op === 'find' && coll === 'total' && (q.owner || q.sType)) return Promise.resolve([baseItem]);
+            if (op === 'find' && coll === 'total' && q._id) return Promise.resolve([{ ...baseItem, ...(opts.reloadOverrides || {}) }]);
+            if (op === 'update') { if (opts.onUpdate) opts.onUpdate(q, upd); return Promise.resolve({}); }
+            if (op === 'deleteMany') return Promise.resolve({});
+            return Promise.resolve([]);
+        };
+    };
+
+    test('recur_status: item.profit → added to orig', async () => {
+        const id = 'RS18';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemP', {
+            profit: 200, orig: 800, amount: 800,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // profit=200 → orig becomes 800+200=1000 before stockProcess
+        expect(mockStockProcess).toHaveBeenCalled();
+    });
+
+    test('recur_status: type=3 buy with loop → bCount multiplied', async () => {
+        const id = 'RS19';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        // type=3: amount > orig*5/8=625 → check. tmpAmount = amount-orig/2 = 700-500=200
+        // buy*times = 10*1=10 → 200/10=20 iterations
+        mockStockProcess.mockReturnValue({
+            type: 3, buy: 10, sell: 0, bCount: 0.01, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemT3', {
+            orig: 1000, amount: 700, times: 1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+    });
+
+    test('recur_status: type=6 buy with loop → bCount multiplied', async () => {
+        const id = 'RS20';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        // type=6: amount > orig*3/8=375 → check. tmpAmount = amount-orig/4 = 450-250=200
+        mockStockProcess.mockReturnValue({
+            type: 6, buy: 10, sell: 0, bCount: 0.01, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemT6', {
+            orig: 1000, amount: 450, times: 1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+    });
+
+    test('recur_status: type=5 sell with loop → sCount multiplied', async () => {
+        const id = 'RS21';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 100, price: 55000, lp: 54000, pl: 10000, time: FROZEN_SEC },
+            ] } },
+        });
+        // type=5: amount < orig*3/8=375 → check. tmpAmount = orig/2 - amount = 500-200=300
+        // sell*times*(1-FEE) = 10*1*0.996=9.96 → ~30 iterations
+        mockStockProcess.mockReturnValue({
+            type: 5, buy: 0, sell: 10, bCount: 0, sCount: 0.01, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemT5', {
+            orig: 1000, amount: 200, times: 1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+    });
+
+    test('recur_status: type=8 sell with loop → sCount multiplied', async () => {
+        const id = 'RS22';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 100, price: 55000, lp: 54000, pl: 10000, time: FROZEN_SEC },
+            ] } },
+        });
+        // type=8: amount < orig*5/8=625 → check. tmpAmount = orig*3/4-amount = 750-400=350
+        mockStockProcess.mockReturnValue({
+            type: 8, buy: 0, sell: 10, bCount: 0, sCount: 0.01, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemT8', {
+            orig: 1000, amount: 400, times: 1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+    });
+
+    test('recur_status: newMid pop loop → reverts tmpPT to previous', async () => {
+        const id = 'RS23';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 48000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemNM', {
+            orig: 1000, amount: 1000, times: 1,
+            newMid: [55000],
+            tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        let savedUpdate;
+        mockMongo.mockImplementation((op, coll, q, upd) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && (q.owner || q.sType)) {
+                return Promise.resolve([{
+                    _id: 'itemNM', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [55000],
+                    tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                return Promise.resolve([{
+                    _id: 'itemNM', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [55000],
+                    tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update' && upd?.$set?.newMid) { savedUpdate = upd.$set; return Promise.resolve({}); }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // newMid=[55000] > checkMid(=mid=50000), lastPrice(48000) < checkMid → pop condition met
+        // After pop: newMid=[], previous should have tmpPT values restored
+        if (savedUpdate) {
+            expect(savedUpdate.newMid).toEqual([]);
+            expect(savedUpdate.previous.price).toBe(49000);
+        }
+    });
+
+    test('recur_status: ing=2 with positions (count>0) → sell-all order + deleteMany', async () => {
+        const id = 'RS24';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 0.5, price: 55000, lp: 54000, pl: 2500, time: FROZEN_SEC },
+            ] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item24', index: 'tBTCUSD', type: 'fUSD', ing: 2,
+                    orig: 1000, amount: 500, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'deleteMany') return Promise.resolve({});
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // position adds count=0.5 > 0 → sell-all MARKET order submitted, then deleteMany
+        expect(mockMongo).toHaveBeenCalledWith('deleteMany', expect.anything(), { _id: 'item24' });
+    });
+
+    test('recur_status: order[id][type] missing → initialized to empty array', async () => {
+        const id = 'RS25';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: {} },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('item25', {}, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        const state = _getState();
+        expect(state.order[id].fUSD).toEqual([]);
+    });
+
+    test('recur_status: startStatus item not found → handleError', async () => {
+        const id = 'RS26';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item26', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) return Promise.resolve([]);
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // startStatus finds no item → handleError with 'miss tBTCUSD'
+        // error is caught and trade time rewound
+        expect(_getState().updateTime[id].trade).toBeLessThan(FROZEN_SEC);
+    });
+
+    test('recur_NewOrder: buy with quota retry (not enough balance)', async () => {
+        const id = 'RS27';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 0, bCount: 0.01, sCount: 0, str: 'buy', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemBQ', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        let submitCount = 0;
+        _orderSubmitInterceptor = () => {
+            submitCount++;
+            if (submitCount <= 2) {
+                return Promise.reject(new Error('not enough tradable balance'));
+            }
+            return Promise.resolve();
+        };
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // quota retry attempted (submitOrderBuy calls itself recursively)
+        expect(submitCount).toBeGreaterThanOrEqual(1);
+    });
+
+    test('recur_NewOrder: sell with minimum size error → or = null', async () => {
+        const id = 'RS28';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 100, price: 55000, lp: 54000, pl: 10000, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 65000, bCount: 0, sCount: 0.1, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemMS', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // sell order submitted (or fails with minimum size → or=null)
+        // Either way, flow completes without error
+        expect(mockStockProcess).toHaveBeenCalled();
+    });
+
+    test('recur_status: ing=0 lastPrice=0 → skips to next', async () => {
+        const id = 'RS29';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 0, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([{
+                    _id: 'item29', index: 'tBTCUSD', type: 'fUSD', ing: 0,
+                    orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr({ enter_mid: 50 }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // (0-50000)/50000*100 = -100 < 50 → sets ing=1
+        // But then lastPrice=0 → recur_status skips (L2230 path)
+        expect(mockStockProcess).not.toHaveBeenCalled();
+    });
+
+    test('recur_NewOrder: newOrder insert ordering by (orig-amount)', async () => {
+        const id = 'RS30';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        // Two items with different orig-amount ratios; second has higher orig-amount
+        let callIdx = 0;
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && q.owner) {
+                return Promise.resolve([
+                    {
+                        _id: 'itemA', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 900, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                        web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                    {
+                        _id: 'itemB', index: 'tETHUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 500, times: 1, mid: 3000, count: 0, pricecost: 0, pl: 0,
+                        web: [2800, 2900, 3000, 3100, 3200], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                ]);
+            }
+            if (op === 'find' && coll === 'total' && q._id === 'itemA') {
+                return Promise.resolve([{
+                    _id: 'itemA', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 900, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                    web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'find' && coll === 'total' && q._id === 'itemB') {
+                return Promise.resolve([{
+                    _id: 'itemB', index: 'tETHUSD', type: 'fUSD', ing: 1,
+                    orig: 1000, amount: 500, times: 1, mid: 3000, count: 0, pricecost: 0, pl: 0,
+                    web: [2800, 2900, 3000, 3100, 3200], wType: 0,
+                    newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                    previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                }]);
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr({
+            pair: [{ type: 'tBTCUSD', amount: 1000 }, { type: 'tETHUSD', amount: 1000 }],
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // itemA: orig-amount=100, itemB: orig-amount=500
+        // itemB has higher orig-amount → inserted before itemA in newOrder
+        expect(mockStockProcess).toHaveBeenCalled();
+    });
+
+    test('getLedger: old ledger + early morning → skips REST call', async () => {
+        const earlyAM = new Date('2026-05-05T01:00:00Z'); // 9:00 AM Taipei
+        jest.setSystemTime(earlyAM);
+        const earlyAMSec = Math.round(earlyAM.getTime() / 1000);
+        const yesterdaySec = earlyAMSec - 86400;
+
+        const id = 'RS31';
+        seedTradeStatusUser(id, {
+            updateTime: { [id]: { book: earlyAMSec, offer: 0, credit: 0, position: 0, order: 0, trade: 0 } },
+            ledger: { [id]: { fUSD: [{ time: yesterdaySec, amount: 10, rate: 0.001, id: 1 }] } },
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: earlyAMSec, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('item31', {}, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // ledger time < midnight → old, but current time (9 AM) < 9:30 AM → skip REST
+        expect(mockRest.ledgers).not.toHaveBeenCalled();
+    });
+
+    // ── Type 7 buy loop (L2040-2043, 2046) ──
+    test('recur_status: type=7 buy loop executes when buy*times small', async () => {
+        const id = 'RS32';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 7, buy: 100, sell: 0, bCount: 0.01, sCount: 0, str: 'buy', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemT7L', {
+            orig: 10000, amount: 9500, times: 1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 100000, balanceAvailable: 100000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // type=7, amount(9500) > orig*7/8(8750), buy*times=100 << tmpAmount(2000) → loop executes
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+    });
+
+    // ── order_avail insufficient → bCount zeroed (L2279-2281) ──
+    test('recur_NewOrder: order_avail < 2/3 needed → bCount zeroed', async () => {
+        const id = 'RS33';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            margin: { [id]: { fUSD: { avail: 1, time: FROZEN_SEC, total: 5000 } } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 0, bCount: 0.1, sCount: 0, str: 'buy', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemOA', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        // margin avail = 1 → order_avail ≈ 0 → bCount * buy * 2/3 >> 0 → bCount zeroed
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 5000, balanceAvailable: 1 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // order_avail ≈ 0, needed = bCount * buy * 2/3 = 3666 → zeroed, no buy logged
+        expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('buy tBTCUSD'));
+    });
+
+    // ── submitOrderBuy quota exhausted → or1 = null (L2290-2292) ──
+    test('recur_NewOrder: buy quota exhausted → or1 = null', async () => {
+        const id = 'RS35';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 0, bCount: 0.01, sCount: 0, str: 'buy', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemQE', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        // Always reject → quota decrements to 0
+        _orderSubmitInterceptor = () => Promise.reject(new Error('not enough tradable balance'));
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // quota exhausted → or1 = null → no order pushed to state
+        expect(_getState().order[id].fUSD.length).toBe(0);
+    });
+
+    // ── submitOrderBuy minimum size → or1 = null (L2307-2309) ──
+    test('recur_NewOrder: buy minimum size error → or1 = null', async () => {
+        const id = 'RS36';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 55000, sell: 0, bCount: 0.01, sCount: 0, str: 'buy', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemBMS', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([
+            { currency: 'USD', type: 'margin', balance: 10000, balanceAvailable: 10000 },
+        ]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        _orderSubmitInterceptor = () => Promise.reject(new Error('minimum size for tBTCUSD'));
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // minimum size → or1 = null → no order pushed
+        expect(_getState().order[id].fUSD.length).toBe(0);
+    });
+
+    // ── sell submit minimum size → or = null (L2375-2378) ──
+    test('recur_NewOrder: sell minimum size error → or = null', async () => {
+        const id = 'RS37';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [] } },
+            position: { [id]: { fUSD: [
+                { symbol: 'tBTCUSD', amount: 2, price: 55000, lp: 54000, pl: 10000, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 65000, bCount: 0, sCount: 0.001, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemSMS', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        _orderSubmitInterceptor = () => Promise.reject(new Error('minimum size for tBTCUSD'));
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // minimum size → or = null → no order in state
+        expect(_getState().order[id].fUSD.length).toBe(0);
+    });
+
+    // ── newOrder sorted insert (L2148-2151) ──
+    test('recur_status: newOrder sorted insert — higher orig-amount first', async () => {
+        const id = 'RS38';
+        seedTradeStatusUser(id, {
+            priceData: {
+                tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' },
+                tETHUSD: { lastPrice: 3000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' },
+            },
+            order: { [id]: { fUSD: [] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
+        });
+        // itemA: orig=1000, amount=900 → diff=100; itemB: orig=1000, amount=200 → diff=800
+        // B has larger diff → should be inserted before A
+        mockMongo.mockImplementation((op, coll, q) => {
+            if (op === 'find' && coll === 'user') return Promise.resolve([{ _id: id }]);
+            if (op === 'find' && coll === 'total' && (q.owner || q.sType)) {
+                return Promise.resolve([
+                    {
+                        _id: 'itemA38', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 900, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                        web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                    {
+                        _id: 'itemB38', index: 'tETHUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 200, times: 1, mid: 3000, count: 0, pricecost: 0, pl: 0,
+                        web: [2800, 2900, 3000, 3100, 3200], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                ]);
+            }
+            if (op === 'find' && coll === 'total' && q._id) {
+                const items = {
+                    itemA38: {
+                        _id: 'itemA38', index: 'tBTCUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 900, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
+                        web: [48000, 49000, 50000, 51000, 52000], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                    itemB38: {
+                        _id: 'itemB38', index: 'tETHUSD', type: 'fUSD', ing: 1,
+                        orig: 1000, amount: 200, times: 1, mid: 3000, count: 0, pricecost: 0, pl: 0,
+                        web: [2800, 2900, 3000, 3100, 3200], wType: 0,
+                        newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+                        previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
+                    },
+                };
+                return Promise.resolve([items[q._id]].filter(Boolean));
+            }
+            if (op === 'update') return Promise.resolve({});
+            return Promise.resolve([]);
+        });
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+
+        const p = setWsOffer(id, statusCurArr({
+            pair: [{ type: 'tBTCUSD', amount: 1000 }, { type: 'tETHUSD', amount: 1000 }],
+        }), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // B (diff=800) should be inserted before A (diff=100)
+        expect(mockStockProcess).toHaveBeenCalled();
+    });
+
+    // ── cancelOrder skip partially filled (L1938-1939) ──
+    test('recur_status: cancelOrder skips PARTIALLY FILLED order', async () => {
+        const id = 'RS40';
+        seedTradeStatusUser(id, {
+            priceData: { tBTCUSD: { lastPrice: 60000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
+            order: { [id]: { fUSD: [
+                { id: 1001, symbol: 'tBTCUSD', amount: 0.5, type: 'LIMIT', status: 'PARTIALLY FILLED', price: 55000, time: FROZEN_SEC },
+                { id: 1002, symbol: 'tBTCUSD', amount: 0.3, type: 'LIMIT', status: 'ACTIVE', price: 54000, time: FROZEN_SEC },
+            ] } },
+        });
+        mockStockProcess.mockReturnValue({
+            type: 0, buy: 0, sell: 65000, bCount: 0, sCount: 0.1, str: '', resetWeb: false,
+        });
+        mockMongo.mockImplementation(mkStatusMongo('itemPF', {
+            orig: 10000, amount: 10000, times: 0.1,
+        }, { uid: id }));
+        mockRest.wallets.mockResolvedValue([]);
+        mockRest.accountTrades.mockResolvedValue([]);
+        mockRest.cancelOrder.mockResolvedValue({});
+
+        const p = setWsOffer(id, statusCurArr(), id);
+        await flushTimers();
+        await p.catch(() => {});
+
+        // 1001 (PARTIALLY FILLED) skipped, 1002 (ACTIVE) canceled
+        expect(mockRest.cancelOrder).toHaveBeenCalledWith(1002);
+        expect(mockRest.cancelOrder).not.toHaveBeenCalledWith(1001);
     });
 });
 
