@@ -15,7 +15,8 @@
     "release": "docker compose -f docker-compose.release.yml up -d",
     "release-restart": "docker compose -f docker-compose.release.yml restart",
     "release-stop": "docker compose -f docker-compose.release.yml down",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit --testPathPattern=\\.integration\\.test\\.js$"
   },
   "type": "module",
   "dependencies": {
