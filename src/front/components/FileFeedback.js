@@ -119,9 +119,6 @@ class FileFeedback extends React.Component {
         return ret
     }
     _sendTag = () => {
-        if (this.state.sending) {
-            return false
-        }
         const send_tag = this.state.tags.map((tag, i) => {
             if (isValidString(tag, 'name')) {
                 return {

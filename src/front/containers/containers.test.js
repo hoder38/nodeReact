@@ -65,3 +65,14 @@ describe('configureStore', () => {
     expect(store.getState()).toBeDefined();
   });
 });
+
+// Root test — now accepts store as prop for testability
+describe('Root', () => {
+  test('renders with provided store', () => {
+    const configureStore = require('../configureStore.js').default;
+    const Root = require('../containers/Root.js').default;
+    const store = configureStore();
+    const { container } = render(<Root store={store} />);
+    expect(container).toBeTruthy();
+  });
+});

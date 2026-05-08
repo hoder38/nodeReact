@@ -7,10 +7,8 @@ import { ROOT_PAGE, LOGIN_PAGE } from '../constants.js'
 import ReApp from './ReApp.js'
 import ReLogin from './ReLogin.js'
 
-const store = configureStore()
-//let unsubscribe = store.subscribe(() => console.log(store.getState()))
-
-export default function Root() {
+export default function Root({ store: externalStore } = {}) {
+    const store = externalStore || configureStore()
     return (
         <Provider store={store}>
             <div>
