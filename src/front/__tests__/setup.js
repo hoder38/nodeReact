@@ -17,6 +17,9 @@ if (typeof global.WebSocket === 'undefined') {
   };
 }
 
+// Stub window.scrollTo (not implemented in jsdom)
+window.scrollTo = () => {};
+
 // Stub window.CustomEvent if needed (IE polyfill in utility.js)
 if (typeof window.CustomEvent !== 'function') {
   window.CustomEvent = class CustomEvent extends Event {
