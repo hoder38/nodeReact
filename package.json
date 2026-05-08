@@ -17,7 +17,9 @@
     "release-restart": "docker compose -f docker-compose.release.yml restart",
     "release-stop": "docker compose -f docker-compose.release.yml down",
     "postinstall": "patch-package",
-    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit --testPathPattern=\\.integration\\.test\\.js$"
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit --testPathPattern=\\.integration\\.test\\.js$",
+    "test:smoke": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.smoke.cjs --forceExit",
+    "dev-test-smoke": "docker exec -w /app -e NODE_OPTIONS=--experimental-vm-modules reactnode-file-server npx jest --config jest.smoke.cjs --forceExit --no-cache"
   },
   "type": "module",
   "dependencies": {

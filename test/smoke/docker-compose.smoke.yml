@@ -1,0 +1,64 @@
+# docker-compose.smoke.yml — Minimal compose for smoke tests
+# Brings up only MongoDB + Redis + a test runner container.
+#
+# Usage:
+#   docker compose -f test/smoke/docker-compose.smoke.yml up -d --wait
+#   docker exec smoke-runner sh -c 'cd /app && test/smoke/setup.sh'
+#   docker exec -w /app -e NODE_OPTIONS=--experimental-vm-modules \
+#     smoke-runner npx jest --config jest.smoke.cjs --forceExit
+#   docker compose -f test/smoke/docker-compose.smoke.yml down -v
+
+name: anomopi-smoke
+services:
+  redis:
+    build:
+      context: ../..
+      dockerfile: redis.Dockerfile
+    image: nodereact-redis:v1.0
+    container_name: smoke-redis
+    env_file: ../../.env.dev
+    command: redis-server /etc/redis/redis.conf --requirepass ${SESS_PWD}
+    restart: "no"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${SESS_PWD}", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  mongodb:
+    build:
+      context: ../..
+      dockerfile: mongodb.Dockerfile
+    image: nodereact-mongodb:v1.0
+    container_name: smoke-mongodb
+    env_file: ../../.env.dev
+    command: mongod --config /etc/mongo/mongod.conf
+    restart: "no"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PWD}
+      MONGO_INITDB_DATABASE: ${DB_USERNAME}
+    healthcheck:
+      test: test $$(echo "db.version()" | mongo --port 27017 --quiet)
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  smoke-runner:
+    build:
+      context: ../..
+      dockerfile: reactnode-file-server.Dockerfile
+    image: reactnode-file-server:v1.0
+    container_name: smoke-runner
+    env_file: ../../.env.dev
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - ../..:/app/
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["tail", "-f", "/dev/null"]
