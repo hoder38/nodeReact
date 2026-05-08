@@ -47,3 +47,21 @@ describe('ReAlertlist (connected)', () => {
     expect(container.querySelectorAll('.alert')).toHaveLength(0);
   });
 });
+
+// configureStore test
+describe('configureStore', () => {
+  test('creates a Redux store with router middleware', () => {
+    const configureStore = require('../configureStore.js').default;
+    const { history } = require('../configureStore.js');
+    const store = configureStore();
+    expect(store.getState()).toBeDefined();
+    expect(store.dispatch).toBeDefined();
+    expect(history).toBeDefined();
+  });
+
+  test('accepts preloaded state', () => {
+    const configureStore = require('../configureStore.js').default;
+    const store = configureStore({});
+    expect(store.getState()).toBeDefined();
+  });
+});

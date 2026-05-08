@@ -89,6 +89,36 @@ describe('UserInput component', () => {
     expect(container.querySelector('.wrapper input')).toBeTruthy();
   });
 
+  test('insertChild with children array — branches with/without nested children', () => {
+    const getinput = makeGetInput();
+    const { container } = render(
+      <UserInput val="test" getinput={getinput}>
+        <div className="outer">
+          <span className="leaf" />
+          <div className="nested"><em>deep</em></div>
+        </div>
+      </UserInput>
+    );
+    // leaf has no children → gets input inserted (line 62-65)
+    expect(container.querySelector('.leaf input')).toBeTruthy();
+    // nested has children → returned as-is (line 67)
+    expect(container.querySelector('.nested em')).toBeTruthy();
+  });
+
+  test('insertChild via tagv/tage — wraps with tag elements', () => {
+    const getinput = makeGetInput();
+    // edit=true → uses tage
+    const { container: c1 } = render(
+      <UserInput val="test" getinput={getinput} edit={true} tage={<span className="tag-edit" />} />
+    );
+    expect(c1.querySelector('.tag-edit input')).toBeTruthy();
+    // edit=false, copy provided → uses tagv
+    const { container: c2 } = render(
+      <UserInput val="test" getinput={getinput} edit={false} copy={jest.fn()} tagv={<span className="tag-view" />} />
+    );
+    expect(c2.querySelector('.tag-view input')).toBeTruthy();
+  });
+
   test('onChange calls getinput.onchange', () => {
     const onchange = jest.fn();
     const getinput = makeGetInput({ onchange });

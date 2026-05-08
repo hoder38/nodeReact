@@ -180,6 +180,20 @@ describe('Dropdown', () => {
     expect(screen.getByText('Click me')).toBeTruthy();
     expect(container.querySelector('.custom.dropdown')).toBeTruthy();
   });
+
+  test('_closeDrop closes the menu via mouseup', () => {
+    const droplist = [{ key: '1', title: 'Opt', className: '', onclick: jest.fn() }];
+    const { container } = render(
+      <Dropdown headelement="div" droplist={droplist}>
+        <span>Menu</span>
+      </Dropdown>
+    );
+    const wrapper = container.querySelector('.dropdown');
+    fireEvent.click(wrapper);
+    expect(wrapper.classList.contains('open')).toBe(true);
+    fireEvent.mouseUp(document);
+    expect(wrapper.classList.contains('open')).toBe(false);
+  });
 });
 
 describe('GlobalComfirm', () => {
