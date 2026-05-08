@@ -5,41 +5,37 @@
 
 ---
 
-## 0. Current State
+## 0. Current State (Updated)
 
 | Metric | Value |
 |--------|-------|
-| Total frontend files | 125 `.js` files in `src/front/` |
-| Test files | **0** — no frontend tests exist |
-| Coverage | **0%** |
-| Dead feature modules | Fitness (10 files), Rank (10 files), Lottery (8 files) = **28 dead files** |
-| Active components | 40 components, 28 containers |
-| Largest files | `StockInfo.js` (1494), `MediaWidget.js` (999), `actions/index.js` (453), `BitfinexInfo.js` (419) |
+| Total frontend files | **97** active `.js` files in `src/front/` (28 dead removed) |
+| Test files | **8** test suites |
+| Test count | **230** passing tests |
+| Coverage (tested modules) | actions 100%, reducers 99%, utility 94%, constants 100% |
+| Coverage (overall frontend) | ~15% (most components/containers untested) |
 | Stack | React 17 (class components), Redux 4, React Router 5, Bootstrap 3, Chart.js 2 |
+| Test framework | **Jest 27** + babel-jest + jsdom + @testing-library/react@12 |
 
-### Active feature modules (routed)
+### Completed phases
 
-| Route | Container | Component | Info Panel |
-|-------|-----------|-----------|------------|
-| `/` | — | `Homepage.js` | — |
-| `/Login` | `ReLogin` | `Login.js` | — |
-| `/User` | `ReUserlist` | `Userlist.js` + `UserInfo.js` | — |
-| `/Storage` | — | `Storage.js` + `ItemFile.js` | `FileManage.js`, `FileAdd.js` |
-| `/Password` | `RePassword` | `Password.js` + `ItemPassword.js` | `PasswordInfo.js` |
-| `/Stock` | `ReStock` | `Stock.js` + `ItemStock.js` | `StockInfo.js`, `StockTotal.js` |
-| `/Bitfinex` | `ReBitfinex` | `Bitfinex.js` + `ItemBitfinex.js` | `BitfinexInfo.js` |
+| Phase | Status |
+|-------|--------|
+| 1. Dead Code Removal | ✅ Done — 28 files deleted, all references cleaned |
+| 2. Test Infrastructure | ✅ Done — Jest config, setup, helpers, file mocks |
+| 3. Pure Logic Tests | ✅ Done — utility, actions, reducers, API functions |
+| 4. Component Tests | 🔄 Started — AlertMsg, Alertlist, ToggleNav, WidgetButton, Dropdown, DropdownMenu, GlobalComfirm, UserInput, ReAlertlist |
+| 5. Page-Level Tests | ⬜ Not started |
+| 6. Integration Tests | ⬜ Not started |
 
-### Shared infra components
+### Node.js Constraint
 
-`App.js`, `Navlist.js`, `ToggleNav.js`, `TopSection.js`, `Dropdown.js`, `DropdownMenu.js`,
-`AlertMsg.js`, `Alertlist.js`, `Categorylist.js`, `Dirlist.js`, `Itemlist.js`, `ItemHead.js`,
-`ItemPath.js`, `ItemInput.js`, `FileUploader.js`, `FileFeedback.js`, `MediaManage.js`,
-`MediaWidget.js`, `WidgetManage.js`, `WidgetButton.js`, `GlobalPassword.js`,
-`GlobalComfirm.js`, `Tooltip.js`, `UserInput.js`
+Docker containers run **Node.js 14.21.3**. Vitest/MSW 2.x require Node 18+.
+All frontend tests use Jest 27 + babel-jest + jest-environment-jsdom@27.
 
 ---
 
-## 1. Dead Code Removal
+## 1. Dead Code Removal — ✅ DONE
 
 ### 1.1 Files to delete (28 files)
 
@@ -97,109 +93,36 @@ without errors. Dead files are unreferenced — removal is safe.
 
 ---
 
-## 2. Test Infrastructure Setup
+## 2. Test Infrastructure Setup — ✅ DONE
 
-### 2.1 Install dependencies
+### Actual implementation (Node 14 compatible)
 
-```bash
-npm install --save-dev \
-  vitest \
-  @testing-library/react \
-  @testing-library/jest-dom \
-  @testing-library/user-event \
-  jsdom \
-  @vitejs/plugin-react \
-  msw
-```
+- **Config**: `jest.front.cjs` — jsdom env, babel-jest transform, identity-obj-proxy for CSS
+- **Setup**: `src/front/__tests__/setup.js` — browser globals (Headers, WebSocket, scrollTo, CustomEvent, localStorage)
+- **After-env setup**: `src/front/__tests__/setupAfterFramework.js` — @testing-library/jest-dom + cleanup
+- **File mock**: `src/front/__tests__/fileMock.js` — for static assets
+- **Helpers**: `src/front/__tests__/helpers.js` — renderWithProviders, createTestStore
 
-### 2.2 Vitest config
-
-Create `vitest.config.js` at project root:
-
-```js
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/front/__tests__/setup.js'],
-    include: ['src/front/**/*.test.{js,jsx}'],
-    coverage: {
-      provider: 'v8',
-      include: ['src/front/**/*.js'],
-      exclude: [
-        'src/front/**/*.test.js',
-        'src/front/__tests__/**',
-        'src/front/css/**',
-        'src/front/fonts/**',
-      ],
-      thresholds: {
-        lines: 80,
-        branches: 70,
-        functions: 80,
-      },
-    },
-  },
-  resolve: {
-    alias: {
-      'isomorphic-fetch': 'node-fetch',
-    },
-  },
-});
-```
-
-### 2.3 Test setup file
-
-Create `src/front/__tests__/setup.js`:
-
-```js
-import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
-
-afterEach(() => cleanup());
-
-// Stub browser globals
-global.Headers = class Headers {
-  constructor() { this._h = {}; }
-  append(k, v) { this._h[k] = v; }
-};
-global.WebSocket = class WebSocket {
-  constructor() { this.readyState = 1; }
-  send() {}
-  close() {}
-};
-```
-
-### 2.4 MSW handlers
-
-Create `src/front/__tests__/mocks/handlers.js` with canned API responses:
-
-```js
-import { rest } from 'msw';
-
-export const handlers = [
-  rest.get('/api/testLogin', (req, res, ctx) => res(ctx.json({ id: 'user1' }))),
-  rest.post('/api/login', (req, res, ctx) => res(ctx.json({ loginOK: true }))),
-  rest.get('/api/logout', (req, res, ctx) => res(ctx.json({}))),
-  rest.get('/api/storage/get/:sort/:type/:page', (req, res, ctx) =>
-    res(ctx.json({ itemList: [], parentList: [], bookmarkID: '', latest: '' }))
-  ),
-  // ... add per-feature as tests grow
-];
-```
-
-### 2.5 npm scripts
+### npm scripts
 
 ```json
 {
-  "test:front": "vitest run --coverage",
-  "test:front:watch": "vitest",
-  "dev-test-front": "docker exec -w /app reactnode-file-server npx vitest run --coverage"
+  "test:front": "jest --config jest.front.cjs --forceExit",
+  "test:front:watch": "jest --config jest.front.cjs --watch",
+  "test:front:coverage": "jest --config jest.front.cjs --forceExit --coverage",
+  "dev-test-front": "docker exec -w /app reactnode-file-server npx jest --config jest.front.cjs --forceExit --no-cache"
 }
+```
+
+### Dependencies (devDependencies)
+
+```
+@testing-library/react@12 (React 17 compatible)
+@testing-library/jest-dom@5 (Node 14 compatible)
+@testing-library/dom@9
+@testing-library/user-event@14
+jest-environment-jsdom@27
+identity-obj-proxy@3
 ```
 
 ---
