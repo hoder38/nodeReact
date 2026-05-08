@@ -5,18 +5,12 @@ export const USER_PAGE = '/User'
 export const STORAGE_PAGE = '/Storage'
 export const PASSWORD_PAGE = '/Password'
 export const STOCK_PAGE = '/Stock'
-export const FITNESS_PAGE = '/Fitness'
-export const RANK_PAGE = '/Rank'
-export const LOTTERY_PAGE = '/Lottery'
 export const BITFINEX_PAGE = '/Bitfinex'
 
 //item type
 export const STORAGE = 'storage'
 export const PASSWORD = 'password'
 export const STOCK = 'stock'
-//export const FITNESS = 'fitness'
-//export const RANK = 'rank'
-//export const LOTTERY = 'lottery'
 export const BITFINEX = 'bitfinex'
 
 //action
@@ -62,29 +56,6 @@ export const SDIR_POP = 'SDIR_POP'
 export const SDIR_PUSH = 'SDIR_PUSH'
 export const SBOOKMARK_POP = 'SBOOKMARK_POP'
 export const SBOOKMARK_PUSH = 'SBOOKMARK_PUSH'
-/*
-//fitness
-export const FITNESS_PUSH = 'FITNESS_PUSH'
-export const FITNESS_POP = 'FITNESS_POP'
-export const SET_FITNESS = 'SET_FITNESS'
-export const SET_FDIRS = 'SET_FDIRS'
-export const FDIR_POP = 'FDIR_POP'
-export const FDIR_PUSH = 'FDIR_PUSH'
-export const FBOOKMARK_POP = 'FBOOKMARK_POP'
-export const FBOOKMARK_PUSH = 'FBOOKMARK_PUSH'
-//rank
-export const RANK_PUSH = 'RANK_PUSH'
-export const RANK_POP = 'RANK_POP'
-export const SET_RANK = 'SET_RANK'
-export const SET_RDIRS = 'SET_RDIRS'
-export const RDIR_POP = 'RDIR_POP'
-export const RDIR_PUSH = 'RDIR_PUSH'
-export const RBOOKMARK_POP = 'RBOOKMARK_POP'
-export const RBOOKMARK_PUSH = 'RBOOKMARK_PUSH'
-//lottery
-export const LOTTERY_PUSH = 'LOTTERY_PUSH'
-export const LOTTERY_POP = 'LOTTERY_POP'
-export const SET_LOTTERY = 'SET_LOTTERY'*/
 //bitfinex
 export const BITFINEX_PUSH = 'BITFINEX_PUSH'
 export const BITFINEX_POP = 'BITFINEX_POP'

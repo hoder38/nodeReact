@@ -1,7 +1,7 @@
 import React from 'react'
 import Tooltip from './Tooltip.js'
 import { getItemList, isValidString, api, killEvent } from '../utility.js'
-import { STORAGE, PASSWORD, STOCK/*, FITNESS, RANK, LOTTERY*/, BITFINEX } from '../constants.js'
+import { STORAGE, PASSWORD, STOCK, BITFINEX } from '../constants.js'
 
 class ItemHead extends React.Component {
     constructor(props) {
@@ -85,18 +85,6 @@ class ItemHead extends React.Component {
                 </li>
             )
             break
-            /*case FITNESS:
-            head1 = 'price'
-            break
-            case RANK:
-            head1 = 'start';
-            head2 = 'type';
-            break;
-            case LOTTERY:
-            click = () => {}
-            click2 = () => {}
-            click3 = () => {}
-            break;*/
             case BITFINEX:
             head1 = 'rate/total';
             head2 = 'time';

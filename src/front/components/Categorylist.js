@@ -2,9 +2,7 @@ import React from 'react'
 import ReDirlist from '../containers/ReDirlist.js'
 import RePasswordInfo from '../containers/RePasswordInfo.js'
 import ReBitfinexInfo from '../containers/ReBitfinexInfo.js'
-//import ReFitnessInfo from '../containers/ReFitnessInfo'
-//import ReRankInfo from '../containers/ReRankInfo'
-import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK/*, FITNESS, RANK, LOTTERY*/, BITFINEX } from '../constants.js'
+import { RIGHT_SECTION_ZINDEX, PASSWORD, STOCK, BITFINEX } from '../constants.js'
 import { dirItemList, bookmarkItemList, killEvent, api, isValidString, getItemList } from '../utility.js'
 
 class Categorylist extends React.Component {
@@ -145,43 +143,6 @@ class Categorylist extends React.Component {
                 </li>
             )
             break
-            /*case FITNESS:
-            if (this.props.level === 2) {
-                open = (
-                    <li>
-                        <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
-                            New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
-                        </a>
-                    </li>
-                );
-                if (this.state.edit) {
-                    edit = <ReFitnessInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} item={{newable: true}} />;
-                }
-            }
-            break;
-            case RANK:
-            if (this.props.level === 2) {
-                open = (
-                    <li>
-                        <a href="#" onClick={e => killEvent(e, () => this.setState(Object.assign({}, this.state, {edit: !this.state.edit})))}>
-                            New Row&nbsp;<i className="glyphicon glyphicon-plus"></i>
-                        </a>
-                    </li>
-                );
-                if (this.state.edit) {
-                    edit = <ReRankInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
-                }
-            }
-            break;
-            case LOTTERY:
-            open = this.props.stockopen ? (
-                <li>
-                    <a href="#" onClick={e => killEvent(e, this.props.setstock)}>
-                        END LOTTERY&nbsp;<i className="glyphicon glyphicon-cloud-download"></i>
-                    </a>
-                </li>
-            ) : null;
-            break;*/
             case BITFINEX:
             if (this.state.edit) {
                 edit = <ReBitfinexInfo onclose={() => this.setState(Object.assign({}, this.state, {edit: false}))} />;
@@ -212,13 +173,7 @@ class Categorylist extends React.Component {
                 </a>
             </li>
         ) : null
-        const ul = /*(this.props.itemType === LOTTERY) ? (
-            <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
-                {open}
-                {open2}
-                <ReDirlist name="USER LIST" time="mtime" dir={this.props.itemlist} del={()=>{}} edit={false} collapse={false} dirItem={()=>{}} noSort={true} />
-            </ul>
-        ) :*/ (this.props.itemType === BITFINEX) ? (
+        const ul = (this.props.itemType === BITFINEX) ? (
             <ul className="nav navbar-nav side-nav" id="inverse-nav" style={{right: '0px', left: 'auto', overflowX: 'hidden', overflowY: 'auto'}}>
                 {chart}
                 {open}

@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink, Route, Redirect, Switch } from 'react-router-dom'
 import { history } from '../configureStore.js'
-import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD/*, FITNESS_PAGE, RANK_PAGE, LOTTERY_PAGE*/, BITFINEX_PAGE, STOCK_PAGE } from '../constants.js'
+import { ROOT_PAGE, LOGIN_PAGE, USER_PAGE, STORAGE_PAGE, PASSWORD_PAGE, LEFT, RIGHT, UPLOAD, BITFINEX_PAGE, STOCK_PAGE } from '../constants.js'
 import { collapseToggle } from '../actions/index.js'
 import { api, doLogout, isValidString } from '../utility.js'
 import Navlist from './Navlist.js'
@@ -17,15 +17,8 @@ import Homepage from './Homepage.js'
 import Storage from './Storage.js'
 import RePassword from '../containers/RePassword.js'
 import ReStock from '../containers/ReStock.js'
-//import ReLottery from '../containers/ReLottery.js'
 import ReBitfinex from '../containers/ReBitfinex.js'
 import ReUserlist from '../containers/ReUserlist.js'
-//import ReFitness from './ReFitness'
-//import ReRank from './ReRank'
-//要用rank fitess記得router加上
-//<Route path={FITNESS_PAGE} component={ReFitness} />
-//<Route path={RANK_PAGE} component={ReRank} />
-//<Route path={LOTTERY_PAGE} component={ReLottery} />
 
 class App extends React.Component {
     constructor(props) {
@@ -40,9 +33,6 @@ class App extends React.Component {
                 {title: "homepage", hash: ROOT_PAGE, css: "glyphicon glyphicon-home", key: 0},
                 {title: "Storage", hash: STORAGE_PAGE, css: "glyphicon glyphicon-hdd", key: 1},
                 {title: "Password", hash: PASSWORD_PAGE, css: "glyphicon glyphicon-lock", key: 2},
-                //{title: "Fitness", hash: FITNESS_PAGE, css: "glyphicon glyphicon-fire", key: 4},
-                //{title: "Rank", hash: RANK_PAGE, css: "glyphicon glyphicon-education", key: 5},
-                //{title: "Lottery", hash: LOTTERY_PAGE, css: "glyphicon glyphicon-yen", key: 6},
                 {title: "Bitfinex", hash: BITFINEX_PAGE, css: "glyphicon glyphicon-bitcoin", key: 7},
             ],
             zipPw: null,

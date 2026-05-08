@@ -2,14 +2,11 @@ import React from 'react'
 import ReItemFile from '../containers/ReItemFile.js'
 import ReItemPassword from '../containers/ReItemPassword.js'
 import ReItemStock from '../containers/ReItemStock.js'
-//import ReItemFitness from '../containers/ReItemFitness.js'
-//import ReItemRank from '../containers/ReItemRank.js'
-//import ReItemLottery from '../containers/ReItemLottery.js'
 import ItemBitfinex from './ItemBitfinex.js'
 import Tooltip from './Tooltip.js'
 import Dropdown from './Dropdown.js'
 import { isValidString, getItemList, api, killEvent } from '../utility.js'
-import { STORAGE, PASSWORD, STOCK/*, FITNESS, RANK, LOTTERY*/, BITFINEX } from '../constants.js'
+import { STORAGE, PASSWORD, STOCK, BITFINEX } from '../constants.js'
 
 class Itemlist extends React.Component {
     constructor(props) {
@@ -114,15 +111,6 @@ class Itemlist extends React.Component {
                 case STOCK:
                 rows.push(<ReItemStock key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} setstock={this.props.setstock} />)
                 break
-                /*case FITNESS:
-                rows.push(<ReItemFitness key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
-                break
-                case RANK:
-                rows.push(<ReItemRank key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} latest={this.props.latest} check={select} />)
-                break
-                case LOTTERY:
-                rows.push(<ReItemLottery key={item.id} item={item} owner={this.props.owner} />)
-                break*/
                 case BITFINEX:
                 rows.push(<ItemBitfinex key={item.id} item={item} getRef={ref => this._select.set(i, ref)} onchange={this._handleSelect} check={select} mainUrl={this.props.mainUrl} sendglbcf={this.props.sendglbcf} />)
                 break
