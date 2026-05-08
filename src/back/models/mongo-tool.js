@@ -7,6 +7,7 @@ const { createHash } = crypto;
 import { handleError, HoError } from '../util/utility.js'
 
 let mongo = null;
+let _client = null;
 
 MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_PORT(ENV_TYPE)}/${DB_NAME(ENV_TYPE)}?authSource=admin`, {
     poolSize: 10,
@@ -28,6 +29,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                 return handleError(new HoError('No db connected'), 'DB connect');
             }
             mongo = db;
+            _client = client;
             console.log('database connected');
             db.collection('user', (err, collection) => {
                 if (err) {
@@ -58,6 +60,7 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
             return handleError(new HoError('No db connected'), 'DB connect');
         }
         mongo = db;
+        _client = client;
         console.log('database connected');
         db.collection('user', (err, collection) => {
             if (err) {
@@ -84,6 +87,17 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
 let collections = {}
 
 export const objectID = (id=null) => id === null ? new ObjectId() : new ObjectId(id)
+
+export const closeDB = () => {
+    if (_client) {
+        const c = _client;
+        _client = null;
+        mongo = null;
+        collections = {};
+        return c.close();
+    }
+    return Promise.resolve();
+};
 
 export default function(functionName, name, ...args) {
     switch (functionName) {

@@ -7,6 +7,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit && python3 -m pytest src/back/util/myuzip_test.py src/back/util/twse_test.py -v",
     "build": "webpack --config config/webpack.release.config.cjs",
     "dev-test": "docker exec -w /app reactnode-server npm run test",
+    "dev-test-int": "docker exec -w /app reactnode-server npm run test:integration",
     "dev-build": "docker exec -w /app reactnode-server npm run build",
     "dev-back": "docker compose -f docker-compose.dev.yml down; docker compose -f docker-compose.dev.yml up -d --build",
     "dev-code": "docker compose -f docker-compose.dev.yml restart reactnode-file-server reactnode-server nginx",

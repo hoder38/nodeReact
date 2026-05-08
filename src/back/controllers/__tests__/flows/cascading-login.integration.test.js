@@ -29,7 +29,7 @@ const { default: session } = await import('express-session');
 const { default: Passport } = await import('passport');
 const { default: request } = await import('supertest');
 
-const { default: Mongo } = await import('../../../models/mongo-tool.js');
+const { default: Mongo, closeDB } = await import('../../../models/mongo-tool.js');
 
 // Importing login-router.js registers the Passport strategy + serialize/deserialize
 const { default: LoginRouter } = await import('../../login-router.js');
@@ -151,6 +151,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     try { await Mongo('deleteMany', 'user', { username: TEST_USERNAME }); } catch (e) { /* ok */ }
+    await closeDB();
 });
 
 // =====================================================================

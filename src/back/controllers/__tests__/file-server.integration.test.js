@@ -28,7 +28,7 @@ const { default: session } = await import('express-session');
 const { default: Passport } = await import('passport');
 const { default: request } = await import('supertest');
 
-const { default: Mongo } = await import('../../models/mongo-tool.js');
+const { default: Mongo, closeDB } = await import('../../models/mongo-tool.js');
 const { default: LoginRouter } = await import('../login-router.js');
 const { default: FileBasicRouter } = await import('../file-basic-router.js');
 const { handleError, HoError } = await import('../../util/utility.js');
@@ -126,6 +126,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
     try { await Mongo('deleteMany', 'user', { username: TEST_USERNAME }); } catch (e) { /* ok */ }
+    await closeDB();
 });
 
 // =====================================================================

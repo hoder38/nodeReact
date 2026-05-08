@@ -32,7 +32,7 @@ const { default: Passport } = await import('passport');
 const { default: request } = await import('supertest');
 
 // Real mongo-tool — triggers actual MongoDB connection
-const { default: Mongo, objectID } = await import('../../models/mongo-tool.js');
+const { default: Mongo, objectID, closeDB } = await import('../../models/mongo-tool.js');
 
 // Real routers — use cached mongo-tool, real passport strategy
 const { default: LoginRouter } = await import('../login-router.js');
@@ -151,6 +151,7 @@ beforeAll(async () => {
 afterAll(async () => {
     try { await Mongo('deleteMany', 'user', { username: TEST_USERNAME }); } catch (e) { /* ok */ }
     try { await Mongo('deleteMany', 'user', { username: ADMIN_USERNAME }); } catch (e) { /* ok */ }
+    await closeDB();
 });
 
 // =====================================================================
