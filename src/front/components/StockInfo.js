@@ -1048,7 +1048,7 @@ class StockInfo extends React.Component {
                                     data2[index].push(mode === 2 ? Math.ceil(ry/1000000) : Math.ceil(ry/this._parse.managementStatus[i][rs]['share']*10000)/1000)
                                 } else if (mode === 1) {
                                     data2[index].push(Math.ceil(this._parse.managementStatus[i][j][k]/1000000))
-                                } else if (mode === 1) {
+                                } else if (mode === 3) {
                                     data2[index].push(Math.ceil(this._parse.managementStatus[i][j][k]/this._parse.managementStatus[i][j]['share']*10000)/1000)
                                 }
                             }

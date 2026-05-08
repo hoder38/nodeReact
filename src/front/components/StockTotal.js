@@ -66,9 +66,6 @@ class StockTotal extends React.Component {
         } else {
             this.setState(Object.assign({}, this.state, {sending: true}), () => {
                 api('/api/stock/updateTotal/0', {info: this._info}, 'PUT').then(result => {
-                    if (real) {
-                        this._info = [];
-                    }
                     this.setState(Object.assign({}, this.state, this._input.initValue(), {sending: false, total: result}))
                 }).catch(err => {
                     this.props.addalert(err)
