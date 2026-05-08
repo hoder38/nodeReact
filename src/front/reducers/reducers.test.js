@@ -73,6 +73,13 @@ describe('basicDataHandle', () => {
     });
     expect(result.sub).toEqual(['newSub']);
   });
+
+  test('SET_BASIC updates all fields at once', () => {
+    const result = basicDataHandle(initial, {
+      type: SET_BASIC, id: 'admin', url: '/pic.jpg', edit: true, level: 2, sub: 'x', fitness: 5,
+    });
+    expect(result).toEqual({ id: 'admin', url: '/pic.jpg', edit: true, level: 2, sub: ['x'], fitness: 5 });
+  });
 });
 
 describe('uploadDataHandle', () => {
@@ -284,6 +291,25 @@ describe('dirDataHandle (factory)', () => {
     });
     expect(state[0].list.size).toBe(2);
     expect(state[0].more).toBe(true);
+  });
+
+  test('DIR_PUSH without sort appends array and increments page', () => {
+    const prev = [{ name: 'music', list: new Map([['f1', { id: 'f1' }]]), sortName: 'name', sortType: 'asc', page: 1, more: true }];
+    const state = reducer(prev, {
+      type: DIR_PUSH, name: 'music', dir: [{ id: 'f2' }, { id: 'f3' }], sortName: null, sortType: null,
+    });
+    expect(state[0].list.size).toBe(3);
+    expect(state[0].page).toBe(3);
+    expect(state[0].more).toBe(true);
+  });
+
+  test('DIR_PUSH without sort empty array sets more=false', () => {
+    const prev = [{ name: 'music', list: new Map(), sortName: 'name', sortType: 'asc', page: 0, more: true }];
+    const state = reducer(prev, {
+      type: DIR_PUSH, name: 'music', dir: [], sortName: null, sortType: null,
+    });
+    expect(state[0].more).toBe(false);
+    expect(state[0].page).toBe(0);
   });
 
   test('DIR_PUSH empty array sets more=false', () => {

@@ -234,4 +234,63 @@ describe('complexDataHandle (bitfinex) — rest_item2 formatting', () => {
     });
     expect(state.list.get('bf2').utime).toBe(5);
   });
+
+  test('without sort and pageToken appends to named sub-list', () => {
+    const initial = reducer(undefined, { type: 'INIT' });
+    // First push to set up
+    const s1 = reducer(initial, {
+      type: BITFINEX_PUSH, item: [{ id: 'bf1', utime: 20000 }], path: null, bookmark: null,
+      latest: null, sortName: 'name', sortType: 'asc', pageToken: null, list: 'item', noScroll: true,
+    });
+    // Append without sort
+    const s2 = reducer(s1, {
+      type: BITFINEX_PUSH, item: [{ id: 'bf2', utime: 30000 }], path: null, bookmark: null,
+      latest: null, sortName: null, sortType: null, pageToken: null, list: 'item', noScroll: true,
+    });
+    expect(s2.item.list.size).toBe(2);
+    expect(s2.item.page).toBe(2);
+  });
+
+  test('with pageToken and matching path', () => {
+    const initial = reducer(undefined, { type: 'INIT' });
+    const s1 = reducer(initial, {
+      type: BITFINEX_PUSH, item: [{ id: 'bf1' }], path: { cur: ['a'] }, bookmark: null,
+      latest: null, sortName: 'name', sortType: 'asc', pageToken: null, list: 'item', noScroll: true,
+    });
+    const s2 = reducer(s1, {
+      type: BITFINEX_PUSH, item: [{ id: 'bf2' }], path: { cur: ['a'] }, bookmark: null,
+      latest: null, sortName: null, sortType: null, pageToken: 'page2', list: 'item', noScroll: true,
+    });
+    expect(s2.item.pageToken).toBe('page2');
+    expect(s2.item.list.size).toBe(2);
+  });
+
+  test('POP from numbered sub-lists (3 and 4)', () => {
+    const initial = reducer(undefined, { type: 'INIT' });
+    const state = {
+      ...initial,
+      list: new Map([['bf1', { id: 'bf1' }]]),
+      item: { ...initial.item, list: new Set(['bf1']), page: 1 },
+      select: new Set(['bf1']),
+      3: { list: new Set(['bf1']), page: 1 },
+      4: { list: new Set(['bf1']), page: 1 },
+    };
+    const result = reducer(state, { type: BITFINEX_POP, id: 'bf1' });
+    expect(result[3].list.has('bf1')).toBe(false);
+    expect(result[4].list.has('bf1')).toBe(false);
+    expect(result[3].page).toBe(0);
+    expect(result[4].page).toBe(0);
+  });
+
+  test('SET_BITFINEX with list=9 (array mode) sets complete=false', () => {
+    const initial = reducer(undefined, { type: 'INIT' });
+    const items = [{ name: 'order1' }, { name: 'order2' }];
+    const state = reducer(initial, {
+      type: SET_BITFINEX, select: null, latest: null, bookmark: null,
+      multi: null, list: items, id: 'myid', opt: null, time: 3,
+    });
+    expect(state[9]).toBeDefined();
+    expect(state[9].index).toBe(3);
+    expect(state[9].more).toBe(false);
+  });
 });
