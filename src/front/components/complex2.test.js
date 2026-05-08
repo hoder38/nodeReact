@@ -21,14 +21,28 @@ jest.mock('../configureStore.js', () => ({
 
 jest.mock('./UserInput.js', () => {
   const React = require('react');
-  function MockUserInput({ val, getinput, type, placeholder }) {
-    return React.createElement('input', {
+  function MockUserInput({ val, getinput, type, placeholder, children }) {
+    const input = React.createElement('input', {
       type: type || 'text',
       placeholder: placeholder || '',
       value: val != null ? val : '',
       onChange: getinput ? getinput.onchange : () => {},
       readOnly: false,
     });
+    if (children && children.props && children.props.children) {
+      const kids = Array.isArray(children.props.children) ? children.props.children : [children.props.children];
+      const newKids = kids.map((child, idx) => {
+        if (child && child.props && !child.props.children) {
+          return React.cloneElement(child, { key: idx }, input);
+        }
+        return React.cloneElement(child, { key: idx });
+      });
+      return React.cloneElement(children, {}, newKids);
+    }
+    if (children) {
+      return React.cloneElement(children, {}, input);
+    }
+    return input;
   }
   MockUserInput.Input = class {
     constructor(names, submit, change) {
@@ -38,7 +52,7 @@ jest.mock('./UserInput.js', () => {
     }
     initValue(init = {}) {
       const obj = {};
-      this.names.forEach(n => { obj[n] = init[n] !== undefined ? init[n] : ''; });
+      this.names.forEach(n => { obj[n] = init[n] != null ? init[n] : ''; });
       return obj;
     }
     getValue() {

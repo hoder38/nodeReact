@@ -58,13 +58,14 @@ function insertChild(item1, item2) {
     if (!item2) {
         return item1
     } else if (item2.props.children) {
-        return React.cloneElement(item2, {}, item2.props.children.map(child => {
+        return React.cloneElement(item2, {}, item2.props.children.map((child, idx) => {
             if (!child.props.children) {
                 return React.cloneElement(child, {
+                    key: idx,
                     style: {wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}
                 }, item1)
             } else {
-                return child
+                return React.cloneElement(child, { key: idx })
             }
         }))
     } else {
@@ -129,7 +130,7 @@ UserInput.Input = class {
     initValue(init = {}) {
         let obj = {}
         for (let key of this.ref.keys()) {
-            if (init[key] === undefined) {
+            if (init[key] == null) {
                 obj[key] = ''
             } else {
                 obj[key] = init[key]

@@ -136,11 +136,11 @@ class BitfinexInfo extends React.Component {
         this.setState(Object.assign({}, this.state, {
             list,
             current,
-            diff: item.isDiff,
-            active: item.isActive,
+            diff: !!item.isDiff,
+            active: !!item.isActive,
             advanced: (item.keepAmountRate1 || item.dynamicRate1 || item.dynamicRate2) ? true: false,
-            tradable: item.tradable,
-            trade: item.isTrade,
+            tradable: !!item.tradable,
+            trade: !!item.isTrade,
         }, this._input.initValue(item)));
     }
     _delBot = () => {

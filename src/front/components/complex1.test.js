@@ -1674,7 +1674,7 @@ describe('Itemlist', () => {
   });
 
   test('componentDidMount: fetches list when empty (STORAGE)', async () => {
-    await act(async () => { render(<table><tbody><Itemlist {...baseProps} /></tbody></table>); });
+    await act(async () => { render(<Itemlist {...baseProps} />); });
     await act(flushPromises);
     expect(getItemList).toHaveBeenCalled();
   });
@@ -1682,28 +1682,28 @@ describe('Itemlist', () => {
   test('componentDidMount: BITFINEX with no mainUrl does NOT fetch', async () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = '';
-    await act(async () => { render(<table><tbody><Itemlist {...baseProps} /></tbody></table>); });
+    await act(async () => { render(<Itemlist {...baseProps} />); });
     expect(getItemList).not.toHaveBeenCalled();
   });
 
   test('componentDidMount: BITFINEX with mainUrl fetches', async () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = 'http://example.com';
-    await act(async () => { render(<table><tbody><Itemlist {...baseProps} /></tbody></table>); });
+    await act(async () => { render(<Itemlist {...baseProps} />); });
     await act(flushPromises);
     expect(getItemList).toHaveBeenCalled();
   });
 
   test('componentDidMount: list not empty → no fetch', async () => {
     baseProps.list = new Map([[0, mkItem('a1', 'Item1')]]);
-    await act(async () => { render(<table><tbody><Itemlist {...baseProps} /></tbody></table>); });
+    await act(async () => { render(<Itemlist {...baseProps} />); });
     expect(getItemList).not.toHaveBeenCalled();
   });
 
   test('componentDidMount: uses localStorage values', async () => {
     localStorage.setItem(`${STORAGE}SortName`, 'count');
     localStorage.setItem(`${STORAGE}SortType`, 'desc');
-    await act(async () => { render(<table><tbody><Itemlist {...baseProps} /></tbody></table>); });
+    await act(async () => { render(<Itemlist {...baseProps} />); });
     await act(flushPromises);
     expect(getItemList).toHaveBeenCalledWith(STORAGE, 'count', 'desc', baseProps.set, 0, '', false, null, 0, false, false, false, '');
     localStorage.removeItem(`${STORAGE}SortName`);
@@ -1714,11 +1714,11 @@ describe('Itemlist', () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = 'http://old.com';
     baseProps.list = new Map([[0, mkItem('a1', 'A')]]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     jest.clearAllMocks();
     getItemList.mockResolvedValue();
     const newProps = { ...baseProps, mainUrl: 'http://new.com' };
-    await act(async () => { rerender(<table><tbody><Itemlist {...newProps} /></tbody></table>); });
+    await act(async () => { rerender(<Itemlist {...newProps} />); });
     await act(flushPromises);
     expect(getItemList).toHaveBeenCalled();
   });
@@ -1729,11 +1729,11 @@ describe('Itemlist', () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = 'http://old.com';
     baseProps.list = new Map([[0, mkItem('a1', 'A')]]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     jest.clearAllMocks();
     getItemList.mockResolvedValue();
     const newProps = { ...baseProps, mainUrl: 'http://new2.com' };
-    await act(async () => { rerender(<table><tbody><Itemlist {...newProps} /></tbody></table>); });
+    await act(async () => { rerender(<Itemlist {...newProps} />); });
     await act(flushPromises);
     expect(getItemList).toHaveBeenCalledWith(BITFINEX, 'storedName', 'storedType', baseProps.set, 0, '', false, null, 0, false, false, false, 'http://new2.com');
     localStorage.removeItem(`${BITFINEX}SortName`);
@@ -1744,38 +1744,38 @@ describe('Itemlist', () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = 'http://same.com';
     baseProps.list = new Map([[0, mkItem('a1', 'A')]]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     jest.clearAllMocks();
     const sameProps = { ...baseProps };
-    rerender(<table><tbody><Itemlist {...sameProps} /></tbody></table>);
+    rerender(<Itemlist {...sameProps} />);
     expect(getItemList).not.toHaveBeenCalled();
   });
 
   test('componentDidUpdate: non-BITFINEX does NOT fetch on mainUrl change', async () => {
     baseProps.list = new Map([[0, mkItem('a1', 'A')]]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     jest.clearAllMocks();
-    rerender(<table><tbody><Itemlist {...{ ...baseProps, mainUrl: 'changed' }} /></tbody></table>);
+    rerender(<Itemlist {...{ ...baseProps, mainUrl: 'changed' }} />);
     expect(getItemList).not.toHaveBeenCalled();
   });
 
   test('renders STORAGE items as ReItemFile', () => {
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     expect(screen.getByTestId('item-file-a1')).toBeTruthy();
   });
 
   test('renders PASSWORD items as ReItemPassword', () => {
     baseProps.itemType = PASSWORD;
     baseProps.list = new Map([[0, mkItem('p1', 'Pass1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     expect(screen.getByTestId('item-password-p1')).toBeTruthy();
   });
 
   test('renders STOCK items as ReItemStock', () => {
     baseProps.itemType = STOCK;
     baseProps.list = new Map([[0, mkItem('s1', 'Stock1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     expect(screen.getByTestId('item-stock-s1')).toBeTruthy();
   });
 
@@ -1783,21 +1783,21 @@ describe('Itemlist', () => {
     baseProps.itemType = BITFINEX;
     baseProps.mainUrl = 'http://test.com';
     baseProps.list = new Map([[0, mkItem('bf1', 'BF1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     expect(screen.getByTestId('item-bitfinex-bf1')).toBeTruthy();
   });
 
   test('more=true shows More button', () => {
     baseProps.more = true;
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     expect(screen.getByText('More')).toBeTruthy();
   });
 
   test('More button calls _getlist (push=true)', async () => {
     baseProps.more = true;
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const moreBtn = screen.getByText('More');
     await act(async () => { fireEvent.click(moreBtn); });
     await act(flushPromises);
@@ -1808,7 +1808,7 @@ describe('Itemlist', () => {
     getItemList.mockRejectedValue('list-err');
     baseProps.more = true;
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const moreBtn = screen.getByText('More');
     await act(async () => { fireEvent.click(moreBtn); });
     await act(flushPromises);
@@ -1821,7 +1821,7 @@ describe('Itemlist', () => {
       [1, mkItem('a2', 'File2', ['tag1', 'tag2'])],
     ]);
     baseProps.select = new Set([0, 1]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     // Should show up to 3 common tags + All button
     expect(screen.getByText('All')).toBeTruthy();
   });
@@ -1833,7 +1833,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0, 1]);
     api.mockResolvedValue({ relative: ['relTag1'] });
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     await act(flushPromises);
@@ -1848,7 +1848,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0, 1]);
     api.mockResolvedValue({ relative: ['relTag1'] });
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     await act(flushPromises);
@@ -1864,7 +1864,7 @@ describe('Itemlist', () => {
       [0, { id: 'bf1', name: 'BF1', tags: ['t1'] }],
     ]);
     baseProps.select = new Set([0]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     expect(api).not.toHaveBeenCalledWith('/api/bitfinex/getOptionTag', expect.anything());
@@ -1876,7 +1876,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0]);
     api.mockRejectedValue('opt-err');
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     await act(flushPromises);
@@ -1885,7 +1885,7 @@ describe('Itemlist', () => {
 
   test('_handleSelect updates selected items', () => {
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    const { container } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { container } = render(<Itemlist {...baseProps} />);
     const checkbox = container.querySelector('input[type="checkbox"]');
     // Use click since it's what users do, and triggers onChange for checkboxes
     act(() => { fireEvent.click(checkbox); });
@@ -1897,7 +1897,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1')],
       [1, mkItem('a2', 'File2')],
     ]);
-    const { container } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { container } = render(<Itemlist {...baseProps} />);
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     // Click only first checkbox — second stays unchecked, covering the false branch of item.checked
     act(() => { fireEvent.click(checkboxes[0]); });
@@ -1910,7 +1910,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1', ['tag1'])],
     ]);
     baseProps.select = new Set([0]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     // Click tag → sendglbcf → _handleTag with type='del'
     const tagLink = screen.getByText('tag1');
     fireEvent.click(tagLink);
@@ -1924,7 +1924,7 @@ describe('Itemlist', () => {
     baseProps.select = new Set([0]);
     isValidString.mockReturnValue('ok');
     api.mockResolvedValue({});
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     // The tag row's button triggers sendglbcf
     const delBtn = screen.getByText('刪除TAG').closest('button');
     await act(async () => { fireEvent.click(delBtn); });
@@ -1938,7 +1938,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0]);
     isValidString.mockReturnValue('');
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const delBtn = screen.getByText('刪除TAG').closest('button');
     fireEvent.click(delBtn);
     expect(baseProps.addalert).toHaveBeenCalledWith('Tag is not valid!!!!!!');
@@ -1949,7 +1949,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1', ['tag1'])],
     ]);
     baseProps.select = new Set([0]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     // temporarily set select to empty
     // We need to rerender with empty select but tags still showing
     // That's not possible because tags only show when select > 0
@@ -1961,7 +1961,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1', ['tag1'])],
     ]);
     baseProps.select = new Set([0]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const tagLink = screen.getByText('tag1').closest('a');
     await act(async () => { fireEvent.click(tagLink); });
     await act(flushPromises);
@@ -1975,7 +1975,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0, 1]);
     api.mockResolvedValue({ relative: ['relTag1'] });
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     await act(flushPromises);
@@ -1989,7 +1989,7 @@ describe('Itemlist', () => {
       [0, { id: 's1', name: 'Stock1', tags: ['stag1'] }],
     ]);
     baseProps.select = new Set([0]);
-    const { container } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { container } = render(<Itemlist {...baseProps} />);
     // STOCK adds an extra td
     const tagRow = container.querySelector('tr[class=""]') || container.querySelectorAll('tr')[0];
     expect(tagRow).toBeTruthy();
@@ -2006,7 +2006,7 @@ describe('Itemlist', () => {
 
   test('paddingTop is 125px for non-BITFINEX', () => {
     baseProps.list = new Map([[0, mkItem('a1', 'File1')]]);
-    const { container } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { container } = render(<Itemlist {...baseProps} />);
     const section = container.querySelector('section');
     expect(section.style.paddingTop).toBe('125px');
   });
@@ -2016,7 +2016,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1', ['t1', 't2', 't3', 't4', 't5'])],
     ]);
     baseProps.select = new Set([0]);
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     // Should show 3 tags + All button
     expect(screen.getByText('All')).toBeTruthy();
   });
@@ -2024,9 +2024,9 @@ describe('Itemlist', () => {
   test('select reset: deselecting all resets _first', () => {
     baseProps.list = new Map([[0, mkItem('a1', 'File1', ['t1'])]]);
     baseProps.select = new Set([0]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     // deselect
-    rerender(<table><tbody><Itemlist {...{ ...baseProps, select: new Set() }} /></tbody></table>);
+    rerender(<Itemlist {...{ ...baseProps, select: new Set() }} />);
     // No tag rows
     expect(screen.queryByText('All')).toBeNull();
   });
@@ -2038,7 +2038,7 @@ describe('Itemlist', () => {
     baseProps.select = new Set([0]);
     isValidString.mockReturnValue('ok');
     api.mockRejectedValue('tag-err');
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const delBtn = screen.getByText('刪除TAG').closest('button');
     await act(async () => { fireEvent.click(delBtn); });
     await act(flushPromises);
@@ -2052,7 +2052,7 @@ describe('Itemlist', () => {
     ]);
     baseProps.select = new Set([0, 1]);
     api.mockResolvedValue({ relative: [] });
-    render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    render(<Itemlist {...baseProps} />);
     const allBtn = screen.getByText('All');
     await act(async () => { fireEvent.click(allBtn); });
     await act(flushPromises);
@@ -2074,7 +2074,7 @@ describe('Itemlist', () => {
       [0, mkItem('a1', 'File1', ['tag1'])],
     ]);
     baseProps.select = new Set([0]);
-    const { rerender } = render(<table><tbody><Itemlist {...baseProps} /></tbody></table>);
+    const { rerender } = render(<Itemlist {...baseProps} />);
     // Now rerender with empty select - tag rows will disappear
     // We need a way to call _handleTag with empty select
     // _handleTag is called by sendglbcf callback on the tag row button
@@ -2085,12 +2085,12 @@ describe('Itemlist', () => {
     // But select.size is currently 1, not 0. We need to rerender first.
     // Actually, let's use a deferred sendglbcf:
     baseProps.sendglbcf = jest.fn();
-    rerender(<table><tbody><Itemlist {...{ ...baseProps, select: new Set([0]) }} /></tbody></table>);
+    rerender(<Itemlist {...{ ...baseProps, select: new Set([0]) }} />);
     const delBtn = screen.getByText('刪除TAG').closest('button');
     fireEvent.click(delBtn);
     // Now sendglbcf is stored but not called. Get the callback and call after rerendering with empty select
     const cb = baseProps.sendglbcf.mock.calls[0][0];
-    rerender(<table><tbody><Itemlist {...{ ...baseProps, select: new Set() }} /></tbody></table>);
+    rerender(<Itemlist {...{ ...baseProps, select: new Set() }} />);
     // Now call cb which will run _handleTag with this.props.select.size === 0
     cb();
     expect(baseProps.addalert).toHaveBeenCalledWith('Please selects item!!!');

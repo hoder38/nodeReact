@@ -185,7 +185,7 @@ class FileFeedback extends React.Component {
             rows.push(
                 <div className="input-group" key={key++}>
                     <span className="input-group-addon">
-                        <input type="checkbox" disabled="true" />
+                        <input type="checkbox" disabled={true} />
                     </span>
                     <span className="form-control" style={{wordBreak: 'break-all', wordWrap: 'break-word', height: 'auto'}}>{tag}</span>
                     <Dropdown headelement="span" className="input-group-btn" style={{left: 'auto', right: '0px', top: '0px'}} droplist={this.props.dirs} param={tag}>

@@ -20,6 +20,17 @@ if (typeof global.WebSocket === 'undefined') {
 // Stub window.scrollTo (not implemented in jsdom)
 window.scrollTo = () => {};
 
+// Suppress jsdom "Not implemented" errors (navigation, canvas)
+const originalConsoleError = console.error;
+console.error = (...args) => {
+  const msg = typeof args[0] === 'string' ? args[0] : '';
+  if (msg.includes('Not implemented: navigation') ||
+      msg.includes('Not implemented: HTMLCanvasElement.prototype.getContext')) {
+    return;
+  }
+  originalConsoleError.apply(console, args);
+};
+
 // Stub window.CustomEvent if needed (IE polyfill in utility.js)
 if (typeof window.CustomEvent !== 'function') {
   window.CustomEvent = class CustomEvent extends Event {

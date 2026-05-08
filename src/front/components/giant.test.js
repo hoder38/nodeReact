@@ -41,7 +41,7 @@ jest.mock('./UserInput.js', () => {
       init = init || {};
       const obj = {};
       for (const key of this.ref.keys()) {
-        obj[key] = init[key] === undefined ? '' : init[key];
+        obj[key] = init[key] == null ? '' : init[key];
       }
       return obj;
     }
@@ -59,7 +59,20 @@ jest.mock('./UserInput.js', () => {
       onCopy: props.copy || undefined,
     });
     var extra = (props.edit === false) ? props.tagv : props.tage;
-    return React.createElement(React.Fragment, null, inp, extra || null, props.children || null);
+    if (props.children && props.children.props && props.children.props.children) {
+      var kids = Array.isArray(props.children.props.children) ? props.children.props.children : [props.children.props.children];
+      var newKids = kids.map(function (child, idx) {
+        if (child && child.props && !child.props.children) {
+          return React.cloneElement(child, { key: idx }, inp, extra || null);
+        }
+        return React.cloneElement(child, { key: idx });
+      });
+      return React.cloneElement(props.children, {}, newKids);
+    }
+    if (props.children) {
+      return React.cloneElement(props.children, {}, inp, extra || null);
+    }
+    return React.createElement(React.Fragment, null, inp, extra || null);
   }
 
   MockUserInput.Input = MockInput;

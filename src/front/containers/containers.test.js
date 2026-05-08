@@ -7,6 +7,9 @@ import alertHandle from '../reducers/alertHandle.js';
 import ReAlertlist from '../containers/ReAlertlist.js';
 import { ALERT_PUSH } from '../constants.js';
 
+// Mock fetch to prevent "Only absolute URLs are supported" from Homepage's api call
+global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ msg: [] }) }));
+
 function makeStore(alerts = []) {
   const rootReducer = combineReducers({ alertHandle });
   const store = createStore(rootReducer);
@@ -68,6 +71,10 @@ describe('configureStore', () => {
 
 // Root test — now accepts store as prop for testability
 describe('Root', () => {
+  let logSpy;
+  beforeEach(() => { logSpy = jest.spyOn(console, 'log').mockImplementation(); });
+  afterEach(() => { logSpy.mockRestore(); });
+
   test('renders with provided store', () => {
     const configureStore = require('../configureStore.js').default;
     const Root = require('../containers/Root.js').default;

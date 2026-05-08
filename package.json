@@ -23,10 +23,11 @@
     "test:front:watch": "jest --config jest.front.cjs --watch",
     "test:front:coverage": "jest --config jest.front.cjs --forceExit --coverage",
     "dev-test-smoke": "docker exec -w /app -e NODE_OPTIONS=--experimental-vm-modules reactnode-file-server npx jest --config jest.smoke.cjs --forceExit --no-cache",
-    "dev-test-front": "docker exec -w /app reactnode-file-server npx jest --config jest.front.cjs --forceExit --no-cache",
+    "dev-test-front": "docker exec -w /app reactnode-server npm run test:front",
     "test:e2e": "npx playwright test --config e2e/playwright.config.js",
     "test:e2e:headed": "npx playwright test --config e2e/playwright.config.js --headed",
-    "test:e2e:debug": "npx playwright test --config e2e/playwright.config.js --debug"
+    "test:e2e:debug": "npx playwright test --config e2e/playwright.config.js --debug",
+    "dev-test-e2e": "docker exec -w /app reactnode-server npm run test:e2e"
   },
   "type": "module",
   "dependencies": {

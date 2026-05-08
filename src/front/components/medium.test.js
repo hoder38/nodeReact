@@ -110,10 +110,16 @@ const renderInTable = (el) => render(<table><tbody>{el}</tbody></table>);
 
 describe('Login', () => {
   let addalert;
+  let logSpy;
 
   beforeEach(() => {
     addalert = jest.fn();
+    logSpy = jest.spyOn(console, 'log').mockImplementation();
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
   });
 
   test('renders login form', async () => {
@@ -130,18 +136,15 @@ describe('Login', () => {
   });
 
   test('testLogin fails → logs error', async () => {
-    const spy = jest.spyOn(console, 'log').mockImplementation();
     testLogin.mockRejectedValue('test-err');
     await act(async () => { render(<Login addalert={addalert} />); });
-    expect(spy).toHaveBeenCalledWith('test-err');
-    spy.mockRestore();
+    expect(logSpy).toHaveBeenCalledWith('test-err');
   });
 
   test('submit valid creds → doLogin succeeds → goBack', async () => {
     testLogin.mockRejectedValue('no');
     isValidString.mockReturnValue('ok');
     doLogin.mockResolvedValue();
-    const spy = jest.spyOn(console, 'log').mockImplementation();
 
     let container;
     await act(async () => {
@@ -153,7 +156,6 @@ describe('Login', () => {
 
     expect(doLogin).toHaveBeenCalledWith('', '');
     expect(history.goBack).toHaveBeenCalled();
-    spy.mockRestore();
   });
 
   test('submit valid creds → doLogin fails → addalert', async () => {
@@ -194,7 +196,6 @@ describe('Login', () => {
       return '';
     });
     doLogin.mockResolvedValue();
-    const spy = jest.spyOn(console, 'log').mockImplementation();
 
     let container;
     await act(async () => {
@@ -205,7 +206,6 @@ describe('Login', () => {
 
     expect(doLogin).toHaveBeenCalled();
     expect(history.goBack).toHaveBeenCalled();
-    spy.mockRestore();
   });
 
   test('submit: username valid, passwd+verify falsy → else branch', async () => {
