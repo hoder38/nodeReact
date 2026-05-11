@@ -59,6 +59,10 @@ services:
     depends_on:
       - reactnode-file-server
       - reactnode-server
+    networks:
+      default:
+        aliases:
+          - www.anomopi.com
     restart: no
 
   reactnode-file-server:
@@ -112,3 +116,18 @@ services:
         condition: service_healthy
     restart: no
 
+  e2e:
+    build:
+      context: .
+      dockerfile: e2e.Dockerfile
+    image: nodereact-e2e:v1.0
+    container_name: reactnode-e2e
+    environment:
+      - PLAYWRIGHT_BASE_URL=https://www.anomopi.com:443
+    volumes:
+      - ./e2e:/app/e2e
+    depends_on:
+      - nginx
+    profiles:
+      - e2e
+    restart: no

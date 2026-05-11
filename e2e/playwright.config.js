@@ -11,7 +11,7 @@ const config = {
   reporter: process.env.CI ? 'html' : 'list',
   timeout: 30000,
   use: {
-    baseURL: 'https://www.anomopi.com:8080',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'https://www.anomopi.com:8080',
     ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

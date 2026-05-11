@@ -30,7 +30,14 @@ test.describe('Logout', () => {
     expect(logoutData).toHaveProperty('apiOK', true);
     // If cascading, the response has a url field for the file server logout
     if (logoutData.url) {
-      const fileLogoutResp = await page.request.get(`${logoutData.url}/api/logout`, {
+      // In Docker, the cascading URL may reference host port (8080) but nginx
+      // listens on 443 internally — normalize to match PLAYWRIGHT_BASE_URL
+      let fileLogoutUrl = `${logoutData.url}/api/logout`;
+      const baseURL = process.env.PLAYWRIGHT_BASE_URL;
+      if (baseURL && baseURL.includes(':443')) {
+        fileLogoutUrl = fileLogoutUrl.replace(':8080', ':443');
+      }
+      const fileLogoutResp = await page.request.get(fileLogoutUrl, {
         ignoreHTTPSErrors: true,
       });
       expect(fileLogoutResp.ok()).toBeTruthy();

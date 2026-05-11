@@ -27,7 +27,7 @@
     "test:e2e": "npx playwright test --config e2e/playwright.config.js",
     "test:e2e:headed": "npx playwright test --config e2e/playwright.config.js --headed",
     "test:e2e:debug": "npx playwright test --config e2e/playwright.config.js --debug",
-    "dev-test-e2e": "docker exec -w /app reactnode-server npm run test:e2e"
+    "dev-test-e2e": "docker compose -f docker-compose.dev.yml run --rm e2e"
   },
   "type": "module",
   "dependencies": {
