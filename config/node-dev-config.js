@@ -26,7 +26,6 @@ export default {
     //BACKUP_PATH: '/home/pipipi/mnt/backup',
     HINT: false,
     AUTO_UPLOAD: false,
-    AUTO_DOWNLOAD: false,
     UPDATE_STOCK: false,
     //UPDATE_EXTERNAL: false,
     CHECK_MEDIA: false,

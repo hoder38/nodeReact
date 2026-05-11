@@ -6,7 +6,7 @@ const { createInterface } = readline;
 import fsModule from 'fs'
 const { writeFile: FsWriteFile, createReadStream: FsCreateReadStream, existsSync: FsExistsSync } = fsModule;
 import Mkdirp from 'mkdirp'
-import { autoDoc, sendPresentName } from '../models/api-tool-google.js'
+import { sendPresentName } from '../models/api-tool-google.js'
 import { completeMimeTag } from '../models/tag-tool.js'
 //import External from '../models/external-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
@@ -227,12 +227,6 @@ rl.on('line', line => {
         /*case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));*/
-        case 'doc':
-        console.log('doc');
-        return Mongo('find', USERDB, {
-            auto: {$exists: true},
-            perm: 1,
-        }).then(userlist => autoDoc(userlist, 0, cmd[1], cmd[2])).then(() => console.log('done')).catch(err => handleError(err, 'CMD doc'));
         case 'checkdoc':
         console.log('checkdoc');
         return Mongo('find', DOCDB).then(doclist => console.log(doclist)).catch(err => handleError(err, 'CMD checkdoc'));

@@ -23,7 +23,6 @@ export default {
     BACKUP_PATH: '/data/db/backup',
     HINT: true,
     AUTO_UPLOAD: false,
-    AUTO_DOWNLOAD: true,
     UPDATE_STOCK: true,
     //UPDATE_EXTERNAL: true,
     CHECK_MEDIA: true,

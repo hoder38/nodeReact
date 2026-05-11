@@ -25,7 +25,6 @@ export const NAS_TMP = env => env === RELEASE ? ReleaseConfig.NAS_TMP : DevConfi
 export const NAS_PREFIX = env => env === RELEASE ? ReleaseConfig.NAS_PREFIX : DevConfig.NAS_PREFIX
 export const HINT = env => env === RELEASE ? ReleaseConfig.HINT : DevConfig.HINT
 export const AUTO_UPLOAD = env => env === RELEASE ? ReleaseConfig.AUTO_UPLOAD : DevConfig.AUTO_UPLOAD
-export const AUTO_DOWNLOAD = env => env === RELEASE ? ReleaseConfig.AUTO_DOWNLOAD : DevConfig.AUTO_DOWNLOAD
 export const UPDATE_STOCK = env => env === RELEASE ? ReleaseConfig.UPDATE_STOCK : DevConfig.UPDATE_STOCK
 //export const UPDATE_EXTERNAL = env => env === RELEASE ? ReleaseConfig.UPDATE_EXTERNAL : DevConfig.UPDATE_EXTERNAL
 export const CHECK_MEDIA = env => env === RELEASE ? ReleaseConfig.CHECK_MEDIA : DevConfig.CHECK_MEDIA

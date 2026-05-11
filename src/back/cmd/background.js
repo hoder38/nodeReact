@@ -1,5 +1,5 @@
 import { ENV_TYPE } from '../../../ver.js'
-import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, AUTO_DOWNLOAD, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER, BACKUP_PATH } from '../config.js'
+import { AUTO_UPLOAD, CHECK_MEDIA/*, UPDATE_EXTERNAL*/, UPDATE_STOCK, /*STOCK_MODE, STOCK_DATE, */STOCK_FILTER, DB_BACKUP, CHECK_STOCK, BITFINEX_LOAN, BITFINEX_FILTER, USSE_TICKER, TWSE_TICKER, BACKUP_PATH } from '../config.js'
 import { DRIVE_INTERVAL, USERDB, MEDIA_INTERVAL, DOC_INTERVAL, BACKUP_COLLECTION, BACKUP_INTERVAL, PRICE_INTERVAL, RATE_INTERVAL, FUSD_SYM, SUPPORT_COIN, SUPPORT_PAIR, MAX_RETRY } from '../constants.js'
 import Child_process from 'child_process'
 import Mongo from '../models/mongo-tool.js'
@@ -7,7 +7,7 @@ import StockTool, { getStockListV2, stockStatus } from '../models/stock-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
 import { calRate, setWsOffer, resetBFX, calWeb } from '../models/bitfinex-tool.js'
 import PlaylistApi from '../models/api-tool-playlist.js'
-import { userDrive, autoDoc, googleBackupDb } from '../models/api-tool-google.js'
+import { userDrive, googleBackupDb } from '../models/api-tool-google.js'
 import { usseTDInit, resetTD } from '../models/tdameritrade-tool.js'
 import { twseShioajiInit, resetShioaji } from '../models/shioaji-tool.js'
 import { dbDump } from './cmd.js'
@@ -43,32 +43,6 @@ export const autoUpload = () => {
             return new Promise((resolve, reject) => setTimeout(() => resolve(), DRIVE_INTERVAL * 1000)).then(() => loopDrive());
         }
         return new Promise((resolve, reject) => setTimeout(() => resolve(), 360000)).then(() => loopDrive());
-    }
-}
-
-export const autoDownload = () => {
-    if (AUTO_DOWNLOAD(ENV_TYPE)) {
-        const loopDoc = () => {
-            console.log('loopDoc');
-            console.log(new Date().toLocaleString());
-            Mongo('find', USERDB, {
-                auto: {$exists: true},
-                perm: 1,
-            }).then(userlist => {
-                switch (new Date().getHours()) {
-                    case 11:
-                    return autoDoc(userlist, 0, 'am');
-                    case 17:
-                    return autoDoc(userlist, 0, 'jp');
-                    case 18:
-                    return autoDoc(userlist, 0, 'tw');
-                    default:
-                    return Promise.resolve();
-                }
-            }).catch(err => bgError(err, 'Loop doc'));
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), DOC_INTERVAL * 1000)).then(() => loopDoc());
-        }
-        return new Promise((resolve, reject) => setTimeout(() => resolve(), 390000)).then(() => loopDoc());
     }
 }
 

@@ -133,13 +133,11 @@ jest.unstable_mockModule('../../models/stock-tool.js', () => ({
 
 // --- api-tool-google.js ---
 const mockUserDrive = jest.fn(() => Promise.resolve());
-const mockAutoDoc = jest.fn(() => Promise.resolve());
 const mockSendPresentName = jest.fn(() => Promise.resolve());
 
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   default: jest.fn(),
   userDrive: mockUserDrive,
-  autoDoc: mockAutoDoc,
   sendPresentName: mockSendPresentName,
 }));
 
@@ -195,7 +193,6 @@ describe('cmd.js', () => {
     mockTestData.mockResolvedValue();
     mockCleanUseless.mockResolvedValue();
     mockGetStockListV2.mockResolvedValue([]);
-    mockAutoDoc.mockResolvedValue();
     mockCompleteMimeTag.mockResolvedValue();
     mockUpdatePasswordCipher.mockResolvedValue();
     mockMkdirp.mockResolvedValue();
@@ -381,52 +378,6 @@ describe('cmd.js', () => {
       mockCleanUseless.mockRejectedValueOnce(new Error('fail'));
       await runCmd('cleanstock remove');
       expect(mockCleanUseless).toHaveBeenCalled();
-    });
-  });
-
-  // =================================================================
-  // doc command
-  // =================================================================
-  describe('doc command', () => {
-    test('doc am → finds admin users, calls autoDoc with "am"', async () => {
-      const users = [{ _id: 'u1', perm: 1, auto: true }];
-      mockMongo.mockResolvedValueOnce(users);
-      await runCmd('doc am');
-      expect(mockMongo).toHaveBeenCalledWith('find', 'user', {
-        auto: { $exists: true },
-        perm: 1,
-      });
-      expect(mockAutoDoc).toHaveBeenCalledWith(users, 0, 'am', undefined);
-    });
-
-    test('doc jp → region "jp"', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      await runCmd('doc jp');
-      expect(mockAutoDoc).toHaveBeenCalledWith([], 0, 'jp', undefined);
-    });
-
-    test('doc tw → region "tw"', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      await runCmd('doc tw');
-      expect(mockAutoDoc).toHaveBeenCalledWith([], 0, 'tw', undefined);
-    });
-
-    test('doc am 202603 → time param forwarded', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      await runCmd('doc am 202603');
-      expect(mockAutoDoc).toHaveBeenCalledWith([], 0, 'am', '202603');
-    });
-
-    test('doc (no region) → undefined region', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      await runCmd('doc');
-      expect(mockAutoDoc).toHaveBeenCalledWith([], 0, undefined, undefined);
-    });
-
-    test('DB error → handleError catches', async () => {
-      mockMongo.mockRejectedValueOnce(new Error('db fail'));
-      await runCmd('doc am');
-      expect(mockMongo).toHaveBeenCalled();
     });
   });
 

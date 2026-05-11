@@ -94,7 +94,6 @@ jest.unstable_mockModule('../../config.js', () => ({
   WS_PORT: jest.fn(() => 8080),
   HINT: jest.fn(() => false),
   AUTO_UPLOAD: jest.fn(() => false),
-  AUTO_DOWNLOAD: jest.fn(() => false),
   UPDATE_STOCK: jest.fn(() => false),
   CHECK_MEDIA: jest.fn(() => false),
   STOCK_FILTER: jest.fn(() => false),

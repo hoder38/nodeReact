@@ -15,7 +15,6 @@ let mockMediaHandleTool, mockExternal;
 
 const TEST_CONFIG = {
     MAX_RETRY: 3, API_EXPIRE: 60, DRIVE_LIMIT: 50, OATH_WAITING: 2,
-    DOC_TYPE: { doc: ['document', 'spreadsheet'], slide: ['presentation'] },
     KINDLE_LIMIT: 52428800, API_LIMIT: 3,
     GOOGLE_MEDIA_FOLDER: 'mock-media-folder-id',
     GOOGLE_BACKUP_FOLDER: 'mock-backup-folder-id',
@@ -28,7 +27,7 @@ const TEST_CONFIG = {
 jest.unstable_mockModule('../../constants.js', () => ({
     MAX_RETRY: TEST_CONFIG.MAX_RETRY, API_EXPIRE: TEST_CONFIG.API_EXPIRE,
     DRIVE_LIMIT: TEST_CONFIG.DRIVE_LIMIT, OATH_WAITING: TEST_CONFIG.OATH_WAITING,
-    DOC_TYPE: TEST_CONFIG.DOC_TYPE, KINDLE_LIMIT: TEST_CONFIG.KINDLE_LIMIT,
+    KINDLE_LIMIT: TEST_CONFIG.KINDLE_LIMIT,
     __dirname: '/app/src/back/models',
 }));
 
@@ -132,7 +131,7 @@ jest.unstable_mockModule('../mongo-tool.js', () => ({ default: mockMongoFunction
 
 mockMediaHandleTool = { handleRecycle: jest.fn(), singleDrive: jest.fn().mockResolvedValue() };
 jest.unstable_mockModule('../mediaHandle-tool.js', () => ({ default: mockMediaHandleTool }));
-mockExternal = { handleDoc: jest.fn(), getSingleList: jest.fn().mockResolvedValue([]), save2Drive: jest.fn().mockResolvedValue() };
+mockExternal = { handleDoc: jest.fn() };
 jest.unstable_mockModule('../external-tool.js', () => ({ default: mockExternal }));
 
 mockHandleError = jest.fn((err) => Promise.reject(err));
@@ -154,7 +153,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs })
 
 const mod = await import('../api-tool-google.js');
 const api = mod.default;
-const { googleBackup, userDrive, autoDoc, isApiing,
+const { googleBackup, userDrive, isApiing,
     sendPresentName, sendLotteryName, googleBackupDb,
     _resetState, _getState, _setState } = mod;
 
@@ -206,8 +205,6 @@ describe('api-tool-google.js', () => {
         mockSendWs.mockReturnValue();
         mockMediaHandleTool.handleRecycle.mockResolvedValue();
         mockMediaHandleTool.singleDrive.mockResolvedValue();
-        mockExternal.getSingleList.mockResolvedValue([]);
-        mockExternal.save2Drive.mockResolvedValue();
     });
 
     // 0. Test Helpers
@@ -877,36 +874,6 @@ describe('api-tool-google.js', () => {
                 }
             });
             await userDrive(ul, 0, 50);
-        });
-    });
-
-    // 18. autoDoc
-    describe('autoDoc', () => {
-        const ul = [{ username: 'u1', auto: 'a1' }];
-        test('invalid type', async () => { await expect(autoDoc(ul, 0, 'bogus')).rejects.toThrow('do not have this country'); });
-        test('empty doclist', async () => { mockExternal.getSingleList.mockResolvedValue([]); await autoDoc(ul, 0, 'doc'); });
-        test('docs found → iterates doc types', async () => {
-            mockExternal.getSingleList.mockResolvedValueOnce([{ name: 'r.pdf' }]).mockResolvedValue([]);
-            await autoDoc(ul, 0, 'doc');
-            expect(mockExternal.save2Drive).toHaveBeenCalledWith('document', { name: 'r.pdf' }, 'a1');
-            expect(mockExternal.getSingleList).toHaveBeenCalledTimes(2);
-        });
-        test('multiple docs', async () => {
-            mockExternal.getSingleList.mockResolvedValueOnce([{ name: 'd1' }, { name: 'd2' }]).mockResolvedValue([]);
-            await autoDoc(ul, 0, 'doc');
-            expect(mockExternal.save2Drive).toHaveBeenCalledTimes(2);
-        });
-        test('multi users with docs', async () => {
-            mockExternal.getSingleList.mockResolvedValueOnce([{ name: 'r.pdf' }]).mockResolvedValue([]);
-            await autoDoc([{ username: 'u1', auto: 'a1' }, { username: 'u2', auto: 'a2' }], 0, 'doc');
-            await WAIT(500);
-            expect(mockExternal.save2Drive).toHaveBeenCalled();
-        });
-        test('with date', async () => {
-            mockExternal.getSingleList.mockResolvedValue([]);
-            const d = new Date('2024-01-01');
-            await autoDoc(ul, 0, 'doc', d);
-            expect(mockExternal.getSingleList).toHaveBeenCalledWith('document', d);
         });
     });
 

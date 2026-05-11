@@ -61,11 +61,6 @@ export const TWSE_MARKET_TIME = [4, 21];
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 export const MONTH_SHORTS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export const DOC_TYPE = {
-    am: [/*'bls', */'cen'/*, 'bea', 'ism', 'oec'*/, 'dol'/*, 'rea'*/, 'sca', 'fed', 'cbo'],
-    jp: ['sea'],
-    tw: ['sta', 'moe', 'cbc', 'mof'/*, 'ndc'*/],
-}
 
 //regex
 export const RE_WEBURL = new RegExp(

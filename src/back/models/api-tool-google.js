@@ -1,4 +1,4 @@
-import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, DOC_TYPE, KINDLE_LIMIT, __dirname } from '../constants.js'
+import { MAX_RETRY, API_EXPIRE, DRIVE_LIMIT, OATH_WAITING, KINDLE_LIMIT, __dirname } from '../constants.js'
 import { ENV_TYPE, GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT, ROOT_USER } from '../../../ver.js'
 import { GOOGLE_MEDIA_FOLDER, GOOGLE_BACKUP_FOLDER, API_LIMIT, NAS_TMP, GOOGLE_DB_BACKUP_FOLDER, BACKUP_PATH } from '../config.js'
 import googleapisModule from 'googleapis'
@@ -13,7 +13,6 @@ import fsModule from 'fs'
 const { existsSync: FsExistsSync, createReadStream: FsCreateReadStream, unlink: FsUnlink, renameSync: FsRenameSync, createWriteStream: FsCreateWriteStream, statSync: FsStatSync, readdirSync: FsReaddirSync, lstatSync: FsLstatSync, writeFile: FsWriteFile } = fsModule
 import Mongo from '../models/mongo-tool.js'
 import MediaHandleTool from '../models/mediaHandle-tool.js'
-import External from '../models/external-tool.js'
 import { handleError, HoError, isValidString } from '../util/utility.js'
 import { mediaMIME, isKindle } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
@@ -898,54 +897,6 @@ export function userDrive(userlist, index, drive_batch=DRIVE_LIMIT) {
     }
 }
 
-export function autoDoc(userlist, index, type, date=null) {
-    console.log('autoDoc');
-    console.log(new Date().toLocaleString());
-    console.log(userlist[index].username);
-    date = date ? date : new Date();
-    if (!DOC_TYPE.hasOwnProperty(type)) {
-        return handleError(new HoError('do not have this country!!!'));
-    }
-    /*let downloaded = null;
-    let downloaded_data = {
-        folderId: userlist[index].auto,
-        name: 'downloaded',
-    };
-    return api('list folder', downloaded_data).then(downloadedList => {
-        if (downloadedList.length < 1) {
-            return handleError(new HoError('do not have downloaded folder!!!'));
-        }
-        downloaded = downloadedList[0].id;*/
-        const downloaded = userlist[index].auto;
-        const download_ext_doc = (tIndex, doc_type) => External.getSingleList(doc_type[tIndex], date).then(doclist => {
-            console.log(doclist);
-            if (doclist.length > 0) {
-                sendWs(doclist.reduce((a, v) => `${a} ${v.name}`, `${doc_type[tIndex]}: `), 0, 0, true);
-            }
-            const recur_download = dIndex => {
-                const single_download = () => (dIndex < doclist.length) ? External.save2Drive(doc_type[tIndex], doclist[dIndex], downloaded) : Promise.resolve();
-                return single_download().then(() => {
-                    dIndex++;
-                    if (dIndex < doclist.length) {
-                        return recur_download(dIndex);
-                    } else {
-                        tIndex++;
-                        if (tIndex < doc_type.length) {
-                            return download_ext_doc(tIndex, doc_type);
-                        } else {
-                            index++;
-                            if (index < userlist.length) {
-                                return autoDoc(userlist, index, type, date);
-                            }
-                        }
-                    }
-                });
-            }
-            return recur_download(0);
-        });
-        return download_ext_doc(0, DOC_TYPE[type]);
-    //});
-}
 
 export const isApiing = () => (api_ing > 0) ? true : false;
 

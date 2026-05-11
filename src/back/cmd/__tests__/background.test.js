@@ -56,7 +56,6 @@ jest.unstable_mockModule('../../../../ver.js', () => ({
 // --- config.js — feature flags default to enabled (release mode) ---
 const mockAutoUpload = jest.fn(() => true);
 const mockCheckMedia = jest.fn(() => true);
-const mockAutoDownload = jest.fn(() => true);
 const mockUpdateStock = jest.fn(() => true);
 const mockStockFilter = jest.fn(() => true);
 const mockDbBackup = jest.fn(() => true);
@@ -70,7 +69,6 @@ const mockBackupPath = jest.fn(() => '/backup');
 jest.unstable_mockModule('../../config.js', () => ({
   AUTO_UPLOAD: mockAutoUpload,
   CHECK_MEDIA: mockCheckMedia,
-  AUTO_DOWNLOAD: mockAutoDownload,
   UPDATE_STOCK: mockUpdateStock,
   STOCK_FILTER: mockStockFilter,
   DB_BACKUP: mockDbBackup,
@@ -190,12 +188,10 @@ jest.unstable_mockModule('../../models/api-tool-playlist.js', () => ({
 
 // --- api-tool-google.js ---
 const mockUserDrive = jest.fn(() => Promise.resolve());
-const mockAutoDoc = jest.fn(() => Promise.resolve());
 const mockGoogleBackupDb = jest.fn(() => Promise.resolve());
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   default: jest.fn(),
   userDrive: mockUserDrive,
-  autoDoc: mockAutoDoc,
   googleBackupDb: mockGoogleBackupDb,
 }));
 
@@ -266,7 +262,6 @@ describe('background.js', () => {
     // Default: all flags enabled
     mockAutoUpload.mockReturnValue(true);
     mockCheckMedia.mockReturnValue(true);
-    mockAutoDownload.mockReturnValue(true);
     mockUpdateStock.mockReturnValue(true);
     mockStockFilter.mockReturnValue(true);
     mockDbBackup.mockReturnValue(true);
@@ -288,7 +283,6 @@ describe('background.js', () => {
     mockResetBFX.mockResolvedValue();
     mockCalWeb.mockResolvedValue();
     mockUserDrive.mockResolvedValue();
-    mockAutoDoc.mockResolvedValue();
     mockGoogleBackupDb.mockResolvedValue();
     mockUsseTDInit.mockResolvedValue();
     mockTwseShioajiInit.mockResolvedValue();
@@ -341,68 +335,6 @@ describe('background.js', () => {
       await advanceAndFlush(360000);
       expect(mockSendWs).toHaveBeenCalledWith(
         expect.stringContaining('Loop drive'),
-        0, 0, true,
-      );
-    });
-  });
-
-  // =================================================================
-  // 2. autoDownload
-  // =================================================================
-  describe('autoDownload', () => {
-    test('disabled flag → returns undefined', () => {
-      mockAutoDownload.mockReturnValue(false);
-      expect(bg.autoDownload()).toBeUndefined();
-    });
-
-    test('enabled → returns a Promise', () => {
-      expect(bg.autoDownload()).toBeInstanceOf(Promise);
-    });
-
-    test('hour=11 → calls autoDoc with "am"', async () => {
-      const users = [{ _id: 'u1', auto: true, perm: 1 }];
-      mockMongo.mockResolvedValueOnce(users);
-      jest.setSystemTime(new Date(2026, 2, 19, 11, 0, 0));
-      bg.autoDownload();
-      await advanceAndFlush(390000);
-      expect(mockMongo).toHaveBeenCalledWith('find', 'user', {
-        auto: { $exists: true },
-        perm: 1,
-      });
-      expect(mockAutoDoc).toHaveBeenCalledWith(users, 0, 'am');
-    });
-
-    test('hour=17 → calls autoDoc with "jp"', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'u1', perm: 1 }]);
-      jest.setSystemTime(new Date(2026, 2, 19, 17, 0, 0));
-      bg.autoDownload();
-      await advanceAndFlush(390000);
-      expect(mockAutoDoc).toHaveBeenCalledWith(expect.anything(), 0, 'jp');
-    });
-
-    test('hour=18 → calls autoDoc with "tw"', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'u1', perm: 1 }]);
-      jest.setSystemTime(new Date(2026, 2, 19, 18, 0, 0));
-      bg.autoDownload();
-      await advanceAndFlush(390000);
-      expect(mockAutoDoc).toHaveBeenCalledWith(expect.anything(), 0, 'tw');
-    });
-
-    test('other hours → no autoDoc call', async () => {
-      mockMongo.mockResolvedValueOnce([{ _id: 'u1', perm: 1 }]);
-      jest.setSystemTime(new Date(2026, 2, 19, 5, 0, 0));
-      bg.autoDownload();
-      await advanceAndFlush(390000);
-      expect(mockAutoDoc).not.toHaveBeenCalled();
-    });
-
-    test('Mongo error → bgError called', async () => {
-      mockMongo.mockRejectedValueOnce(new Error('db fail'));
-      jest.setSystemTime(new Date(2026, 2, 19, 11, 0, 0));
-      bg.autoDownload();
-      await advanceAndFlush(390000);
-      expect(mockSendWs).toHaveBeenCalledWith(
-        expect.stringContaining('Loop doc'),
         0, 0, true,
       );
     });
@@ -975,14 +907,6 @@ describe('background.js', () => {
       expect(mockMongo).toHaveBeenCalled();
     });
 
-    test('autoDownload initial delay = 390s', async () => {
-      bg.autoDownload();
-      await advanceAndFlush(389999);
-      expect(mockMongo).not.toHaveBeenCalled();
-      await advanceAndFlush(1);
-      expect(mockMongo).toHaveBeenCalled();
-    });
-
     test('checkMedia initial delay = 420s', async () => {
       bg.checkMedia();
       await advanceAndFlush(419999);
@@ -1034,7 +958,6 @@ describe('background.js', () => {
   describe('Feature flag edge cases', () => {
     test('all flags disabled → all functions return undefined', () => {
       mockAutoUpload.mockReturnValue(false);
-      mockAutoDownload.mockReturnValue(false);
       mockCheckMedia.mockReturnValue(false);
       mockUpdateStock.mockReturnValue(false);
       mockStockFilter.mockReturnValue(false);
@@ -1046,7 +969,6 @@ describe('background.js', () => {
       mockTwseTicker.mockReturnValue(false);
 
       expect(bg.autoUpload()).toBeUndefined();
-      expect(bg.autoDownload()).toBeUndefined();
       expect(bg.checkMedia()).toBeUndefined();
       expect(bg.updateStock()).toBeUndefined();
       expect(bg.updateStockList()).toBeUndefined();

@@ -96,7 +96,6 @@ jest.unstable_mockModule('../../config.js', () => ({
   WS_PORT: jest.fn(() => 8080),
   HINT: jest.fn(() => false),
   AUTO_UPLOAD: jest.fn(() => false),
-  AUTO_DOWNLOAD: jest.fn(() => false),
   UPDATE_STOCK: jest.fn(() => false),
   CHECK_MEDIA: jest.fn(() => false),
   STOCK_FILTER: jest.fn(() => false),
@@ -128,7 +127,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
   VERIFYDB: 'verify',
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
-  DOCDB: 'docUpdate',
   TOTALDB: 'total',
   RE_WEBURL: /^https?:\/\//,
   QUERY_LIMIT: 20,
@@ -202,10 +200,9 @@ jest.unstable_mockModule('connect-multiparty', () => ({
   default: mockMultiparty,
 }));
 
-// --- Background jobs: mock all 13 job functions ---
+// --- Background jobs: mock all 12 job functions ---
 const mockAutoUpload = jest.fn();
 const mockCheckMedia = jest.fn();
-const mockAutoDownload = jest.fn();
 const mockUpdateStock = jest.fn();
 const mockUpdateStockList = jest.fn();
 const mockFilterStock = jest.fn();
@@ -219,7 +216,6 @@ const mockTwseInit = jest.fn();
 jest.unstable_mockModule('../../cmd/background.js', () => ({
   autoUpload: mockAutoUpload,
   checkMedia: mockCheckMedia,
-  autoDownload: mockAutoDownload,
   updateStock: mockUpdateStock,
   updateStockList: mockUpdateStockList,
   filterStock: mockFilterStock,
@@ -385,10 +381,6 @@ describe('file-server.js — File/Media Server', () => {
       expect(mockCheckMedia).toHaveBeenCalledTimes(1);
     });
 
-    test('autoDownload() is called once at startup', () => {
-      expect(mockAutoDownload).toHaveBeenCalledTimes(1);
-    });
-
     test('updateStock() is called once at startup', () => {
       expect(mockUpdateStock).toHaveBeenCalledTimes(1);
     });
@@ -429,14 +421,14 @@ describe('file-server.js — File/Media Server', () => {
       expect(mockTwseInit).toHaveBeenCalledTimes(1);
     });
 
-    test('all 13 background jobs are invoked (no more, no less)', () => {
+    test('all 12 background jobs are invoked (no more, no less)', () => {
       const allJobs = [
-        mockAutoUpload, mockCheckMedia, mockAutoDownload,
+        mockAutoUpload, mockCheckMedia,
         mockUpdateStock, mockUpdateStockList, mockFilterStock,
         mockDbBackup, mockCheckStock, mockRateCalculator,
         mockSetUserOffer, mockFilterBitfinex, mockUsseInit, mockTwseInit,
       ];
-      expect(allJobs.length).toBe(13);
+      expect(allJobs.length).toBe(12);
       allJobs.forEach((job) => {
         expect(job).toHaveBeenCalledTimes(1);
       });
@@ -444,7 +436,7 @@ describe('file-server.js — File/Media Server', () => {
 
     test('background jobs are called with no arguments', () => {
       const allJobs = [
-        mockAutoUpload, mockCheckMedia, mockAutoDownload,
+        mockAutoUpload, mockCheckMedia,
         mockUpdateStock, mockUpdateStockList, mockFilterStock,
         mockDbBackup, mockCheckStock, mockRateCalculator,
         mockSetUserOffer, mockFilterBitfinex, mockUsseInit, mockTwseInit,

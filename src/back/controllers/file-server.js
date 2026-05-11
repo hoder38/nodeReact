@@ -32,7 +32,7 @@ import { handleError, HoError, showLog } from '../util/utility.js'
 import { mainInit } from '../util/sendWs.js'
 
 //background
-import { autoUpload, checkMedia/*, updateExternal*/, autoDownload, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, usseInit, twseInit, updateStockList } from '../cmd/background.js'
+import { autoUpload, checkMedia/*, updateExternal*/, updateStock, filterStock, dbBackup, checkStock, rateCalculator, setUserOffer, filterBitfinex, usseInit, twseInit, updateStockList } from '../cmd/background.js'
 //global
 const credentials = {
     cert: FsReadFileSync(CERT),
@@ -68,7 +68,6 @@ mainInit(server);
 autoUpload();
 checkMedia();
 //updateExternal();
-autoDownload();
 updateStock();
 updateStockList();
 filterStock();

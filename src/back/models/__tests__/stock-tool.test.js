@@ -73,7 +73,6 @@ jest.unstable_mockModule('../../config.js', () => ({
     GOOGLE_DB_BACKUP_FOLDER: mockConfigFn,
     HINT: mockConfigFn,
     AUTO_UPLOAD: mockConfigFn,
-    AUTO_DOWNLOAD: mockConfigFn,
     UPDATE_STOCK: mockConfigFn,
     CHECK_MEDIA: mockConfigFn,
     API_LIMIT: mockConfigFn,
