@@ -1,10 +1,10 @@
 # STOCK-TOOL.MD — Technical Documentation & QA Testing Guide
 
 > **Module**: `/src/back/models/stock-tool.js`  
-> **Lines**: 4,719 (cleaned, dead code removed)  
+> **Lines**: ~4,500  
 > **Purpose**: Stock data management, trading algorithm backtesting, portfolio tracking  
 > **Stack**: Node.js · MongoDB · Redis · Yahoo Finance API · Web Scraping  
-> **Generated**: 2025-01-XX
+> **Last Updated**: 2026-05-19
 
 ---
 
@@ -41,7 +41,8 @@
 - **Retry Logic**: Fault-tolerant API calls with exponential backoff
 - **Concurrency Control**: Module-level flags prevent resource contention
 - **Real-Time Updates**: WebSocket integration for live client notifications
-- **Price Distribution Analysis**: Logarithmic scaling for volatility modeling
+- **Price Distribution Analysis**: Logarithmic scaling with normal distribution (σ-layer) modeling for volatility
+- **Corporate Action Adjustment**: Adjusts historical prices for splits, dividends, and capital gains (TWSE via Yahoo Finance, USSE via adjclose ratio)
 
 ---
 
@@ -104,7 +105,7 @@ USSE_FEE                    // USA trading fee
 TRADE_TIME                  // Trading hour restrictions
 TRADE_INTERVAL              // Time between trades (seconds)
 RANGE_INTERVAL              // Analysis rolling window
-NORMAL_DISTRIBUTION         // [15, 50, 85] percentile thresholds
+NORMAL_DISTRIBUTION         // [1, 2, 16, 50, 84, 98, 99] — cumulative percentiles mapping to ~-2.33σ, -2σ, -1σ, median, +1σ, +2σ, ~+2.33σ
 GAIN_LOSS                   // Gain/loss threshold multiplier
 STOCK_INDEX                 // TWSE sector classification mapping
 MONTH_SHORTS                // ['Jan', 'Feb', ...]
@@ -620,18 +621,20 @@ const mockPredictWarp = {
 
 ### 3.6 getIntervalV2(id, session)
 
-**Purpose**: Fetches 60-month historical price/volume data with intelligent caching.
+**Purpose**: Fetches 60-month historical price/volume data with intelligent caching and corporate action adjustment.
 
 **Parameters**:
 - `id` (string): Stock MongoDB ObjectId
 - `session` (object): User session for WebSocket
 
 **Logic Flow**:
-1. Checks Redis cache
-2. If miss: Fetches from TWSE/Yahoo Finance
+1. Checks Redis cache (`interval: {type}{index}`)
+2. If miss:
+   - **TWSE**: Fetches 60 months of daily data from TWSE CSV, then calls `adjustWithYahoo()` to apply split/dividend/capital-gain adjustment ratios sourced from Yahoo Finance chart API
+   - **USSE**: Fetches 60 months via Yahoo Finance `chart` endpoint with `events=capitalGains,dividends,splits`. Uses `adjclose/close` ratio to adjust all prices. If corporate action events are detected, recursively re-fetches the full period to ensure consistent adjustment
 3. Filters low-volume months
-4. Calculates price distribution
-5. Caches in Redis
+4. Calculates price distribution (max, min, min_vol)
+5. Caches in Redis with TTL
 6. Returns interval data
 
 **Returns**: Historical price data with distribution analysis
@@ -820,27 +823,21 @@ const mockPredictWarp = {
 - `now` (number): Current timestamp
 
 **Logic Flow**:
-1. Compares current price against distribution stairs
+1. Compares current price against distribution stairs (web array)
 2. Generates BUY signal if price crosses below mid and amount available
 3. Generates SELL signal if profit target reached or position too large
 4. Applies trading fee calculations
 5. Updates position (count, cost, P&L)
 6. Respects time intervals and trading hours
-7. Returns signal array or reset parameters
+7. **Price breakout**: If price falls below array → returns `{resetWeb: 1, newMid}` via `calcResetMid(priceArray, fee, 1)`. If above → `{resetWeb: 2, newMid}` via `calcResetMid(priceArray, fee, 2)`. The newMid shifts the grid's centre to the 1σ boundary in the breakout direction.
 
 **Returns**:
 ```javascript
-// Buy signal
-['buy', shareCount, price, newAmount, newCount, newCost, newPL]
+// Normal signal
+{ type, buy, sell, bCount, sCount, str, previous }
 
-// Sell signal  
-['sell', shareCount, price, newAmount, newCount, newCost, newPL]
-
-// Reset (rebalance)
-['reset', newAmount, newCost, newPL]
-
-// No action
-[]
+// Price breakout — grid needs shifting
+{ resetWeb: 1|2, newMid: number }
 ```
 
 **Side Effects**: None (pure calculation function)
@@ -936,23 +933,19 @@ const mockPredictWarp = {
 **Logic Flow**:
 1. Extracts window of prices (length `len` or auto)
 2. Maps prices to log scale positions
-3. Calculates percentiles using NORMAL_DISTRIBUTION [15, 50, 85]
-4. Identifies mid (50th), up (85th), down (15th) prices
-5. Calculates volatility metrics (extrem, ds)
-6. Builds web array for trading logic
+3. Calculates 7 percentiles using `NORMAL_DISTRIBUTION = [1, 2, 16, 50, 84, 98, 99]` → nd[] array
+4. Identifies mid (nd[3] = 50th percentile), with σ boundaries at nd[0..6]
+5. Selects `extrem` (daily swing percentile) at nd[4] (1σ=84th), fallback nd[5] (2σ=98th)
+6. Builds web array via `calWeb()`: each of the 6 σ-layers (±1σ, ±2σ, ±3σ) gets steps proportional to its actual nd[] width, using `buildSteps(range)` helper. Empty layers (range ≤ 0) insert boundary marker only.
 7. Returns distribution object
 
 **Returns**:
 ```javascript
 {
-  mid: 520,
-  up: 600,
-  down: 450,
-  extrem: 0.15,
-  ds: 0.08,
-  web: [480, 490, 500, 510, 520, 530, 540, 550, 560, 570],
-  webMid: 5,
-  webCount: 10
+  mid: 520,        // nd[3] — 50th percentile (median)
+  arr: [-600, 580, 560, -540, ...],  // web array with σ-boundary markers (negative)
+  times: 1,        // price multiplier
+  // ... additional metrics
 }
 ```
 
@@ -1097,12 +1090,25 @@ const mockPredictWarp = {
 
 ---
 
-### 5.7 Ticker Functions
+### 5.7 Ticker & Web Array Functions
 
-**adjustWeb(webArr, webMid, amount, force)**: Adjusts web array for trading logic
-**bitfinexTicker(price, large)**: Formats price for Bitfinex precision
-**usseTicker(price, large)**: Formats US stock price
+**adjustWeb(webArr, webMid, amount, force)**: Thins the web array when the position budget requires fewer steps. Parses the array into σ-boundary markers (negative values) and step layers (positive values between boundaries). Assigns probability weights per layer (`sigmaProbs = [34.13, 13.59, 2.15]`), allocates kept steps proportionally to probability weight, and thins each layer with evenly-spaced index selection. Boundaries are always preserved.
+
+**bitfinexTicker(price, large)**: Formats price for Bitfinex precision  
+**usseTicker(price, large)**: Formats US stock price  
 **twseTicker(price, large)**: Formats TWSE stock price
+
+### 5.8 NewMid Helper Functions (Named Exports)
+
+These three functions extract the duplicated newMid (price-breakout grid-shifting) logic that was previously inlined in `stockProcess`, `stockStatus`, `stockTest`, and `startStatus` (bitfinex-tool).
+
+**scaleWebArr(stack, mid, webArr)**: Scales the web array by the top of the newMid stack. If stack is empty, returns the original array unchanged. Otherwise returns `webArr.map(v => v * stack[last] / mid)`.
+
+**calcResetMid(priceArray, fee, direction)**: Computes the new midpoint when price breaks out of the web array. Collects all σ-boundary prices (negative markers), finds mid as the 4th boundary from the top (`midIdx = min(3, len-1)`), then:
+- `direction=1` (price below): uses `boundaries[midIdx+1]` (1σ below), capped at `midPrice * (1 - fee*10)`
+- `direction=2` (price above): uses `boundaries[midIdx-1]` (1σ above), capped at `midPrice * (1 + fee*10)`
+
+**resolveNewMidStack(stack, price, mid, webArr, onPop)**: Unwinds the newMid stack when price returns towards the original mid. Loops while the top-of-stack entry satisfies the cross-back condition, calls `stack.pop()`, then invokes `onPop(poppedValue)` (callback sees post-pop stack state). Returns the final `scaleWebArr(stack, mid, webArr)` result.
 
 ---
 
@@ -1130,9 +1136,11 @@ const mockPredictWarp = {
 
 Focus on pure calculation functions:
 - `logArray()` - Mathematical correctness
-- `calStair()` - Distribution percentiles
+- `calStair()` / `calWeb()` - Distribution percentiles with σ-layer widths
 - `stockProcess()` - Trading logic with various scenarios
 - `stockTest()` - Backtest calculations
+- `scaleWebArr()` / `calcResetMid()` / `resolveNewMidStack()` - NewMid grid-shifting
+- `adjustWeb()` - Normal-distribution-weighted array thinning
 - Ticker formatters - Price precision
 
 Tools: Jest, expect assertions
@@ -2214,7 +2222,7 @@ TRADE_INTERVAL = 300       // 5 minutes between trades
 RANGE_INTERVAL = 21        // 21 days rolling window
 
 // Distribution Analysis
-NORMAL_DISTRIBUTION = [15, 50, 85]  // Percentiles
+NORMAL_DISTRIBUTION = [1, 2, 16, 50, 84, 98, 99]  // Cumulative percentiles → ~-2.33σ, -2σ, -1σ, median, +1σ, +2σ, ~+2.33σ
 GAIN_LOSS = 1.05           // 5% gain/loss threshold
 
 // Retry Logic
@@ -2244,7 +2252,6 @@ RETRY_DELAY = 60000        // 60 seconds
 
 **END OF DOCUMENTATION**
 
-*Generated for stock-tool.js (4,719 lines)*  
-*QA Engineer: Senior Test Automation Specialist*  
-*Last Updated: 2025-01-XX*
+*Generated for stock-tool.js (~4,500 lines)*  
+*Last Updated: 2026-05-19*
 

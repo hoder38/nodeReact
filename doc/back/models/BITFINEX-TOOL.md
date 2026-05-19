@@ -59,7 +59,7 @@ import Htmlparser from 'htmlparser2'                   // HTML parsing (unused?)
 
 ### Internal Dependencies
 ```javascript
-import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool.js'
+import { calStair, stockProcess, stockTest, logArray, resolveNewMidStack, scaleWebArr } from '../models/stock-tool.js'
 import Mongo from '../models/mongo-tool.js'            // MongoDB wrapper
 import Redis from '../models/redis-tool.js'            // Redis wrapper
 import Api from './api-tool.js'                        // HTTP API client
@@ -2802,7 +2802,15 @@ jest.mock('../models/stock-tool', () => ({
   calStair: jest.fn(),
   stockProcess: jest.fn(),
   stockTest: jest.fn(),
-  logArray: jest.fn()
+  logArray: jest.fn(),
+  resolveNewMidStack: jest.fn((stack, price, mid, webArr, onPop) => {
+    // Real unwinding logic replicated for test fidelity
+    while (stack.length > 0) { /* ... condition check, pop, onPop ... */ }
+    return stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr;
+  }),
+  scaleWebArr: jest.fn((stack, mid, webArr) =>
+    stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr
+  ),
 }));
 
 // Test constants
@@ -3438,12 +3446,13 @@ npm test -- bitfinex-tool.test.js --watch
 
 ## Documentation Maintenance
 
-**Last Updated**: 2026-03-17  
+**Last Updated**: 2026-05-19  
 **Reviewed By**: Senior QA/Test Automation Engineer  
-**Next Review**: 2026-06-17 (Quarterly)
+**Next Review**: 2026-08-19 (Quarterly)
 
 **Change Log**:
 - 2026-03-17: Initial comprehensive documentation created
+- 2026-05-19: Updated imports to include `resolveNewMidStack`, `scaleWebArr` from stock-tool.js. `startStatus` newMid pop/push logic now uses shared helper functions instead of inline duplication.
 - Future updates should include:
   - New test scenarios as edge cases discovered
   - Updated snapshot data when data structures change
