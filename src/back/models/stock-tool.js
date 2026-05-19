@@ -1606,11 +1606,8 @@ export default {
                     return this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
                         console.log(filterList[iIndex].name);
                         console.log(result);
-                        const intervalVal = result.match(/(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\-?\d+\.?\d*) (\d+) (\-?\d+\.?\d*)\% (\d+) (\d+)$/);
-                        if (intervalVal) {
-                            filterList[iIndex].name = filterList[iIndex].name + result;
-                            filterList1.push(filterList[iIndex]);
-                        }
+                        filterList[iIndex].name = filterList[iIndex].name + result;
+                        filterList1.push(filterList[iIndex]);
                     }).catch(err => {
                         if (web) {
                             sendWs({

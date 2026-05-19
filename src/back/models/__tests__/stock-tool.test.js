@@ -6874,7 +6874,7 @@ describe('stockFilterV4', () => {
         expect(r.out).toEqual([]);
     });
 
-    test('items present, getIntervalWarp returns matched string → adds to filter', async () => {
+    test('items present, getIntervalWarp returns result → adds to filter', async () => {
         // First tagQuery (clearName) returns existing → loop deletes
         // Second tagQuery (recur_query) returns 1 item → process
         let qIdx = 0;
@@ -6904,7 +6904,6 @@ describe('stockFilterV4', () => {
         // Redis: getIntervalWarp's getIntervalV2 calls Redis hgetall, return cached for fast exit
         mockRedis.mockResolvedValue({
             raw_list: JSON.stringify({}),
-            // Cached return val that matches the regex pattern in stage3 line 1652
             ret_obj: '5.5% 100 10% 8% 2 5 1.5% 30 1000',
             etime: Math.round(new Date().getTime() / 1000) + 100000,
         });
@@ -7515,7 +7514,7 @@ describe('stockFilterV4 error branches', () => {
             return Promise.resolve({ items: [] });
         });
         mockTagInstance.addTag.mockRejectedValue(new Error('add failed'));
-        // Need price + interval result that matches
+        // Need price + interval result for item to enter addFilter path
         const bNode = mkNode('b', '', ['100']);
         const td2 = mkNode('td', '', [bNode]);
         const innerTr1 = mkNode('tr', '', [mkNode('td'), mkNode('td'), td2]);
