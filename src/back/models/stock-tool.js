@@ -850,6 +850,66 @@ export default {
                         if (!is_stop && index < 60 && raw_arr.length <= 1000) {
                             return recur_mi(type, index);
                         }
+                        // Adjust prices for capital gains, dividends and splits using Yahoo Finance
+                        const adjustWithYahoo = () => {
+                            if (!interval_data) return Promise.resolve();
+                            const yahooIndex = type === 2 ? `${items[0].index}.TWO` : `${items[0].index}.TW`;
+                            const adjDate = _dateFactory();
+                            return yahooFinance.chart(yahooIndex, {
+                                period1: new Date(adjDate.getFullYear() - 5, adjDate.getMonth(), adjDate.getDate(), 12).getTime() / 1000,
+                                period2: new Date(adjDate.getFullYear(), adjDate.getMonth(), adjDate.getDate(), 12).getTime() / 1000,
+                                events: 'capitalGain|div|split',
+                                includeAdjustedClose: true,
+                                interval: "1d",
+                                useYfid: true,
+                                lang: "en-US",
+                                return: "object"
+                            }).then(stockData => {
+                                const timestamps = stockData.timestamp;
+                                const quotes = stockData.indicators.quote[0];
+                                const adjcloses = stockData.indicators.adjclose ? stockData.indicators.adjclose[0].adjclose : null;
+                                if (!adjcloses) return;
+                                const yahooByMonth = {};
+                                for (let i = 0; i < timestamps.length - 1; i++) {
+                                    const sDate = convertTimestampToDate(timestamps[i]);
+                                    const key = `${sDate.year}_${sDate.month}`;
+                                    if (!yahooByMonth[key]) yahooByMonth[key] = [];
+                                    yahooByMonth[key].push((quotes.close[i] && adjcloses[i]) ? adjcloses[i] / quotes.close[i] : 1);
+                                }
+                                for (const y in interval_data) {
+                                    for (const m in interval_data[y]) {
+                                        const ratios = yahooByMonth[`${y}_${m}`];
+                                        if (ratios) {
+                                            let tmp_max = 0;
+                                            let tmp_min = 0;
+                                            interval_data[y][m].raw.forEach((v, idx) => {
+                                                const ratio = idx < ratios.length ? ratios[idx] : ratios[ratios.length - 1];
+                                                v.h = v.h * ratio;
+                                                v.l = v.l * ratio;
+                                                if (v.h > tmp_max) tmp_max = v.h;
+                                                if (!tmp_min || v.l < tmp_min) tmp_min = v.l;
+                                            });
+                                            interval_data[y][m].max = tmp_max;
+                                            interval_data[y][m].min = tmp_min;
+                                        }
+                                    }
+                                }
+                                const months = [];
+                                for (const y in interval_data) {
+                                    for (const m in interval_data[y]) months.push({y: Number(y), m});
+                                }
+                                months.sort((a, b) => a.y !== b.y ? b.y - a.y : b.m.localeCompare(a.m));
+                                raw_arr = [];
+                                max = 0;
+                                min = 0;
+                                for (const {y, m} of months) {
+                                    raw_arr = raw_arr.concat(interval_data[y][m].raw.slice().reverse());
+                                    if (interval_data[y][m].max > max) max = interval_data[y][m].max;
+                                    if (!min || interval_data[y][m].min < min) min = interval_data[y][m].min;
+                                }
+                            }).catch(err => handleError(err, 'Yahoo adjust'));
+                        };
+                        return adjustWithYahoo().then(() => {
                         console.log(max);
                         console.log(min);
                         let min_vol = 0;
@@ -1018,6 +1078,7 @@ export default {
                                 });
                             });
                         })
+                        });
                     }
                     const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${_dateFactory().getTime()}`).then(raw_data => {
                         const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
@@ -1132,7 +1193,8 @@ export default {
                         month_str = completeZero(month.toString(), 2);
                     }*/
                     let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
-                    let end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
+                    let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                    const full_end_get = end_get;
                     let start_month = `${year}${month_str}`;
                     let max = 0;
                     let min = 0;
@@ -1311,7 +1373,7 @@ export default {
                     const get_mi = index => {
                         if (raw_list) {
                             let isEnd = false;
-                            for (let i = 0; i < 48; i++) {
+                            for (let i = 0; i < 60; i++) {
                                 if (raw_list[year] && raw_list[year][month_str]) {
                                     if (!isEnd) {
                                         isEnd = true;
@@ -1374,13 +1436,19 @@ export default {
                             }*/
                             const timestamps = stockData.timestamp;
                             const quotes = stockData.indicators.quote[0];
-                            if (stockData.hasOwnProperty('events') && stockData.events.hasOwnProperty('splits') && stockData.events.splits.length > 0) {
+                            const adjcloses = stockData.indicators.adjclose ? stockData.indicators.adjclose[0].adjclose : null;
+                            const hasEvents = stockData.hasOwnProperty('events') && (
+                                (stockData.events.hasOwnProperty('splits') && stockData.events.splits.length > 0) ||
+                                (stockData.events.hasOwnProperty('dividends') && stockData.events.dividends.length > 0) ||
+                                (stockData.events.hasOwnProperty('capitalGains') && stockData.events.capitalGains.length > 0)
+                            );
+                            if (hasEvents && raw_arr.length > 0) {
                                 raw_arr = [];
                                 interval_data = null;
-                                //min_vol = 0;
                                 max = 0;
                                 min = 0;
-                                end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
+                                end_get = full_end_get;
+                                return getFinance();
                             }
                             let y = '';
                             let m = '';
@@ -1409,27 +1477,30 @@ export default {
                                     y = sDate.year;
                                     m = sDate.month;
                                 }
+                                const adjRatio = (adjcloses && quotes.close[i] && adjcloses[i]) ? adjcloses[i] / quotes.close[i] : 1;
+                                const adjHigh = Number(quotes.high[i]) * adjRatio;
+                                const adjLow = Number(quotes.low[i]) * adjRatio;
                                 raw_arr.push({
-                                    h: Number(quotes.high[i]),
-                                    l: Number(quotes.low[i]),
+                                    h: adjHigh,
+                                    l: adjLow,
                                     v: Number(quotes.volume[i]),
                                 });
                                 tmp_interval.push({
-                                    h: Number(quotes.high[i]),
-                                    l: Number(quotes.low[i]),
+                                    h: adjHigh,
+                                    l: adjLow,
                                     v: Number(quotes.volume[i]),
                                 });
-                                if (Number(quotes.high[i]) > max) {
-                                    max = Number(quotes.high[i]);
+                                if (adjHigh > max) {
+                                    max = adjHigh;
                                 }
-                                if (!min || Number(quotes.low[i]) < min) {
-                                    min = Number(quotes.low[i]);
+                                if (!min || adjLow < min) {
+                                    min = adjLow;
                                 }
-                                if (Number(quotes.high[i]) > tmp_max) {
-                                    tmp_max = Number(quotes.high[i]);
+                                if (adjHigh > tmp_max) {
+                                    tmp_max = adjHigh;
                                 }
-                                if (!tmp_min || Number(quotes.low[i]) < tmp_min) {
-                                    tmp_min = Number(quotes.low[i]);
+                                if (!tmp_min || adjLow < tmp_min) {
+                                    tmp_min = adjLow;
                                 }
                             }
                             if (y && m) {
@@ -4105,57 +4176,55 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     }
     const calWeb = () => {
         const stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
-        const upArray = [];
-        let up = stair;
-        while (up < web.up) {
-            upArray.push(up);
-            up += stair;
-        }
-        if ((up - web.up) < (stair / 2)) {
-            upArray.push(web.up);
-        } else {
-            if (upArray.length > 0) {
-                upArray[upArray.length - 1] = web.up;
-            } else {
-                upArray.push(web.up);
+        const buildSteps = (range) => {
+            const arr = [];
+            if (range <= 0) return arr;
+            let pos = stair;
+            while (pos < range) {
+                arr.push(pos);
+                pos += stair;
             }
-        }
-        //console.log(upArray);
-        const downArray = [];
-        let down = stair;
-        while (down < web.down) {
-            downArray.push(down);
-            down += stair;
-        }
-        if ((down - web.down) < (stair / 2)) {
-            downArray.push(web.down);
-        } else {
-            if (downArray.length > 0) {
-                downArray[downArray.length - 1] = web.down;
+            if ((pos - range) < (stair / 2)) {
+                arr.push(range);
+            } else if (arr.length > 0) {
+                arr[arr.length - 1] = range;
             } else {
-                downArray.push(web.down);
+                arr.push(range);
             }
-        }
-        //console.log(downArray);
+            return arr;
+        };
+        // use actual distribution data for each σ layer
+        const upLayers = [
+            buildSteps(nd[4] - nd[3]),  // mid → 1σ
+            buildSteps(nd[5] - nd[4]),  // 1σ → 2σ
+            buildSteps(nd[6] - nd[5]),  // 2σ → 3σ
+        ];
+        const downLayers = [
+            buildSteps(nd[3] - nd[2]),  // mid → 1σ
+            buildSteps(nd[2] - nd[1]),  // 1σ → 2σ
+            buildSteps(nd[1] - nd[0]),  // 2σ → 3σ
+        ];
         const result = [-web.mid];
         let temp = web.mid;
-        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-        temp = result[0];
-        result[0] = -result[0];
-        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-        temp = result[0];
-        result[0] = -result[0];
-        upArray.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
-        result[0] = -result[0];
+        upLayers.forEach(arr => {
+            if (arr.length > 0) {
+                arr.forEach(v => result.splice(0, 0, temp * Math.pow(1 + web.single, v)));
+                temp = result[0];
+                result[0] = -result[0];
+            } else {
+                result.splice(0, 0, -temp);
+            }
+        });
         temp = web.mid;
-        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-        temp = result[result.length - 1];
-        result[result.length - 1] = -result[result.length - 1];
-        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-        temp = result[result.length - 1];
-        result[result.length - 1] = -result[result.length - 1];
-        downArray.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
-        result[result.length - 1] = -result[result.length - 1];
+        downLayers.forEach(arr => {
+            if (arr.length > 0) {
+                arr.forEach(v => result.push(temp / Math.pow(1 + web.single, v)));
+                temp = result[result.length - 1];
+                result[result.length - 1] = -result[result.length - 1];
+            } else {
+                result.push(-temp);
+            }
+        });
         return result;
     }
     web.arr = calWeb();
