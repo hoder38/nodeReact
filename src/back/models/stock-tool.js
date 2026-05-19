@@ -2863,15 +2863,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     console.log(item);
                     const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
                     //new mid
-                    let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                    let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                    while ((item.newMid.length > 0) &&
-                        (((item.newMid[item.newMid.length - 1] > checkMid) && ((price < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
-                         || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((price > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
-                    {
-                        console.log(item.newMid[item.newMid.length - 1]);
-                        item.newMid.pop();
-                        if (/*item.newMid.length === 0 && */Math.round(_dateFactory().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
+                    let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
+                        console.log(nm);
+                        if (Math.round(_dateFactory().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
                             change_previous = true;
                             item.previous.price = item.tmpPT.price;
                             item.previous.time = item.tmpPT.time;
@@ -2886,9 +2880,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                 //real: item.previous.real,
                             };
                         }
-                        newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                        checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-                    }
+                    });
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
                     while(suggestion.resetWeb) {
                         //if (item.newMid.length === 0) {
@@ -2907,7 +2899,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         item.previous.tprice = 0;
                         //item.previous.real = false;
                         item.newMid.push(suggestion.newMid);
-                        newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+                        newArr = scaleWebArr(item.newMid, item.mid, item.web);
                         suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
                     }
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
@@ -3268,6 +3260,51 @@ export const getStockListV2 = (type, year, month) => {
     }
 }
 
+// Scale web array by the current newMid stack
+export const scaleWebArr = (stack, mid, webArr) =>
+    stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr;
+
+// Calculate the new midpoint when price breaks out of the web array
+// Uses 1σ boundary from the normal distribution structure
+export const calcResetMid = (priceArray, fee, direction) => {
+    // Collect σ-boundary prices (negative markers in the array)
+    const boundaries = [];
+    for (let i = 0; i < priceArray.length; i++) {
+        if (priceArray[i] < 0) boundaries.push(Math.abs(priceArray[i]));
+    }
+    // Mid = 4th boundary from top
+    const midIdx = Math.min(3, boundaries.length - 1);
+    const midPrice = boundaries[midIdx];
+    if (direction === 1) {
+        // Price below array → shift mid down to 1σ below current mid
+        const sigma1Idx = midIdx + 1;
+        let newMid = sigma1Idx < boundaries.length ? boundaries[sigma1Idx] : midPrice * (1 - fee * 10);
+        const cap = midPrice * (1 - fee * 10);
+        if (newMid > cap) newMid = cap;
+        return newMid;
+    } else {
+        // Price above array → shift mid up to 1σ above current mid
+        const sigma1Idx = midIdx - 1;
+        let newMid = sigma1Idx >= 0 ? boundaries[sigma1Idx] : midPrice * (1 + fee * 10);
+        const cap = midPrice * (1 + fee * 10);
+        if (newMid < cap) newMid = cap;
+        return newMid;
+    }
+};
+
+// Unwind the newMid stack when price returns towards original mid
+export const resolveNewMidStack = (stack, price, mid, webArr, onPop) => {
+    while (stack.length > 0) {
+        const nm = stack[stack.length - 1];
+        const checkMid = stack.length > 1 ? stack[stack.length - 2] : mid;
+        if (!((nm > checkMid && (price < checkMid || nm <= mid)) ||
+              (nm <= checkMid && (price > checkMid || nm > mid)))) break;
+        stack.pop();
+        if (onPop) onPop(nm);
+    }
+    return scaleWebArr(stack, mid, webArr);
+};
+
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000)) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(_dateFactory().getTime() / 1000);
@@ -3293,22 +3330,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     if (nowBP === priceArray.length - 1) {
     //if (bP > 6) {
-        let newMid = 0;
-        let count = 0;
-        for (nowBP = priceArray.length - 1; nowBP >= 0; nowBP--) {
-            if (priceArray[nowBP] < 0) {
-                count++;
-                if (count === 3) {
-                    newMid = Math.abs(priceArray[nowBP]);
-                }
-                if (count === 4) {
-                    if (newMid > (Math.abs(priceArray[nowBP]) * (1 - fee * 10))) {
-                        newMid = Math.abs(priceArray[nowBP]) * (1 - fee * 10);
-                    }
-                    break;
-                }
-            }
-        }
+        const newMid = calcResetMid(priceArray, fee, 1);
         console.log(`newMid L ${newMid} ${price}`)
         return {
             resetWeb: 1,
@@ -3334,22 +3356,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     if (nowSP === 0) {
     //if (sP < 2) {
-        let newMid = 0;
-        let count = 0;
-        for (nowSP = 0; nowSP < priceArray.length; nowSP++) {
-            if (priceArray[nowSP] < 0) {
-                count++;
-                if (count === 3) {
-                    newMid = Math.abs(priceArray[nowSP]);
-                }
-                if (count === 4) {
-                    if (newMid < (Math.abs(priceArray[nowSP]) * (1 + fee * 10))) {
-                        newMid = Math.abs(priceArray[nowSP]) * (1 + fee * 10);
-                    }
-                    break;
-                }
-            }
-        }
+        const newMid = calcResetMid(priceArray, fee, 2);
         console.log(`newMid H ${newMid} ${price}`)
         return {
             resetWeb: 2,
@@ -3925,13 +3932,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
             }
             let suggest = null;
-            let checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
-            let newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
-            while ((newMid.length > 0) &&
-                (((newMid[newMid.length - 1] > checkMid) && ((price < checkMid) || (newMid[newMid.length - 1] <= web.mid)))
-                 || ((newMid[newMid.length - 1] <= checkMid) && ((price > checkMid) || (newMid[newMid.length - 1] > web.mid)))))
-            {
-                newMid.pop();
+            let newArr = resolveNewMidStack(newMid, price, web.mid, web.arr, () => {
                 if (newMid.length === 0 && now - tmpPT.time < rinterval) {
                     priviousTrade.price = tmpPT.price;
                     priviousTrade.time = tmpPT.time;
@@ -3940,9 +3941,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     //priviousTrade.real = tmpPT.real;
                 }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
-                newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
-                checkMid = (newMid.length > 1) ? newMid[newMid.length - 2] : web.mid;
-            }
+            });
             suggest = stockProcess(price, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval));
             while(suggest.resetWeb) {
                 if (newMid.length === 0) {
@@ -3965,7 +3964,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                     stopLoss++;
                 }
                 newMid.push(suggest.newMid);
-                newArr = (newMid.length > 0) ? web.arr.map(v => v * newMid[newMid.length - 1] / web.mid) : web.arr;
+                newArr = scaleWebArr(newMid, web.mid, web.arr);
                 suggest = stockProcess(price, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval));
                 //console.log(price);
                 //console.log(suggest);
@@ -4258,47 +4257,64 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
             return false;
         }
     }
-    const ignore = Math.floor(maxAmount / (maxAmount - amount));
-    let neg = 0;
-    let mid = 0;
-    for (; mid < webArr.length; mid++) {
-        if (webArr[mid] < 0) {
-            neg++;
-        }
-        if (neg === 4) {
-            break;
+    // Parse array into σ-boundary markers and step layers
+    const boundaries = [];
+    const layers = [];
+    let current = [];
+    for (const val of webArr) {
+        if (val < 0) {
+            layers.push(current);
+            boundaries.push(val);
+            current = [];
+        } else {
+            current.push(val);
         }
     }
+    layers.push(current);
+    if (boundaries.length === 0) {
+        return { arr: webArr, mid: webMid };
+    }
+    // Mid boundary = 4th negative (or last if fewer than 4)
+    const midIdx = Math.min(3, boundaries.length - 1);
+    // Normal distribution probability per σ band
+    const sigmaProbs = [34.13, 13.59, 2.15];
+    // Weight each layer by σ-band probability (closer to mid = higher weight = keep more)
+    const weights = layers.map((_, i) => {
+        const dist = i <= midIdx ? midIdx - i : i - midIdx - 1;
+        return dist < sigmaProbs.length ? sigmaProbs[dist] : 0.5;
+    });
+    const totalSteps = layers.reduce((sum, l) => sum + l.length, 0);
+    if (totalSteps === 0) {
+        return { arr: webArr, mid: webMid };
+    }
+    const totalWeight = weights.reduce((sum, w, i) => sum + (layers[i].length > 0 ? w : 0), 0);
+    const totalToKeep = Math.max(1, Math.round(totalSteps * amount / maxAmount));
+    // Allocate kept steps per layer proportionally to probability weight
+    const keepCounts = layers.map((layer, i) => {
+        if (layer.length === 0) return 0;
+        return Math.min(layer.length, Math.max(1, Math.round(totalToKeep * weights[i] / totalWeight)));
+    });
+    // Evenly space kept steps within each layer
+    const thinLayer = (steps, keep) => {
+        if (keep >= steps.length) return steps;
+        if (keep <= 0) return [];
+        if (keep === 1) return [steps[Math.floor(steps.length / 2)]];
+        const result = [];
+        for (let j = 0; j < keep; j++) {
+            result.push(steps[Math.round(j * (steps.length - 1) / (keep - 1))]);
+        }
+        return result;
+    };
+    // Reassemble: layers[0] boundary[0] layers[1] boundary[1] ... boundary[N-1] layers[N]
     const new_arr = [];
-    let count = 0;
-    //console.log(mid);
-    for (let i = mid; i < webArr.length; i++) {
-        if (webArr[i] >= 0) {
-            count++;
-            if (count === ignore) {
-                count = 0;
-            } else {
-                new_arr.push(webArr[i]);
-            }
-        } else {
-            new_arr.push(webArr[i]);
-        }
-    }
-    count = 0;
-    for (let i = mid - 1; i >= 0; i--) {
-        if (webArr[i] >= 0) {
-            count++;
-            if (count === ignore) {
-                count = 0;
-            } else {
-                new_arr.splice(0, 0, webArr[i]);
-            }
-        } else {
-            new_arr.splice(0, 0, webArr[i]);
+    for (let i = 0; i < layers.length; i++) {
+        thinLayer(layers[i], keepCounts[i]).forEach(v => new_arr.push(v));
+        if (i < boundaries.length) {
+            new_arr.push(boundaries[i]);
         }
     }
     return {
-        arr: webArr,
+        arr: new_arr,
         mid: webMid,
     };
 }

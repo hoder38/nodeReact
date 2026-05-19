@@ -170,6 +170,7 @@ let logArray, calStair, stockProcess, stockTest, getSuggestionData;
 let getStockListV2, stockStatus, getSingleAnnual;
 let parseMacrotrendsMarketCap, parseMacrotrendsRatio;
 let parseStockCsv, getParameterV2, getBasicStockData, handleStockTagV2, getStockPrice, getUsStock;
+let scaleWebArr, calcResetMid, resolveNewMidStack;
 let StockTool, setMaxRetry, setStatusDelay, setTwseDelay;
 
 beforeAll(async () => {
@@ -190,6 +191,9 @@ beforeAll(async () => {
     handleStockTagV2  = mod.handleStockTagV2;
     getStockPrice     = mod.getStockPrice;
     getUsStock        = mod.getUsStock;
+    scaleWebArr       = mod.scaleWebArr;
+    calcResetMid      = mod.calcResetMid;
+    resolveNewMidStack = mod.resolveNewMidStack;
     StockTool       = mod.default;
     setMaxRetry     = mod._setMaxRetry;
     setStatusDelay  = mod._setStatusDelay;
@@ -344,11 +348,11 @@ describe('stockProcess', () => {
         expect(typeof result.newMid).toBe('number');
     });
 
-    test('resetWeb:1 newMid computed from 3rd/4th negative from bottom', () => {
-        // PA2 negatives from bottom: -10,−60,−120,−250,… → 3rd=-120, check 4th=-250
+    test('resetWeb:1 newMid via calcResetMid: mid=4th boundary, sigma1=5th', () => {
+        // PA2 boundaries from top: 1000,900,600,400,250,120,60,10
+        // mid=boundaries[3]=400, sigma1=boundaries[4]=250, cap=400*0.94=376 → newMid=250
         const result = stockProcess(5, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
-        // newMid: count=3 gives 120; count=4: 120 > 250*(1-0.06)=235? no → newMid stays 120
-        expect(result.newMid).toBe(120);
+        expect(result.newMid).toBe(250);
     });
 
     test('price above entire array → resetWeb:2 with newMid', () => {
@@ -358,9 +362,9 @@ describe('stockProcess', () => {
         expect(typeof result.newMid).toBe('number');
     });
 
-    test('resetWeb:2 newMid computed from 3rd/4th negative from top', () => {
-        // PA2 negatives from top: -1000,-900,-600,-400,… → 3rd=-600, 4th=-400
-        // newMid: count=3 gives 600; count=4: 600 < 400*(1+0.06)=424? no → newMid=600
+    test('resetWeb:2 newMid via calcResetMid: mid=4th boundary, sigma1=3rd', () => {
+        // PA2 boundaries from top: 1000,900,600,400,250,120,60,10
+        // mid=boundaries[3]=400, sigma1=boundaries[2]=600, cap=400*1.06=424 → newMid=600
         const result = stockProcess(1000, PA2, 1, empty, 10000, 10000, 0, 0, 0, 10, 0, 0, 0.006, ttime, tinterval, farFuture);
         expect(result.newMid).toBe(600);
     });
@@ -5784,7 +5788,8 @@ describe('testData Redis hmset rejection', () => {
 // ===========================================================================
 describe('stockProcess newMid 4th negative edge', () => {
     test('4 consecutive negatives in priceArray → newMid adjusted (line 3260-3261)', () => {
-        // All-negative suffix → count reaches 4 → newMid = abs(PA[nowBP])*(1-fee*10)
+        // All-negative array → calcResetMid finds mid at 4th boundary from top (=70),
+        // then uses 5th boundary (=60) as 1σ below, capped at 70*0.94=65.8 → newMid=60
         const PA = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10];
         const farFuture = Math.round(new Date().getTime() / 1000) + 100000;
         const result = stockProcess(
@@ -5792,19 +5797,18 @@ describe('stockProcess newMid 4th negative edge', () => {
             { price: 50, time: farFuture - 600000, type: 'sell', buy: [], sell: [] },
             1000, 500, 0, 0, 0, 100, 0, 0, 0.006
         );
-        // stockProcess returns {newMid, resetWeb} for this path (no str)
         expect(result).toBeDefined();
-        expect(result.newMid).toBeDefined();
-        expect(result.resetWeb).toBeDefined();
+        expect(result.newMid).toBe(60);
+        expect(result.resetWeb).toBe(1);
     });
 
-    test('newMid L branch: 3rd neg > 4th*(1-fee*10) → line 3261', () => {
-        // PA with 3rd-from-right close to 4th-from-right so newMid(3rd) > |4th|*(1-0.06)
-        // index 9=-10(c1), 8=-20(c2), 7=-40(c3→newMid=40), 6=-42(c4→40>42*0.94=39.48→YES)
+    test('newMid L branch: 1σ boundary below mid via calcResetMid', () => {
+        // boundaries from top: [100, 90, 80, 70, 60, 50, 42, 40, 20, 10]
+        // mid=boundaries[3]=70, sigma1=boundaries[4]=60, cap=70*0.94=65.8 → newMid=60
         const PA = [-100, -90, -80, -70, -60, -50, -42, -40, -20, -10];
         const result = stockProcess(5, PA, 1, { buy: [], sell: [] }, 1000, 500, 0, 0, 0, 100, 0, 0, 0.006);
         expect(result.resetWeb).toBe(1);
-        expect(result.newMid).toBeCloseTo(42 * 0.94, 5);
+        expect(result.newMid).toBe(60);
     });
 });
 
@@ -8331,5 +8335,129 @@ describe('stockStatus line 2967 — bCount partial reduction (amount in middle r
         expect(data['ELSESTOCK']).toBeDefined();
         expect(data['ELSESTOCK'].buy).toBeGreaterThan(0);
         expect(data['ELSESTOCK'].bCount).toBe(1);
+    });
+});
+
+// ===========================================================================
+// scaleWebArr — scale web array by newMid stack
+// ===========================================================================
+describe('scaleWebArr', () => {
+    test('empty stack → returns original array', () => {
+        const arr = [-100, 50, 40, -30, 20, 10, -5];
+        expect(scaleWebArr([], 30, arr)).toEqual(arr);
+    });
+
+    test('stack with one entry → scales by stack[0]/mid', () => {
+        const arr = [-100, 50, -30, 20, -10];
+        const result = scaleWebArr([60], 30, arr);
+        expect(result).toEqual(arr.map(v => v * 60 / 30));
+    });
+
+    test('stack with multiple entries → scales by last entry', () => {
+        const arr = [-100, 50, -30];
+        const result = scaleWebArr([60, 90], 30, arr);
+        expect(result).toEqual(arr.map(v => v * 90 / 30));
+    });
+});
+
+// ===========================================================================
+// calcResetMid — compute new midpoint for price breakout
+// ===========================================================================
+describe('calcResetMid', () => {
+    // Standard 7-boundary array: negatives at indices 0,5,8,11,14,17,21
+    const PA = [
+        -1000, 900, 800, 750, 700,
+        -600, 550, 500,
+        -400, 350, 300,
+        -250, 200, 150,
+        -120, 100, 80,
+        -60, 40, 20, -10,
+    ];
+
+    test('direction=1 (LOW): mid=4th boundary, sigma1=5th', () => {
+        // boundaries: [1000, 600, 400, 250, 120, 60, 10]
+        // midIdx=3 → midPrice=250, sigma1Idx=4 → 120, cap=250*0.94=235 → newMid=120
+        expect(calcResetMid(PA, 0.006, 1)).toBe(120);
+    });
+
+    test('direction=2 (HIGH): mid=4th boundary, sigma1=3rd', () => {
+        // midIdx=3 → midPrice=250, sigma1Idx=2 → 400, cap=250*1.06=265 → newMid=400
+        expect(calcResetMid(PA, 0.006, 2)).toBe(400);
+    });
+
+    test('direction=1 with tight spread → capped by fee', () => {
+        // boundaries: [100, 99, 98, 97, 96]
+        // mid=97, sigma1=96, cap=97*0.94=91.18 → 96 > 91.18 → newMid=91.18
+        const tightPA = [-100, -99, -98, -97, -96];
+        expect(calcResetMid(tightPA, 0.006, 1)).toBeCloseTo(97 * 0.94, 5);
+    });
+
+    test('direction=2 with tight spread → capped by fee', () => {
+        // boundaries: [100, 99, 98, 97, 96]
+        // mid=97, sigma1=98, cap=97*1.06=102.82 → 98 < 102.82 → newMid=102.82
+        const tightPA = [-100, -99, -98, -97, -96];
+        expect(calcResetMid(tightPA, 0.006, 2)).toBeCloseTo(97 * 1.06, 5);
+    });
+
+    test('fewer than 4 boundaries → midIdx clamped', () => {
+        // boundaries: [100, 50, 10]
+        // midIdx=min(3,2)=2 → midPrice=10, sigma1Idx=3 → out of bounds → cap
+        const smallPA = [-100, 80, 60, -50, 30, -10];
+        expect(calcResetMid(smallPA, 0.006, 1)).toBeCloseTo(10 * 0.94, 5);
+    });
+});
+
+// ===========================================================================
+// resolveNewMidStack — unwind newMid stack when price returns to mid
+// ===========================================================================
+describe('resolveNewMidStack', () => {
+    test('empty stack → returns original array', () => {
+        const arr = [-100, 50, -30, 20, -10];
+        const result = resolveNewMidStack([], 50, 30, arr, () => {});
+        expect(result).toEqual(arr);
+    });
+
+    test('condition not met → no pop, returns scaled array', () => {
+        // stack=[20], mid=30 → nm=20 < checkMid=30
+        // condition: nm<=checkMid && (price>checkMid || nm>mid) → 20<=30 && (10>30 || 20>30) → false
+        const arr = [-100, 50, -30, 20, -10];
+        const stack = [20];
+        const cb = jest.fn();
+        const result = resolveNewMidStack(stack, 10, 30, arr, cb);
+        expect(stack).toEqual([20]);
+        expect(cb).not.toHaveBeenCalled();
+        expect(result).toEqual(arr.map(v => v * 20 / 30));
+    });
+
+    test('pops when price crosses back past checkMid', () => {
+        // stack=[20], mid=30 → nm=20, checkMid=30
+        // nm<=checkMid(20<=30) && (price>checkMid(50>30)=true) → pops
+        const arr = [-100, 50, -30, 20, -10];
+        const stack = [20];
+        const cb = jest.fn();
+        const result = resolveNewMidStack(stack, 50, 30, arr, cb);
+        expect(stack).toEqual([]);
+        expect(cb).toHaveBeenCalledWith(20);
+        expect(result).toEqual(arr);
+    });
+
+    test('pops multiple entries in sequence', () => {
+        // stack=[20, 15], mid=30
+        // Iter1: nm=15, checkMid=20 → nm<=checkMid(15<=20) && (price>checkMid(50>20)=true) → pop(15)
+        // Iter2: nm=20, checkMid=30 → nm<=checkMid(20<=30) && (price>checkMid(50>30)=true) → pop(20)
+        const arr = [-100, 50, -30, 20, -10];
+        const stack = [20, 15];
+        const popped = [];
+        resolveNewMidStack(stack, 50, 30, arr, (nm) => popped.push(nm));
+        expect(stack).toEqual([]);
+        expect(popped).toEqual([15, 20]);
+    });
+
+    test('onPop callback receives popped value after pop', () => {
+        const arr = [-100, 50, -30, 20, -10];
+        const stack = [20];
+        let stackLenInCb;
+        resolveNewMidStack(stack, 50, 30, arr, () => { stackLenInCb = stack.length; });
+        expect(stackLenInCb).toBe(0);
     });
 });

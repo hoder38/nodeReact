@@ -110,11 +110,27 @@ const mockStockTest = jest.fn(() => Promise.resolve({
     start: 0,
 }));
 const mockLogArray = jest.fn(() => [1, 2, 3, 4, 5]);
+const mockResolveNewMidStack = jest.fn((stack, price, mid, webArr, onPop) => {
+    while (stack.length > 0) {
+        const nm = stack[stack.length - 1];
+        const checkMid = stack.length > 1 ? stack[stack.length - 2] : mid;
+        if (!((nm > checkMid && (price < checkMid || nm <= mid)) ||
+              (nm <= checkMid && (price > checkMid || nm > mid)))) break;
+        stack.pop();
+        if (onPop) onPop(nm);
+    }
+    return stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr;
+});
+const mockScaleWebArr = jest.fn((stack, mid, webArr) =>
+    stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr
+);
 jest.unstable_mockModule('../stock-tool.js', () => ({
     calStair: mockCalStair,
     stockProcess: mockStockProcess,
     stockTest: mockStockTest,
     logArray: mockLogArray,
+    resolveNewMidStack: mockResolveNewMidStack,
+    scaleWebArr: mockScaleWebArr,
 }));
 
 // ── mongo-tool.js mock ─────────────────────────────────────

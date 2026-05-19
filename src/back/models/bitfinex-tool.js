@@ -4,7 +4,7 @@ import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
 const { FundingOffer, Order } = bfxApiNodeModels;
-import { calStair, stockProcess, stockTest, logArray } from '../models/stock-tool.js'
+import { calStair, stockProcess, stockTest, logArray, resolveNewMidStack, scaleWebArr } from '../models/stock-tool.js'
 import Mongo from '../models/mongo-tool.js'
 import Redis from '../models/redis-tool.js'
 import Api from './api-tool.js'
@@ -1106,15 +1106,9 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                     }
                 });
             }
-            let newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-            let checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-             while ((item.newMid.length > 0) &&
-                (((item.newMid[item.newMid.length - 1] > checkMid) && ((+priceData[item.index].lastPrice < checkMid) || (item.newMid[item.newMid.length - 1] <= item.mid)))
-                 || ((item.newMid[item.newMid.length - 1] <= checkMid) && ((+priceData[item.index].lastPrice > checkMid) || (item.newMid[item.newMid.length - 1] > item.mid)))))
-             {
-                console.log(item.newMid[item.newMid.length - 1]);
-                item.newMid.pop();
-                if (/*item.newMid.length === 0 && */Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
+            let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {
+                console.log(nm);
+                if (Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
                     item.previous.price = item.tmpPT.price;
                     item.previous.time = item.tmpPT.time;
                     item.previous.type = item.tmpPT.type;
@@ -1126,9 +1120,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                         tprice: 0,
                     };
                 }
-                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
-                checkMid = (item.newMid.length > 1) ? item.newMid[item.newMid.length - 2] : item.mid;
-            }
+            });
             let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
             while(suggestion.resetWeb) {
                 item.tmpPT = {
@@ -1142,7 +1134,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 item.previous.type = '';
                 item.previous.tprice = 0;
                 item.newMid.push(suggestion.newMid);
-                newArr = (item.newMid.length > 0) ? item.web.map(v => v * item.newMid[item.newMid.length - 1] / item.mid) : item.web;
+                newArr = scaleWebArr(item.newMid, item.mid, item.web);
                 suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
             }
             let count = 0;
