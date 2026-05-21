@@ -827,14 +827,15 @@ export default {
                 case 'twse':
                 StockTagTool.setLatest(items[0]._id, session).catch(err => handleError(err, 'Set latest'));
                 return Redis('hgetall', `interval: ${items[0].type}${items[0].index}`).then(item => {
-                    const getInit = () => item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
+                    const getInit = () => item ? [JSON.parse(item.raw_list), item.adjustments ? JSON.parse(item.adjustments) : [], item.ret_obj, item.etime] : [null, [], 0, -1];
                     return getInit();
-                }).then(([raw_list, ret_obj, etime]) => {
+                }).then(([raw_list, cached_adjustments, ret_obj, etime]) => {
                     let interval_data = null;
                     let start_month = '';
                     let max = 0;
                     let min = 0;
                     let raw_arr = [];
+                    let latestAdjustments = cached_adjustments;
                     const rest_interval = (type, index, is_stop=false) => {
                         index++;
                         if (month === 1) {
@@ -850,66 +851,20 @@ export default {
                         if (!is_stop && index < 60 && raw_arr.length <= 1000) {
                             return recur_mi(type, index);
                         }
-                        // Adjust prices for capital gains, dividends and splits using Yahoo Finance
-                        const adjustWithYahoo = () => {
-                            if (!interval_data) return Promise.resolve();
-                            const yahooIndex = type === 2 ? `${items[0].index}.TWO` : `${items[0].index}.TW`;
-                            const adjDate = _dateFactory();
-                            return yahooFinance.chart(yahooIndex, {
-                                period1: new Date(adjDate.getFullYear() - 5, adjDate.getMonth(), adjDate.getDate(), 12).getTime() / 1000,
-                                period2: new Date(adjDate.getFullYear(), adjDate.getMonth(), adjDate.getDate(), 12).getTime() / 1000,
-                                events: 'capitalGain|div|split',
-                                includeAdjustedClose: true,
-                                interval: "1d",
-                                useYfid: true,
-                                lang: "en-US",
-                                return: "object"
-                            }).then(stockData => {
-                                const timestamps = stockData.timestamp;
-                                const quotes = stockData.indicators.quote[0];
-                                const adjcloses = stockData.indicators.adjclose ? stockData.indicators.adjclose[0].adjclose : null;
-                                if (!adjcloses) return;
-                                const yahooByMonth = {};
-                                for (let i = 0; i < timestamps.length - 1; i++) {
-                                    const sDate = convertTimestampToDate(timestamps[i]);
-                                    const key = `${sDate.year}_${sDate.month}`;
-                                    if (!yahooByMonth[key]) yahooByMonth[key] = [];
-                                    yahooByMonth[key].push((quotes.close[i] && adjcloses[i]) ? adjcloses[i] / quotes.close[i] : 1);
-                                }
-                                for (const y in interval_data) {
-                                    for (const m in interval_data[y]) {
-                                        const ratios = yahooByMonth[`${y}_${m}`];
-                                        if (ratios) {
-                                            let tmp_max = 0;
-                                            let tmp_min = 0;
-                                            interval_data[y][m].raw.forEach((v, idx) => {
-                                                const ratio = idx < ratios.length ? ratios[idx] : ratios[ratios.length - 1];
-                                                v.h = v.h * ratio;
-                                                v.l = v.l * ratio;
-                                                if (v.h > tmp_max) tmp_max = v.h;
-                                                if (!tmp_min || v.l < tmp_min) tmp_min = v.l;
-                                            });
-                                            interval_data[y][m].max = tmp_max;
-                                            interval_data[y][m].min = tmp_min;
-                                        }
-                                    }
-                                }
-                                const months = [];
-                                for (const y in interval_data) {
-                                    for (const m in interval_data[y]) months.push({y: Number(y), m});
-                                }
-                                months.sort((a, b) => a.y !== b.y ? b.y - a.y : b.m.localeCompare(a.m));
-                                raw_arr = [];
-                                max = 0;
-                                min = 0;
-                                for (const {y, m} of months) {
-                                    raw_arr = raw_arr.concat(interval_data[y][m].raw.slice().reverse());
-                                    if (interval_data[y][m].max > max) max = interval_data[y][m].max;
-                                    if (!min || interval_data[y][m].min < min) min = interval_data[y][m].min;
-                                }
-                            }).catch(err => handleError(err, 'Yahoo adjust'));
+                        // Adjust prices using TWSE/TPEx official APIs
+                        const adjustWithTwse = () => {
+                            if (!interval_data) return Promise.resolve([]);
+                            return fetchTwseAdjustments(items[0].index, type);
                         };
-                        return adjustWithYahoo().then(() => {
+                        return adjustWithTwse().then(newAdjustments => {
+                        latestAdjustments = newAdjustments;
+                        if (newAdjustments.length > 0) {
+                            const { adjustedData, raw_arr: adjArr, max: adjMax, min: adjMin } = applyAdjustments(interval_data, newAdjustments);
+                            raw_arr = adjArr;
+                            max = adjMax;
+                            min = adjMin;
+                        }
+                        validateIntervalData(interval_data, raw_arr, newAdjustments);
                         console.log(max);
                         console.log(min);
                         let min_vol = 0;
@@ -1021,12 +976,12 @@ export default {
                         });
                     }
                     const getTpexList = () => Api('url', `https://www.tpex.org.tw//www/zh-tw/afterTrading/tradingStock?code=4966&date=${year}/${month_str}/01&id=&response=utf-8&_=${_dateFactory().getTime()}`).then(raw_data => {
-                        const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
-                        return isStop ? [2, {high, low, vol}, true] : [2, {high, low, vol}];
+                        const { high, low, vol, day: dayArr, isStop } = parseStockCsv(raw_data, year, month_str);
+                        return isStop ? [2, {high, low, vol, day: dayArr}, true] : [2, {high, low, vol, day: dayArr}];
                     });
                     const getTwseList = () => new Promise((resolve, reject) => setTimeout(() => resolve(), _twseDelay)).then(() => Api('url', `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=csv&date=${year}${month_str}01&stockNo=${items[0].index}`).then(raw_data => {
-                        const { high, low, vol, isStop } = parseStockCsv(raw_data, year, month_str);
-                        return isStop ? [3, {high, low, vol}, true] : [3, {high, low, vol}];
+                        const { high, low, vol, day: dayArr, isStop } = parseStockCsv(raw_data, year, month_str);
+                        return isStop ? [3, {high, low, vol, day: dayArr}, true] : [3, {high, low, vol, day: dayArr}];
                     }));
                     const recur_mi = (type, index) => {
                         const getList = () => {
@@ -1085,6 +1040,7 @@ export default {
                                             h: list.high[i],
                                             l: list.low[i],
                                             v: list.vol[i],
+                                            d: list.day && list.day[i] ? list.day[i] : Number(i) + 1,
                                         });
                                     }
                                     if (!interval_data) {
@@ -1109,6 +1065,7 @@ export default {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
                                 raw_list: JSON.stringify(raw_list),
+                                adjustments: JSON.stringify(latestAdjustments),
                                 ret_obj,
                                 etime: Math.round(_dateFactory().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
@@ -1120,9 +1077,9 @@ export default {
                 case 'usse':
                 StockTagTool.setLatest(items[0]._id, session).catch(err => handleError(err, 'Set latest'));
                 return Redis('hgetall', `interval: ${items[0].type}${items[0].index}`).then(item => {
-                    const getInit = () => item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
+                    const getInit = () => item ? [JSON.parse(item.raw_list), item.adjustments ? JSON.parse(item.adjustments) : [], item.ret_obj, item.etime] : [null, [], 0, -1];
                     return getInit();
-                }).then(([raw_list, ret_obj, etime]) => {
+                }).then(([raw_list, cached_adjustments, ret_obj, etime]) => {
                     let interval_data = null;
                     /*if (month === 1) {
                         year--;
@@ -1134,12 +1091,12 @@ export default {
                     }*/
                     let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
                     let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
-                    const full_end_get = end_get;
                     let start_month = `${year}${month_str}`;
                     let max = 0;
                     let min = 0;
                     let raw_arr = [];
                     let min_vol = 0;
+                    let latestAdjustments = cached_adjustments;
                     const rest_interval = () => {
                         console.log(max);
                         console.log(min);
@@ -1259,13 +1216,6 @@ export default {
                                         isEnd = true;
                                         end_get = new Date(year, month - 1, 1, 12).getTime() / 1000;
                                     }
-                                    raw_arr = raw_arr.concat(raw_list[year][month_str].raw.slice().reverse());
-                                    if (raw_list[year][month_str].max > max) {
-                                        max = raw_list[year][month_str].max;
-                                    }
-                                    if (!min || raw_list[year][month_str].min < min) {
-                                        min = raw_list[year][month_str].min;
-                                    }
                                     if (!interval_data) {
                                         interval_data = {};
                                     }
@@ -1288,7 +1238,6 @@ export default {
                                 }
                             }
                         }
-                        //let financeCount = 0;
                         const getFinance = () => yahooFinance.chart(items[0].index, {
                             period1: end_get,
                             period2: start_get,
@@ -1299,37 +1248,17 @@ export default {
                             lang:"en-US",
                             return: "object"
                         }).then(stockData => {
-                        /*const getFinance = () => Api('url', `https://query1.finance.yahoo.com/v8/finance/chart/${items[0].index}?events=capitalGain%7Cdiv%7Csplit&formatted=true&includeAdjustedClose=true&interval=1d&period1=${end_get}&period2=${start_get}&symbol=${items[0].index}&userYfid=true&lang=en-US&region=US`).then(raw_data => {
-                            const stockData = JSON.parse(raw_data);
-                            if (!stockData.chart.result[0]) {
-                                return handleError(new HoError(`${items[0].index} data miss!!!`));
-                            }
-                            const timestamps = stockData.chart.result[0].timestamp;
-                            const quotes = stockData.chart.result[0].indicators.quote[0];
-                            if (stockData.chart.result[0].hasOwnProperty('events') && stockData.chart.result[0].events.hasOwnProperty('splits') && stockData.chart.result[0].events.splits.length > 0) {
-                                raw_arr = [];
-                                interval_data = null;
-                                //min_vol = 0;
-                                max = 0;
-                                min = 0;
-                                end_get = new Date(year - 4, month - 1, day, 12).getTime() / 1000;
-                            }*/
                             const timestamps = stockData.timestamp;
                             const quotes = stockData.indicators.quote[0];
-                            const adjcloses = stockData.indicators.adjclose ? stockData.indicators.adjclose[0].adjclose : null;
-                            const hasEvents = stockData.hasOwnProperty('events') && (
-                                (stockData.events.hasOwnProperty('splits') && stockData.events.splits.length > 0) ||
-                                (stockData.events.hasOwnProperty('dividends') && stockData.events.dividends.length > 0) ||
-                                (stockData.events.hasOwnProperty('capitalGains') && stockData.events.capitalGains.length > 0)
-                            );
-                            if (hasEvents && raw_arr.length > 0) {
-                                raw_arr = [];
-                                interval_data = null;
-                                max = 0;
-                                min = 0;
-                                end_get = full_end_get;
-                                return getFinance();
+
+                            // Extract adjustment events from Yahoo response
+                            const newAdjustments = extractUsseAdjustments(stockData, timestamps, quotes);
+                            if (newAdjustments.length > 0 || cached_adjustments.length > 0) {
+                                // Merge: use new events (they are authoritative for the fetched range)
+                                latestAdjustments = newAdjustments;
                             }
+
+                            // Store RAW unadjusted data with day field
                             let y = '';
                             let m = '';
                             let tmp_interval = [];
@@ -1357,30 +1286,19 @@ export default {
                                     y = sDate.year;
                                     m = sDate.month;
                                 }
-                                const adjRatio = (adjcloses && quotes.close[i] && adjcloses[i]) ? adjcloses[i] / quotes.close[i] : 1;
-                                const adjHigh = Number(quotes.high[i]) * adjRatio;
-                                const adjLow = Number(quotes.low[i]) * adjRatio;
-                                raw_arr.push({
-                                    h: adjHigh,
-                                    l: adjLow,
-                                    v: Number(quotes.volume[i]),
-                                });
+                                const rawHigh = Number(quotes.high[i]);
+                                const rawLow = Number(quotes.low[i]);
                                 tmp_interval.push({
-                                    h: adjHigh,
-                                    l: adjLow,
+                                    h: rawHigh,
+                                    l: rawLow,
                                     v: Number(quotes.volume[i]),
+                                    d: Number(sDate.day),
                                 });
-                                if (adjHigh > max) {
-                                    max = adjHigh;
+                                if (rawHigh > tmp_max) {
+                                    tmp_max = rawHigh;
                                 }
-                                if (!min || adjLow < min) {
-                                    min = adjLow;
-                                }
-                                if (adjHigh > tmp_max) {
-                                    tmp_max = adjHigh;
-                                }
-                                if (!tmp_min || adjLow < tmp_min) {
-                                    tmp_min = adjLow;
+                                if (!tmp_min || rawLow < tmp_min) {
+                                    tmp_min = rawLow;
                                 }
                             }
                             if (y && m) {
@@ -1395,17 +1313,16 @@ export default {
                                     max: tmp_max,
                                     min: tmp_min,
                                 };
-                                tmp_interval = [];
-                                tmp_max = 0;
-                                tmp_min = 0;
                             }
+
+                            // Apply adjustments to raw data
+                            const { raw_arr: adjArr, max: adjMax, min: adjMin } = applyAdjustments(interval_data, latestAdjustments);
+                            raw_arr = adjArr;
+                            max = adjMax;
+                            min = adjMin;
+
+                            validateIntervalData(interval_data, raw_arr, latestAdjustments);
                             return rest_interval();
-                        /*}).catch(err => {
-                            console.log(financeCount);
-                            if (err.name === 'HoError' && err.message.includes('data miss')) {
-                                financeCount = 10;
-                            }
-                            return (++financeCount > MAX_RETRY) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(getFinance()), 60000));*/
                         });
                         return getFinance();
                     }
@@ -1414,6 +1331,7 @@ export default {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
                                 raw_list: JSON.stringify(raw_list),
+                                adjustments: JSON.stringify(latestAdjustments),
                                 ret_obj,
                                 etime: Math.round(_dateFactory().getTime()/1000 + CACHE_EXPIRE),
                             }).catch(err => handleError(err, 'Redis'));
@@ -2531,8 +2449,9 @@ export const parseStockCsv = (raw_data, year, month_str) => {
     const high = [];
     const low = [];
     const vol = [];
+    const day = [];
     if (raw_data.length <= 200) {
-        return { high, low, vol, isStop: true };
+        return { high, low, vol, day, isStop: true };
     }
     const year_str = year - 1911;
     const data_list = raw_data.match(new RegExp('"' + year_str + '\\/' + month_str + '.*', 'g'));
@@ -2566,10 +2485,270 @@ export const parseStockCsv = (raw_data, year, month_str) => {
                 high.push(Number(tmp_list_1[4]));
                 low.push(Number(tmp_list_1[5]));
                 vol.push(Number(tmp_list_1[8]));
+                // Extract day from date field "YYY/MM/DD"
+                const dateParts = tmp_list_1[0].trim().split('/');
+                day.push(dateParts.length >= 3 ? Number(dateParts[2]) : 0);
             }
         }
     }
-    return { high, low, vol, isStop: false };
+    return { high, low, vol, day, isStop: false };
+};
+
+// Parse ROC date strings: "113年03月18日" or "113/01/22" → "2024-03-18" or "2024-01-22"
+export const parseTwseRocDate = (dateStr) => {
+    let m;
+    if ((m = dateStr.match(/(\d+)年(\d+)月(\d+)日/))) {
+        return `${Number(m[1]) + 1911}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    }
+    if ((m = dateStr.match(/(\d+)\/(\d+)\/(\d+)/))) {
+        return `${Number(m[1]) + 1911}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+    }
+    return null;
+};
+
+// Fetch TWSE/TPEx adjustment events (dividends, rights, capital reductions)
+// stockType: 2=TPEx, 3=TWSE, other=try both
+// Returns: [{ date: 'YYYY-MM-DD', ratio: number, type: string }] sorted by date ascending
+export const fetchTwseAdjustments = (stockIndex, stockType) => {
+    const adjustments = [];
+    const date = _dateFactory();
+    const endDate = `${date.getFullYear()}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`;
+    const startDate = `${date.getFullYear() - 5}${completeZero(date.getMonth() + 1, 2)}${completeZero(date.getDate(), 2)}`;
+    const startDateTpex = `${date.getFullYear() - 5}/${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}`;
+    const endDateTpex = `${date.getFullYear()}/${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}`;
+
+    const fetchTwseExRight = () => {
+        if (stockType === 2) return Promise.resolve();
+        return Api('url', `https://www.twse.com.tw/rwd/zh/exRight/TWT49U?startDate=${startDate}&endDate=${endDate}&selectType=ALL&response=json`).then(raw => {
+            const data = JSON.parse(raw);
+            if (data.stat === 'OK' && data.data) {
+                for (const row of data.data) {
+                    if (row[1] === stockIndex) {
+                        const d = parseTwseRocDate(row[0]);
+                        const prevClose = parseFloat(row[3].replace(/,/g, ''));
+                        const refPrice = parseFloat(row[4].replace(/,/g, ''));
+                        if (d && prevClose > 0 && refPrice > 0) {
+                            adjustments.push({ date: d, ratio: refPrice / prevClose, type: row[6] === '息' ? 'dividend' : row[6] === '權' ? 'rights' : 'both' });
+                        }
+                    }
+                }
+            }
+        }).catch(err => handleError(err, 'TWSE TWT49U'));
+    };
+
+    const fetchTwseReduction = () => {
+        if (stockType === 2) return Promise.resolve();
+        return Api('url', `https://www.twse.com.tw/rwd/zh/reducation/TWTAUU?startDate=${startDate}&endDate=${endDate}&response=json`).then(raw => {
+            const data = JSON.parse(raw);
+            if (data.stat === 'OK' && data.data) {
+                for (const row of data.data) {
+                    if (row[1].trim() === stockIndex) {
+                        const d = parseTwseRocDate(row[0]);
+                        const prevClose = parseFloat(row[3].replace(/,/g, ''));
+                        const refPrice = parseFloat(row[4].replace(/,/g, ''));
+                        if (d && prevClose > 0 && refPrice > 0) {
+                            adjustments.push({ date: d, ratio: prevClose / refPrice, type: 'reduction' });
+                        }
+                    }
+                }
+            }
+        }).catch(err => handleError(err, 'TWSE TWTAUU'));
+    };
+
+    const fetchTpexExRight = () => {
+        if (stockType === 3) return Promise.resolve();
+        return Api('url', `https://www.tpex.org.tw/www/zh-tw/bulletin/exDailyQ?startDate=${startDateTpex}&endDate=${endDateTpex}&response=json`).then(raw => {
+            const data = JSON.parse(raw);
+            if (data.stat === 'OK' && data.tables && data.tables[0] && data.tables[0].data) {
+                for (const row of data.tables[0].data) {
+                    if (row[1].trim() === stockIndex) {
+                        const d = parseTwseRocDate(row[0]);
+                        const prevClose = parseFloat(row[3].replace(/,/g, ''));
+                        const refPrice = parseFloat(row[4].replace(/,/g, ''));
+                        if (d && prevClose > 0 && refPrice > 0) {
+                            adjustments.push({ date: d, ratio: refPrice / prevClose, type: row[8].includes('息') ? 'dividend' : row[8].includes('權') ? 'rights' : 'both' });
+                        }
+                    }
+                }
+            }
+        }).catch(err => handleError(err, 'TPEx exDailyQ'));
+    };
+
+    return fetchTwseExRight()
+        .then(() => fetchTwseReduction())
+        .then(() => fetchTpexExRight())
+        .then(() => adjustments.sort((a, b) => a.date.localeCompare(b.date)));
+};
+
+// Extract adjustment events from Yahoo Finance chart response (for USSE)
+// Returns: [{ date: 'YYYY-MM-DD', ratio: number, type: string }] sorted by date ascending
+export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
+    const adjustments = [];
+    if (!stockData || !stockData.events) return adjustments;
+
+    const findCloseBefore = (eventTs) => {
+        for (let i = timestamps.length - 1; i >= 0; i--) {
+            if (timestamps[i] < eventTs && quotes.close[i]) {
+                return quotes.close[i];
+            }
+        }
+        return null;
+    };
+
+    if (stockData.events.dividends) {
+        for (const ev of stockData.events.dividends) {
+            const closeBefore = findCloseBefore(ev.date);
+            if (closeBefore && ev.amount > 0) {
+                const d = convertTimestampToDate(ev.date);
+                adjustments.push({
+                    date: `${d.year}-${d.month}-${d.day}`,
+                    ratio: (closeBefore - ev.amount) / closeBefore,
+                    type: 'dividend',
+                });
+            }
+        }
+    }
+
+    if (stockData.events.splits) {
+        for (const ev of stockData.events.splits) {
+            if (ev.numerator && ev.denominator) {
+                const d = convertTimestampToDate(ev.date);
+                adjustments.push({
+                    date: `${d.year}-${d.month}-${d.day}`,
+                    ratio: ev.denominator / ev.numerator,
+                    type: 'split',
+                });
+            }
+        }
+    }
+
+    if (stockData.events.capitalGains) {
+        for (const ev of stockData.events.capitalGains) {
+            const closeBefore = findCloseBefore(ev.date);
+            if (closeBefore && ev.amount > 0) {
+                const d = convertTimestampToDate(ev.date);
+                adjustments.push({
+                    date: `${d.year}-${d.month}-${d.day}`,
+                    ratio: (closeBefore - ev.amount) / closeBefore,
+                    type: 'capitalGain',
+                });
+            }
+        }
+    }
+
+    return adjustments.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+// Apply backward adjustments to raw interval_data
+// Each data point {h, l, v, d} in month raw[] is date-ascending (d=day of month)
+// Returns { adjustedData (cloned), raw_arr, max, min }
+export const applyAdjustments = (interval_data, adjustments) => {
+    if (!interval_data) return { adjustedData: null, raw_arr: [], max: 0, min: 0 };
+
+    const adjData = JSON.parse(JSON.stringify(interval_data));
+
+    if (adjustments && adjustments.length > 0) {
+        // Sort events by date descending for cumulative application
+        const sorted = [...adjustments].sort((a, b) => b.date.localeCompare(a.date));
+
+        for (const y in adjData) {
+            for (const m in adjData[y]) {
+                let tmp_max = 0;
+                let tmp_min = 0;
+                adjData[y][m].raw.forEach(v => {
+                    const pointDate = `${y}-${m}-${String(v.d).padStart(2, '0')}`;
+                    // Compute cumulative ratio: product of all event ratios where event.date > pointDate
+                    let cumRatio = 1;
+                    for (const ev of sorted) {
+                        if (ev.date <= pointDate) break;
+                        cumRatio *= ev.ratio;
+                    }
+                    v.h = v.h * cumRatio;
+                    v.l = v.l * cumRatio;
+                    if (v.h > tmp_max) tmp_max = v.h;
+                    if (!tmp_min || v.l < tmp_min) tmp_min = v.l;
+                });
+                adjData[y][m].max = tmp_max;
+                adjData[y][m].min = tmp_min;
+            }
+        }
+    }
+
+    // Build raw_arr (most recent first) and compute global max/min
+    const months = [];
+    for (const y in adjData) {
+        for (const m in adjData[y]) months.push({ y: Number(y), m });
+    }
+    months.sort((a, b) => a.y !== b.y ? b.y - a.y : b.m.localeCompare(a.m));
+
+    let raw_arr = [];
+    let max = 0;
+    let min = 0;
+    for (const { y, m } of months) {
+        raw_arr = raw_arr.concat(adjData[y][m].raw.slice().reverse());
+        if (adjData[y][m].max > max) max = adjData[y][m].max;
+        if (!min || adjData[y][m].min < min) min = adjData[y][m].min;
+    }
+
+    return { adjustedData: adjData, raw_arr, max, min };
+};
+
+// Validate interval data quality
+// Returns { valid: boolean, warnings: string[] }
+export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
+    const warnings = [];
+
+    if (!interval_data || !raw_arr || raw_arr.length === 0) {
+        return { valid: false, warnings: ['No interval data or empty raw_arr'] };
+    }
+
+    // Check data point validity
+    let zeroPrice = 0;
+    let highLowInversion = 0;
+    let zeroVolume = 0;
+    let nanCount = 0;
+    for (const pt of raw_arr) {
+        if (isNaN(pt.h) || isNaN(pt.l)) nanCount++;
+        if (pt.h <= 0 || pt.l <= 0) zeroPrice++;
+        if (pt.h < pt.l) highLowInversion++;
+        if (pt.v === 0) zeroVolume++;
+    }
+    if (nanCount > 0) warnings.push(`${nanCount} data points with NaN prices`);
+    if (zeroPrice > 0) warnings.push(`${zeroPrice} data points with zero/negative prices`);
+    if (highLowInversion > 0) warnings.push(`${highLowInversion} data points where high < low`);
+    if (zeroVolume > raw_arr.length * 0.5) warnings.push(`${zeroVolume}/${raw_arr.length} data points with zero volume`);
+
+    // Check for large price gaps without adjustment events
+    const adjDates = new Set((adjustments || []).map(a => a.date));
+    let gapCount = 0;
+    for (let i = 1; i < raw_arr.length; i++) {
+        const prevMid = (raw_arr[i - 1].h + raw_arr[i - 1].l) / 2;
+        const currMid = (raw_arr[i].h + raw_arr[i].l) / 2;
+        if (prevMid > 0 && Math.abs(currMid - prevMid) / prevMid > 0.5) {
+            gapCount++;
+        }
+    }
+    if (gapCount > 0) warnings.push(`${gapCount} price gaps > 50% detected`);
+
+    // Validate adjustment ratios
+    if (adjustments) {
+        for (const adj of adjustments) {
+            if (adj.ratio <= 0.05 || adj.ratio > 20) {
+                warnings.push(`Unusual adjustment ratio ${adj.ratio} on ${adj.date} (type: ${adj.type})`);
+            }
+        }
+    }
+
+    // Check data completeness
+    let monthCount = 0;
+    for (const y in interval_data) {
+        for (const m in interval_data[y]) monthCount++;
+    }
+    if (monthCount < 6) warnings.push(`Only ${monthCount} months of data (expected 12+)`);
+
+    const valid = nanCount === 0 && zeroPrice === 0;
+    if (warnings.length > 0) console.log('Data validation warnings:', warnings);
+    return { valid, warnings };
 };
 
 const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {

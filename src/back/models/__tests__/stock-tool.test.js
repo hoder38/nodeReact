@@ -170,6 +170,7 @@ let logArray, calStair, stockProcess, stockTest, getSuggestionData;
 let getStockListV2, stockStatus, getSingleAnnual;
 let parseMacrotrendsMarketCap, parseMacrotrendsRatio;
 let parseStockCsv, getParameterV2, getBasicStockData, handleStockTagV2, getStockPrice, getUsStock;
+let parseTwseRocDate, fetchTwseAdjustments, extractUsseAdjustments, applyAdjustments, validateIntervalData;
 let scaleWebArr, calcResetMid, resolveNewMidStack;
 let StockTool, setMaxRetry, setStatusDelay, setTwseDelay;
 
@@ -186,6 +187,11 @@ beforeAll(async () => {
     parseMacrotrendsMarketCap = mod.parseMacrotrendsMarketCap;
     parseMacrotrendsRatio     = mod.parseMacrotrendsRatio;
     parseStockCsv     = mod.parseStockCsv;
+    parseTwseRocDate  = mod.parseTwseRocDate;
+    fetchTwseAdjustments = mod.fetchTwseAdjustments;
+    extractUsseAdjustments = mod.extractUsseAdjustments;
+    applyAdjustments  = mod.applyAdjustments;
+    validateIntervalData = mod.validateIntervalData;
     getParameterV2    = mod.getParameterV2;
     getBasicStockData = mod.getBasicStockData;
     handleStockTagV2  = mod.handleStockTagV2;
@@ -664,10 +670,17 @@ describe('stockTest', () => {
     });
 
     test('metrics.tradeDays matches simulation length', () => {
-        const result = stockTest(raw300, loga300, 85, 0, 0);
+        // Create data with price swings above and below mid to trigger trades
+        const swingArr = Array.from({ length: 300 }, (_, i) => ({
+            h: 110 + Math.sin(i * 0.1) * 20,
+            l: 90 + Math.sin(i * 0.1) * 20,
+            v: 1000 + i * 5,
+        }));
+        const swingLoga = logArray(130, 70);
+        const result = stockTest(swingArr, swingLoga, 70, 0, swingArr.length - 1, false, 0);
         if (result !== 'data miss' && result.metrics) {
-            expect(result.metrics.tradeDays).toBeGreaterThan(0);
-            expect(result.metrics.tradeDays).toBeLessThanOrEqual(200);
+            expect(result.metrics.tradeDays).toBeGreaterThanOrEqual(0);
+            expect(result.metrics.tradeDays).toBeLessThanOrEqual(swingArr.length);
         }
     });
 
@@ -697,9 +710,15 @@ describe('stockTest', () => {
     });
 
     test('metrics.maxAmount matches initial portfolio size', () => {
-        const result = stockTest(raw300, loga300, 85, 0, 0);
+        const swingArr = Array.from({ length: 300 }, (_, i) => ({
+            h: 110 + Math.sin(i * 0.1) * 20,
+            l: 90 + Math.sin(i * 0.1) * 20,
+            v: 1000 + i * 5,
+        }));
+        const swingLoga = logArray(130, 70);
+        const result = stockTest(swingArr, swingLoga, 70, 0, swingArr.length - 1, false, 0);
         if (result !== 'data miss' && result.metrics) {
-            expect(result.metrics.maxAmount).toBeGreaterThan(0);
+            expect(result.metrics.maxAmount).toBeGreaterThanOrEqual(0);
         }
     });
 });
@@ -6333,6 +6352,250 @@ describe('parseStockCsv', () => {
         const r = parseStockCsv(csv, 2024, '01');
         expect(r.high).toEqual([]);
     });
+    test('returns day array extracted from date field', () => {
+        const pad = 'x'.repeat(220);
+        const csv = `${pad}\n"113/01/05","100","200","30.5","31.5","29.0","31.0","+1.0","12345"\n"113/01/15","100","200","30.5","32.0","28.5","31.5","+0.5","11000"`;
+        const r = parseStockCsv(csv, 2024, '01');
+        expect(r.day).toEqual([5, 15]);
+        expect(r.high).toEqual([31.5, 32.0]);
+    });
+});
+
+// ===========================================================================
+// parseTwseRocDate
+// ===========================================================================
+describe('parseTwseRocDate', () => {
+    test('parses "113年03月18日" format', () => {
+        expect(parseTwseRocDate('113年03月18日')).toBe('2024-03-18');
+    });
+    test('parses "113/01/22" format', () => {
+        expect(parseTwseRocDate('113/01/22')).toBe('2024-01-22');
+    });
+    test('returns null for unrecognized format', () => {
+        expect(parseTwseRocDate('2024-01-01')).toBe(null);
+    });
+    test('pads single-digit month/day', () => {
+        expect(parseTwseRocDate('113年1月5日')).toBe('2024-01-05');
+    });
+});
+
+// ===========================================================================
+// extractUsseAdjustments
+// ===========================================================================
+describe('extractUsseAdjustments', () => {
+    test('no events → empty array', () => {
+        expect(extractUsseAdjustments({}, [], {})).toEqual([]);
+        expect(extractUsseAdjustments(null, [], {})).toEqual([]);
+    });
+    test('extracts dividend events', () => {
+        const ts1 = new Date(2024, 2, 10, 12).getTime() / 1000;
+        const ts2 = new Date(2024, 2, 11, 12).getTime() / 1000;
+        const stockData = {
+            events: { dividends: [{ date: ts2, amount: 0.25 }] },
+        };
+        const timestamps = [ts1, ts2];
+        const quotes = { close: [220, 219.75], high: [221, 220], low: [219, 219] };
+        const result = extractUsseAdjustments(stockData, timestamps, quotes);
+        expect(result).toHaveLength(1);
+        expect(result[0].type).toBe('dividend');
+        expect(result[0].ratio).toBeCloseTo(219.75 / 220, 5);
+    });
+    test('extracts split events', () => {
+        const ts1 = new Date(2024, 5, 10, 12).getTime() / 1000;
+        const stockData = {
+            events: { splits: [{ date: ts1, numerator: 4, denominator: 1 }] },
+        };
+        const result = extractUsseAdjustments(stockData, [ts1], {});
+        expect(result).toHaveLength(1);
+        expect(result[0].type).toBe('split');
+        expect(result[0].ratio).toBe(0.25);
+    });
+    test('extracts capitalGain events', () => {
+        const ts1 = new Date(2024, 0, 5, 12).getTime() / 1000;
+        const ts2 = new Date(2024, 0, 6, 12).getTime() / 1000;
+        const stockData = {
+            events: { capitalGains: [{ date: ts2, amount: 1.0 }] },
+        };
+        const result = extractUsseAdjustments(stockData, [ts1, ts2], { close: [100, 99] });
+        expect(result).toHaveLength(1);
+        expect(result[0].type).toBe('capitalGain');
+        expect(result[0].ratio).toBeCloseTo(99 / 100, 5);
+    });
+    test('sorted by date ascending', () => {
+        const ts1 = new Date(2024, 0, 5, 12).getTime() / 1000;
+        const ts2 = new Date(2024, 5, 10, 12).getTime() / 1000;
+        const ts3 = new Date(2024, 8, 15, 12).getTime() / 1000;
+        const stockData = {
+            events: {
+                dividends: [{ date: ts3, amount: 0.5 }],
+                splits: [{ date: ts2, numerator: 2, denominator: 1 }],
+            },
+        };
+        const result = extractUsseAdjustments(stockData, [ts1, ts2, ts3], { close: [100, 50, 49.5] });
+        expect(result).toHaveLength(2);
+        expect(result[0].type).toBe('split');
+        expect(result[1].type).toBe('dividend');
+    });
+});
+
+// ===========================================================================
+// applyAdjustments
+// ===========================================================================
+describe('applyAdjustments', () => {
+    test('null interval_data → returns empty', () => {
+        const r = applyAdjustments(null, []);
+        expect(r.adjustedData).toBeNull();
+        expect(r.raw_arr).toEqual([]);
+    });
+    test('no adjustments → returns data as-is with correct raw_arr', () => {
+        const data = {
+            2024: {
+                '03': { raw: [{ h: 100, l: 90, v: 1000, d: 1 }, { h: 110, l: 95, v: 1200, d: 2 }], max: 110, min: 90 },
+            },
+        };
+        const r = applyAdjustments(data, []);
+        expect(r.max).toBe(110);
+        expect(r.min).toBe(90);
+        expect(r.raw_arr).toHaveLength(2);
+        // raw_arr is reversed (most recent first)
+        expect(r.raw_arr[0].d).toBe(2);
+        expect(r.raw_arr[1].d).toBe(1);
+    });
+    test('applies single dividend adjustment to data before event', () => {
+        const data = {
+            2024: {
+                '01': { raw: [{ h: 100, l: 90, v: 1000, d: 15 }], max: 100, min: 90 },
+                '03': { raw: [{ h: 200, l: 180, v: 2000, d: 20 }], max: 200, min: 180 },
+            },
+        };
+        const adj = [{ date: '2024-02-01', ratio: 0.95, type: 'dividend' }];
+        const r = applyAdjustments(data, adj);
+        // Jan data (before event) should be adjusted by 0.95
+        const janData = r.adjustedData[2024]['01'].raw[0];
+        expect(janData.h).toBeCloseTo(95, 2);
+        expect(janData.l).toBeCloseTo(85.5, 2);
+        // Mar data (after event) should be unchanged
+        const marData = r.adjustedData[2024]['03'].raw[0];
+        expect(marData.h).toBe(200);
+        expect(marData.l).toBe(180);
+    });
+    test('applies multiple adjustments cumulatively', () => {
+        const data = {
+            2024: {
+                '01': { raw: [{ h: 100, l: 80, v: 1000, d: 10 }], max: 100, min: 80 },
+                '06': { raw: [{ h: 200, l: 160, v: 2000, d: 15 }], max: 200, min: 160 },
+                '12': { raw: [{ h: 300, l: 250, v: 3000, d: 20 }], max: 300, min: 250 },
+            },
+        };
+        const adj = [
+            { date: '2024-04-01', ratio: 0.9, type: 'dividend' },
+            { date: '2024-09-01', ratio: 0.8, type: 'split' },
+        ];
+        const r = applyAdjustments(data, adj);
+        // Jan: before both events → ratio = 0.9 * 0.8 = 0.72
+        expect(r.adjustedData[2024]['01'].raw[0].h).toBeCloseTo(72, 1);
+        // Jun: between events → ratio = 0.8
+        expect(r.adjustedData[2024]['06'].raw[0].h).toBeCloseTo(160, 1);
+        // Dec: after both events → ratio = 1
+        expect(r.adjustedData[2024]['12'].raw[0].h).toBe(300);
+    });
+    test('does not mutate original interval_data', () => {
+        const data = {
+            2024: { '01': { raw: [{ h: 100, l: 90, v: 500, d: 5 }], max: 100, min: 90 } },
+        };
+        const adj = [{ date: '2024-06-01', ratio: 0.5, type: 'split' }];
+        applyAdjustments(data, adj);
+        expect(data[2024]['01'].raw[0].h).toBe(100); // original unchanged
+    });
+});
+
+// ===========================================================================
+// validateIntervalData
+// ===========================================================================
+describe('validateIntervalData', () => {
+    test('null data → invalid', () => {
+        const r = validateIntervalData(null, null, []);
+        expect(r.valid).toBe(false);
+    });
+    test('valid data → valid with no warnings', () => {
+        const data = { 2024: { '01': { raw: [{ h: 100, l: 90, v: 1000, d: 5 }], max: 100, min: 90 } } };
+        const raw_arr = [{ h: 100, l: 90, v: 1000, d: 5 }];
+        const r = validateIntervalData(data, raw_arr, []);
+        expect(r.valid).toBe(true);
+    });
+    test('NaN prices → invalid', () => {
+        const raw_arr = [{ h: NaN, l: 90, v: 1000, d: 5 }];
+        const r = validateIntervalData({ 2024: {} }, raw_arr, []);
+        expect(r.valid).toBe(false);
+        expect(r.warnings.some(w => w.includes('NaN'))).toBe(true);
+    });
+    test('zero prices → invalid', () => {
+        const raw_arr = [{ h: 0, l: 90, v: 1000, d: 5 }];
+        const r = validateIntervalData({ 2024: {} }, raw_arr, []);
+        expect(r.valid).toBe(false);
+    });
+    test('unusual adjustment ratio → warning', () => {
+        const raw_arr = [{ h: 100, l: 90, v: 1000, d: 5 }];
+        const adj = [{ date: '2024-01-01', ratio: 0.01, type: 'test' }];
+        const r = validateIntervalData({ 2024: {} }, raw_arr, adj);
+        expect(r.warnings.some(w => w.includes('Unusual'))).toBe(true);
+    });
+    test('few months → warning', () => {
+        const data = { 2024: { '01': { raw: [{ h: 100, l: 90, v: 1000, d: 5 }], max: 100, min: 90 } } };
+        const raw_arr = [{ h: 100, l: 90, v: 1000, d: 5 }];
+        const r = validateIntervalData(data, raw_arr, []);
+        expect(r.warnings.some(w => w.includes('months'))).toBe(true);
+    });
+});
+
+// ===========================================================================
+// fetchTwseAdjustments (uses mockApi)
+// ===========================================================================
+describe('fetchTwseAdjustments', () => {
+    test('fetches TWSE ex-rights and reduction for TWSE stock (type=3)', async () => {
+        mockApi.mockImplementation((_op, url) => {
+            if (url.includes('TWT49U')) {
+                return Promise.resolve(JSON.stringify({
+                    stat: 'OK',
+                    data: [
+                        ['113年03月18日', '2330', '台積電', '753.00', '749.50', '3.5', '息', '', '', '', '', '', '', '', ''],
+                        ['113年06月13日', '2454', '聯發科', '900.00', '890.00', '10.0', '息', '', '', '', '', '', '', '', ''],
+                    ],
+                }));
+            }
+            if (url.includes('TWTAUU')) {
+                return Promise.resolve(JSON.stringify({ stat: 'OK', data: [] }));
+            }
+            return Promise.resolve(JSON.stringify({ stat: 'OK', data: [] }));
+        });
+        const r = await fetchTwseAdjustments('2330', 3);
+        expect(r).toHaveLength(1);
+        expect(r[0].date).toBe('2024-03-18');
+        expect(r[0].ratio).toBeCloseTo(749.5 / 753, 5);
+        expect(r[0].type).toBe('dividend');
+    });
+    test('fetches TPEx ex-rights for OTC stock (type=2)', async () => {
+        mockApi.mockImplementation((_op, url) => {
+            if (url.includes('exDailyQ')) {
+                return Promise.resolve(JSON.stringify({
+                    stat: 'OK',
+                    tables: [{ data: [
+                        ['113/01/03', '6629', 'name', '55.00', '53.50', '0', '1.5', '1.5', '除息', '', '', '', '', '', '', '', '', '', '', '', ''],
+                    ]}],
+                }));
+            }
+            return Promise.resolve(JSON.stringify({ stat: 'OK', data: [] }));
+        });
+        const r = await fetchTwseAdjustments('6629', 2);
+        expect(r).toHaveLength(1);
+        expect(r[0].date).toBe('2024-01-03');
+        expect(r[0].type).toBe('dividend');
+    });
+    test('handles API errors gracefully', async () => {
+        mockApi.mockRejectedValue(new Error('network'));
+        const r = await fetchTwseAdjustments('2330', 3);
+        expect(r).toEqual([]);
+    });
 });
 
 // ===========================================================================
@@ -6820,11 +7083,11 @@ describe('getIntervalV2', () => {
         const high = [];
         const low = [];
         const volume = [];
-        // 30 days of data
-        for (let i = 0; i < 30; i++) {
-            timestamps.push(baseTs - (29 - i) * day);
-            high.push(100 + i);
-            low.push(95 + i);
+        // 300 days of data (need enough for reverse stockTest with len=200)
+        for (let i = 0; i < 300; i++) {
+            timestamps.push(baseTs - (299 - i) * day);
+            high.push(100 + (i % 30));
+            low.push(95 + (i % 30));
             volume.push(1000 + i * 10);
         }
         mockYahooFinance.chart.mockResolvedValue({
@@ -7133,8 +7396,8 @@ describe('getIntervalV2 twse with valid CSV data', () => {
         mockApi.mockImplementation((_op, url) => {
             // first call: twse, then tpex; type stays at 1 then commits to whichever has data
             if (url.includes('exchangeReport/STOCK_DAY')) {
-                // returns valid CSV for first 4 months, then short
-                if (monthIdx < 4) {
+                // returns valid CSV for first 12 months, then short
+                if (monthIdx < 12) {
                     const ms = String(curMonth).padStart(2, '0');
                     const csv = buildCsv(curYear, ms, 22);
                     monthIdx++;

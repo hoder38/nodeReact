@@ -1,10 +1,10 @@
 # STOCK-TOOL.MD — Technical Documentation & QA Testing Guide
 
 > **Module**: `/src/back/models/stock-tool.js`  
-> **Lines**: ~4,500  
+> **Lines**: ~4,620  
 > **Purpose**: Stock data management, trading algorithm backtesting, portfolio tracking  
-> **Stack**: Node.js · MongoDB · Redis · Yahoo Finance API · Web Scraping  
-> **Last Updated**: 2026-05-19
+> **Stack**: Node.js · MongoDB · Redis · Yahoo Finance API · TWSE/TPEx Official APIs · Web Scraping  
+> **Last Updated**: 2026-06-27
 
 ---
 
@@ -42,7 +42,7 @@
 - **Concurrency Control**: Module-level flags prevent resource contention
 - **Real-Time Updates**: WebSocket integration for live client notifications
 - **Price Distribution Analysis**: Logarithmic scaling with normal distribution (σ-layer) modeling for volatility
-- **Corporate Action Adjustment**: Adjusts historical prices for splits, dividends, and capital gains (TWSE via Yahoo Finance, USSE via adjclose ratio)
+- **Corporate Action Adjustment**: Adjusts historical prices for splits, dividends, and capital gains. TWSE uses official TWSE TWT49U (ex-rights/dividends) and TWTAUU (capital reduction) APIs plus TPEx exDailyQ. USSE extracts events from Yahoo Finance chart response. Both use backward-adjustment with cumulative ratio product. Raw unadjusted data + adjustment events stored in Redis for incremental updates.
 
 ---
 
@@ -62,7 +62,7 @@
 
 | Key Pattern | Data | TTL |
 |-------------|------|-----|
-| `interval: {type}{index}` | `{raw_list: JSON, ret_obj, etime}` | Until `etime` timestamp |
+| `interval: {type}{index}` | `{raw_list: JSON, adjustments: JSON, ret_obj, etime}` | Until `etime` timestamp |
 
 ### 2.2 External Services
 
@@ -630,12 +630,13 @@ const mockPredictWarp = {
 **Logic Flow**:
 1. Checks Redis cache (`interval: {type}{index}`)
 2. If miss:
-   - **TWSE**: Fetches 60 months of daily data from TWSE CSV, then calls `adjustWithYahoo()` to apply split/dividend/capital-gain adjustment ratios sourced from Yahoo Finance chart API
-   - **USSE**: Fetches 60 months via Yahoo Finance `chart` endpoint with `events=capitalGains,dividends,splits`. Uses `adjclose/close` ratio to adjust all prices. If corporate action events are detected, recursively re-fetches the full period to ensure consistent adjustment
-3. Filters low-volume months
-4. Calculates price distribution (max, min, min_vol)
-5. Caches in Redis with TTL
-6. Returns interval data
+   - **TWSE**: Fetches 60 months of daily data from TWSE CSV. Stores raw unadjusted prices with day-of-month (`{h, l, v, d}`). Calls `fetchTwseAdjustments()` to get corporate action events from official TWSE TWT49U/TWTAUU and TPEx exDailyQ APIs, then `applyAdjustments()` for backward price adjustment using cumulative ratio product
+   - **USSE**: Fetches 60 months via Yahoo Finance `chart` endpoint. Stores raw unadjusted prices with day-of-month. Calls `extractUsseAdjustments()` to extract dividend/split/capitalGain events from Yahoo response, then `applyAdjustments()` for backward adjustment
+3. Calls `validateIntervalData()` for data quality checks
+4. Filters low-volume months
+5. Calculates price distribution (max, min, min_vol)
+6. Caches in Redis with TTL — stores `raw_list` (raw unadjusted), `adjustments` (events array), `ret_obj`, `etime`
+7. Returns interval data
 
 **Returns**: Historical price data with distribution analysis
 
@@ -982,7 +983,88 @@ const mockPredictWarp = {
 
 ---
 
-## 5. Internal Helper Functions
+### 4.9 parseTwseRocDate(dateStr)
+
+**Purpose**: Parses ROC (Republic of China) date strings to ISO format.
+
+**Parameters**:
+- `dateStr` (string): ROC date in format "113年03月18日" or "113/01/22"
+
+**Returns**: `'YYYY-MM-DD'` string, or `null` if unrecognized format.
+
+---
+
+### 4.10 fetchTwseAdjustments(stockIndex, stockType)
+
+**Purpose**: Fetches corporate action adjustment events from official TWSE/TPEx APIs.
+
+**Parameters**:
+- `stockIndex` (string): Stock code (e.g., '2330')
+- `stockType` (number): 2=TPEx, 3=TWSE
+
+**Logic Flow**:
+1. Computes 5-year date range
+2. If TWSE (type≠2): Calls TWT49U (ex-rights/dividends) and TWTAUU (capital reduction) APIs
+3. If TPEx (type≠3): Calls exDailyQ API
+4. Filters rows matching stockIndex
+5. Computes ratio: `refPrice/prevClose` (ex-rights) or `prevClose/refPrice` (reduction)
+
+**Returns**: `[{date, ratio, type}]` sorted by date ascending. Types: 'dividend', 'rights', 'both', 'reduction'.
+
+---
+
+### 4.11 extractUsseAdjustments(stockData, timestamps, quotes)
+
+**Purpose**: Extracts adjustment events from Yahoo Finance chart API response.
+
+**Parameters**:
+- `stockData` (object): Yahoo Finance chart response (has `.events`)
+- `timestamps` (number[]): Unix timestamps array
+- `quotes` (object): `{close, high, low, volume}` arrays
+
+**Logic Flow**:
+1. For dividends: ratio = `(closeBefore - amount) / closeBefore`
+2. For splits: ratio = `denominator / numerator` (e.g., 4:1 → 0.25)
+3. For capitalGains: ratio = `(closeBefore - amount) / closeBefore`
+
+**Returns**: `[{date, ratio, type}]` sorted by date ascending.
+
+---
+
+### 4.12 applyAdjustments(interval_data, adjustments)
+
+**Purpose**: Applies backward price adjustment to raw interval data using cumulative ratio product.
+
+**Parameters**:
+- `interval_data` (object): `{year: {month: {raw: [{h, l, v, d}], max, min}}}`
+- `adjustments` (array): `[{date, ratio, type}]`
+
+**Algorithm**:
+1. Deep-clone interval_data
+2. Sort events by date descending
+3. For each data point, compute `cumRatio = Π(event.ratio)` for all events where `event.date > pointDate`
+4. `adjusted_price = raw_price × cumRatio`
+5. Rebuild raw_arr (most recent month first, days reversed) and global max/min
+
+**Returns**: `{adjustedData, raw_arr, max, min}`. Does not mutate the original input.
+
+---
+
+### 4.13 validateIntervalData(interval_data, raw_arr, adjustments)
+
+**Purpose**: Validates data quality of interval data after adjustment.
+
+**Checks**:
+- NaN or zero/negative prices → `valid: false`
+- High < low inversions → warning
+- Zero-volume data points (>50%) → warning
+- Price gaps >50% without adjustment events → warning
+- Unusual adjustment ratios (≤0.05 or >20) → warning
+- Data completeness (<6 months) → warning
+
+**Returns**: `{valid: boolean, warnings: string[]}`
+
+---
 
 ### 5.1 getStockPrice(type, index, previous)
 
