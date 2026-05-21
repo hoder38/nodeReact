@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT } from '../constants.js'
+import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT, MAX_NEWMID_STACK } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
@@ -1057,34 +1057,32 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {
                 console.log(nm);
-                if (Math.round(new Date().getTime() / 1000) - item.tmpPT.time < RANGE_BITFINEX_INTERVAL) {
-                    item.previous.price = item.tmpPT.price;
-                    item.previous.time = item.tmpPT.time;
-                    item.previous.type = item.tmpPT.type;
-                    item.previous.tprice = item.tmpPT.tprice;
-                    item.tmpPT = {
-                        price: 0,
-                        time: 0,
-                        type: '',
-                        tprice: 0,
-                    };
-                }
             });
-            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+            let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+            let recalcCount = 0;
             while(suggestion.resetWeb) {
-                item.tmpPT = {
-                    price: item.previous.price,
-                    time: item.previous.time,
-                    type: item.previous.type,
-                    tprice: item.previous.tprice,
-                };
                 item.previous.time = 0;
                 item.previous.price = '';
                 item.previous.type = '';
                 item.previous.tprice = 0;
                 item.newMid.push(suggestion.newMid);
-                newArr = scaleWebArr(item.newMid, item.mid, item.web);
-                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL);
+                // Stack depth limit: adopt last shift as new base mid
+                if (item.newMid.length >= MAX_NEWMID_STACK) {
+                    recalcCount++;
+                    if (recalcCount > 3) {
+                        item.newMid = [];
+                        newArr = item.web;
+                        break;
+                    }
+                    const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                    item.mid = item.newMid[item.newMid.length - 1];
+                    item.web = item.web.map(v => v * ratio);
+                    item.newMid = [];
+                    newArr = item.web;
+                } else {
+                    newArr = scaleWebArr(item.newMid, item.mid, item.web);
+                }
+                suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
             }
             let count = 0;
             let amount = clearP ? 0 : item.amount;
@@ -1187,7 +1185,8 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             await Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                 newMid: item.newMid,
-                tmpPT: item.tmpPT,
+                mid: item.mid,
+                web: item.web,
                 previous: item.previous,
             }});
             let is_insert = false;

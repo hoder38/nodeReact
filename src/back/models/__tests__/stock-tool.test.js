@@ -3474,7 +3474,7 @@ describe('stockStatus count capping', () => {
 // stockStatus newMid processing (lines 2812-2837)
 // ===========================================================================
 describe('stockStatus newMid pop processing', () => {
-    test('newMid pops when price reverses → restores tmpPT to previous (lines 2818-2836)', async () => {
+    test('newMid pops when price reverses → clears stack (tmpPT removed)', async () => {
         const nowTs = Math.round(new Date().getTime() / 1000);
         const item = {
             _id: 'st1', index: 'TSLA', setype: 'usse', type: 'Tech',
@@ -3494,7 +3494,6 @@ describe('stockStatus newMid pop processing', () => {
             newMid: [120],
             times: 1, mul: 0, clear: false, ing: 0,
             str: '', order: null,
-            tmpPT: { price: 700, time: nowTs - 100, type: 'buy', tprice: 680 },
             profit: 0, amount: 1000000, orig: 1000000, count: 0,
             previous: { price: 0, time: 0, type: '', tprice: 0, buy: [], sell: [] },
             wType: 0, price: 0, previousPrice: 0,
@@ -3516,19 +3515,13 @@ describe('stockStatus newMid pop processing', () => {
         mockGetUsseOrder.mockReturnValue([]);
         mockGetTwseOrder.mockReturnValue([]);
         await stockStatus(false);
-        // After pop, previous should be restored from tmpPT, tmpPT should be zeroed
+        // After pop, newMid should be empty, no tmpPT in update
         expect(mockMongo).toHaveBeenCalledWith('update', expect.any(String),
             expect.any(Object),
             expect.objectContaining({
                 $set: expect.objectContaining({
-                    previous: expect.objectContaining({
-                        price: 700,
-                        type: 'buy',
-                    }),
-                    tmpPT: expect.objectContaining({
-                        price: 0,
-                        time: 0,
-                    }),
+                    newMid: [],
+                    mid: 600,
                 }),
             }));
     });
@@ -8717,6 +8710,37 @@ describe('calcResetMid', () => {
         // midIdx=min(3,2)=2 → midPrice=10, sigma1Idx=3 → out of bounds → cap
         const smallPA = [-100, 80, 60, -50, 30, -10];
         expect(calcResetMid(smallPA, 0.006, 1)).toBeCloseTo(10 * 0.94, 5);
+    });
+
+    test('stackDepth=0 → 1σ shift (same as default)', () => {
+        // boundaries: [1000, 600, 400, 250, 120, 60, 10]
+        // midIdx=3 → midPrice=250, sigma1Dist=250-120=130, multiplier=1
+        // newMid=250-130*1=120
+        expect(calcResetMid(PA, 0.006, 1, 0)).toBe(120);
+    });
+
+    test('stackDepth=1 → 1.5σ shift', () => {
+        // multiplier=1.5, sigma1Dist=130, newMid=250-130*1.5=55
+        expect(calcResetMid(PA, 0.006, 1, 1)).toBe(250 - 130 * 1.5);
+    });
+
+    test('stackDepth=2 → 2σ shift', () => {
+        // multiplier=2, sigma1Dist=130, newMid=250-130*2=-10 → but cap=250*0.94=235
+        // -10 < cap? No, -10 > 235 is false, so newMid=-10 (no cap applies since -10 < cap)
+        // Actually cap check: if (newMid > cap) newMid = cap. -10 > 235? No. So newMid=-10
+        expect(calcResetMid(PA, 0.006, 1, 2)).toBe(250 - 130 * 2);
+    });
+
+    test('stackDepth=1 direction=2 → 1.5σ upward shift', () => {
+        // boundaries: [1000, 600, 400, 250, 120, 60, 10]
+        // midIdx=3 → midPrice=250, sigma1=400, sigma1Dist=400-250=150
+        // multiplier=1.5, newMid=250+150*1.5=475
+        expect(calcResetMid(PA, 0.006, 2, 1)).toBe(250 + 150 * 1.5);
+    });
+
+    test('stackDepth=2 direction=2 → 2σ upward shift', () => {
+        // multiplier=2, newMid=250+150*2=550
+        expect(calcResetMid(PA, 0.006, 2, 2)).toBe(250 + 150 * 2);
     });
 });
 

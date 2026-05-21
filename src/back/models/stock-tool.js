@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
@@ -2924,42 +2924,33 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     //new mid
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
                         console.log(nm);
-                        if (Math.round(_dateFactory().getTime() / 1000) - item.tmpPT.time < RANGE_INTERVAL) {
-                            change_previous = true;
-                            item.previous.price = item.tmpPT.price;
-                            item.previous.time = item.tmpPT.time;
-                            item.previous.type = item.tmpPT.type;
-                            item.previous.tprice = item.tmpPT.tprice;
-                            //item.previous.real = item.tmpPT.real;
-                            item.tmpPT = {
-                                price: 0,
-                                time: 0,
-                                type: '',
-                                tprice: 0,
-                                //real: item.previous.real,
-                            };
-                        }
                     });
-                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
+                    let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                    let recalcCount = 0;
                     while(suggestion.resetWeb) {
-                        //if (item.newMid.length === 0) {
-                            item.tmpPT = {
-                                price: item.previous.price,
-                                time: item.previous.time,
-                                type: item.previous.type,
-                                tprice: item.previous.tprice,
-                                //real: item.previous.real,
-                            };
-                        //}
                         change_previous = true;
                         item.previous.time = 0;
                         item.previous.price = 0;
                         item.previous.type = '';
                         item.previous.tprice = 0;
-                        //item.previous.real = false;
                         item.newMid.push(suggestion.newMid);
-                        newArr = scaleWebArr(item.newMid, item.mid, item.web);
-                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee);
+                        // Stack depth limit: adopt last shift as new base mid
+                        if (item.newMid.length >= MAX_NEWMID_STACK) {
+                            recalcCount++;
+                            if (recalcCount > 3) {
+                                item.newMid = [];
+                                newArr = item.web;
+                                break;
+                            }
+                            const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                            item.mid = item.newMid[item.newMid.length - 1];
+                            item.web = item.web.map(v => v * ratio);
+                            item.newMid = [];
+                            newArr = item.web;
+                        } else {
+                            newArr = scaleWebArr(item.newMid, item.mid, item.web);
+                        }
+                        suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                     }
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
@@ -3152,11 +3143,12 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         //sTarget: item.sTarget,
                         //sCurrent: item.sCurrent,
                         newMid: item.newMid,
+                        mid: item.mid,
+                        web: item.web,
                         count: item.count,
                         amount: item.amount,
                         order: item.order,
                     }, change_previous ? {
-                        tmpPT: item.tmpPT,
                         previous: item.previous,
                     } : {})});
                 });
@@ -3324,8 +3316,9 @@ export const scaleWebArr = (stack, mid, webArr) =>
     stack.length > 0 ? webArr.map(v => v * stack[stack.length - 1] / mid) : webArr;
 
 // Calculate the new midpoint when price breaks out of the web array
-// Uses 1σ boundary from the normal distribution structure
-export const calcResetMid = (priceArray, fee, direction) => {
+// Uses σ boundary from the normal distribution structure
+// stackDepth: current newMid stack length → graduated shift (1σ → 1.5σ → 2σ ...)
+export const calcResetMid = (priceArray, fee, direction, stackDepth = 0) => {
     // Collect σ-boundary prices (negative markers in the array)
     const boundaries = [];
     for (let i = 0; i < priceArray.length; i++) {
@@ -3334,17 +3327,23 @@ export const calcResetMid = (priceArray, fee, direction) => {
     // Mid = 4th boundary from top
     const midIdx = Math.min(3, boundaries.length - 1);
     const midPrice = boundaries[midIdx];
+    // Graduated multiplier: 1σ, 1.5σ, 2σ, 2.5σ, ...
+    const multiplier = 1 + 0.5 * stackDepth;
     if (direction === 1) {
-        // Price below array → shift mid down to 1σ below current mid
+        // Price below array → shift mid down
         const sigma1Idx = midIdx + 1;
-        let newMid = sigma1Idx < boundaries.length ? boundaries[sigma1Idx] : midPrice * (1 - fee * 10);
+        const sigma1Price = sigma1Idx < boundaries.length ? boundaries[sigma1Idx] : midPrice * (1 - fee * 10);
+        const sigma1Dist = midPrice - sigma1Price;
+        let newMid = midPrice - sigma1Dist * multiplier;
         const cap = midPrice * (1 - fee * 10);
         if (newMid > cap) newMid = cap;
         return newMid;
     } else {
-        // Price above array → shift mid up to 1σ above current mid
+        // Price above array → shift mid up
         const sigma1Idx = midIdx - 1;
-        let newMid = sigma1Idx >= 0 ? boundaries[sigma1Idx] : midPrice * (1 + fee * 10);
+        const sigma1Price = sigma1Idx >= 0 ? boundaries[sigma1Idx] : midPrice * (1 + fee * 10);
+        const sigma1Dist = sigma1Price - midPrice;
+        let newMid = midPrice + sigma1Dist * multiplier;
         const cap = midPrice * (1 + fee * 10);
         if (newMid < cap) newMid = cap;
         return newMid;
@@ -3364,7 +3363,7 @@ export const resolveNewMidStack = (stack, price, mid, webArr, onPop) => {
     return scaleWebArr(stack, mid, webArr);
 };
 
-export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000)) => {
+export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0) => {
     priceTimes = priceTimes ? priceTimes : 1;
     //const now = Math.round(_dateFactory().getTime() / 1000);
     //const t5 = (pType|16) === pType ? true : false;
@@ -3389,8 +3388,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     if (nowBP === priceArray.length - 1) {
     //if (bP > 6) {
-        const newMid = calcResetMid(priceArray, fee, 1);
-        console.log(`newMid L ${newMid} ${price}`)
+        const newMid = calcResetMid(priceArray, fee, 1, newMidDepth);
         return {
             resetWeb: 1,
             newMid,
@@ -3415,8 +3413,7 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     }
     if (nowSP === 0) {
     //if (sP < 2) {
-        const newMid = calcResetMid(priceArray, fee, 2);
-        console.log(`newMid H ${newMid} ${price}`)
+        const newMid = calcResetMid(priceArray, fee, 2, newMidDepth);
         return {
             resetWeb: 2,
             newMid,
@@ -3846,7 +3843,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     let count = 0;
     let privious = {};
     let priviousTrade = {buy:[], sell:[]};
-    let tmpPT = null;
     let buyTrade = 0;
     let sellTrade = 0;
     let stopLoss = 0;
@@ -3982,22 +3978,47 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     }
 
     const runSignal = (p, i, newArr) => {
-        let suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval));
+        let suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
+        let recalcCount = 0;
         while (suggest.resetWeb) {
-            if (newMid.length === 0) {
-                tmpPT = {
-                    price: priviousTrade.price, time: priviousTrade.time,
-                    type: priviousTrade.type, tprice: priviousTrade.tprice,
-                };
-            }
             priviousTrade.time = 0;
             priviousTrade.price = 0;
             priviousTrade.type = '';
             priviousTrade.tprice = 0;
             if (suggest.resetWeb === 1) stopLoss++;
             newMid.push(suggest.newMid);
-            newArr = scaleWebArr(newMid, web.mid, web.arr);
-            suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval));
+            // Stack depth limit: recalculate from recent history
+            if (newMid.length >= MAX_NEWMID_STACK) {
+                recalcCount++;
+                if (recalcCount > 3) {
+                    // Safety: stop after 3 recalculations to prevent infinite loop
+                    newMid = [];
+                    newArr = web.arr;
+                    break;
+                }
+                let fraction = 2;
+                let recalcWeb = null;
+                while (fraction <= 16) {
+                    const halfLen = Math.max(Math.floor((his_arr.length - i) / fraction), 20);
+                    const recalcStart = Math.max(0, i - halfLen);
+                    recalcWeb = calStair(his_arr, loga, min, recalcStart, fee, halfLen);
+                    if (recalcWeb) break;
+                    fraction *= 2;
+                }
+                if (recalcWeb) {
+                    web = recalcWeb;
+                    maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                    newMid = [];
+                    newArr = web.arr;
+                } else {
+                    newMid = [];
+                    newArr = web.arr;
+                    break;
+                }
+            } else {
+                newArr = scaleWebArr(newMid, web.mid, web.arr);
+            }
+            suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
         }
         return { suggest, newArr };
     };
@@ -4083,6 +4104,8 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             web.arr = newWeb.arr;
             web.mid = newWeb.mid;
             web.times = newWeb.times;
+            maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+            newMid = [];
         } else {
             checkweb++;
         }
@@ -4113,12 +4136,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         for (const p of prices) {
             price = p;
             let newArr = resolveNewMidStack(newMid, price, web.mid, web.arr, () => {
-                if (newMid.length === 0 && now - tmpPT.time < rinterval) {
-                    priviousTrade.price = tmpPT.price;
-                    priviousTrade.time = tmpPT.time;
-                    priviousTrade.type = tmpPT.type;
-                    priviousTrade.tprice = tmpPT.tprice;
-                }
                 stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
             });
             const { suggest, newArr: updatedArr } = runSignal(price, i, newArr);

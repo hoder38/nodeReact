@@ -3639,7 +3639,8 @@ describe('recur_status + recur_NewOrder paths', () => {
             expect.any(Number), expect.any(Number),
             0.5, 55000, 2500,
             expect.any(Number), expect.any(Number), 1,
-            expect.any(Number), expect.any(Number), expect.any(Number)
+            expect.any(Number), expect.any(Number), expect.any(Number),
+            undefined, expect.any(Number)
         );
     });
 
@@ -4224,7 +4225,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
     });
 
-    test('recur_status: newMid pop loop → reverts tmpPT to previous', async () => {
+    test('recur_status: newMid pop loop → clears stack (tmpPT removed)', async () => {
         const id = 'RS23';
         seedTradeStatusUser(id, {
             priceData: { tBTCUSD: { lastPrice: 48000, dailyChange: 0, time: FROZEN_SEC, str: '', str2: '' } },
@@ -4236,7 +4237,6 @@ describe('recur_status + recur_NewOrder paths', () => {
         mockMongo.mockImplementation(mkStatusMongo('itemNM', {
             orig: 1000, amount: 1000, times: 1,
             newMid: [55000],
-            tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
         }, { uid: id }));
         mockRest.wallets.mockResolvedValue([]);
         mockRest.accountTrades.mockResolvedValue([]);
@@ -4250,7 +4250,6 @@ describe('recur_status + recur_NewOrder paths', () => {
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
                     web: [48000, 49000, 50000, 51000, 52000], wType: 0,
                     newMid: [55000],
-                    tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
             }
@@ -4260,7 +4259,6 @@ describe('recur_status + recur_NewOrder paths', () => {
                     orig: 1000, amount: 1000, times: 1, mid: 50000, count: 0, pricecost: 0, pl: 0,
                     web: [48000, 49000, 50000, 51000, 52000], wType: 0,
                     newMid: [55000],
-                    tmpPT: { price: 49000, time: FROZEN_SEC, type: 'buy', tprice: 49500 },
                     previous: { buy: [], sell: [], price: '', time: 0, type: '', tprice: 0 },
                 }]);
             }
@@ -4274,10 +4272,11 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // newMid=[55000] > checkMid(=mid=50000), lastPrice(48000) < checkMid → pop condition met
-        // After pop: newMid=[], previous should have tmpPT values restored
+        // After pop: newMid=[], previous unchanged (tmpPT removed)
         if (savedUpdate) {
             expect(savedUpdate.newMid).toEqual([]);
-            expect(savedUpdate.previous.price).toBe(49000);
+            expect(savedUpdate.mid).toBe(50000);
+            expect(savedUpdate.web).toEqual([48000, 49000, 50000, 51000, 52000]);
         }
     });
 
