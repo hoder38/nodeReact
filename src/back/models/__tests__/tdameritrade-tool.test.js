@@ -53,7 +53,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
     USSE_ORDER_INTERVAL: 86400,
     UPDATE_BOOK: 86400,
     PRICE_INTERVAL: 600,
-    USSE_ENTER_MID: 100,
     UPDATE_ORDER: 0,
     USSE_MARKET_TIME: MOCK_MARKET_TIME,
     RANGE_INTERVAL: 7776000,
@@ -2456,26 +2455,26 @@ describe('usseTDInit', () => {
         test('recur_status: item.mul applied', async () => {
             await alignTradeCounter();
             await runTradeLogic(
-                [{ _id: 'mul1', index: 'MUL', setype: 'usse', ing: 0, amount: 1000, orig: 500, mid: 100, times: 5, mul: 2 }],
-                { MUL: { price: 250 } } // (250 - 100) / 100 * 100 = 150 > 100 → enter_mid fail
+                [{ _id: 'mul1', index: 'MUL', setype: 'usse', ing: 0, amount: 1000, orig: 500, mid: 100, times: 5, mul: 2, web: [-130, -120, -110, -100, -91, -83, -76] }],
+                { MUL: { price: 250 } } // price=250 > sigma2Up=120 → enter_mid fail
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid');
+            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 2σ');
         });
 
         test('recur_status: ing === 0, enter_mid not met → skip', async () => {
             await alignTradeCounter();
             await runTradeLogic(
-                [{ _id: 'ent0', index: 'ENT', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10 }],
-                { ENT: { price: 250 } } // (250 - 100) / 100 * 100 = 150 > 100 → skip
+                [{ _id: 'ent0', index: 'ENT', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
+                { ENT: { price: 250 } } // price=250 > sigma2Up=120 → skip
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid');
+            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 2σ');
         });
 
         test('recur_status: ing === 0, enter_mid met, price exists → startStatus', async () => {
             await alignTradeCounter();
             await runTradeLogic(
-                [{ _id: 'ent1', index: 'ENT2', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10 }],
-                { ENT2: { price: 150, buy: 140, sell: 160, bCount: 2, sCount: 1 } } // (150-100)/100*100 = 50 < 100 → met
+                [{ _id: 'ent1', index: 'ENT2', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
+                { ENT2: { price: 115, buy: 140, sell: 160, bCount: 2, sCount: 1 } } // price=115 < sigma2Up=120 → met
             );
             // Should have called Mongo update to set ing=1
             expect(mockMongo).toHaveBeenCalledWith('update', 'total',
@@ -2485,8 +2484,8 @@ describe('usseTDInit', () => {
         test('recur_status: ing === 0, enter_mid met, no price → skip', async () => {
             await alignTradeCounter();
             await runTradeLogic(
-                [{ _id: 'ent3', index: 'ENT3', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10 }],
-                { ENT3: { price: 0, buy: 0, sell: 0, bCount: 0, sCount: 0 } } // (0-100)/100*100 = -100 < 100 → met, but price falsy
+                [{ _id: 'ent3', index: 'ENT3', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
+                { ENT3: { price: 0, buy: 0, sell: 0, bCount: 0, sCount: 0 } } // price=0 < sigma2Up=120 → met, but price falsy
             );
         });
 

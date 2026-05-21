@@ -51,10 +51,11 @@ export const TWSE_ORDER_INTERVAL = 86400;
 export const STOCK_FILTER_LIMIT = 100;
 export const ALGORITHM = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800;
+// DEPRECATED: replaced by 2σ boundary from web array in shioaji-tool & tdameritrade-tool
 //export const USSE_ENTER_MID = 5;
-export const USSE_ENTER_MID = 100;
+//export const USSE_ENTER_MID = 100;
 //export const TWSE_ENTER_MID = 5;
-export const TWSE_ENTER_MID = 100;
+//export const TWSE_ENTER_MID = 100;
 export const USSE_MARKET_TIME = [16, 9];
 export const TWSE_MARKET_TIME = [4, 21];
 

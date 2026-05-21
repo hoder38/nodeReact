@@ -1,5 +1,5 @@
 import { SHIOAJI_APIKEY, SHIOAJI_APISECRET, SHIOAJI_CA, SHIOAJI_CAPW } from '../../../ver.js'
-import { __dirname, TRADE_FEE, UPDATE_ORDER, TOTALDB, RANGE_INTERVAL, TWSE_ORDER_INTERVAL, TWSE_MARKET_TIME, PRICE_INTERVAL, API_WAIT, TWSE_ENTER_MID } from '../constants.js'
+import { __dirname, TRADE_FEE, UPDATE_ORDER, TOTALDB, RANGE_INTERVAL, TWSE_ORDER_INTERVAL, TWSE_MARKET_TIME, PRICE_INTERVAL, API_WAIT } from '../constants.js'
 import pathModule from 'path'
 const { join: PathJoin } = pathModule;
 import Child_process from 'child_process'
@@ -333,7 +333,9 @@ export const twseShioajiInit = (force = false) => {
                             return recur_status(index + 1);
                         }
                     } else {
-                        if ((price - item.mid) / item.mid * 100 < TWSE_ENTER_MID) {
+                        const negBounds = item.web.filter(v => v < 0);
+                        const sigma2Up = negBounds.length >= 2 ? -negBounds[1] : item.mid * 2;
+                        if (price < sigma2Up) {
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
                                 if (price) {
                                     return startStatus();
@@ -342,8 +344,8 @@ export const twseShioajiInit = (force = false) => {
                                 }
                             });
                         } else {
-                            console.log('enter_mid');
-                            console.log((price - item.mid) / item.mid * 100);
+                            console.log('enter_mid: price above 2σ');
+                            console.log(`price=${price} sigma2Up=${sigma2Up} mid=${item.mid}`);
                             return recur_status(index + 1);
                         }
                     }

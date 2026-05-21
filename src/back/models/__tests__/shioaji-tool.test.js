@@ -52,7 +52,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
   TWSE_MARKET_TIME: [9, 14],
   PRICE_INTERVAL: 15,
   API_WAIT: 1,
-  TWSE_ENTER_MID: -5,
   RE_WEBURL: /^https?:\/\//,
   STATIC_PATH: '/p',
   RELEASE: 'release',
@@ -1781,9 +1780,8 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // TWSE_ENTER_MID = -5
-      // (price - mid) / mid * 100 < -5
-      // price=90, mid=100: (90-100)/100*100 = -10 < -5 => yes
+      // 2σ upper boundary from web array: -negBounds[1] = 120
+      // price=90 < 120 → enter
       const suggestion = { price: 90, bCount: 1, buy: 89, sCount: 0, sell: 0 };
       mockGetSuggestionData.mockReturnValue({ '2330': suggestion });
 
@@ -1792,6 +1790,7 @@ describe('shioaji-tool.js', () => {
           return Promise.resolve([{
             _id: 'id1', index: '2330', setype: 'twse', ing: 0,
             mid: 100, orig: 1000, times: 2, amount: 3,
+            web: [-130, -120, -110, -100, -91, -83, -76],
           }]);
         }
         if (method === 'update') return Promise.resolve();
@@ -1818,13 +1817,14 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // (price - mid) / mid * 100 >= -5
-      // price=98, mid=100: (98-100)/100*100 = -2 >= -5 => skip
-      mockGetSuggestionData.mockReturnValue({ '2330': { price: 98 } });
+      // 2σ upper boundary from web array: -negBounds[1] = 120
+      // price=125 > 120 → skip (above 2σ)
+      mockGetSuggestionData.mockReturnValue({ '2330': { price: 125 } });
 
       mockMongo.mockResolvedValue([{
         _id: 'id1', index: '2330', setype: 'twse', ing: 0,
         mid: 100, orig: 1000, times: 2, amount: 3,
+        web: [-130, -120, -110, -100, -91, -83, -76],
       }]);
 
       await twseShioajiInit();
@@ -1844,8 +1844,7 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // (price - mid) / mid * 100 < -5 with price=0 and mid=100:
-      // (0-100)/100*100 = -100 < -5 => threshold met, but price is falsy
+      // 2σ upper boundary = 120, price=0 < 120 → threshold met, but price is falsy
       mockGetSuggestionData.mockReturnValue({ '2330': { price: 0 } });
 
       mockMongo.mockImplementation((method) => {
@@ -1853,6 +1852,7 @@ describe('shioaji-tool.js', () => {
           return Promise.resolve([{
             _id: 'id1', index: '2330', setype: 'twse', ing: 0,
             mid: 100, orig: 1000, times: 2, amount: 3,
+            web: [-130, -120, -110, -100, -91, -83, -76],
           }]);
         }
         if (method === 'update') return Promise.resolve();

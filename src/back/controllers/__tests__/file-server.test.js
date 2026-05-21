@@ -161,8 +161,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
   STOCK_FILTER_LIMIT: 100,
   ALGORITHM: 'aes-256-ctr',
   KINDLE_LIMIT: 52428800,
-  USSE_ENTER_MID: 100,
-  TWSE_ENTER_MID: 100,
   UNACTIVE_DAY: 5,
   UNACTIVE_HIT: 10,
 }));

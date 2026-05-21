@@ -1,5 +1,5 @@
 import { TDAMERITRADE_KEY, GOOGLE_REDIRECT, TDAMERITRADE_SECRET } from '../../../ver.js'
-import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, PRICE_INTERVAL, USSE_ENTER_MID, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
+import { TD_AUTH_URL, TD_TOKEN_URL, TOTALDB, USSE_ORDER_INTERVAL, PRICE_INTERVAL, UPDATE_ORDER, USSE_MARKET_TIME, RANGE_INTERVAL, USSE_FEE, API_WAIT } from '../constants.js'
 import Fetch from 'node-fetch'
 import { stringify as QStringify } from 'querystring'
 import { handleError, HoError } from '../util/utility.js'
@@ -678,7 +678,9 @@ export const usseTDInit = () => checkOauth().then(() => {
                             return recur_status(index + 1);
                         }
                     } else {
-                        if ((price - item.mid) / item.mid * 100 < USSE_ENTER_MID) {
+                        const negBounds = item.web.filter(v => v < 0);
+                        const sigma2Up = negBounds.length >= 2 ? -negBounds[1] : item.mid * 2;
+                        if (price < sigma2Up) {
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
                                 if (price) {
                                     return startStatus();
@@ -687,8 +689,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             });
                         } else {
-                            console.log('enter_mid');
-                            console.log((price - item.mid) / item.mid * 100);
+                            console.log('enter_mid: price above 2σ');
+                            console.log(`price=${price} sigma2Up=${sigma2Up} mid=${item.mid}`);
                             return recur_status(index + 1);
                         }
                     }
