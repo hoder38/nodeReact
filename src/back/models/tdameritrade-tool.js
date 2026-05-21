@@ -138,6 +138,178 @@ const submitTDOrder = (id, price, count) => {
     });
 }
 
+// Helper: process a filled order — updates previous ledger & calculates profit
+const processFilledOrder = (o, lastP, currentPosition, order_recur, nextIndex) => {
+    const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
+    let profit = 0;
+    const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
+    let time = o.fake ? o.time : 0;
+    let fillRevenue = [];
+    let price = o.fake ? o.price : 0;
+    if (!o.fake) {
+        console.log(o);
+        console.log(o.orderActivityCollection[0].executionLegs[0]);
+        o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
+            time = Math.round(new Date(oace.time).getTime() / 1000);
+            price = oace.price;
+            fillRevenue.push({
+                time,
+                price,
+                revenue: oace.quantity * oace.price,
+            });
+        }));
+    }
+    console.log(symbol);
+    console.log(type);
+    console.log(time);
+    console.log(price);
+    console.log(fillRevenue);
+    if (price <= 0) {
+        return order_recur(nextIndex);
+    }
+    return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
+        if (items.length < 1) {
+            console.log(`miss ${symbol}`);
+            return order_recur(nextIndex);
+        }
+        const item = items[0];
+        if (type === 'BUY') {
+            let isDup = false;
+            for (let k = 0; k < item.previous.buy.length; k++) {
+                if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
+                    console.log('t order duplicate');
+                    return order_recur(nextIndex);
+                } else if (price < item.previous.buy[k].price) {
+                    item.previous.buy.splice(k, 0, {price, time});
+                    isDup = true;
+                    break;
+                }
+            }
+            if (!isDup) {
+                item.previous.buy.push({price, time});
+            }
+            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
+                if (o.fake) {
+                    item.previous = {
+                        price,
+                        tprice: item.previous.tprice ? 0 : item.previous.price,
+                        time: item.previous.time,
+                        type: 'buy',
+                        buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        sell: item.previous.sell,
+                    }
+                } else {
+                    item.previous = {
+                        price,
+                        time,
+                        type: 'buy',
+                        buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        sell: item.previous.sell,
+                    }
+                }
+            } else {
+                console.log('t out of time');
+                console.log(new Date(o.enteredTime).getTime() / 1000);
+                console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
+                console.log(Math.round(new Date().getTime() / 1000));
+                item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
+            }
+        } else {
+            let isDup = false;
+            for (let k = 0; k < item.previous.sell.length; k++) {
+                if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
+                    console.log('t order duplicate');
+                    return order_recur(nextIndex);
+                } else if (price > item.previous.sell[k].price) {
+                    item.previous.sell.splice(k, 0, {price, time});
+                    isDup = true;
+                    break;
+                }
+            }
+            if (!isDup) {
+                item.previous.sell.push({price, time});
+            }
+            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
+                if (o.fake) {
+                    item.previous = {
+                        price,
+                        tprice: item.previous.tprice ? 0 : item.previous.price,
+                        time: item.previous.time,
+                        type: 'sell',
+                        sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        buy: item.previous.buy,
+                    }
+                } else {
+                    item.previous = {
+                        price,
+                        time,
+                        type: 'sell',
+                        sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
+                        buy: item.previous.buy,
+                        real: true,
+                    }
+                }
+            } else {
+                console.log('t out of time');
+                console.log(new Date(o.enteredTime).getTime() / 1000);
+                console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
+                console.log(Math.round(new Date().getTime() / 1000));
+                item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
+            }
+            // Calculate profit from position delta
+            console.log(lastP);
+            console.log(currentPosition);
+            if (!o.fake && lastP.length > 0) {
+                let pp = 0;
+                let cp = 0;
+                let pa = 0;
+                let peq = false;
+                for (let i = 0; i < lastP.length; i++) {
+                    if (lastP[i].symbol === item.index) {
+                        pa = lastP[i].amount;
+                        pp = lastP[i].amount * lastP[i].price;
+                        break;
+                    }
+                }
+                if (pp !== 0) {
+                    for (let i = 0; i < currentPosition.length; i++) {
+                        if (currentPosition[i].symbol === item.index) {
+                            if (pa === currentPosition[i].amount) {
+                                peq = true;
+                            }
+                            cp = currentPosition[i].amount * currentPosition[i].price;
+                            break;
+                        }
+                    }
+                    console.log(pp);
+                    console.log(cp);
+                    if (!peq) {
+                        let matchCount = 0;
+                        for (let i = fillRevenue.length - 1; i >= 0; i--) {
+                            for (let k = 0; k < item.previous.sell.length; k++) {
+                                if (item.previous.sell[k].price === fillRevenue[i].price && item.previous.sell[k].time === fillRevenue[i].time) {
+                                    matchCount++;
+                                    break;
+                                }
+                            }
+                            if (matchCount < 2) {
+                                profit = profit + fillRevenue[i].revenue * (1 - USSE_FEE);
+                            } else {
+                                break;
+                            }
+                        }
+                        profit = profit - pp + cp;
+                    }
+                    console.log(profit);
+                }
+            }
+        }
+        item.profit = item.profit ? item.profit + profit : profit;
+        console.log(item.previous);
+        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(nextIndex));
+    });
+};
+
 export const usseTDInit = () => checkOauth().then(() => {
     const initWs = () => {
         if (!encryptedId) {
@@ -258,319 +430,12 @@ export const usseTDInit = () => checkOauth().then(() => {
                                     partial: (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) ? true : false,
                                 });
                                 if (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL')) {
-                                    console.log(o);
-                                    console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                    const symbol = (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
-                                    let profit = 0;
-                                    const type = o.orderLegCollection[0].instruction;
-                                    let time = 0;
-                                    //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
-                                    //const price = o.orderActivityCollection[0].executionLegs[0].price;
-                                    let this_profit = [];
-                                    let price = 0;
-                                    o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
-                                        time = Math.round(new Date(oace.time).getTime() / 1000);
-                                        price = oace.price;
-                                        this_profit.push({
-                                            time,
-                                            price,
-                                            profit: oace.quantity * oace.price,
-                                        });
-                                    }));
-                                    console.log(symbol);
-                                    console.log(type);
-                                    console.log(time);
-                                    console.log(price);
-                                    console.log(this_profit);
-                                    if (price <= 0) {
-                                        return order_recur(index + 1);
-                                    }
-                                    return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
-                                        if (items.length < 1) {
-                                            console.log(`miss ${symbol}`);
-                                            return order_recur(index + 1);
-                                        }
-                                        const item = items[0];
-                                        if (type === 'BUY') {
-                                            let is_insert = false;
-                                            for (let k = 0; k < item.previous.buy.length; k++) {
-                                                if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
-                                                    return order_recur(index + 1);
-                                                } else if (price < item.previous.buy[k].price) {
-                                                    item.previous.buy.splice(k, 0, {price, time});
-                                                    is_insert = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!is_insert) {
-                                                item.previous.buy.push({price, time});
-                                            }
-                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                                item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'buy',
-                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    sell: item.previous.sell,
-                                                }
-                                            } else {
-                                                item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
-                                            }
-                                        } else {
-                                            let is_insert = false;
-                                            for (let k = 0; k < item.previous.sell.length; k++) {
-                                                if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
-                                                    return order_recur(index + 1);
-                                                } else if (price > item.previous.sell[k].price) {
-                                                    item.previous.sell.splice(k, 0, {price, time});
-                                                    is_insert = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (!is_insert) {
-                                                item.previous.sell.push({price, time});
-                                            }
-                                            if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                                item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'sell',
-                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    buy: item.previous.buy,
-                                                }
-                                            } else {
-                                                item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
-                                            }
-                                            //calculate profit
-                                            console.log(lastP);
-                                            console.log(position);
-                                            if (lastP.length > 0) {
-                                                let pp = 0;
-                                                let cp = 0;
-                                                let pa = 0;
-                                                let peq = false;
-                                                for (let i = 0; i < lastP.length; i++) {
-                                                    if (lastP[i].symbol === item.index) {
-                                                        pa = lastP[i].amount;
-                                                        pp = lastP[i].amount * lastP[i].price;
-                                                        break;
-                                                    }
-                                                }
-                                                if (pp !== 0) {
-                                                    for (let i = 0; i < position.length; i++) {
-                                                        if (position[i].symbol === item.index) {
-                                                            if (pa === position[i].amount) {
-                                                                peq = true;
-                                                            }
-                                                            cp = position[i].amount * position[i].price;
-                                                            break;
-                                                        }
-                                                    }
-                                                    console.log(pp);
-                                                    console.log(cp);
-                                                    if (!peq) {
-                                                        is_insert = 0;
-                                                        for (let i = this_profit.length - 1; i >= 0; i--) {
-                                                            for (let k = 0; k < item.previous.sell.length; k++) {
-                                                                if (item.previous.sell[k].price === this_profit[i].price && item.previous.sell[k].time === this_profit[i].time) {
-                                                                    is_insert++;
-                                                                    break;
-                                                                }
-                                                            }
-                                                            if (is_insert < 2) {
-                                                                profit = profit + this_profit[i].profit * (1 - USSE_FEE)
-                                                            } else {
-                                                                break;
-                                                            }
-                                                        }
-                                                        profit = profit - pp + cp;
-                                                    }
-                                                    console.log(profit);
-                                                }
-                                            }
-                                        }
-                                        item.profit = item.profit ? item.profit + profit : profit;
-                                        return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(index + 1));
-                                    });
+                                    return processFilledOrder(o, lastP, position, order_recur, index + 1);
                                 } else {
                                     return order_recur(index + 1);
                                 }
                             } else if (o.fake || (o.orderActivityCollection && (o.orderActivityCollection[0].executionType === 'FILL' || o.orderActivityCollection[0].executionType === 'PARTIALFILL' || o.orderActivityCollection[0].executionType === 'PARTIAL FILL'))) {
-                                console.log(o);
-                                if (!o.fake) {
-                                    console.log(o.orderActivityCollection[0].executionLegs[0]);
-                                }
-                                const symbol = o.fake ? o.symbol : (o.orderLegCollection[0].instrument.symbol === 'BRK/B' || o.orderLegCollection[0].instrument.symbol === 'BRK.B') ? 'BRK-B' : o.orderLegCollection[0].instrument.symbol;
-                                let profit = 0;
-                                const type = o.fake ? o.type : o.orderLegCollection[0].instruction;
-                                let time = o.fake ? o.time : 0;
-                                //const time = Math.round(new Date(o.orderActivityCollection[0].executionLegs[0].time).getTime() / 1000);
-                                //const price = o.orderActivityCollection[0].executionLegs[0].price;
-                                let this_profit = [];
-                                let price =  o.fake ? o.price : 0;
-                                if (!o.fake) {
-                                    o.orderActivityCollection.forEach(oac => oac.executionLegs.forEach(oace => {
-                                        time = Math.round(new Date(oace.time).getTime() / 1000);
-                                        price = oace.price;
-                                        this_profit.push({
-                                            time,
-                                            price,
-                                            profit: oace.quantity * oace.price,
-                                        });
-                                    }));
-                                }
-                                console.log(symbol);
-                                console.log(type);
-                                console.log(time);
-                                console.log(price);
-                                console.log(this_profit);
-                                if (price <= 0) {
-                                    return order_recur(index + 1);
-                                }
-                                return Mongo('find', TOTALDB, {setype: 'usse', index: symbol}).then(items => {
-                                    if (items.length < 1) {
-                                        console.log(`miss ${symbol}`);
-                                        return order_recur(index + 1);
-                                    }
-                                    const item = items[0];
-                                    if (type === 'BUY') {
-                                        let is_insert = false;
-                                        for (let k = 0; k < item.previous.buy.length; k++) {
-                                            if (item.previous.buy[k].price === price && item.previous.buy[k].time === time) {
-                                                console.log('t order duplicate');
-                                                return order_recur(index + 1);
-                                            } else if (price < item.previous.buy[k].price) {
-                                                item.previous.buy.splice(k, 0, {price, time});
-                                                is_insert = true;
-                                                break;
-                                            }
-                                        }
-                                        if (!is_insert) {
-                                            item.previous.buy.push({price, time});
-                                        }
-                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                            if (o.fake) {
-                                                item.previous = {
-                                                    price,
-                                                    tprice: item.previous.tprice ? 0 : item.previous.price,
-                                                    time: item.previous.time,
-                                                    type: 'buy',
-                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    sell: item.previous.sell,
-                                                    //real: false,
-                                                }
-                                            } else {
-                                                item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'buy',
-                                                    buy: item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    sell: item.previous.sell,
-                                                    //real: true,
-                                                }
-                                            }
-                                        } else {
-                                            console.log('t out of time');
-                                            console.log(new Date(o.enteredTime).getTime() / 1000);
-                                            console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
-                                            console.log(Math.round(new Date().getTime() / 1000));
-                                            item.previous.buy = item.previous.buy.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
-                                        }
-                                    } else {
-                                        let is_insert = false;
-                                        for (let k = 0; k < item.previous.sell.length; k++) {
-                                            if (item.previous.sell[k].price === price && item.previous.sell[k].time === time) {
-                                                console.log('t order duplicate');
-                                                return order_recur(index + 1);
-                                            } else if (price > item.previous.sell[k].price) {
-                                                item.previous.sell.splice(k, 0, {price, time});
-                                                is_insert = true;
-                                                break;
-                                            }
-                                        }
-                                        if (!is_insert) {
-                                            item.previous.sell.push({price, time});
-                                        }
-                                        if ((new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000)) {
-                                            if (o.fake) {
-                                                item.previous = {
-                                                    price,
-                                                    tprice: item.previous.tprice ? 0 : item.previous.price,
-                                                    time: item.previous.time,
-                                                    type: 'sell',
-                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    buy: item.previous.buy,
-                                                    //real: false,
-                                                }
-                                            } else {
-                                                item.previous = {
-                                                    price,
-                                                    time,
-                                                    type: 'sell',
-                                                    sell: item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false),
-                                                    buy: item.previous.buy,
-                                                    real: true,
-                                                }
-                                            }
-                                        } else {
-                                            console.log('t out of time');
-                                            console.log(new Date(o.enteredTime).getTime() / 1000);
-                                            console.log(new Date(o.enteredTime).getTime() / 1000 + USSE_ORDER_INTERVAL + USSE_ORDER_INTERVAL);
-                                            console.log(Math.round(new Date().getTime() / 1000));
-                                            item.previous.sell = item.previous.sell.filter(v => (time - v.time < RANGE_INTERVAL) ? true : false);
-                                        }
-                                        //calculate profit
-                                        console.log(lastP);
-                                        console.log(position);
-                                        if (!o.fake && lastP.length > 0) {
-                                            let pp = 0;
-                                            let cp = 0;
-                                            let pa = 0;
-                                            let peq = false;
-                                            for (let i = 0; i < lastP.length; i++) {
-                                                if (lastP[i].symbol === item.index) {
-                                                    pa = lastP[i].amount;
-                                                    pp = lastP[i].amount * lastP[i].price;
-                                                    break;
-                                                }
-                                            }
-                                            if (pp !== 0) {
-                                                for (let i = 0; i < position.length; i++) {
-                                                    if (position[i].symbol === item.index) {
-                                                        if (pa === position[i].amount) {
-                                                            peq = true;
-                                                        }
-                                                        cp = position[i].amount * position[i].price;
-                                                        break;
-                                                    }
-                                                }
-                                                console.log(pp);
-                                                console.log(cp);
-                                                if (!peq) {
-                                                    is_insert = 0;
-                                                    for (let i = this_profit.length - 1; i >= 0; i--) {
-                                                        for (let k = 0; k < item.previous.sell.length; k++) {
-                                                            if (item.previous.sell[k].price === this_profit[i].price && item.previous.sell[k].time === this_profit[i].time) {
-                                                                is_insert++;
-                                                                break;
-                                                            }
-                                                        }
-                                                        if (is_insert < 2) {
-                                                            profit = profit + this_profit[i].profit * (1 - USSE_FEE)
-                                                        } else {
-                                                            break;
-                                                        }
-                                                    }
-                                                    profit = profit - pp + cp;
-                                                }
-                                                console.log(profit);
-                                            }
-                                        }
-                                    }
-                                    item.profit = item.profit ? item.profit + profit : profit;
-                                    console.log(item.previous);
-                                    return Mongo('update', TOTALDB, {_id: item._id}, {$set: {previous: item.previous, profit: item.profit}}).then(() => order_recur(index + 1));
-                                });
+                                return processFilledOrder(o, lastP, position, order_recur, index + 1);
                             } else {
                                 return order_recur(index + 1);
                             }

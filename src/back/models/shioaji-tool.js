@@ -224,17 +224,17 @@ export const twseShioajiInit = (force = false) => {
                                         if (!peq) {
                                             const this_profit = o.profit.split('p').filter(i => i);
                                             const this_time = o.ptime.split('t').filter(i => i);
-                                            is_insert = 0;
+                                            let matchCount = 0;
                                             for (let i = this_profit.length - 1; i >= 0; i--) {
                                                 const p = Number(this_profit[i]);
                                                 const t = Number(this_time[i]);
                                                 for (let k = 0; k < item.previous.sell.length; k++) {
                                                     if (item.previous.sell[k].time === t) {
-                                                        is_insert++;
+                                                        matchCount++;
                                                         break;
                                                     }
                                                 }
-                                                if (is_insert < 2) {
+                                                if (matchCount < 2) {
                                                     profit = profit + p * (1 - TRADE_FEE);
                                                     while (Number(this_time[i - 1]) === t) {
                                                         profit = profit + Number(this_profit[i - 1]) * (1 - TRADE_FEE);
