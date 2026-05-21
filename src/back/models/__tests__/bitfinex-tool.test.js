@@ -106,8 +106,13 @@ const mockStockProcess = jest.fn(() => ({
     type: 0, buy: 0, sell: 0, bCount: 0, sCount: 0, str: '', resetWeb: false,
 }));
 const mockStockTest = jest.fn(() => Promise.resolve({
-    str: '5.0% 1 5.0% 5.0% 1 1 -2.0% ',
     start: 0,
+    metrics: {
+        maxAmount: 1, returnPct: 5, returnAnnualPct: 5, buyHoldPct: 5,
+        sharpe: 1, sortino: 1, calmar: 1, maxDrawdownPct: 2, maxDrawdownDuration: 5,
+        winRate: 50, avgWin: 10, avgLoss: 5, profitFactor: 2,
+        buyTrade: 1, sellTrade: 1, stopLoss: 0, tradeDays: 200, tradesPerYear: 12,
+    },
 }));
 const mockLogArray = jest.fn(() => [1, 2, 3, 4, 5]);
 const mockResolveNewMidStack = jest.fn((stack, price, mid, webArr, onPop) => {
@@ -1424,7 +1429,12 @@ describe('calWeb', () => {
         await calRate(['fUSD']).catch(() => {});
 
         // stockTest returns string that doesn't satisfy regex condition
-        mockStockTest.mockResolvedValue({ str: 'no match', start: 0 });
+        mockStockTest.mockResolvedValue({ start: 0, metrics: {
+            maxAmount: 0, returnPct: 0, returnAnnualPct: 0, buyHoldPct: 0,
+            sharpe: 0, sortino: 0, calmar: 0, maxDrawdownPct: 0, maxDrawdownDuration: 0,
+            winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
+            buyTrade: 0, sellTrade: 0, stopLoss: 0, tradeDays: 0, tradesPerYear: 0,
+        } });
         const candleArr = Array.from({ length: 1000 }, () => ({
             high: 110, low: 90, volume: 1000,
         }));

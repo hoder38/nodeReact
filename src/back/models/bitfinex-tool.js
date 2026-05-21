@@ -263,90 +263,35 @@ export const calWeb = curArr => {
         const loga = logArray(max, min);
         const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE, 240 * 3);
         console.log(web);
-        const month = [];
-        const ret_str1 = [];
-        const rate_arr = [];
+        const results = [];
         let lastest_type = 0;
         let lastest_rate = 0;
+        const pricePct = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100;
         const resultShow = type => {
-            let str = '';
-            const testResult = [];
-            const match = [];
-            //let j = Math.floor((raw_arr.length - 1) / 2);
-            //console.log('start');
-            const loopTest = j => {
-                if (j > 239) {
-                    //console.log(j);
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, j, false, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
-                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                            testResult.push(temp);
-                            match.push(tempM);
-                        }
-                        return loopTest(temp.start + 1);
-                    });
-                } else {
-                    return Promise.resolve(j);
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
+                if (temp === 'data miss') {
+                    return;
                 }
-            }
-            return loopTest(raw_arr.length - (240 * 3)).then(result => {
-                if (testResult.length > 0) {
-                    testResult.forEach((v, i) => {
-                        if (!month[i]) {
-                            month[i] = [];
-                        }
-                        month[i].push(v);
-                    });
-                    let rate = 1;
-                    let real = 1;
-                    let count = 0;
-                    let times = 0;
-                    let stoploss = 0;
-                    let maxloss = 0;
-                    match.forEach((v, i) => {
-                        rate = rate * (Number(v[3]) + 100) / 100;
-                        /*if ((i === match.length - 1) && (!lastest_rate || Number(v[3]) > lastest_rate)) {
-                            lastest_rate = Number(v[3]);
+                const m = temp.metrics;
+                if (!m || (m.returnPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
+                    results.push({ type, str: 'no less than mid point', metrics: null, rate: -Infinity });
+                    return;
+                }
+                const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
+                const str = `${pricePct}% ${m.maxAmount} ${m.returnPct}% ${m.buyHoldPct}% ${m.sharpe} ${m.sortino} ${m.maxDrawdownPct}% ${m.maxDrawdownDuration} ${m.winRate}% ${winLoss} ${m.profitFactor} ${m.tradesPerYear} ${m.calmar} ${raw_arr.length} ${Math.round(min_vol * 100) / 100}`;
+                results.push({ type, str, metrics: m, rate: m.returnPct });
+                return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(rtemp => {
+                    if (rtemp === 'data miss') {
+                        return;
+                    }
+                    const rm = rtemp.metrics;
+                    if (rm && (rm.returnPct !== 0 || rm.sellTrade !== 0 || rm.stopLoss !== 0)) {
+                        if (!lastest_rate || rm.returnPct > lastest_rate) {
+                            lastest_rate = rm.returnPct;
                             lastest_type = type;
-                        }*/
-                        real = real * (Number(v[4]) + 100) / 100;
-                        count++;
-                        times += Number(v[5]);
-                        stoploss += Number(v[6]);
-                        if (!maxloss || maxloss > +v[7]) {
-                            maxloss = +v[7];
-                        }
-                    });
-                    str = `${Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100}% ${Math.ceil(web.mid * (web.arr.length - 1) / 3 * 2)}`;
-                    rate = Math.round(rate * 10000 - 10000) / 100;
-                    real = Math.round(rate * 100 - real * 10000 + 10000) / 100;
-                    times = Math.round(times / count * 100) / 100;
-                    str += ` ${rate}% ${real}% ${times} ${stoploss} ${maxloss}% ${raw_arr.length} ${Math.round(min_vol * 100) / 100}`;
-                    let is_exist = false;
-                    for (let k = 0; k < rate_arr.length; k++) {
-                        if (rate >= rate_arr[k].r) {
-                            rate_arr.splice(k, 0, {r: rate, i: ret_str1.length});
-                            is_exist = true;
-                            break;
                         }
                     }
-                    if (!is_exist) {
-                        rate_arr.push({r: rate, i: ret_str1.length});
-                    }
-                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, result, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
-                        const tempM = temp.str.match(/^(\-?\d+\.?\d*)\% (\d+) (\-?\d+\.?\d*)\% (\-?\d+\.?\d*)\% (\d+) (\d+) (\-?\d+\.?\d*)\%/);
-                        if (tempM && (tempM[3] !== '0' || tempM[5] !== '0' || tempM[6] !== '0')) {
-                            if (!lastest_rate || Number(tempM[3]) > lastest_rate) {
-                                lastest_rate = Number(tempM[3]);
-                                lastest_type = type;
-                            }
-                        }
-                        ret_str1.push(str);
-                    });
-                } else {
-                    str = 'no less than mid point';
-                    ret_str1.push(str);
-                }
+                });
             });
         }
         const loopShow = index => {
@@ -358,15 +303,16 @@ export const calWeb = curArr => {
         }
         //return loopShow(31).then(() => {
         return loopShow(0).then(() => {
-            month.forEach((v, i) => {
-                console.log('season' + (+i + 1));
-                v.forEach(k => console.log(k.str));
-            });
-            ret_str1.forEach(v => console.log(v));
+            const sorted = results.filter(r => r.metrics);
+            sorted.sort((a, b) => b.rate - a.rate);
+            const bestIdx = sorted.length > 0 ? Math.ceil(sorted.length / 2) - 1 : -1;
+            const bestStr = bestIdx >= 0 ? sorted[bestIdx].str : 'no less than mid point';
+            const bestMetrics = bestIdx >= 0 ? sorted[bestIdx].metrics : null;
+            results.forEach(r => console.log(r.str));
             console.log(lastest_type);
             console.log('done');
             Redis('hmset', `bitfinex: ${curArr[index]}`, {
-                str: (rate_arr.length < 1) ?  'no less than mid point' : ret_str1[rate_arr[Math.ceil(rate_arr.length / 2) - 1].i],
+                str: bestStr,
             }).catch(err => handleError(err, 'Redis'));
             const updateWeb = () => Mongo('find', TOTALDB, {index: curArr[index]}).then(item => {
                 console.log(item);
@@ -379,6 +325,7 @@ export const calWeb = curArr => {
                         web: web.arr,
                         wType: lastest_type,
                         mid: web.mid,
+                        metrics: bestMetrics,
                     }).then(items => console.log(items));
                 } else {
                     const recur_update = async () => {
@@ -388,6 +335,7 @@ export const calWeb = curArr => {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
+                                    metrics: bestMetrics,
                                 }});
                                 console.log(items);
                             } else {
@@ -396,6 +344,7 @@ export const calWeb = curArr => {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
+                                    metrics: bestMetrics,
                                     times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
                                 }});
                                 console.log(items);

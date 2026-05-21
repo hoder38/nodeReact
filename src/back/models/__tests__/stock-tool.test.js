@@ -604,19 +604,26 @@ describe('stockTest', () => {
         loga300 = logArray(130, 85);
     });
 
-    test('returns object with str and start when valid data', () => {
+    test('returns object with start and metrics when valid data', () => {
         const result = stockTest(raw300, loga300, 85, 0, 0);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
             expect(result).toHaveProperty('start');
+            expect(result).toHaveProperty('metrics');
+            expect(result.metrics).toHaveProperty('returnPct');
+            expect(result.metrics).toHaveProperty('sharpe');
+            expect(result.metrics).toHaveProperty('sortino');
+            expect(result.metrics).toHaveProperty('maxDrawdownPct');
+            expect(result.metrics).toHaveProperty('winRate');
+            expect(result.metrics).toHaveProperty('profitFactor');
+            expect(result.metrics).toHaveProperty('tradesPerYear');
         }
     });
 
-    test('str format matches pattern when valid', () => {
+    test('no str in return, metrics has no startMid', () => {
         const result = stockTest(raw300, loga300, 85, 0, 0);
         if (result !== 'data miss') {
-            // format: "x% n x% x% n n x%"
-            expect(result.str).toMatch(/[-\d.]+ [-\d.]+/);
+            expect(result).not.toHaveProperty('str');
+            expect(result.metrics).not.toHaveProperty('startMid');
         }
     });
 
@@ -628,12 +635,16 @@ describe('stockTest', () => {
         }
     });
 
-    test('insufficient data returns early result with 0s', () => {
-        // Array shorter than len → startI <= len-1 → early return
+    test('insufficient data returns early result with metrics zeros', () => {
         const shortArr = makeArr(50, 110, 90);
         const result = stockTest(shortArr, loga300, 85, 0, 0, false, 200);
         if (result !== 'data miss') {
-            expect(result.str).toBe('0% 0 0% 0% 0 0 0%');
+            expect(result).not.toHaveProperty('str');
+            expect(result.metrics.returnPct).toBe(0);
+            expect(result.metrics.sharpe).toBe(0);
+            expect(result.metrics.maxDrawdownPct).toBe(0);
+            expect(result.metrics.winRate).toBe(0);
+            expect(result.metrics.tradesPerYear).toBe(0);
         }
     });
 
@@ -641,14 +652,54 @@ describe('stockTest', () => {
         const badArr = makeArr(250, 110, 90);
         badArr[100] = { h: null, l: null, v: 100 };
         const result = stockTest(badArr, loga300, 85, 0, 0, false, 100);
-        // May or may not hit null depending on path, but should not throw
         expect(['data miss', 'object'].includes(typeof result === 'object' ? 'object' : result)).toBe(true);
     });
 
     test('reverse=true uses reverse scan path', () => {
         const result = stockTest(raw300, loga300, 85, 0, raw300.length - 220, true, 200);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
+            expect(result).toHaveProperty('start');
+        }
+    });
+
+    test('metrics.tradeDays matches simulation length', () => {
+        const result = stockTest(raw300, loga300, 85, 0, 0);
+        if (result !== 'data miss' && result.metrics) {
+            expect(result.metrics.tradeDays).toBeGreaterThan(0);
+            expect(result.metrics.tradeDays).toBeLessThanOrEqual(200);
+        }
+    });
+
+    test('metrics.maxDrawdownPct is non-negative', () => {
+        const result = stockTest(raw300, loga300, 85, 0, 0);
+        if (result !== 'data miss' && result.metrics) {
+            expect(result.metrics.maxDrawdownPct).toBeGreaterThanOrEqual(0);
+        }
+    });
+
+    test('metrics.buyTrade + sellTrade are non-negative integers', () => {
+        const result = stockTest(raw300, loga300, 85, 0, 0);
+        if (result !== 'data miss' && result.metrics) {
+            expect(Number.isInteger(result.metrics.buyTrade)).toBe(true);
+            expect(Number.isInteger(result.metrics.sellTrade)).toBe(true);
+            expect(result.metrics.buyTrade).toBeGreaterThanOrEqual(0);
+            expect(result.metrics.sellTrade).toBeGreaterThanOrEqual(0);
+        }
+    });
+
+    test('metrics.winRate is between 0 and 100', () => {
+        const result = stockTest(raw300, loga300, 85, 0, 0);
+        if (result !== 'data miss' && result.metrics) {
+            expect(result.metrics.winRate).toBeGreaterThanOrEqual(0);
+            expect(result.metrics.winRate).toBeLessThanOrEqual(100);
+        }
+    });
+
+    test('metrics.maxAmount matches initial portfolio size', () => {
+        const result = stockTest(raw300, loga300, 85, 0, 0);
+        if (result !== 'data miss' && result.metrics) {
+            expect(result.metrics.maxAmount).toBeGreaterThan(0);
         }
     });
 });
@@ -2057,10 +2108,10 @@ describe('stockTest comprehensive', () => {
         loga500 = logArray(140, 70);
     });
 
-    test('reverse=true with proper data → returns str and start', () => {
+    test('reverse=true with proper data → returns metrics and start', () => {
         const result = stockTest(raw500, loga500, 70, 0, 0, true, 200);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
             expect(result).toHaveProperty('start');
         }
     });
@@ -2069,28 +2120,28 @@ describe('stockTest comprehensive', () => {
         // Data goes below mid, then above → triggers next=1,2 transitions
         const result = stockTest(raw500, loga500, 70, 0, 50, true, 100);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
     test('sType=1 → bitfinex fee path', () => {
         const result = stockTest(raw500, loga500, 70, 0, 0, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5, 1);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
     test('pType=5 exercises different buy/sell branching', () => {
         const result = stockTest(raw500, loga500, 70, 5, 0, false, 200);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
     test('resetWeb=2 → more frequent web recalculation', () => {
         const result = stockTest(raw500, loga500, 70, 0, 0, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 2);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
@@ -2107,7 +2158,7 @@ describe('stockTest comprehensive', () => {
         // start > his_arr.length - len - 1 → startI capped
         const result = stockTest(raw500, loga500, 70, 0, 999, false, 200);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 });
@@ -3104,7 +3155,7 @@ describe('stockTest trade execution', () => {
         const loga = logArray(160, 50);
         const result = stockTest(raw, loga, 50, 0, 0, false, 200);
         if (result !== 'data miss') {
-            expect(result.str).toMatch(/%/);
+            expect(result.metrics.returnPct).toBeDefined();
         }
     });
 
@@ -3113,7 +3164,7 @@ describe('stockTest trade execution', () => {
         const loga = logArray(200, 60);
         const result = stockTest(raw, loga, 60, 0, 100, true, 150);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
@@ -3122,7 +3173,7 @@ describe('stockTest trade execution', () => {
         const loga = logArray(130, 75);
         const result = stockTest(raw, loga, 75, 0, 0, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 
@@ -3131,7 +3182,7 @@ describe('stockTest trade execution', () => {
         const loga = logArray(150, 60);
         const result = stockTest(raw, loga, 60, 0, 0, false, 200, 86400 * 30, 0.004);
         if (result !== 'data miss') {
-            expect(typeof result.str).toBe('string');
+            expect(typeof result.metrics).toBe('object');
         }
     });
 });
@@ -3784,22 +3835,21 @@ describe('stockTest forward with various trade types', () => {
 
     test('forward run with start=400 generates buy and sell trades', () => {
         const result = stockTest(waveArr, loga600, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
-        expect(result).toHaveProperty('str');
-        expect(result.str).toMatch(/\d/);
-        const parts = result.str.split(' ');
-        expect(parts.length).toBe(8);
+        expect(result).toHaveProperty('metrics');
+        expect(result.metrics.returnPct).toBeDefined();
+        expect(result.metrics.buyTrade).toBeDefined();
+        expect(result.metrics.sellTrade).toBeDefined();
     });
 
     test('forward with resetWeb=1 → frequent web recalculation + checkweb++ path', () => {
         const result = stockTest(waveArr, loga600, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 1);
-        expect(result).toHaveProperty('str');
+        expect(result).toHaveProperty('metrics');
     });
 
     test('forward with small ttime/tinterval → more frequent buy/sell triggers', () => {
         const result = stockTest(waveArr, loga600, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400, 86400, 3);
-        expect(result).toHaveProperty('str');
-        const parts = result.str.split(' ');
-        const sellTrades = parseInt(parts[4]);
+        expect(result).toHaveProperty('metrics');
+        const sellTrades = result.metrics.sellTrade;
         expect(sellTrades).toBeGreaterThanOrEqual(0);
     });
 
@@ -3812,12 +3862,12 @@ describe('stockTest forward with various trade types', () => {
             extreme.push({ h: base + 3, l: Math.max(base - 3, 1), v: 1000 + i });
         }
         const result = stockTest(extreme, loga600, 50, 0, 400, false, 150, 86400 * 30, 0.006, 86400 * 3, 86400 * 3, 3);
-        expect(result).toHaveProperty('str');
+        expect(result).toHaveProperty('metrics');
     });
 
     test('sType=1 forward run for bitfinex ticker coverage', () => {
         const result = stockTest(waveArr, loga600, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5, 1);
-        expect(result).toHaveProperty('str');
+        expect(result).toHaveProperty('metrics');
     });
 });
 
@@ -3836,7 +3886,7 @@ describe('stockTest price fallback paths', () => {
         const loga = logArray(160, 50);
         const result = stockTest(arr, loga, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -3855,7 +3905,7 @@ describe('stockTest price fallback paths', () => {
         const loga = logArray(160, 50);
         const result = stockTest(arr, loga, 50, 0, 400, false, 200, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 });
@@ -3882,7 +3932,7 @@ describe('stockTest resetWeb newMid processing', () => {
         const loga = logArray(120, 5);
         const result = stockTest(arr, loga, 5, 0, 450, false, 100, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -3902,7 +3952,7 @@ describe('stockTest resetWeb newMid processing', () => {
         const loga = logArray(250, 5);
         const result = stockTest(arr, loga, 5, 0, 450, false, 100, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 });
@@ -5558,8 +5608,8 @@ describe('stockTest type-specific buy trades', () => {
         const loga = logArray(150, 10);
         const result = stockTest(arr, loga, 10, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
-            expect(result.str).toBeDefined();
+            expect(result).toHaveProperty('metrics');
+            expect(result.metrics).toBeDefined();
         }
     });
 
@@ -5569,7 +5619,7 @@ describe('stockTest type-specific buy trades', () => {
         const loga = logArray(150, 5);
         const result = stockTest(arr, loga, 5, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5579,7 +5629,7 @@ describe('stockTest type-specific buy trades', () => {
         const loga = logArray(150, 3);
         const result = stockTest(arr, loga, 3, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5588,7 +5638,7 @@ describe('stockTest type-specific buy trades', () => {
         const loga = logArray(120, 30);
         const result = stockTest(arr, loga, 30, 0, 300, false, 150, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 3);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 });
@@ -5624,9 +5674,9 @@ describe('stockTest type-specific sell trades', () => {
         const loga = logArray(350, 5);
         const result = stockTest(arr, loga, 5, 0, 500, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
             // Should have some sell trades
-            expect(result.str).toBeDefined();
+            expect(result.metrics).toBeDefined();
         }
     });
 
@@ -5648,7 +5698,7 @@ describe('stockTest type-specific sell trades', () => {
         const loga = logArray(350, 5);
         const result = stockTest(arr, loga, 5, 0, 500, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 2);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 });
@@ -5669,7 +5719,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         }
         const loga = logArray(150, 10);
         const result = stockTest(arr, loga, 10, 0, 100, false, 50, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
-        expect(result === 'data miss' || (result && result.str)).toBeTruthy();
+        expect(result === 'data miss' || (result && result.metrics)).toBeTruthy();
     });
 
     test('price fallback: h exists but no privious (line 3904-3905)', () => {
@@ -5683,7 +5733,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         const loga = logArray(150, 10);
         const result = stockTest(arr, loga, 10, 0, 100, false, 50, 86400 * 30, 0.006, 86400 * 5, 86400 * 5, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5701,7 +5751,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         const loga = logArray(150, 5);
         const result = stockTest(arr, loga, 5, 0, 150, false, 50, 86400 * 365, 0.006, 86400 * 2, 86400 * 2, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5720,7 +5770,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         const loga = logArray(350, 5);
         const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5736,7 +5786,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         const loga = logArray(350, 5);
         const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 
@@ -5751,7 +5801,7 @@ describe('stockTest reverse data miss and price fallback', () => {
         const loga = logArray(350, 5);
         const result = stockTest(arr, loga, 5, 0, 300, false, 200, 86400 * 30, 0.006, 86400 * 2, 86400 * 2, 5);
         if (result !== 'data miss') {
-            expect(result).toHaveProperty('str');
+            expect(result).toHaveProperty('metrics');
         }
     });
 });
