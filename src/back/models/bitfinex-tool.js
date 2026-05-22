@@ -198,6 +198,9 @@ export const calRate = curArr => {
                         }
                     }
                 });
+                // R1: pad to 11 elements so finalRate map never indexes undefined
+                const fill = rate.length > 0 ? rate[rate.length - 1] : 0;
+                while (rate.length < 11) rate.push(fill);
                 return rate.reverse();
             }
             const calTenthRate = (hl, weight) => {
@@ -214,6 +217,9 @@ export const calRate = curArr => {
                     }
                 });
                 rate.push(hl[9].high);
+                // R2: pad to 11 elements so maxRange/finalRate never index undefined
+                const fill = rate.length > 0 ? rate[rate.length - 1] : 0;
+                while (rate.length < 11) rate.push(fill);
                 return rate.reverse();
             }
             const OBRate = calOBRate(orderBooks);
@@ -603,7 +609,13 @@ export const makeOnFundingOfferClose = (id) => fo => {
                 break;
             }
         }
-        if (!is_exist) deleteOffer.push(fo.id);
+        if (!is_exist) {
+            deleteOffer.push(fo.id);
+            // L3: cap deleteOffer to prevent unbounded growth
+            if (deleteOffer.length > OFFER_MAX * 5) {
+                deleteOffer.splice(0, deleteOffer.length - OFFER_MAX * 5);
+            }
+        }
     }
 };
 
@@ -1734,8 +1746,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     extremRate[id][current.type] = {
                         high: 1,
                         low: 0,
-                        is_low: 0,
-                        is_high: 0,
+                        lowTriggeredAt: 0,
+                        highTriggeredAt: 0,
                     }
                 }
                 return false;
@@ -1745,15 +1757,15 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     extremRate[id][current.type] = {
                         high: 1,
                         low: 0,
-                        is_low: 0,
-                        is_high: 0,
+                        lowTriggeredAt: 0,
+                        highTriggeredAt: 0,
                     }
                 } else {
                     extremRate[id][current.type].high++;
                     extremRate[id][current.type].low = extremRate[id][current.type].low < 2 ? 0 : (extremRate[id][current.type].low - 1);
                     if (extremRate[id][current.type].high >= EXTREM_RATE_NUMBER) {
                         sendWs(`${id} ${current.type.substr(1)} rate too high!!!` , 0, 0, true);
-                        extremRate[id][current.type].is_high = Math.round(new Date().getTime() / 1000);
+                        extremRate[id][current.type].highTriggeredAt = Math.round(new Date().getTime() / 1000);
                         extremRate[id][current.type].high = 0;
                     }
                 }
@@ -1762,15 +1774,15 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     extremRate[id][current.type] = {
                         high: 0,
                         low: 1,
-                        is_low: 0,
-                        is_high: 0,
+                        lowTriggeredAt: 0,
+                        highTriggeredAt: 0,
                     }
                 } else {
                     extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
                     extremRate[id][current.type].low++;
                     if (extremRate[id][current.type].low >= EXTREM_RATE_NUMBER) {
                         sendWs(`${id} ${current.type.substr(1)} rate too low!!!` , 0, 0, true);
-                        extremRate[id][current.type].is_low = Math.round(new Date().getTime() / 1000);
+                        extremRate[id][current.type].lowTriggeredAt = Math.round(new Date().getTime() / 1000);
                         extremRate[id][current.type].low = 0;
                     }
                 }
@@ -1779,8 +1791,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                     extremRate[id][current.type] = {
                         high: 0,
                         low: 0,
-                        is_low: 0,
-                        is_high: 0,
+                        lowTriggeredAt: 0,
+                        highTriggeredAt: 0,
                     }
                 } else {
                     extremRate[id][current.type].high = extremRate[id][current.type].high < 2 ? 0 : (extremRate[id][current.type].high - 1);
@@ -1820,9 +1832,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
             const adjustOffer = () => {
                 console.log(`${id} ${current.type}`);
                 if (offer[id][current.type]) {
-                    //console.log(offer[current.type]);
+                    // L4: snapshot offer array to avoid WS mutation during async phases
+                    const offerSnapshot = [...offer[id][current.type]];
                     //produce retain delete
-                    offer[id][current.type].forEach(v => {
+                    offerSnapshot.forEach(v => {
                         if (v.risk === undefined) {
                             console.log('manual');
                             return false;
@@ -1996,12 +2009,13 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
             };
             const submitOffer = async () => {
+                // L2: single balance check before the loop to avoid per-offer REST race
+                let submitAvailable = await calKeepCash();
                 for (let index = 0; index < finalNew.length; index++) {
-                    const kp = await calKeepCash();
-                    if (kp < finalNew[index].amount) {
+                    if (submitAvailable < finalNew[index].amount) {
                         continue;
                     }
-                    const finalfinalRate = ((currentRate[current.type].frr >= current.dynamic) || (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
+                    const finalfinalRate = ((currentRate[current.type].frr >= current.dynamic) || (extremRate[id][current.type].lowTriggeredAt && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].lowTriggeredAt) <= EXTREM_DURATION && extremRate[id][current.type].highTriggeredAt < extremRate[id][current.type].lowTriggeredAt) || (finalNew[index].rate > currentRate[current.type].frr * 0.7)) ? finalNew[index].rate : currentRate[current.type].frr * 0.7;
                     const DRT = getDR(finalfinalRate);
                     console.log(DRT);
                     const fo = new FundingOffer({
@@ -2012,8 +2026,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         type: 'LIMIT',
                     }, userRest);
                     console.log(finalNew[index].amount);
-                    console.log(keep_available);
+                    console.log(submitAvailable);
                     await fo.submit();
+                    submitAvailable -= finalNew[index].amount;
                     await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
                     let isExist = false;
                     for (let i = 0; i < offer[id][current.type].length; i++) {
@@ -2094,11 +2109,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
         //return Promise.resolve();
         //if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
         if (current.amount > 0 && current.rate_ratio > 0) {
-            if (extremRate[id][current.type].is_low && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_low) <= EXTREM_DURATION && extremRate[id][current.type].is_high < extremRate[id][current.type].is_low) {
+            if (extremRate[id][current.type].lowTriggeredAt && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].lowTriggeredAt) <= EXTREM_DURATION && extremRate[id][current.type].highTriggeredAt < extremRate[id][current.type].lowTriggeredAt) {
                 console.log('is low');
                 min_available = 0;
                 //current.amount = current.amount + current.amount * current.rate_ratio;
-            } else if (extremRate[id][current.type].is_high && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].is_high) <= EXTREM_DURATION && extremRate[id][current.type].is_high > extremRate[id][current.type].is_low) {
+            } else if (extremRate[id][current.type].highTriggeredAt && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].highTriggeredAt) <= EXTREM_DURATION && extremRate[id][current.type].highTriggeredAt > extremRate[id][current.type].lowTriggeredAt) {
                 console.log('is high');
                 min_available = 10000;
                 //current.amount = current.amount - current.amount * current.rate_ratio;

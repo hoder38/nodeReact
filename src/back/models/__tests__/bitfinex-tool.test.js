@@ -1365,6 +1365,46 @@ describe('calRate', () => {
         mockRedis.mockResolvedValue(null);
         await calRate(['fUSD']).catch(() => {});
     });
+
+    test('R1: sparse orderBook → calOBRate pads to 11 elements, finalRate fully defined', async () => {
+        mockRest.ticker.mockResolvedValue({
+            lastPrice: 0.0001, dailyChangePerc: 0, frr: 0.00008, volume: 100,
+        });
+        // Only 1 positive-volume entry → calOBRate would produce 2 elements without padding
+        mockRest.orderBook.mockResolvedValue([
+            [0.0001, 3, 1000],
+        ]);
+        mockRest.candles.mockResolvedValue(
+            Array.from({ length: 1440 }, () => ({ high: 0.00011, low: 0.00009, volume: 50 }))
+        );
+        mockRedis.mockResolvedValue(null);
+        await calRate(['fUSD']);
+        const state = _getState();
+        // finalRate should have exactly 11 elements with no undefined
+        expect(state.finalRate.fUSD.length).toBe(11);
+        state.finalRate.fUSD.forEach(v => expect(v).not.toBeUndefined());
+    });
+
+    test('R2: sparse candles → calTenthRate pads to 11, maxRange defined', async () => {
+        mockRest.ticker.mockResolvedValue({
+            lastPrice: 0.0001, dailyChangePerc: 0, frr: 0.00008, volume: 100,
+        });
+        mockRest.orderBook.mockResolvedValue([
+            [0.0001, 3, 500], [0.00009, 3, 500],
+        ]);
+        // Only 3 candles → weight[] is very sparse, calTenthRate may produce < 11 elements
+        mockRest.candles.mockResolvedValue([
+            { high: 0.00011, low: 0.00009, volume: 50 },
+            { high: 0.00012, low: 0.00008, volume: 30 },
+            { high: 0.00010, low: 0.00010, volume: 20 },
+        ]);
+        mockRedis.mockResolvedValue(null);
+        await calRate(['fUSD']);
+        const state = _getState();
+        expect(state.maxRange.fUSD).toBeDefined();
+        expect(typeof state.maxRange.fUSD).toBe('number');
+        expect(state.finalRate.fUSD.length).toBe(11);
+    });
 });
 
 // ════════════════════════════════════════════════════════════
@@ -1784,6 +1824,22 @@ describe('setWsOffer — WS event handler bodies', () => {
         // Just need the path to execute without throwing
     });
 
+    test('L3: deleteOffer capped at OFFER_MAX*5 when unknown offers close', async () => {
+        const id = await initSetWs('wsFOC_L3');
+        const closeHandler = mockWs.onFundingOfferClose.mock.calls[0][1];
+        const state = _getState();
+        state.offer[id] = { fUSD: [] };
+        state.deleteOffer.length = 0;
+        // Push 60 unknown offer closes (OFFER_MAX=10, cap=50)
+        for (let i = 0; i < 60; i++) {
+            closeHandler({ symbol: 'fUSD', id: 9000 + i, status: 'CANCELED' });
+        }
+        expect(state.deleteOffer.length).toBe(50);
+        // Oldest entries trimmed, newest kept
+        expect(state.deleteOffer[0]).toBe(9010);
+        expect(state.deleteOffer[49]).toBe(9059);
+    });
+
     test('onFundingOfferUpdate unsupported symbol → ignored', async () => {
         await initSetWs('wsFOUx');
         const updHandler = mockWs.onFundingOfferUpdate.mock.calls[0][1];
@@ -2179,7 +2235,7 @@ describe('setWsOffer flow — singleLoan extremRateCheck branches', () => {
     test('high rate path → DR has entries and rate > DR[0].rate (high counter)', async () => {
         // Marker test; full flow exercised via 'low rate path' below.
         _setState({
-            extremRate: { userEH: { fUSD: { high: 1, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { userEH: { fUSD: { high: 1, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
         });
         const s = _getState();
         expect(s.extremRate.userEH.fUSD.high).toBeGreaterThanOrEqual(1);
@@ -2238,7 +2294,7 @@ describe('setWsOffer flow — singleTrade entry branches', () => {
     test('singleTrade returns early when isTrade=false', async () => {
         _setState({
             currentRate: { fUSD: { rate: 30 / 100 * 365, frr: 20 / 100 * 365 } },
-            extremRate: { userT1: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { userT1: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
         });
         await setWsOffer('userT1', [{
             isActive: true, riskLimit: 5, waitTime: 60, amountLimit: 200,
@@ -2249,11 +2305,11 @@ describe('setWsOffer flow — singleTrade entry branches', () => {
         expect(mockRest.wallets).toHaveBeenCalled();
     });
 
-    test('singleTrade is_low rate condition → min_available=0', async () => {
+    test('singleTrade lowTriggeredAt rate condition → min_available=0', async () => {
         const now = Math.round(new Date().getTime() / 1000);
         _setState({
             currentRate: { fUSD: { rate: 30 / 100 * 365, frr: 20 / 100 * 365 } },
-            extremRate: { userT2: { fUSD: { high: 0, low: 0, is_high: 0, is_low: now } } },
+            extremRate: { userT2: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: now } } },
         });
         await setWsOffer('userT2', [{
             isActive: true, riskLimit: 5, waitTime: 60, amountLimit: 200,
@@ -2264,11 +2320,11 @@ describe('setWsOffer flow — singleTrade entry branches', () => {
         expect(mockRest.wallets).toHaveBeenCalled();
     });
 
-    test('singleTrade is_high rate condition → min_available=10000', async () => {
+    test('singleTrade highTriggeredAt rate condition → min_available=10000', async () => {
         const now = Math.round(new Date().getTime() / 1000);
         _setState({
             currentRate: { fUSD: { rate: 30 / 100 * 365, frr: 20 / 100 * 365 } },
-            extremRate: { userT3: { fUSD: { high: 0, low: 0, is_high: now, is_low: 0 } } },
+            extremRate: { userT3: { fUSD: { high: 0, low: 0, highTriggeredAt: now, lowTriggeredAt: 0 } } },
         });
         await setWsOffer('userT3', [{
             isActive: true, riskLimit: 5, waitTime: 60, amountLimit: 200,
@@ -2302,7 +2358,7 @@ describe('singleLoan - deep money flows', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 109.5, frr: 73 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 182.5 },
@@ -2554,7 +2610,7 @@ describe('singleLoan - deep money flows', () => {
     test('extremRateCheck high: counter reaches EXTREM_RATE_NUMBER → sendWs warning', async () => {
         const id = 'DL9';
         seedLoanUser(id, {
-            extremRate: { [id]: { fUSD: { high: 14, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 14, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 10000000, frr: 73 } },
         });
         mockRest.wallets.mockResolvedValue([
@@ -2571,12 +2627,16 @@ describe('singleLoan - deep money flows', () => {
         expect(mockSendWs).toHaveBeenCalledWith(
             expect.stringContaining('rate too high'), 0, 0, true
         );
+        // E1: verify highTriggeredAt is set as a timestamp (not boolean)
+        const er = _getState().extremRate[id].fUSD;
+        expect(er.highTriggeredAt).toBeGreaterThan(0);
+        expect(er.high).toBe(0); // reset after trigger
     });
 
     test('extremRateCheck low: counter reaches EXTREM_RATE_NUMBER → sendWs warning', async () => {
         const id = 'DL10';
         seedLoanUser(id, {
-            extremRate: { [id]: { fUSD: { high: 0, low: 14, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 14, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 100, frr: 73 } },
         });
         mockRest.wallets.mockResolvedValue([
@@ -2593,6 +2653,10 @@ describe('singleLoan - deep money flows', () => {
         expect(mockSendWs).toHaveBeenCalledWith(
             expect.stringContaining('rate too low'), 0, 0, true
         );
+        // E1: verify lowTriggeredAt is set as a timestamp (not boolean)
+        const er = _getState().extremRate[id].fUSD;
+        expect(er.lowTriggeredAt).toBeGreaterThan(0);
+        expect(er.low).toBe(0); // reset after trigger
     });
 
     test('isDiff: prevents risk from going below 1 in newOffer', async () => {
@@ -2849,7 +2913,7 @@ describe('singleTrade.getAM - deep money flows', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 109.5, frr: 73 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 182.5 },
@@ -3119,10 +3183,10 @@ describe('singleTrade.getAM - deep money flows', () => {
         expect(mockRest.cancelOrder).toHaveBeenCalledWith(812);
     });
 
-    test('is_low: recent extreme low → min_available = 0', async () => {
+    test('lowTriggeredAt: recent extreme low → min_available = 0', async () => {
         const id = 'GT12';
         seedTradeUser(id, {
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: FROZEN_SEC - 100 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: FROZEN_SEC - 100 } } },
         });
         mockRest.wallets.mockResolvedValue([
             { currency: 'USD', type: 'funding', balance: 12000, balanceAvailable: 10000 },
@@ -3136,10 +3200,10 @@ describe('singleTrade.getAM - deep money flows', () => {
         expect(consoleSpy).toHaveBeenCalledWith('is low');
     });
 
-    test('is_high: recent extreme high → min_available = 10000', async () => {
+    test('highTriggeredAt: recent extreme high → min_available = 10000', async () => {
         const id = 'GT13';
         seedTradeUser(id, {
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: FROZEN_SEC - 100, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: FROZEN_SEC - 100, lowTriggeredAt: 0 } } },
         });
         mockRest.wallets.mockResolvedValue([
             { currency: 'USD', type: 'funding', balance: 12000, balanceAvailable: 10000 },
@@ -3320,7 +3384,7 @@ describe('recur_status + recur_NewOrder paths', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 109.5, frr: 73 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 182.5 },
@@ -5463,7 +5527,7 @@ describe('adjustOffer — rate-based deletion', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 25000, frr: 20000 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 5000 },
@@ -5666,7 +5730,7 @@ describe('singleLoan — uncovered paths', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 109.5, frr: 73 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 182.5 },
@@ -5939,7 +6003,7 @@ describe('singleTrade.getAM — uncovered paths', () => {
             credit: { [id]: {} },
             ledger: { [id]: { fUSD: [{ time: FROZEN_SEC, amount: 10, rate: 0.001, id: 1 }] } },
             position: { [id]: {} },
-            extremRate: { [id]: { fUSD: { high: 0, low: 0, is_high: 0, is_low: 0 } } },
+            extremRate: { [id]: { fUSD: { high: 0, low: 0, highTriggeredAt: 0, lowTriggeredAt: 0 } } },
             currentRate: { fUSD: { rate: 109.5, frr: 73 } },
             finalRate: { fUSD: Array.from({ length: 11 }, (_, i) => (50 - i * 4) * BFX_EXP / 100) },
             maxRange: { fUSD: 182.5 },
