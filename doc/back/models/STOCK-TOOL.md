@@ -4,7 +4,7 @@
 > **Lines**: ~4,620  
 > **Purpose**: Stock data management, trading algorithm backtesting, portfolio tracking  
 > **Stack**: Node.js · MongoDB · Redis · Yahoo Finance API · TWSE/TPEx Official APIs · Web Scraping  
-> **Last Updated**: 2026-06-27
+> **Last Updated**: 2026-07-17
 
 ---
 
@@ -105,6 +105,9 @@ USSE_FEE                    // USA trading fee
 TRADE_TIME                  // Trading hour restrictions
 TRADE_INTERVAL              // Time between trades (seconds)
 RANGE_INTERVAL              // Analysis rolling window
+MAX_NEWMID_STACK            // Maximum newMid stack depth (default: 5)
+EMERGENCY_STOP_PCT          // Emergency stop percentage (0-100)
+VOLUME_DECAY_HALFLIFE       // Volume-time decay half-life in days
 NORMAL_DISTRIBUTION         // [1, 2, 16, 50, 84, 98, 99] — cumulative percentiles mapping to ~-2.33σ, -2σ, -1σ, median, +1σ, +2σ, ~+2.33σ
 GAIN_LOSS                   // Gain/loss threshold multiplier
 STOCK_INDEX                 // TWSE sector classification mapping
@@ -801,7 +804,7 @@ const mockPredictWarp = {
 
 ---
 
-### 4.4 stockProcess(price, priceArray, priceTimes, previous, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType, sType, fee, ttime, tinterval, now)
+### 4.4 stockProcess(price, priceArray, priceTimes, previous, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType, sType, fee, ttime, tinterval, now, newMidDepth)
 
 **Purpose**: Core trading logic - generates buy/sell signals based on price distribution.
 
@@ -822,6 +825,7 @@ const mockPredictWarp = {
 - `ttime` (number): Trading time restrictions
 - `tinterval` (number): Time between trades
 - `now` (number): Current timestamp
+- `newMidDepth` (number): Current newMid stack depth, passed to calcResetMid for graduated shift multiplier
 
 **Logic Flow**:
 1. Compares current price against distribution stairs (web array)
@@ -830,7 +834,9 @@ const mockPredictWarp = {
 4. Applies trading fee calculations
 5. Updates position (count, cost, P&L)
 6. Respects time intervals and trading hours
-7. **Price breakout**: If price falls below array → returns `{resetWeb: 1, newMid}` via `calcResetMid(priceArray, fee, 1)`. If above → `{resetWeb: 2, newMid}` via `calcResetMid(priceArray, fee, 2)`. The newMid shifts the grid's centre to the 1σ boundary in the breakout direction.
+7. **Price breakout**: If price falls below array → returns `{resetWeb: 1, newMid}` via `calcResetMid(priceArray, fee, 1, newMidDepth)`. If above → `{resetWeb: 2, newMid}` via `calcResetMid(priceArray, fee, 2, newMidDepth)`. The graduated shift multiplier is `1 + 0.5 × newMidDepth` (1σ → 1.5σ → 2σ → ...).
+8. **Position control**: When newMid stack is non-empty, adjusts order sizes. If `newMid[last] ≤ mid` and amount > orig×5/8: buy at orig×1/2. If `newMid[last] ≥ mid` and amount < orig×3/8: sell at orig×1/2. Empty stack uses default logic.
+9. **Emergency stop (§6d)**: If >50% of items have non-empty newMid stacks, all new orders become fake orders until next newMid recalculation cycle.
 
 **Returns**:
 ```javascript
@@ -848,6 +854,8 @@ const mockPredictWarp = {
 ### 4.5 stockTest(his_arr, loga, min, pType, start, reverse, len, rinterval, fee, ttime, tinterval, resetWeb, sType)
 
 **Purpose**: Backtests trading strategy over historical data.
+
+**Note**: The tmpPT (temporary previous trade) mechanism has been removed. Trade state is no longer saved/restored on newMid push/pop operations.
 
 **Parameters**:
 - `his_arr` (array): Historical price array
@@ -872,7 +880,9 @@ const mockPredictWarp = {
    - Calls stockProcess() for buy/sell signals
    - Updates position and P&L
 4. Tracks metrics: maxGain, maxLoss, tradeCount
-5. Returns backtest summary
+5. **Stack depth limit**: When newMid stack reaches `MAX_NEWMID_STACK` (5), recalculates mid & web from half history via `calStair()`. If still at max, halves again recursively (1/2 → 1/4 → 1/8 → 1/16). Max 3 recalculations per signal.
+6. **Web recalculation clears newMid**: When web array is recalculated (checkweb reset, Phase 2), clears `newMid = []`.
+7. Returns backtest summary
 
 **Returns**:
 ```javascript
@@ -933,12 +943,13 @@ const mockPredictWarp = {
 
 **Logic Flow**:
 1. Extracts window of prices (length `len` or auto)
-2. Maps prices to log scale positions
-3. Calculates 7 percentiles using `NORMAL_DISTRIBUTION = [1, 2, 16, 50, 84, 98, 99]` → nd[] array
-4. Identifies mid (nd[3] = 50th percentile), with σ boundaries at nd[0..6]
-5. Selects `extrem` (daily swing percentile) at nd[4] (1σ=84th), fallback nd[5] (2σ=98th)
-6. Builds web array via `calWeb()`: each of the 6 σ-layers (±1σ, ±2σ, ±3σ) gets steps proportional to its actual nd[] width, using `buildSteps(range)` helper. Empty layers (range ≤ 0) insert boundary marker only.
-7. Returns distribution object
+2. Maps prices to log scale positions using adaptive bin count. Bin count is dynamically calculated based on data size, clamped to [25, 400].
+3. Applies volume-time decay weighting with half-life of `VOLUME_DECAY_HALFLIFE` days. Recent data points receive higher weight in distribution calculations.
+4. Calculates 7 percentiles using `NORMAL_DISTRIBUTION = [1, 2, 16, 50, 84, 98, 99]` → nd[] array
+5. Identifies mid (nd[3] = 50th percentile), with σ boundaries at nd[0..6]
+6. Selects `extrem` (daily swing percentile) at nd[4] (1σ=84th), fallback nd[5] (2σ=98th)
+7. Builds web array via `calWeb()`: each of the 6 σ-layers (±1σ, ±2σ, ±3σ) gets steps proportional to its actual nd[] width, using `buildSteps(range)` helper. Empty layers (range ≤ 0) insert boundary marker only.
+8. Returns distribution object
 
 **Returns**:
 ```javascript
@@ -1186,9 +1197,9 @@ These three functions extract the duplicated newMid (price-breakout grid-shiftin
 
 **scaleWebArr(stack, mid, webArr)**: Scales the web array by the top of the newMid stack. If stack is empty, returns the original array unchanged. Otherwise returns `webArr.map(v => v * stack[last] / mid)`.
 
-**calcResetMid(priceArray, fee, direction)**: Computes the new midpoint when price breaks out of the web array. Collects all σ-boundary prices (negative markers), finds mid as the 4th boundary from the top (`midIdx = min(3, len-1)`), then:
-- `direction=1` (price below): uses `boundaries[midIdx+1]` (1σ below), capped at `midPrice * (1 - fee*10)`
-- `direction=2` (price above): uses `boundaries[midIdx-1]` (1σ above), capped at `midPrice * (1 + fee*10)`
+**calcResetMid(priceArray, fee, direction, stackDepth=0)**: Computes the new midpoint when price breaks out of the web array. Accepts optional `stackDepth` parameter (default 0). The shift multiplier is `1 + 0.5 × stackDepth`: depth 0 → 1σ, depth 1 → 1.5σ, depth 2 → 2σ, etc. This implements graduated shifts where deeper stack entries shift further from mid. Collects all σ-boundary prices (negative markers), finds mid as the 4th boundary from the top (`midIdx = min(3, len-1)`), then selects a farther breakout-side boundary based on that multiplier:
+- `direction=1` (price below): shifts below mid, capped at `midPrice * (1 - fee*10)`
+- `direction=2` (price above): shifts above mid, capped at `midPrice * (1 + fee*10)`
 
 **resolveNewMidStack(stack, price, mid, webArr, onPop)**: Unwinds the newMid stack when price returns towards the original mid. Loops while the top-of-stack entry satisfies the cross-back condition, calls `stack.pop()`, then invokes `onPop(poppedValue)` (callback sees post-pop stack state). Returns the final `scaleWebArr(stack, mid, webArr)` result.
 
@@ -2334,6 +2345,6 @@ RETRY_DELAY = 60000        // 60 seconds
 
 **END OF DOCUMENTATION**
 
-*Generated for stock-tool.js (~4,500 lines)*  
-*Last Updated: 2026-05-19*
+*Generated for stock-tool.js (~4,620 lines)*  
+*Last Updated: 2026-07-17*
 

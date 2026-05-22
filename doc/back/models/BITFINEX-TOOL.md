@@ -1,9 +1,9 @@
 # BITFINEX-TOOL.md — Comprehensive Testing Documentation
 
 **Module**: `/src/back/models/bitfinex-tool.js`  
-**Lines of Code**: 3,290  
+**Lines of Code**: ~3,230  
 **Purpose**: Bitfinex cryptocurrency lending & trading automation system  
-**Last Updated**: 2026-03-17
+**Last Updated**: 2026-07-17
 
 ---
 
@@ -44,6 +44,8 @@ The `bitfinex-tool.js` module serves as the core automation engine for the ANoMo
 - **WebSocket Persistence**: Automatic reconnection with exponential backoff
 - **Error Recovery**: Comprehensive error handling with `HoError` custom exception class
 - **Session Management**: Redis-backed state persistence across server restarts
+- **Sparse Data Safety**: Rate calculation arrays (orderbook and candle-based) padded to fixed 11-element length for robustness
+- **Merge Rate Tolerance**: Offers within `BITFINEX_MIN × MERGE_RATE_TOLERANCE` of a delete target are merged instead of exact-match only
 
 ---
 
@@ -73,6 +75,7 @@ import sendWs from '../util/sendWs.js'                 // WebSocket notification
 - **Currencies**: `FUSD_SYM`, `FUSDT_SYM`, `FBTC_SYM`, `FETH_SYM`, etc.
 - **Support Arrays**: `SUPPORT_COIN`, `SUPPORT_PRICE`, `SUPPORT_PAIR`, `SUPPORT_LEVERAGE`
 - **Thresholds**: `EXTREM_RATE_NUMBER`, `EXTREM_DURATION`, `OFFER_MAX`, `RISK_MAX`
+- **Merge Tolerance**: `MERGE_RATE_TOLERANCE` (tolerance multiplier for merge-offer rate matching)
 - **Database Names**: `USERDB`, `TOTALDB`, `BITNIFEX_PARENT`
 
 ---
@@ -95,7 +98,7 @@ let priceData = {}       // { [pair]: { dailyChange, lastPrice, time, str, str2 
 let userWs = {}          // { [userID]: WebSocket connection }
 let userOk = {}          // { [userID]: boolean (connection health) }
 let updateTime = {}      // { [userID]: timestamp (last update) }
-let extremRate = {}      // { [userID]: { [currency]: extremeRateData } }
+let extremRate = {}      // { [userID]: { [currency]: { lowTriggeredAt, highTriggeredAt, cnt, ... } } }
 
 let available = {}       // { [userID]: { [currency]: { avail, total, time } } }
 let margin = {}          // { [userID]: { [currency]: marginData } }
@@ -111,6 +114,8 @@ const closeCredit = {}   // { [userID]: [creditId, ...] }
 let ledger = {}          // { [userID]: { [currency]: [...ledgerEntries] } }
 let position = {}        // { [userID]: { [pair]: positionData } }
 ```
+
+- **extremRate fields**: Renamed from `is_low`/`is_high` booleans to `lowTriggeredAt`/`highTriggeredAt` Unix timestamps. Comparisons like `highTriggeredAt < lowTriggeredAt` mean the high trigger happened before the low trigger.
 
 ### Data Structure Notes
 - **State Reset**: All user state cleared on `resetBFX()` or user disconnect
@@ -193,6 +198,11 @@ Fetches real-time ticker data and historical candle data for all supported curre
      - Historical high/low ranges
      - User-configured risk parameters
    - Store result in `finalRate[curType]`
+
+#### Rate Array Padding (R1/R2 Safety)
+- `calOBRate` (orderbook-based rates) pads output to 11 elements with last known value when sparse orderbook data yields fewer entries.
+- `calTenthRate` (candle histogram rates) similarly pads to 11 elements for sparse candle data.
+- Without padding, `finalRate` mapping would index `undefined` causing silent failures.
 
 #### Invocation/Authentication
 - **Auth**: Uses system-level API keys (`BITFINEX_KEY`, `BITFINEX_SECRET`)
@@ -1046,6 +1056,20 @@ Establishes and manages a persistent WebSocket connection for a specific user to
 - **Authentication Failure**: Logs error, sets `userOk[uid] = false`, retries after 5s
 - **Connection Drop**: Automatic reconnection with exponential backoff
 - **Invalid API Keys**: Error event fired, connection closed, no retry
+
+#### Lending System Robustness Improvements
+
+**L3 — deleteOffer Cap**: The `deleteOffer` global array (used to track offers pending deletion) is now capped at `OFFER_MAX × 5` entries in `makeOnFundingOfferClose`. Previously, `deleteOffer` only shrank when `submitOffer` matched entries, leading to unbounded growth.
+
+**L4 — Offer Snapshot**: `adjustOffer` now snapshots `offer[id][current.type]` at the start of the async phase (`const offerSnapshot = [...offer[id][current.type]]`). This prevents WebSocket handlers from mutating the array mid-iteration during async `cancelOffer`/`submitOffer` calls.
+
+**E1 — extremRate Field Rename**: `is_low`/`is_high` boolean fields renamed to `lowTriggeredAt`/`highTriggeredAt` storing Unix timestamps. Enables temporal comparisons (e.g., `highTriggeredAt < lowTriggeredAt` means high triggered before low).
+
+**L1 — initialBookFn Risk Guard**: In `initialBookFn`, risk assignment uses descending post-decrement (10, 9, 8, ...). When `OFFER_MAX > RISK_MAX`, excess offers get a floor of `OFFER_MAX - RISK_MAX` instead of 0, preventing them from mapping to an invalid `finalRate` index.
+
+**L2 — submitOffer Balance Optimization**: `submitOffer` now calls `calKeepCash()` REST endpoint once before the offer submission loop (instead of per-offer), tracking available balance locally with `submitAvailable`. Eliminates N round-trips and race conditions.
+
+**§5 — Merge Rate Tolerance**: `mergeOffer.checkDelete` now uses tolerance-based matching: `|rate - deleteRate| ≤ BITFINEX_MIN × MERGE_RATE_TOLERANCE` instead of exact bucket match. Reduces unnecessary cancel+resubmit cycles for tiny rate shifts. `MERGE_RATE_TOLERANCE` defaults to 2.
 
 ---
 
@@ -3392,6 +3416,7 @@ export const MINIMAL_OFFER = 50;         // Minimum offer amount
 export const OFFER_MAX = 5000000;        // Maximum single offer
 export const RISK_MAX = 10;              // Maximum risk level
 export const MAX_RATE = 500000;          // Maximum rate (0.05% daily)
+export const MERGE_RATE_TOLERANCE = 2;   // Tolerance multiplier for merge-offer rate matching
 
 export const BITFINEX_INTERVAL = 600000; // 10 minutes
 export const RATE_INTERVAL = 1800000;    // 30 minutes
@@ -3446,7 +3471,7 @@ npm test -- bitfinex-tool.test.js --watch
 
 ## Documentation Maintenance
 
-**Last Updated**: 2026-05-19  
+**Last Updated**: 2026-07-17  
 **Reviewed By**: Senior QA/Test Automation Engineer  
 **Next Review**: 2026-08-19 (Quarterly)
 
