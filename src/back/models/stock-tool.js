@@ -2928,11 +2928,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                     const processResetWeb = (recalcCount) => {
                         if (!suggestion.resetWeb) return Promise.resolve();
-                        change_previous = true;
-                        item.previous.time = 0;
-                        item.previous.price = 0;
-                        item.previous.type = '';
-                        item.previous.tprice = 0;
                         item.newMid.push(suggestion.newMid);
                         // Stack depth limit: recalculate from half history
                         if (item.newMid.length >= MAX_NEWMID_STACK) {
@@ -2951,7 +2946,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                         const loga = logArray(max, min);
                                         let fraction = 2;
                                         let recalcWeb = null;
-                                        while (fraction <= 16) {
+                                        while (fraction <= 8) {
                                             const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
                                             recalcWeb = calStair(raw_arr, loga, min, 0, fee, halfLen);
                                             if (recalcWeb) break;
@@ -4038,10 +4033,6 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         let suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
         let recalcCount = 0;
         while (suggest.resetWeb) {
-            priviousTrade.time = 0;
-            priviousTrade.price = 0;
-            priviousTrade.type = '';
-            priviousTrade.tprice = 0;
             if (suggest.resetWeb === 1) stopLoss++;
             newMid.push(suggest.newMid);
             // Stack depth limit: recalculate from recent history
@@ -4055,10 +4046,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
                 let fraction = 2;
                 let recalcWeb = null;
-                while (fraction <= 16) {
-                    const halfLen = Math.max(Math.floor((his_arr.length - i) / fraction), 20);
-                    const recalcStart = Math.max(0, i - halfLen);
-                    recalcWeb = calStair(his_arr, loga, min, recalcStart, fee, halfLen);
+                while (fraction <= 8) {
+                    const halfLen = Math.max(Math.floor(his_arr.length / fraction), 20);
+                    recalcWeb = calStair(his_arr, loga, min, 0, fee, halfLen);
                     if (recalcWeb) break;
                     fraction *= 2;
                 }
@@ -4354,19 +4344,24 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     });
     const sort_arr = [...single_arr].sort((a,b) => a - b);
     //console.log(final_arr);
+    // Extrem fallback chain (§2d): 84th→90th→95th→98th→100th→false
+    const extremPercentiles = [84, 90, 95, 98, 100];
+    let extremIdx = 0;
     const web = {
         mid: Math.pow(1 + loga.diff, nd[3]) * min,
         up: nd[4] - nd[3],
         down: nd[3] - nd[2],
-        extrem: sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 3] / 100) - 1] / 100,
+        extrem: sort_arr[Math.round(sort_arr.length * extremPercentiles[0] / 100) - 1] / 100,
         single: loga.diff,
     }
-    if ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
-        web.extrem = sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[NORMAL_DISTRIBUTION.length - 2] / 100) - 1] / 100;
-        web.ds = 2;
-        if ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
+    while ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
+        extremIdx++;
+        if (extremIdx >= extremPercentiles.length) {
             return false;
         }
+        const pctIdx = Math.round(sort_arr.length * extremPercentiles[extremIdx] / 100) - 1;
+        web.extrem = sort_arr[Math.min(pctIdx, sort_arr.length - 1)] / 100;
+        web.ds = extremIdx + 1;
     }
     const calWeb = () => {
         const stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));

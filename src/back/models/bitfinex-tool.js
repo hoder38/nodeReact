@@ -1059,31 +1059,71 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 console.log(nm);
             });
             let suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
-            let recalcCount = 0;
-            while(suggestion.resetWeb) {
-                item.previous.time = 0;
-                item.previous.price = '';
-                item.previous.type = '';
-                item.previous.tprice = 0;
+            const processResetWeb = (recalcCount) => {
+                if (!suggestion.resetWeb) return Promise.resolve();
                 item.newMid.push(suggestion.newMid);
-                // Stack depth limit: adopt last shift as new base mid
+                // Stack depth limit: recalculate from half history via candles
                 if (item.newMid.length >= MAX_NEWMID_STACK) {
                     recalcCount++;
                     if (recalcCount > 3) {
                         item.newMid = [];
                         newArr = item.web;
-                        break;
+                        return Promise.resolve();
                     }
-                    const ratio = item.newMid[item.newMid.length - 1] / item.mid;
-                    item.mid = item.newMid[item.newMid.length - 1];
-                    item.web = item.web.map(v => v * ratio);
-                    item.newMid = [];
-                    newArr = item.web;
+                    return rest.candles({symbol: item.index, timeframe: '6h', query: {limit: 3600}}).then(entries => {
+                        if (entries && entries.length > 0) {
+                            let cMax = 0, cMin = 0;
+                            const raw_arr = entries.map(v => {
+                                if (!cMax || cMax < v.high) cMax = v.high;
+                                if (!cMin || cMin > v.low) cMin = v.low;
+                                return { h: v.high, l: v.low, v: v.volume };
+                            });
+                            const loga = logArray(cMax, cMin);
+                            let fraction = 2;
+                            let recalcWeb = null;
+                            while (fraction <= 8) {
+                                const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
+                                recalcWeb = calStair(raw_arr, loga, cMin, 0, BITFINEX_FEE, halfLen);
+                                if (recalcWeb) break;
+                                fraction *= 2;
+                            }
+                            if (recalcWeb) {
+                                item.mid = recalcWeb.mid;
+                                item.web = recalcWeb.arr;
+                                item.newMid = [];
+                                newArr = item.web;
+                            } else {
+                                const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                                item.mid = item.newMid[item.newMid.length - 1];
+                                item.web = item.web.map(v => v * ratio);
+                                item.newMid = [];
+                                newArr = item.web;
+                            }
+                        } else {
+                            const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                            item.mid = item.newMid[item.newMid.length - 1];
+                            item.web = item.web.map(v => v * ratio);
+                            item.newMid = [];
+                            newArr = item.web;
+                        }
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        return processResetWeb(recalcCount);
+                    }).catch(() => {
+                        const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                        item.mid = item.newMid[item.newMid.length - 1];
+                        item.web = item.web.map(v => v * ratio);
+                        item.newMid = [];
+                        newArr = item.web;
+                        suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
+                        return processResetWeb(recalcCount);
+                    });
                 } else {
                     newArr = scaleWebArr(item.newMid, item.mid, item.web);
                 }
                 suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
-            }
+                return processResetWeb(recalcCount);
+            };
+            await processResetWeb(0);
             let count = 0;
             let amount = clearP ? 0 : item.amount;
             if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
