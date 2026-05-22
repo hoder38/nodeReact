@@ -1065,7 +1065,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 // Stack depth limit: recalculate from half history via candles
                 if (item.newMid.length >= MAX_NEWMID_STACK) {
                     recalcCount++;
-                    if (recalcCount > 3) {
+                    if (recalcCount > 2) {
                         item.newMid = [];
                         newArr = item.web;
                         return Promise.resolve();
@@ -1312,6 +1312,17 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         data: -1,
         user: id,
     });
+    // §6d Emergency Stop: if >50% of items have non-empty newMid, force all to fakeOrder
+    if (items.length > 0) {
+        const shiftedCount = items.filter(it => it.newMid && it.newMid.length > 0).length;
+        if (shiftedCount > items.length / 2) {
+            console.log(`[emergency stop] ${shiftedCount}/${items.length} items have non-empty newMid — forcing fakeOrder`);
+            newOrder.forEach(entry => {
+                entry.suggestion.bCount = 0;
+                entry.suggestion.sCount = 0;
+            });
+        }
+    }
     return newOrder;
 };
 

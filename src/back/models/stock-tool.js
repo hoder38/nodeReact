@@ -2932,7 +2932,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         // Stack depth limit: recalculate from half history
                         if (item.newMid.length >= MAX_NEWMID_STACK) {
                             recalcCount++;
-                            if (recalcCount > 3) {
+                            if (recalcCount > 2) {
                                 item.newMid = [];
                                 newArr = item.web;
                                 return Promise.resolve();
@@ -3197,6 +3197,20 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         }
     }
     return recur_price(0).then(() => {
+        // §6d Emergency Stop: if >50% of items have non-empty newMid, force all to fakeOrder
+        const activeItems = items.filter(it => it.index !== 0 && it.index);
+        if (activeItems.length > 0) {
+            const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
+            if (shiftedCount > activeItems.length / 2) {
+                console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
+                ['twse', 'usse'].forEach(setype => {
+                    Object.keys(suggestionData[setype]).forEach(key => {
+                        suggestionData[setype][key].bCount = 0;
+                        suggestionData[setype][key].sCount = 0;
+                    });
+                });
+            }
+        }
         if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE)) {
             return Mongo('update', TOTALDB, {index: 0, setype: 'usse'}, {$set : {
                 amount: ussePosition[ussePosition.length -1].price,
@@ -4038,7 +4052,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             // Stack depth limit: recalculate from recent history
             if (newMid.length >= MAX_NEWMID_STACK) {
                 recalcCount++;
-                if (recalcCount > 3) {
+                if (recalcCount > 2) {
                     // Safety: stop after 3 recalculations to prevent infinite loop
                     newMid = [];
                     newArr = web.arr;
@@ -4344,8 +4358,8 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     });
     const sort_arr = [...single_arr].sort((a,b) => a - b);
     //console.log(final_arr);
-    // Extrem fallback chain (§2d): 84th→90th→95th→98th→100th→false
-    const extremPercentiles = [84, 90, 95, 98, 100];
+    // Extrem fallback chain (§2d): 84th→98th→99th→false
+    const extremPercentiles = [84, 98, 99];
     let extremIdx = 0;
     const web = {
         mid: Math.pow(1 + loga.diff, nd[3]) * min,

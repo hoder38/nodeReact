@@ -6480,3 +6480,111 @@ describe('_recur_status — ing=2 sell order isExist/deleteOrder paths', () => {
         expect(_getState().order.rd.fUSD.length).toBe(0);
     });
 });
+
+// §6d Emergency Stop
+describe('_recur_status — emergency stop (§6d)', () => {
+    const FROZEN_NOW = new Date('2025-06-10T12:00:00+08:00').getTime();
+
+    beforeEach(() => {
+        jest.useFakeTimers('modern');
+        jest.setSystemTime(FROZEN_NOW);
+        _resetState();
+        mockMongo.mockReset();
+        mockSendWs.mockClear();
+        mockStockProcess.mockReset();
+        mockStockProcess.mockImplementation(() => ({ type: 0, buy: 100, sell: 200, bCount: 3, sCount: 2, str: 'test', resetWeb: false }));
+        mockRest.cancelOrder.mockReset();
+        mockRest.cancelOrder.mockResolvedValue({});
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const flush = async () => {
+        for (let i = 0; i < 30; i++) {
+            jest.advanceTimersByTime(10000);
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+        }
+    };
+
+    const runWithFlush = async (fn) => {
+        const p = fn();
+        await flush();
+        return p;
+    };
+
+    const mkItem = (id, newMid = []) => ({
+        _id: id, index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+        orig: 10000, mid: 40000, web: [100, -100], wType: 0, times: 1,
+        newMid, tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+        previous: { price: '', time: 0, type: '', tprice: 0 },
+    });
+
+    test('>50% items with non-empty newMid → bCount/sCount zeroed', async () => {
+        // 3 items: 2 with non-empty newMid (below mid so resolveNewMidStack won't pop them)
+        const items = [
+            mkItem('e1', [38000]),
+            mkItem('e2', [35000]),
+            mkItem('e3', []),
+        ];
+        _setState({
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
+            margin: { em: { fUSD: {} } },
+            order: { em: { fUSD: [] } },
+            fakeOrder: { em: { fUSD: [] } },
+            position: { em: { fUSD: null } },
+        });
+        // Return correct item for each Mongo find by _id
+        mockMongo.mockImplementation((op, col, query) => {
+            if (op === 'find' && query && query._id) {
+                const it = items.find(i => i._id === query._id);
+                return Promise.resolve(it ? [{ ...it, newMid: [...it.newMid] }] : []);
+            }
+            return Promise.resolve({});
+        });
+        const ctx = {
+            id: 'em', uid: 'em',
+            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            userRest: mockRest,
+            items,
+        };
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        result.forEach(entry => {
+            expect(entry.suggestion.bCount).toBe(0);
+            expect(entry.suggestion.sCount).toBe(0);
+        });
+    });
+
+    test('≤50% items with non-empty newMid → no emergency stop', async () => {
+        // 3 items: 1 with non-empty newMid (33%)
+        const items = [
+            mkItem('e4', [38000]),
+            mkItem('e5', []),
+            mkItem('e6', []),
+        ];
+        _setState({
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
+            margin: { em2: { fUSD: {} } },
+            order: { em2: { fUSD: [] } },
+            fakeOrder: { em2: { fUSD: [] } },
+            position: { em2: { fUSD: null } },
+        });
+        // Return correct item for each Mongo find by _id
+        mockMongo.mockImplementation((op, col, query) => {
+            if (op === 'find' && query && query._id) {
+                const it = items.find(i => i._id === query._id);
+                return Promise.resolve(it ? [{ ...it, newMid: [...it.newMid] }] : []);
+            }
+            return Promise.resolve({});
+        });
+        const ctx = {
+            id: 'em2', uid: 'em2',
+            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            userRest: mockRest,
+            items,
+        };
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        const anyReal = result.some(e => e.suggestion.bCount > 0 || e.suggestion.sCount > 0);
+        expect(anyReal).toBe(true);
+    });
+});

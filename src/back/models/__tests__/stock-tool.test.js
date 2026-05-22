@@ -8920,3 +8920,90 @@ describe('resolveNewMidStack', () => {
         expect(stackLenInCb).toBe(0);
     });
 });
+
+// §6d Emergency Stop: >50% items with non-empty newMid → force fakeOrder
+describe('stockStatus emergency stop (§6d)', () => {
+    const makeItem = (id, index, newMid = []) => ({
+        _id: id, index, setype: 'usse', type: 'Tech',
+        name: `stock-${index}`,
+        web: [
+            -1000, -900, 800, 750, 700,
+            -600, 550, 500, 450,
+            -400, 350, 300,
+            -250, 200, 150,
+            -120, 100, 80,
+            -60, 40, 20, -10,
+        ],
+        mid: 600, times: 1, mul: 0, clear: false, ing: 1,
+        str: '', order: null, newMid,
+        profit: 0, amount: 900000, orig: 1000000, count: 10,
+        previous: { price: 150, time: 0, type: 'buy', buy: [], sell: [] },
+        wType: 0, price: 160, previousPrice: 158,
+        bquantity: 0, boddquantity: 0, squantity: 0, soddquantity: 0,
+    });
+
+    test('when >50% items have non-empty newMid, bCount/sCount zeroed in suggestionData', async () => {
+        // 3 items: 2 with non-empty newMid (>50%)
+        const items = [
+            makeItem('s1', 'AAPL', [550]),
+            makeItem('s2', 'GOOG', [580]),
+            makeItem('s3', 'MSFT', []),
+        ];
+        let callCount = 0;
+        mockMongo.mockImplementation((op, col, query) => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve(items);
+            // Each item: find by _id then update
+            if (op === 'find') {
+                const item = items.find(it => it._id === query._id);
+                return Promise.resolve(item ? [item] : []);
+            }
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 500, regularMarketPreviousClose: 498,
+        });
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        // All suggestions should have bCount=0, sCount=0 due to emergency stop
+        Object.values(data).forEach(s => {
+            expect(s.bCount).toBe(0);
+            expect(s.sCount).toBe(0);
+        });
+    });
+
+    test('when ≤50% items have non-empty newMid, no emergency stop', async () => {
+        // 3 items: only 1 with non-empty newMid (33%, ≤50%)
+        const items = [
+            makeItem('s4', 'TSLA', [550]),
+            makeItem('s5', 'META', []),
+            makeItem('s6', 'AMZN', []),
+        ];
+        let callCount = 0;
+        mockMongo.mockImplementation((op, col, query) => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve(items);
+            if (op === 'find') {
+                const item = items.find(it => it._id === query._id);
+                return Promise.resolve(item ? [item] : []);
+            }
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 500, regularMarketPreviousClose: 498,
+        });
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        // No emergency stop — at least one suggestion should have non-zero bCount or sCount
+        const anySuggestion = Object.values(data).some(s => s.bCount > 0 || s.sCount > 0);
+        expect(anySuggestion).toBe(true);
+    });
+});
