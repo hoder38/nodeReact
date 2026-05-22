@@ -4,7 +4,7 @@ import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
 const { FundingOffer, Order } = bfxApiNodeModels;
-import { calStair, stockProcess, stockTest, logArray, resolveNewMidStack, scaleWebArr } from '../models/stock-tool.js'
+import { calStair, stockProcess, stockTest, logArray, computeBinCount, resolveNewMidStack, scaleWebArr } from '../models/stock-tool.js'
 import Mongo from '../models/mongo-tool.js'
 import Redis from '../models/redis-tool.js'
 import Api from './api-tool.js'
@@ -260,7 +260,8 @@ export const calWeb = curArr => {
         console.log(max);
         console.log(min);
         console.log(min_vol);
-        const loga = logArray(max, min);
+        const bins = computeBinCount(raw_arr, 0, 240 * 3);
+        const loga = logArray(max, min, bins);
         const web = calStair(raw_arr, loga, min, 0, BITFINEX_FEE, 240 * 3);
         console.log(web);
         const results = [];
@@ -1078,11 +1079,12 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                                 if (!cMin || cMin > v.low) cMin = v.low;
                                 return { h: v.high, l: v.low, v: v.volume };
                             });
-                            const loga = logArray(cMax, cMin);
                             let fraction = 2;
                             let recalcWeb = null;
                             while (fraction <= 8) {
                                 const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
+                                const bins = computeBinCount(raw_arr, 0, halfLen);
+                                const loga = logArray(cMax, cMin, bins);
                                 recalcWeb = calStair(raw_arr, loga, cMin, 0, BITFINEX_FEE, halfLen);
                                 if (recalcWeb) break;
                                 fraction *= 2;

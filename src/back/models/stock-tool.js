@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MIN_BINS, MAX_BINS, VOLUME_DECAY_LAMBDA } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
@@ -713,13 +713,13 @@ export default {
             switch(items[0].type) {
                 case 'twse':
                 return getStockPrice(items[0].type, items[0].index).then(price => {
-                    const per = (items[0].profit === 0) ? 0 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
-                    const pdr = (items[0].dividends === 0) ? 0 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
-                    const pbr = (items[0].netValue === 0) ? 0 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
+                    const per = (items[0].profit <= 0) ? 9999 : Math.round(price / items[0].profit * items[0].equity * 10) / 100;
+                    const pdr = (items[0].dividends <= 0) ? 9999 : Math.round(price / items[0].dividends * items[0].equity * 10) / 100;
+                    const pbr = (items[0].netValue <= 0) ? 9999 : Math.round(price / items[0].netValue * items[0].equity * 10) / 100;
                     return [(per > 0) ? per : 9999, (pdr > 0) ? pdr : 9999, (pbr > 0) ? pbr : 9999, items[0].index, start];
                 });
                 case 'usse':
-                return [items[0].per, items[0].pdr, items[0].pbr, items[0].index, start];
+                return getUsStock(items[0].index, ['price', 'per', 'pbr']).then(ret => [ret.per, items[0].pdr, ret.pbr, items[0].index, start]);
                 default:
                 return handleError(new HoError('stock type unknown!!!'));
             }
@@ -885,7 +885,8 @@ export default {
                             }
                         }
                         console.log(min_vol);
-                        const loga = logArray(max, min);
+                        const bins = computeBinCount(raw_arr);
+                        const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min);
                         console.log(web);
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
@@ -1118,7 +1119,8 @@ export default {
                             }
                         }
                         console.log(min_vol);
-                        const loga = logArray(max, min);
+                        const bins = computeBinCount(raw_arr);
+                        const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min, 0, USSE_FEE);
                         console.log(web);
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
@@ -2943,11 +2945,12 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                     const adjList = cached.adjustments ? JSON.parse(cached.adjustments) : [];
                                     const { raw_arr, max, min } = applyAdjustments(rawData, adjList);
                                     if (raw_arr.length > 0 && max > 0 && min > 0) {
-                                        const loga = logArray(max, min);
                                         let fraction = 2;
                                         let recalcWeb = null;
                                         while (fraction <= 8) {
                                             const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
+                                            const bins = computeBinCount(raw_arr, 0, halfLen);
+                                            const loga = logArray(max, min, bins);
                                             recalcWeb = calStair(raw_arr, loga, min, 0, fee, halfLen);
                                             if (recalcWeb) break;
                                             fraction *= 2;
@@ -4325,6 +4328,25 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     };
 }
 
+export const computeBinCount = (raw_arr, stair_start = 0, len = false) => {
+    const maxlen = (len && ((stair_start + len) < raw_arr.length)) ? (stair_start + len) : raw_arr.length;
+    const n = maxlen - stair_start;
+    if (n < 4) return MIN_BINS;
+    const closes = [];
+    for (let i = stair_start; i < maxlen; i++) {
+        closes.push((raw_arr[i].h + raw_arr[i].l) / 2);
+    }
+    closes.sort((a, b) => a - b);
+    const q1 = closes[Math.floor(n * 0.25)];
+    const q3 = closes[Math.floor(n * 0.75)];
+    const iqr = q3 - q1;
+    if (iqr <= 0) return MIN_BINS;
+    const binWidth = 2 * iqr * Math.pow(n, -1 / 3);
+    const range = closes[n - 1] - closes[0];
+    const bins = Math.round(range / binWidth);
+    return Math.max(MIN_BINS, Math.min(MAX_BINS, bins));
+}
+
 export const logArray = (max, min, pos=100) => {
     const logMax = Math.log(max);
     const logMin = Math.log(min);
@@ -4340,17 +4362,19 @@ export const logArray = (max, min, pos=100) => {
 }
 
 export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, len = false) => {
+    const binCount = loga.arr.length;
     const single_arr = [];
     const final_arr = [];
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < binCount; i++) {
         final_arr[i] = 0;
     }
     let volsum = 0;
     let maxlen = (len && ((stair_start + len) < raw_arr.length)) ? (stair_start + len) : raw_arr.length;
+    const totalDays = maxlen - stair_start;
     for (let i = stair_start; i < maxlen; i++) {
         let s = 0;
-        let e = 100;
-        for (let j = 0; j < 100; j++) {
+        let e = binCount;
+        for (let j = 0; j < binCount; j++) {
         if (raw_arr[i].l >= loga.arr[j]) {
                 s = j;
             }
@@ -4359,12 +4383,17 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
                 break;
             }
         }
-        volsum += raw_arr[i].v;
+        // §2b Volume-time decay: recent data weighted more heavily
+        const dayAge = i - stair_start;
+        const monthsAgo = dayAge / 21;
+        const decayWeight = Math.exp(-VOLUME_DECAY_LAMBDA * monthsAgo);
+        const weightedVol = raw_arr[i].v * decayWeight;
+        volsum += weightedVol;
         single_arr.push((raw_arr[i].h - raw_arr[i].l) / raw_arr[i].h * 100);
         if ((e - s) === 0) {
-            final_arr[s] += raw_arr[i].v;
+            final_arr[s] += weightedVol;
         } else {
-            const v = raw_arr[i].v / (e - s);
+            const v = weightedVol / (e - s);
             for (let j = s; j < e; j++) {
                 final_arr[j] += v;
             }

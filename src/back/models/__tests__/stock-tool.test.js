@@ -166,7 +166,7 @@ jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs })
 // ---------------------------------------------------------------------------
 // Dynamic import — all mocks registered above
 // ---------------------------------------------------------------------------
-let logArray, calStair, stockProcess, stockTest, getSuggestionData;
+let logArray, calStair, stockProcess, stockTest, getSuggestionData, computeBinCount;
 let getStockListV2, stockStatus, getSingleAnnual;
 let parseMacrotrendsMarketCap, parseMacrotrendsRatio;
 let parseStockCsv, getParameterV2, getBasicStockData, handleStockTagV2, getStockPrice, getUsStock;
@@ -177,6 +177,7 @@ let StockTool, setMaxRetry, setStatusDelay, setTwseDelay;
 beforeAll(async () => {
     const mod = await import('../stock-tool.js');
     logArray        = mod.logArray;
+    computeBinCount = mod.computeBinCount;
     calStair        = mod.calStair;
     stockProcess    = mod.stockProcess;
     stockTest       = mod.stockTest;
@@ -256,6 +257,51 @@ describe('logArray', () => {
 });
 
 // ===========================================================================
+// computeBinCount
+// ===========================================================================
+describe('computeBinCount', () => {
+    const makeData = (count, hBase, lBase, vBase) =>
+        Array.from({ length: count }, (_, i) => ({
+            h: hBase + (i % 5),
+            l: lBase - (i % 3),
+            v: vBase + i * 10,
+        }));
+
+    test('returns a number clamped between MIN_BINS and MAX_BINS', () => {
+        const data = makeData(200, 110, 90, 1000);
+        const bins = computeBinCount(data);
+        expect(bins).toBeGreaterThanOrEqual(25);
+        expect(bins).toBeLessThanOrEqual(400);
+    });
+
+    test('returns MIN_BINS for very small data', () => {
+        const data = makeData(3, 100, 99, 100);
+        expect(computeBinCount(data)).toBe(25);
+    });
+
+    test('returns MIN_BINS when IQR is zero', () => {
+        const data = Array.from({ length: 50 }, () => ({ h: 100, l: 100, v: 100 }));
+        expect(computeBinCount(data)).toBe(25);
+    });
+
+    test('respects stair_start and len parameters', () => {
+        const data = makeData(200, 110, 90, 1000);
+        const bins1 = computeBinCount(data, 0, 50);
+        const bins2 = computeBinCount(data, 0, 200);
+        expect(typeof bins1).toBe('number');
+        expect(typeof bins2).toBe('number');
+    });
+
+    test('wider price range produces more bins', () => {
+        const narrow = Array.from({ length: 200 }, (_, i) => ({ h: 100 + (i % 2), l: 99 - (i % 2), v: 1000 }));
+        const wide = Array.from({ length: 200 }, (_, i) => ({ h: 100 + (i % 20), l: 80 - (i % 10), v: 1000 }));
+        const binsNarrow = computeBinCount(narrow);
+        const binsWide = computeBinCount(wide);
+        expect(binsWide).toBeGreaterThanOrEqual(binsNarrow);
+    });
+});
+
+// ===========================================================================
 // calStair
 // ===========================================================================
 describe('calStair', () => {
@@ -322,6 +368,32 @@ describe('calStair', () => {
     test('mid is a positive number when valid', () => {
         const web = calStair(raw100, loga, 87);
         if (web) expect(web.mid).toBeGreaterThan(0);
+    });
+
+    test('works with adaptive bin count from computeBinCount', () => {
+        const bins = computeBinCount(raw100);
+        const adaptiveLoga = logArray(115, 87, bins);
+        const web = calStair(raw100, adaptiveLoga, 87);
+        if (web) {
+            expect(web.mid).toBeGreaterThan(0);
+            expect(Array.isArray(web.arr)).toBe(true);
+        }
+    });
+
+    test('volume-time decay weights recent data more heavily', () => {
+        // Create data where older entries (high index) have high volume at high prices
+        // and newer entries (low index) have high volume at low prices
+        // With decay, the mid should shift toward newer (lower) prices
+        const recentLow = Array.from({ length: 50 }, () => ({ h: 92, l: 88, v: 10000 }));
+        const oldHigh = Array.from({ length: 50 }, () => ({ h: 114, l: 110, v: 10000 }));
+        const data = [...recentLow, ...oldHigh];
+        const bins = computeBinCount(data);
+        const testLoga = logArray(115, 87, bins);
+        const web = calStair(data, testLoga, 87);
+        if (web) {
+            // With decay, mid should lean toward recent low prices rather than midpoint
+            expect(web.mid).toBeLessThan(101);
+        }
     });
 });
 
@@ -871,15 +943,24 @@ describe('getStockPERV2', () => {
         await expect(StockTool.getStockPERV2('id1')).rejects.toMatchObject({ message: 'can not find stock!!!' });
     });
 
-    test('usse type → returns array directly from DB values', async () => {
-        // latestQuarter=2, latestYear=2023 → start = '112' + '06' = '11206'
+    test('usse type → returns fresh per/pbr from yahoo, pdr from DB', async () => {
         mockMongo.mockResolvedValue([{
             _id: 'id2', type: 'usse', index: 'AAPL',
             per: 25, pdr: 50, pbr: 8,
             latestQuarter: 2, latestYear: 2023,
         }]);
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 180,
+            marketCap: 2800000000000,
+            trailingPE: 28.5,
+            priceToBook: 45.2,
+        });
         const result = await StockTool.getStockPERV2('id2');
-        expect(result).toEqual([25, 50, 8, 'AAPL', '11206']);
+        expect(result[0]).toBe(28.5);
+        expect(result[1]).toBe(50);
+        expect(result[2]).toBe(45.2);
+        expect(result[3]).toBe('AAPL');
+        expect(result[4]).toBe('11206');
     });
 
     test('unknown stock type → rejects with "stock type unknown!!!"', async () => {
@@ -893,6 +974,12 @@ describe('getStockPERV2', () => {
             per: 30, pdr: 999, pbr: 10,
             latestQuarter: 0, latestYear: 2023,
         }]);
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 400,
+            marketCap: 3000000000000,
+            trailingPE: 35,
+            priceToBook: 12,
+        });
         const result = await StockTool.getStockPERV2('id4');
         expect(result[4]).toBe('11112'); // 2023-1912=111, '12'
     });
@@ -903,6 +990,12 @@ describe('getStockPERV2', () => {
             per: 20, pdr: 100, pbr: 5,
             latestQuarter: 1, latestYear: 2023,
         }]);
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 170,
+            marketCap: 2000000000000,
+            trailingPE: 22,
+            priceToBook: 6,
+        });
         const result = await StockTool.getStockPERV2('id5');
         expect(result[4]).toBe('11203'); // 2023-1911=112, quarter*3=3 completeZero→'03'
     });
@@ -3220,10 +3313,16 @@ describe('getStockPERV2 usse yahoo per/pbr', () => {
             per: 25, pdr: 50, pbr: 8,
             latestQuarter: 2, latestYear: 2023,
         }]);
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 180,
+            marketCap: 2800000000000,
+            trailingPE: 29.5,
+            priceToBook: 46,
+        });
         const result = await StockTool.getStockPERV2('id1');
-        expect(result[0]).toBe(25);
+        expect(result[0]).toBe(29.5);
         expect(result[1]).toBe(50);
-        expect(result[2]).toBe(8);
+        expect(result[2]).toBe(46);
     });
 });
 
@@ -6043,7 +6142,7 @@ describe('stockTest main-loop data miss', () => {
 // getStockPERV2 — twse type with positive/zero values (line 683)
 // ===========================================================================
 describe('getStockPERV2 twse calculations', () => {
-    test('twse with zero profit → per=0 (mapped to 9999)', async () => {
+    test('twse with zero profit → per=9999', async () => {
         // Non-center path DOM for getStockPrice (lines 38-73, covers line 72-73: non-previous return)
         const priceSpan = mkNode('span', null, ['500']);
         const qhDiv = mkNode('div', 'main-0-QuoteHeader-Proxy', [

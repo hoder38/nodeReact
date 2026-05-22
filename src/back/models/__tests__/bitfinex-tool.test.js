@@ -115,6 +115,7 @@ const mockStockTest = jest.fn(() => Promise.resolve({
     },
 }));
 const mockLogArray = jest.fn(() => [1, 2, 3, 4, 5]);
+const mockComputeBinCount = jest.fn(() => 100);
 const mockResolveNewMidStack = jest.fn((stack, price, mid, webArr, onPop) => {
     while (stack.length > 0) {
         const nm = stack[stack.length - 1];
@@ -134,6 +135,7 @@ jest.unstable_mockModule('../stock-tool.js', () => ({
     stockProcess: mockStockProcess,
     stockTest: mockStockTest,
     logArray: mockLogArray,
+    computeBinCount: mockComputeBinCount,
     resolveNewMidStack: mockResolveNewMidStack,
     scaleWebArr: mockScaleWebArr,
 }));
