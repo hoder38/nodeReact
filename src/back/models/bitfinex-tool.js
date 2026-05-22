@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT, MAX_NEWMID_STACK } from '../constants.js'
+import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
@@ -1126,7 +1126,19 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             await processResetWeb(0);
             let count = 0;
             let amount = clearP ? 0 : item.amount;
-            if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+            if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] <= item.mid) {
+                if (suggestion.buy > 0 && amount > item.orig * 5 / 8) {
+                    let tmpAmount = amount - item.orig / 2;
+                    while ((tmpAmount - suggestion.buy * item.times) > 0) {
+                        amount -= (suggestion.buy * item.times);
+                        tmpAmount = amount - item.orig / 2;
+                        count++;
+                    }
+                    if (count * item.times > suggestion.bCount) {
+                        suggestion.bCount = count * item.times;
+                    }
+                }
+            } else if (item.newMid.length <= 0) {
                 if (suggestion.buy > 0) {
                     if (suggestion.type === 7) {
                         if (amount > item.orig * 7 / 8) {
@@ -1169,7 +1181,19 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             count = 0;
             amount = item.amount;
-            if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+            if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] >= item.mid) {
+                if (suggestion.sell > 0 && amount < item.orig * 3 / 8) {
+                    let tmpAmount = item.orig / 2 - amount;
+                    while ((tmpAmount - suggestion.sell * item.times * (1 - BITFINEX_FEE)) > 0) {
+                        amount += (suggestion.sell * item.times * (1 - BITFINEX_FEE));
+                        tmpAmount = item.orig / 2 - amount;
+                        count++;
+                    }
+                    if (count * item.times > suggestion.sCount) {
+                        suggestion.sCount = count * item.times;
+                    }
+                }
+            } else if (item.newMid.length <= 0) {
                 if (suggestion.sell > 0) {
                     if (suggestion.type === 9) {
                         if (amount < item.orig / 8) {
@@ -1312,10 +1336,10 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         data: -1,
         user: id,
     });
-    // §6d Emergency Stop: if >50% of items have non-empty newMid, force all to fakeOrder
+    // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
     if (items.length > 0) {
         const shiftedCount = items.filter(it => it.newMid && it.newMid.length > 0).length;
-        if (shiftedCount > items.length / 2) {
+        if (shiftedCount > items.length * EMERGENCY_STOP_THRESHOLD / 100) {
             console.log(`[emergency stop] ${shiftedCount}/${items.length} items have non-empty newMid — forcing fakeOrder`);
             newOrder.forEach(entry => {
                 entry.suggestion.bCount = 0;

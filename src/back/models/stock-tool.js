@@ -1,6 +1,6 @@
 import { ENV_TYPE } from '../../../ver.js'
 import { CHECK_STOCK, USSE_TICKER, TWSE_TICKER } from '../config.js'
-import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK } from '../constants.js'
+import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOTALDB, STOCK_INDEX, NORMAL_DISTRIBUTION, TRADE_FEE, TRADE_INTERVAL, RANGE_INTERVAL, TRADE_TIME, USSE_FEE, USERDB, TWSE_NUM, USSE_NUM, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD } from '../constants.js'
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
@@ -2996,7 +2996,20 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     if (!item.clear) {
                         let count = 0;
                         let amount = item.amount;
-                        if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] <= item.mid) {
+                        if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] <= item.mid) {
+                            if (suggestion.buy > 0 && amount > item.orig * 5 / 8) {
+                                let tmpAmount = amount - item.orig / 2;
+                                while ((tmpAmount - suggestion.buy) > 0) {
+                                    amount -= suggestion.buy;
+                                    tmpAmount = amount - item.orig / 2;
+                                    count++;
+                                }
+                                if (count > suggestion.bCount) {
+                                    suggestion.bCount = count;
+                                }
+                                suggestion.str += `[new buy ${count}] `;
+                            }
+                        } else if (item.newMid.length <= 0) {
                             if (suggestion.buy > 0) {
                                 if (suggestion.type === 7) {
                                     if (amount > item.orig * 7 / 8) {
@@ -3048,7 +3061,20 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         }
                         count = 0;
                         amount = item.amount;
-                        if (item.newMid.length <= 0 || item.newMid[item.newMid.length - 1] >= item.mid) {
+                        if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] >= item.mid) {
+                            if (suggestion.sell > 0 && amount < item.orig * 3 / 8) {
+                                let tmpAmount = item.orig / 2 - amount;
+                                while ((tmpAmount - suggestion.sell * (1 - fee)) > 0) {
+                                    amount += (suggestion.sell * (1 - fee));
+                                    tmpAmount = item.orig / 2 - amount;
+                                    count++;
+                                }
+                                if (count > suggestion.sCount) {
+                                    suggestion.sCount = count;
+                                }
+                                suggestion.str += `[new sell ${count}] `;
+                            }
+                        } else if (item.newMid.length <= 0) {
                             if (suggestion.sell > 0) {
                                 if (suggestion.type === 9) {
                                     if (amount < item.orig / 8) {
@@ -3197,11 +3223,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         }
     }
     return recur_price(0).then(() => {
-        // §6d Emergency Stop: if >50% of items have non-empty newMid, force all to fakeOrder
+        // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
         const activeItems = items.filter(it => it.index !== 0 && it.index);
         if (activeItems.length > 0) {
             const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
-            if (shiftedCount > activeItems.length / 2) {
+            if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
                 console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
                 ['twse', 'usse'].forEach(setype => {
                     Object.keys(suggestionData[setype]).forEach(key => {
@@ -4358,24 +4384,25 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     });
     const sort_arr = [...single_arr].sort((a,b) => a - b);
     //console.log(final_arr);
-    // Extrem fallback chain (§2d): 84th→98th→99th→false
-    const extremPercentiles = [84, 98, 99];
-    let extremIdx = 0;
+    // Extrem fallback chain (§2d): NORMAL_DISTRIBUTION[len-3] → [len-2] → [len-1] → false
+    const ndLen = NORMAL_DISTRIBUTION.length;
+    let extremIdx = ndLen - 3;
     const web = {
         mid: Math.pow(1 + loga.diff, nd[3]) * min,
         up: nd[4] - nd[3],
         down: nd[3] - nd[2],
-        extrem: sort_arr[Math.round(sort_arr.length * extremPercentiles[0] / 100) - 1] / 100,
+        extrem: sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[extremIdx] / 100) - 1] / 100,
         single: loga.diff,
     }
+    let dsCount = 0;
     while ((1 + web.extrem) < (1 + fee) * (1 + fee)) {
         extremIdx++;
-        if (extremIdx >= extremPercentiles.length) {
+        if (extremIdx >= ndLen) {
             return false;
         }
-        const pctIdx = Math.round(sort_arr.length * extremPercentiles[extremIdx] / 100) - 1;
-        web.extrem = sort_arr[Math.min(pctIdx, sort_arr.length - 1)] / 100;
-        web.ds = extremIdx + 1;
+        dsCount++;
+        web.extrem = sort_arr[Math.round(sort_arr.length * NORMAL_DISTRIBUTION[extremIdx] / 100) - 1] / 100;
+        web.ds = dsCount;
     }
     const calWeb = () => {
         const stair = Math.ceil(Math.log(1 + web.extrem) / Math.log(1 + web.single));
