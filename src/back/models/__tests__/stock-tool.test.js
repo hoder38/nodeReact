@@ -2823,6 +2823,76 @@ describe('stockStatus resetWeb processing', () => {
 });
 
 // ===========================================================================
+// stockStatus stack depth limit → half-history recalculation via Redis
+// ===========================================================================
+describe('stockStatus stack depth half-history recalculation', () => {
+    test('newMid reaches MAX_NEWMID_STACK → fetches Redis interval, recalculates web', async () => {
+        // Item with newMid stack at MAX-1 (4 entries), price triggers resetWeb
+        // which pushes to 5, triggering half-history recalculation
+        const item = {
+            _id: 'stock1', index: 'AAPL', setype: 'usse', type: 'Tech',
+            name: 'apple',
+            web: [
+                -1000, -900, 800, 750, 700,
+                -600, 550, 500, 450,
+                -400, 350, 300,
+                -250, 200, 150,
+                -120, 100, 80,
+                -60, 40, 20, -10,
+            ],
+            mid: 600, times: 1, mul: 0, clear: false, ing: 0,
+            str: '', order: null,
+            newMid: [500, 400, 300, 200],
+            profit: 0, amount: 1000000, orig: 1000000, count: 0,
+            previous: { price: 0, time: 0, type: '', tprice: 0, buy: [], sell: [] },
+            wType: 0, price: 0, previousPrice: 0,
+        };
+        let callCount = 0;
+        mockMongo.mockImplementation((op) => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve([item]);
+            if (callCount === 2) return Promise.resolve([item]);
+            return Promise.resolve({});
+        });
+        // Build fake interval data for Redis
+        const fakeIntervalData = {};
+        const yr = new Date().getFullYear();
+        for (let m = 1; m <= 12; m++) {
+            const ms = String(m).padStart(2, '0');
+            if (!fakeIntervalData[yr]) fakeIntervalData[yr] = {};
+            fakeIntervalData[yr][ms] = {
+                raw: Array.from({ length: 20 }, (_, i) => ({
+                    d: i + 1, h: 120 + i, l: 80 - i, v: 1000 + i * 10,
+                })),
+                max: 140, min: 60,
+            };
+        }
+        mockRedis.mockResolvedValue({
+            raw_list: JSON.stringify(fakeIntervalData),
+            adjustments: JSON.stringify([]),
+            ret_obj: 0,
+            etime: Math.round(Date.now() / 1000) + 3600,
+        });
+        // price=2 → below scaled web bottom (10*200/600=3.33) → triggers resetWeb
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 2, regularMarketPreviousClose: 2,
+        });
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        // Redis should have been called to fetch interval data
+        expect(mockRedis).toHaveBeenCalledWith('hgetall', 'interval: usseAAPL');
+        // newMid should be cleared after recalculation
+        const updateCalls = mockMongo.mock.calls.filter(c => c[0] === 'update');
+        expect(updateCalls.length).toBeGreaterThan(0);
+        const lastUpdate = updateCalls[updateCalls.length - 1];
+        expect(lastUpdate[3].$set.newMid).toEqual([]);
+    });
+});
+
+// ===========================================================================
 // stockStatus — buy/sell count computation branches (lines 2862-2965)
 // ===========================================================================
 describe('stockStatus buy/sell count computation', () => {
@@ -5898,7 +5968,59 @@ describe('usseTicker penny-stock sell', () => {
 });
 
 // ===========================================================================
-// stockTest main loop null h/l → data miss (lines 3891-3893)
+// stockProcess fee-aware dead zone (§3c)
+// ===========================================================================
+describe('stockProcess fee-aware dead zone', () => {
+    const PA = [-1000, -900, 800, 750, 700, -600, 550, 500, 450, -400, 350, 300, -250, 200, 150, -120, 100, 80, -60, 40, 20, -10];
+    const fee = 0.006;
+    const farFuture = Math.round(new Date().getTime() / 1000) + 100000;
+
+    test('buy suppressed when buy price within 3*fee of previous trade price', () => {
+        // Previous buy at 100, new buy suggestion close to 100
+        // deadZone = 100 * 0.006 * 3 = 1.8
+        const result = stockProcess(
+            99, PA, 1,
+            { price: 100, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] },
+            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
+        );
+        if (result.buy > 0 && Math.abs(result.buy - 100) <= 100 * fee * 3) {
+            expect(result.bCount).toBe(0);
+            expect(result.str).toContain('[dead zone]');
+        }
+    });
+
+    test('sell suppressed when sell price within 3*fee of previous trade price', () => {
+        const result = stockProcess(
+            101, PA, 1,
+            { price: 100, time: farFuture - 200000, type: 'sell', tprice: 0, buy: [], sell: [] },
+            1000000, 500000, 5, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
+        );
+        if (result.sell > 0 && Math.abs(result.sell - 100) <= 100 * fee * 3) {
+            expect(result.sCount).toBe(0);
+            expect(result.str).toContain('[dead zone]');
+        }
+    });
+
+    test('buy NOT suppressed when buy price far from previous trade price', () => {
+        // Previous buy at 1000, new buy at ~60 — well outside dead zone
+        const result = stockProcess(
+            50, PA, 1,
+            { price: 1000, time: farFuture - 200000, type: 'buy', tprice: 0, buy: [], sell: [] },
+            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee, 86400, 86400, farFuture
+        );
+        expect(result.str).not.toContain('[dead zone]');
+    });
+
+    test('no previous trade → dead zone not applied', () => {
+        const result = stockProcess(
+            100, PA, 1,
+            { buy: [], sell: [] },
+            1000000, 500000, 0, 0, 0, 1000, 0, 0, fee
+        );
+        expect(result.str).not.toContain('[dead zone]');
+    });
+});
+
 // ===========================================================================
 describe('stockTest main-loop data miss', () => {
     test('null h in main loop → returns "data miss" (lines 3891-3893)', () => {

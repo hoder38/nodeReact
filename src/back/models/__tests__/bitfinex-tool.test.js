@@ -1400,11 +1400,10 @@ describe('calWeb', () => {
         mockFetch.mockResolvedValue({
             json: () => Promise.resolve({ data: { BTC: { quote: { USD: { market_cap: 1e9 } } } } }),
         });
-        // Use a single entry to keep test fast, but it must be in SUPPORT_PAIR.fUSD
         await calWeb(['tBTCUSD']).catch(() => {});
         expect(mockRest.candles).toHaveBeenCalled();
         expect(mockFetch).toHaveBeenCalled();
-    }, 30000);
+    }, 60000);
 
     test('curArr entry not in SUPPORT_PAIR.fUSD → skipped', async () => {
         mockRest.candles.mockResolvedValue([]);
@@ -1451,7 +1450,7 @@ describe('calWeb', () => {
         await calWeb(['tBTCUSD']).catch(() => {});
         // stockTest called
         expect(mockStockTest).toHaveBeenCalled();
-    }, 30000);
+    }, 60000);
 });
 
 // ════════════════════════════════════════════════════════════

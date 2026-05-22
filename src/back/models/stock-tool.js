@@ -2926,32 +2926,76 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         console.log(nm);
                     });
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
-                    let recalcCount = 0;
-                    while(suggestion.resetWeb) {
+                    const processResetWeb = (recalcCount) => {
+                        if (!suggestion.resetWeb) return Promise.resolve();
                         change_previous = true;
                         item.previous.time = 0;
                         item.previous.price = 0;
                         item.previous.type = '';
                         item.previous.tprice = 0;
                         item.newMid.push(suggestion.newMid);
-                        // Stack depth limit: adopt last shift as new base mid
+                        // Stack depth limit: recalculate from half history
                         if (item.newMid.length >= MAX_NEWMID_STACK) {
                             recalcCount++;
                             if (recalcCount > 3) {
                                 item.newMid = [];
                                 newArr = item.web;
-                                break;
+                                return Promise.resolve();
                             }
-                            const ratio = item.newMid[item.newMid.length - 1] / item.mid;
-                            item.mid = item.newMid[item.newMid.length - 1];
-                            item.web = item.web.map(v => v * ratio);
-                            item.newMid = [];
-                            newArr = item.web;
+                            return Redis('hgetall', `interval: ${items[index].setype}${items[index].index}`).then(cached => {
+                                if (cached && cached.raw_list) {
+                                    const rawData = JSON.parse(cached.raw_list);
+                                    const adjList = cached.adjustments ? JSON.parse(cached.adjustments) : [];
+                                    const { raw_arr, max, min } = applyAdjustments(rawData, adjList);
+                                    if (raw_arr.length > 0 && max > 0 && min > 0) {
+                                        const loga = logArray(max, min);
+                                        let fraction = 2;
+                                        let recalcWeb = null;
+                                        while (fraction <= 16) {
+                                            const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
+                                            recalcWeb = calStair(raw_arr, loga, min, 0, fee, halfLen);
+                                            if (recalcWeb) break;
+                                            fraction *= 2;
+                                        }
+                                        if (recalcWeb) {
+                                            item.mid = recalcWeb.mid;
+                                            item.web = recalcWeb.arr;
+                                            item.newMid = [];
+                                            newArr = item.web;
+                                        } else {
+                                            // Fallback: ratio-based
+                                            const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                                            item.mid = item.newMid[item.newMid.length - 1];
+                                            item.web = item.web.map(v => v * ratio);
+                                            item.newMid = [];
+                                            newArr = item.web;
+                                        }
+                                    } else {
+                                        // Fallback: ratio-based
+                                        const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                                        item.mid = item.newMid[item.newMid.length - 1];
+                                        item.web = item.web.map(v => v * ratio);
+                                        item.newMid = [];
+                                        newArr = item.web;
+                                    }
+                                } else {
+                                    // No cached data: ratio-based fallback
+                                    const ratio = item.newMid[item.newMid.length - 1] / item.mid;
+                                    item.mid = item.newMid[item.newMid.length - 1];
+                                    item.web = item.web.map(v => v * ratio);
+                                    item.newMid = [];
+                                    newArr = item.web;
+                                }
+                                suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                                return processResetWeb(recalcCount);
+                            });
                         } else {
                             newArr = scaleWebArr(item.newMid, item.mid, item.web);
                         }
                         suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
-                    }
+                        return processResetWeb(recalcCount);
+                    };
+                    return processResetWeb(0).then(() => {
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
                     if (!item.clear) {
@@ -3151,6 +3195,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     }, change_previous ? {
                         previous: item.previous,
                     } : {})});
+                    });
                 });
             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), _statusDelay)))
             //}).then(() => recur_price(index + 1));
@@ -3825,6 +3870,18 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
     } else {
         sCount = 0;
+    }
+    // Fee-aware dead zone (§3c): suppress signals too close to previous trade price
+    if (previous.time && previous.price) {
+        const deadZone = previous.price * fee * 3;
+        if (buy > 0 && bCount > 0 && Math.abs(buy - previous.price) <= deadZone) {
+            bCount = 0;
+            str += '[dead zone] ';
+        }
+        if (sell > 0 && sCount > 0 && Math.abs(sell - previous.price) <= deadZone) {
+            sCount = 0;
+            str += '[dead zone] ';
+        }
     }
     return {
         price,
