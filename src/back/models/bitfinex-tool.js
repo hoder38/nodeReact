@@ -38,7 +38,6 @@ let credit = {};
 const closeCredit = {};
 let ledger = {};
 let position = {};
-let creditStats = {};
 
 // ── Test seams (underscore-prefixed: not part of public API) ──
 // These exist solely to enable unit testing without networked Bitfinex calls.
@@ -67,14 +66,13 @@ export const _resetState = () => {
     Object.keys(closeCredit).forEach(k => delete closeCredit[k]);
     ledger = {};
     position = {};
-    creditStats = {};
 };
 export const _getState = () => ({
     finalRate, maxRange, currentRate, priceData,
     userWs, userOk, updateTime, extremRate,
     available, margin, offer, order,
     deleteOffer, deleteOrder, fakeOrder,
-    credit, closeCredit, ledger, position, creditStats,
+    credit, closeCredit, ledger, position,
 });
 export const _setState = (partial) => {
     if (partial.priceData) priceData = { ...priceData, ...partial.priceData };
@@ -98,7 +96,6 @@ export const _setState = (partial) => {
     if (partial.fakeOrder) {
         Object.keys(partial.fakeOrder).forEach(k => { fakeOrder[k] = partial.fakeOrder[k]; });
     }
-    if (partial.creditStats) creditStats = { ...creditStats, ...partial.creditStats };
 };
 
 //wallet history
@@ -491,12 +488,6 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
     }});
 };
 
-// getCreditStats: returns credit duration analytics for a user (or all users)
-export const getCreditStats = (id) => {
-    if (id) return creditStats[id] || {};
-    return creditStats;
-};
-
 // checkRisk: pure helper — returns true if `risk` matches any entry's `.risk` in any of the passed arrays.
 export const checkRisk = (risk, ...arr) => {
     if (risk < 1) {
@@ -663,17 +654,6 @@ export const makeOnFundingCreditNew = (id) => fc => {
         status: fc.status,
         side: fc.side,
     });
-    // Improvement 6: track credit fill stats per symbol/period
-    if (!creditStats[id]) creditStats[id] = {};
-    if (!creditStats[id][fc.symbol]) creditStats[id][fc.symbol] = {};
-    const p = fc.period;
-    if (p > 0) {
-        const entry = creditStats[id][fc.symbol][p] || { count: 0, totalRate: 0, avgRate: 0 };
-        entry.count++;
-        entry.totalRate += fc.rate * BITFINEX_EXP;
-        entry.avgRate = entry.totalRate / entry.count;
-        creditStats[id][fc.symbol][p] = entry;
-    }
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
@@ -682,17 +662,6 @@ export const makeOnFundingCreditClose = (id) => fc => {
     if (credit[id][fc.symbol]) {
         for (let j = 0; j < credit[id][fc.symbol].length; j++) {
             if (credit[id][fc.symbol][j].id === fc.id) {
-                // Improvement 6: track actual duration on close
-                const c = credit[id][fc.symbol][j];
-                const actualDays = Math.max(1, Math.round((Math.round(new Date().getTime() / 1000) - c.time) / 86400));
-                if (creditStats[id] && creditStats[id][fc.symbol] && c.period > 0) {
-                    const entry = creditStats[id][fc.symbol][c.period];
-                    if (entry) {
-                        entry.totalActualDays = (entry.totalActualDays || 0) + actualDays;
-                        entry.closedCount = (entry.closedCount || 0) + 1;
-                        entry.avgActualDays = entry.totalActualDays / entry.closedCount;
-                    }
-                }
                 credit[id][fc.symbol].splice(j, 1);
                 break;
             }
@@ -942,8 +911,8 @@ export const initialBookFn = (id, userRest) => {
                         rate: v.rate,
                         period: v.period,
                         status: v.status,
-                        // L1: clamp to 1 only when OFFER_MAX > RISK_MAX to avoid finalRate[10] undefined
-                        risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : (OFFER_MAX > RISK_MAX ? 1 : 0),
+                        // L1: floor at OFFER_MAX - RISK_MAX when OFFER_MAX > RISK_MAX
+                        risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : (OFFER_MAX > RISK_MAX ? OFFER_MAX - RISK_MAX : 0),
                     });
                 }
             });
