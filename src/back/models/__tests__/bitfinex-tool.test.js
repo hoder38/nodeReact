@@ -212,7 +212,7 @@ let makeOnFundingCreditUpdate, makeOnFundingCreditNew, makeOnFundingCreditClose;
 let makeOnPositionUpdate, makeOnPositionNew, makeOnPositionClose;
 let makeOnOrderUpdate, makeOnOrderNew, makeOnOrderClose;
 let _setSystemBfx, _getSystemRest;
-let _recur_status_fn, _recur_NewOrder_fn;
+let _recur_status_fn, _recur_NewOrder_fn, getCreditStats;
 
 beforeAll(async () => {
     const mod = await import('../bitfinex-tool.js');
@@ -245,6 +245,7 @@ beforeAll(async () => {
     _getSystemRest = mod._getSystemRest;
     _recur_status_fn = mod._recur_status;
     _recur_NewOrder_fn = mod._recur_NewOrder;
+    getCreditStats = mod.getCreditStats;
 });
 
 // Top-level: swallow late async rejections from setWsOffer's fire-and-forget chains
@@ -5073,6 +5074,29 @@ describe('Phase A — initialBookFn', () => {
         await initialBookFn(id, mockRest);
         expect(_getState().margin[id].fUSD.avail).toBe(999);
     });
+
+    test('L1: risk descends from RISK_MAX; excess offers get risk=0 when OFFER_MAX <= RISK_MAX', async () => {
+        const id = 'ibL1a';
+        seedFor(id);
+        // Create RISK_MAX + 2 offers → last 2 should get risk=0 (OFFER_MAX=RISK_MAX=10)
+        const offers = Array.from({ length: 12 }, (_, i) => ({
+            symbol: 'fUSD', id: 100 + i, mtsCreate: 1000, amount: 10,
+            rate: 0.001, period: 2, status: 'A',
+        }));
+        mockRest.wallets.mockResolvedValueOnce([]);
+        mockRest.fundingOffers.mockResolvedValueOnce(offers);
+        mockRest.fundingCredits.mockResolvedValueOnce([]);
+        mockRest.activeOrders.mockResolvedValueOnce([]);
+        mockRest.positions.mockResolvedValueOnce([]);
+        await initialBookFn(id, mockRest);
+        const s = _getState();
+        const risks = s.offer[id].fUSD.map(o => o.risk);
+        // First 10: 10,9,...,1. Then risk=0 (since OFFER_MAX <= RISK_MAX)
+        expect(risks[0]).toBe(10);
+        expect(risks[9]).toBe(1);
+        expect(risks[10]).toBe(0);
+        expect(risks[11]).toBe(0);
+    });
 });
 
 
@@ -6652,5 +6676,68 @@ describe('_recur_status — emergency stop (§6d)', () => {
         const result = await runWithFlush(() => _recur_status_fn(ctx));
         const anyReal = result.some(e => e.suggestion.bCount > 0 || e.suggestion.sCount > 0);
         expect(anyReal).toBe(true);
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+// Improvement 6 — credit duration analytics
+// ════════════════════════════════════════════════════════════
+describe('Improvement 6 — creditStats', () => {
+    test('makeOnFundingCreditNew records fill stats per symbol/period', () => {
+        const id = 'CS1';
+        _setState({
+            credit: { [id]: {} },
+            updateTime: { [id]: { credit: 0 } },
+        });
+        const handler = makeOnFundingCreditNew(id);
+        handler({ symbol: 'fUSD', id: 1, mtsOpening: Date.now(), amount: 100, rate: 0.0003, period: 2, status: 'A', side: 1 });
+        handler({ symbol: 'fUSD', id: 2, mtsOpening: Date.now(), amount: 200, rate: 0.0005, period: 2, status: 'A', side: 1 });
+        handler({ symbol: 'fUSD', id: 3, mtsOpening: Date.now(), amount: 150, rate: 0.0004, period: 30, status: 'A', side: 1 });
+
+        const stats = getCreditStats(id);
+        expect(stats.fUSD).toBeDefined();
+        expect(stats.fUSD[2].count).toBe(2);
+        expect(stats.fUSD[2].avgRate).toBeGreaterThan(0);
+        expect(stats.fUSD[30].count).toBe(1);
+    });
+
+    test('makeOnFundingCreditClose tracks actual duration', () => {
+        const id = 'CS2';
+        const openTime = Math.round(Date.now() / 1000) - 86400 * 5; // 5 days ago
+        _setState({
+            credit: { [id]: { fUSD: [
+                { id: 10, time: openTime, amount: 100, rate: 0.0003, period: 30, status: 'A', side: 1 },
+            ] } },
+            creditStats: { [id]: { fUSD: { 30: { count: 1, totalRate: 30000, avgRate: 30000 } } } },
+            updateTime: { [id]: { credit: 0 } },
+        });
+        const handler = makeOnFundingCreditClose(id);
+        handler({ symbol: 'fUSD', id: 10, status: 'CLOSED' });
+
+        const stats = getCreditStats(id);
+        expect(stats.fUSD[30].closedCount).toBe(1);
+        expect(stats.fUSD[30].avgActualDays).toBeGreaterThanOrEqual(4);
+        expect(stats.fUSD[30].avgActualDays).toBeLessThanOrEqual(6);
+    });
+
+    test('getCreditStats returns empty for unknown user', () => {
+        expect(getCreditStats('nobody')).toEqual({});
+    });
+
+    test('getCreditStats with no id returns all users', () => {
+        const all = getCreditStats();
+        expect(typeof all).toBe('object');
+    });
+
+    test('period=0 credit skips stats tracking', () => {
+        const id = 'CS3';
+        _setState({
+            credit: { [id]: {} },
+            updateTime: { [id]: { credit: 0 } },
+        });
+        const handler = makeOnFundingCreditNew(id);
+        handler({ symbol: 'fUSD', id: 99, mtsOpening: Date.now(), amount: 100, rate: 0.0003, period: 0, status: 'A', side: 1 });
+        const stats = getCreditStats(id);
+        expect(stats.fUSD?.[0]).toBeUndefined();
     });
 });

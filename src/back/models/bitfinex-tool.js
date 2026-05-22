@@ -1,5 +1,5 @@
 import { BITFINEX_KEY, BITFINEX_SECRET } from '../../../ver.js'
-import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD } from '../constants.js'
+import { BITFINEX_EXP, BITFINEX_MIN, DISTRIBUTION, OFFER_MAX, RISK_MAX, SUPPORT_COIN, USERDB, BITNIFEX_PARENT, FUSD_SYM, FUSDT_SYM, FETH_SYM, FBTC_SYM, FLTC_SYM, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FAVAX_SYM, FTRX_SYM, FUNI_SYM, EXTREM_RATE_NUMBER, EXTREM_DURATION, UPDATE_BOOK, UPDATE_ORDER, UPDATE_FILL_ORDER, SUPPORT_PAIR, MINIMAL_OFFER, SUPPORT_PRICE, MAX_RATE, BITFINEX_FEE, BITFINEX_INTERVAL, RANGE_BITFINEX_INTERVAL, TOTALDB, ORDER_INTERVAL, SUPPORT_LEVERAGE, RATE_INTERVAL, API_WAIT, MAX_NEWMID_STACK, EMERGENCY_STOP_THRESHOLD, MERGE_RATE_TOLERANCE } from '../constants.js'
 import BFX from 'bitfinex-api-node'
 import Fetch from 'node-fetch'
 import bfxApiNodeModels from 'bfx-api-node-models'
@@ -38,6 +38,7 @@ let credit = {};
 const closeCredit = {};
 let ledger = {};
 let position = {};
+let creditStats = {};
 
 // ── Test seams (underscore-prefixed: not part of public API) ──
 // These exist solely to enable unit testing without networked Bitfinex calls.
@@ -66,13 +67,14 @@ export const _resetState = () => {
     Object.keys(closeCredit).forEach(k => delete closeCredit[k]);
     ledger = {};
     position = {};
+    creditStats = {};
 };
 export const _getState = () => ({
     finalRate, maxRange, currentRate, priceData,
     userWs, userOk, updateTime, extremRate,
     available, margin, offer, order,
     deleteOffer, deleteOrder, fakeOrder,
-    credit, closeCredit, ledger, position,
+    credit, closeCredit, ledger, position, creditStats,
 });
 export const _setState = (partial) => {
     if (partial.priceData) priceData = { ...priceData, ...partial.priceData };
@@ -96,6 +98,7 @@ export const _setState = (partial) => {
     if (partial.fakeOrder) {
         Object.keys(partial.fakeOrder).forEach(k => { fakeOrder[k] = partial.fakeOrder[k]; });
     }
+    if (partial.creditStats) creditStats = { ...creditStats, ...partial.creditStats };
 };
 
 //wallet history
@@ -488,6 +491,12 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
     }});
 };
 
+// getCreditStats: returns credit duration analytics for a user (or all users)
+export const getCreditStats = (id) => {
+    if (id) return creditStats[id] || {};
+    return creditStats;
+};
+
 // checkRisk: pure helper — returns true if `risk` matches any entry's `.risk` in any of the passed arrays.
 export const checkRisk = (risk, ...arr) => {
     if (risk < 1) {
@@ -654,6 +663,17 @@ export const makeOnFundingCreditNew = (id) => fc => {
         status: fc.status,
         side: fc.side,
     });
+    // Improvement 6: track credit fill stats per symbol/period
+    if (!creditStats[id]) creditStats[id] = {};
+    if (!creditStats[id][fc.symbol]) creditStats[id][fc.symbol] = {};
+    const p = fc.period;
+    if (p > 0) {
+        const entry = creditStats[id][fc.symbol][p] || { count: 0, totalRate: 0, avgRate: 0 };
+        entry.count++;
+        entry.totalRate += fc.rate * BITFINEX_EXP;
+        entry.avgRate = entry.totalRate / entry.count;
+        creditStats[id][fc.symbol][p] = entry;
+    }
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
@@ -662,6 +682,17 @@ export const makeOnFundingCreditClose = (id) => fc => {
     if (credit[id][fc.symbol]) {
         for (let j = 0; j < credit[id][fc.symbol].length; j++) {
             if (credit[id][fc.symbol][j].id === fc.id) {
+                // Improvement 6: track actual duration on close
+                const c = credit[id][fc.symbol][j];
+                const actualDays = Math.max(1, Math.round((Math.round(new Date().getTime() / 1000) - c.time) / 86400));
+                if (creditStats[id] && creditStats[id][fc.symbol] && c.period > 0) {
+                    const entry = creditStats[id][fc.symbol][c.period];
+                    if (entry) {
+                        entry.totalActualDays = (entry.totalActualDays || 0) + actualDays;
+                        entry.closedCount = (entry.closedCount || 0) + 1;
+                        entry.avgActualDays = entry.totalActualDays / entry.closedCount;
+                    }
+                }
                 credit[id][fc.symbol].splice(j, 1);
                 break;
             }
@@ -911,7 +942,8 @@ export const initialBookFn = (id, userRest) => {
                         rate: v.rate,
                         period: v.period,
                         status: v.status,
-                        risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : 0,
+                        // L1: clamp to 1 only when OFFER_MAX > RISK_MAX to avoid finalRate[10] undefined
+                        risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : (OFFER_MAX > RISK_MAX ? 1 : 0),
                     });
                 }
             });
@@ -1958,7 +1990,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
             const mergeOffer = () => {
                 const checkDelete = (rate, amount) => {
                     for (let i = 0; i < needDelete.length; i++) {
-                        if (Math.ceil(rate / BITFINEX_MIN) === Math.ceil(needDelete[i].rate / BITFINEX_MIN) && amount === needDelete[i].amount) {
+                        // Improvement 5: tolerance-based match instead of exact bucket
+                        const rateDiff = Math.abs(rate - needDelete[i].rate);
+                        if (rateDiff <= BITFINEX_MIN * MERGE_RATE_TOLERANCE && amount === needDelete[i].amount) {
                             return i;
                         }
                     }

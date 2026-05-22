@@ -805,6 +805,7 @@ export const EMERGENCY_STOP_THRESHOLD = 50;
 export const MIN_BINS = 25;
 export const MAX_BINS = 400;
 export const VOLUME_DECAY_LAMBDA = 0.02;
+export const MERGE_RATE_TOLERANCE = 2;
 export const API_WAIT = 5;
 //export const MINIMAL_DS_RATE = 0.05;
 export const SUPPORT_COIN = [FUSD_SYM, FUSDT_SYM, FBTC_SYM, FETH_SYM, FLTC_SYM/*, FOMG_SYM*/, FDOT_SYM, FSOL_SYM, FADA_SYM, FXRP_SYM, FTRX_SYM, FAVAX_SYM, FUNI_SYM];
