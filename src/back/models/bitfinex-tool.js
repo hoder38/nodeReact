@@ -1148,6 +1148,16 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 return processResetWeb(recalcCount);
             };
             await processResetWeb(0);
+            // §9a Kelly Criterion: boost trade count when kelly > 50%
+            if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
+                const p = item.metrics.winRate / 100;
+                const b = item.metrics.avgWin / item.metrics.avgLoss;
+                const kelly = p - (1 - p) / b;
+                if (kelly > 0.5) {
+                    if (suggestion.buy > 0) suggestion.bCount++;
+                    if (suggestion.sell > 0) suggestion.sCount++;
+                }
+            }
             let count = 0;
             let amount = clearP ? 0 : item.amount;
             if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] <= item.mid) {
@@ -1256,16 +1266,6 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                             }
                         }
                     }
-                }
-            }
-            // §9a Kelly Criterion: boost trade count when kelly > 50%
-            if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
-                const p = item.metrics.winRate / 100;
-                const b = item.metrics.avgWin / item.metrics.avgLoss;
-                const kelly = p - (1 - p) / b;
-                if (kelly > 0.5) {
-                    if (suggestion.buy > 0) suggestion.bCount++;
-                    if (suggestion.sell > 0) suggestion.sCount++;
                 }
             }
             console.log(suggestion);

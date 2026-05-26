@@ -3005,6 +3005,16 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         return processResetWeb(recalcCount);
                     };
                     return processResetWeb(0).then(() => {
+                    // §9a Kelly Criterion: boost trade count when kelly > 50%
+                    if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
+                        const p = item.metrics.winRate / 100;
+                        const b = item.metrics.avgWin / item.metrics.avgLoss;
+                        const kelly = p - (1 - p) / b;
+                        if (kelly > 0.5) {
+                            if (suggestion.buy > 0) suggestion.bCount++;
+                            if (suggestion.sell > 0) suggestion.sCount++;
+                        }
+                    }
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
                     if (!item.clear) {
@@ -3137,16 +3147,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                     }
                                 }
                             }
-                        }
-                    }
-                    // §9a Kelly Criterion: boost trade count when kelly > 50%
-                    if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
-                        const p = item.metrics.winRate / 100;
-                        const b = item.metrics.avgWin / item.metrics.avgLoss;
-                        const kelly = p - (1 - p) / b;
-                        if (kelly > 0.5) {
-                            if (suggestion.buy > 0) suggestion.bCount++;
-                            if (suggestion.sell > 0) suggestion.sCount++;
                         }
                     }
                     console.log(suggestion.str);
