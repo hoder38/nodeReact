@@ -959,12 +959,16 @@ export default {
                                         return Promise.resolve();
                                     } else {
                                         const newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
+                                        // §9b Volatility-normalized position size
+                                        const volValue = Math.max(0, 1 - (web.extrem || 0) / 0.4);
+                                        const volMul = item[index].mul ? item[index].mul + volValue : 1 + volValue;
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
                                             extrem: web.extrem,
+                                            mul: volMul,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -1194,12 +1198,16 @@ export default {
                                         return Promise.resolve();
                                     } else {
                                         const newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
+                                        // §9b Volatility-normalized position size
+                                        const volValue = Math.max(0, 1 - (web.extrem || 0) / 0.4);
+                                        const volMul = item[index].mul ? item[index].mul + volValue : 1 + volValue;
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
                                             extrem: web.extrem,
+                                            mul: volMul,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }

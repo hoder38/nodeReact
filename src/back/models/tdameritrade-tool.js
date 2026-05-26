@@ -624,16 +624,17 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
             }
             return recur_status(0).then(() => {
-                // §6c Conviction-weighted sort: 50% cash amount + 50% conviction (1/extrem)
+                // §6c Conviction-weighted sort: 50% invested market value + 50% conviction (1/extrem)
                 if (newOrder.length > 1) {
-                    const maxAmount = Math.max(...newOrder.map(e => e.item.amount)) || 1;
+                    const marketVal = e => Math.abs(e.item.count || 0) * (e.suggestion.price || 0);
+                    const maxMarketVal = Math.max(...newOrder.map(marketVal)) || 1;
                     const maxConviction = Math.max(...newOrder.map(e => e.item.extrem ? 1 / e.item.extrem : 0)) || 1;
                     newOrder.sort((a, b) => {
-                        const aAmt = a.item.amount / maxAmount;
-                        const bAmt = b.item.amount / maxAmount;
+                        const aMV = marketVal(a) / maxMarketVal;
+                        const bMV = marketVal(b) / maxMarketVal;
                         const aConv = (a.item.extrem ? 1 / a.item.extrem : 0) / maxConviction;
                         const bConv = (b.item.extrem ? 1 / b.item.extrem : 0) / maxConviction;
-                        return (0.5 * bAmt + 0.5 * bConv) - (0.5 * aAmt + 0.5 * aConv);
+                        return (0.5 * bMV + 0.5 * bConv) - (0.5 * aMV + 0.5 * aConv);
                     });
                 }
                 for (let i = 0; i < newOrder.length; i++) {

@@ -1903,7 +1903,7 @@ describe('shioaji-tool.js', () => {
       expect(submitCmd).toBeDefined();
     });
 
-    test('newOrder sorted by amount DESC — higher amount first', async () => {
+    test('newOrder sorted by market value DESC — higher count*price first', async () => {
       setupPhase2(2);
       const origDate = global.Date;
       const mockDate = class extends origDate {
@@ -1919,8 +1919,8 @@ describe('shioaji-tool.js', () => {
       mockMongo.mockImplementation((method) => {
         if (method === 'find') {
           return Promise.resolve([
-            { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3 },
-            { _id: 'id2', index: '2317', setype: 'twse', ing: 1, amount: 10 },
+            { _id: 'id1', index: '2330', setype: 'twse', ing: 1, amount: 3, count: 1 },
+            { _id: 'id2', index: '2317', setype: 'twse', ing: 1, amount: 10, count: 2 },
           ]);
         }
         return Promise.resolve();
@@ -1935,7 +1935,7 @@ describe('shioaji-tool.js', () => {
       // Submit should be called
       const submitCmd = mockExec.mock.calls.find(c => c[0]?.includes?.('submit'));
       expect(submitCmd).toBeDefined();
-      // 2317 (amount=10) should come before 2330 (amount=3) in the command
+      // 2317 (count=2 * price=100 = 200) should come before 2330 (count=1 * price=90 = 90)
       const cmdStr = submitCmd[0];
       const pos2317 = cmdStr.indexOf('2317');
       const pos2330 = cmdStr.indexOf('2330');

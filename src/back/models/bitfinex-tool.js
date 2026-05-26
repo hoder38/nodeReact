@@ -382,7 +382,7 @@ export const calWeb = curArr => {
                 items.forEach(i => {
                     const sym = i.name.match(/^([\da-zA-Z]+)\:?USD$/);
                     if (sym && data.data[sym[1]]) {
-                        mcList.push({_id: i._id, mc: data.data[sym[1]].quote.USD.market_cap});
+                        mcList.push({_id: i._id, mc: data.data[sym[1]].quote.USD.market_cap, extrem: i.extrem});
                     }
                 });
                 mcList.sort((a, b) => {
@@ -402,7 +402,13 @@ export const calWeb = curArr => {
                     }
                 }
                 console.log(mcList);
-                const updmul = mIndex => (mIndex < mcList.length) ? Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: mcList[mIndex].mul ? mcList[mIndex].mul : 0}}).then(mitems => {
+                // §9b Volatility-normalized position size
+                const updmul = mIndex => (mIndex < mcList.length) ? (() => {
+                    const volValue = Math.max(0, 1 - (mcList[mIndex].extrem || 0) / 0.4);
+                    const baseMul = mcList[mIndex].mul || 0;
+                    const finalMul = baseMul ? baseMul + volValue : 1 + volValue;
+                    return Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: finalMul}});
+                })().then(mitems => {
                     console.log(mitems);
                     return updmul(mIndex + 1);
                 }) : Promise.resolve();
@@ -1344,16 +1350,17 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         data: -1,
         user: id,
     });
-    // §6c Conviction-weighted sort: 50% invested amount + 50% conviction (1/extrem)
+    // §6c Conviction-weighted sort: 50% invested market value + 50% conviction (1/extrem)
     if (newOrder.length > 1) {
-        const maxInvested = Math.max(...newOrder.map(e => e.item.orig - e.item.amount)) || 1;
+        const marketVal = e => Math.abs(e.item.count || 0) * (priceData[e.item.index] ? +priceData[e.item.index].lastPrice : 0);
+        const maxMarketVal = Math.max(...newOrder.map(marketVal)) || 1;
         const maxConviction = Math.max(...newOrder.map(e => e.item.extrem ? 1 / e.item.extrem : 0)) || 1;
         newOrder.sort((a, b) => {
-            const aInvested = (a.item.orig - a.item.amount) / maxInvested;
-            const bInvested = (b.item.orig - b.item.amount) / maxInvested;
+            const aMV = marketVal(a) / maxMarketVal;
+            const bMV = marketVal(b) / maxMarketVal;
             const aConviction = (a.item.extrem ? 1 / a.item.extrem : 0) / maxConviction;
             const bConviction = (b.item.extrem ? 1 / b.item.extrem : 0) / maxConviction;
-            return (0.5 * bInvested + 0.5 * bConviction) - (0.5 * aInvested + 0.5 * aConviction);
+            return (0.5 * bMV + 0.5 * bConviction) - (0.5 * aMV + 0.5 * aConviction);
         });
     }
     // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
@@ -2810,6 +2817,8 @@ export default {
                                         return handleError(new HoError(`miss ${item[index].type} web`));
                                     }
                                     const maxAmount = webitem[0].mid * (webitem[0].web.length - 1) / 3 * 2;
+                                    // §9b Volatility-normalized position size
+                                    const volValue = Math.max(0, 1 - (webitem[0].extrem || 0) / 0.4);
                                     const r = await Mongo('insert', TOTALDB, {
                                         owner: id,
                                         index: item[index].type,
@@ -2820,6 +2829,7 @@ export default {
                                         wType: webitem[0].wType,
                                         mid: webitem[0].mid,
                                         extrem: webitem[0].extrem,
+                                        mul: 1 + volValue,
                                         times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
                                         //amount: item[index].amount,
                                         orig: item[index].amount,
