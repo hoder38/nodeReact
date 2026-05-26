@@ -2,7 +2,7 @@
 
 > **Project**: ANoMoPi (anomopi.com)
 > **Stack**: Node.js 14 · Express · React 17 · Redux · MongoDB 4.4 · Redis 5 · Nginx · Docker Compose
-> **Generated**: 2026-05-01
+> **Generated**: 2026-05-26
 
 ---
 
@@ -196,6 +196,9 @@
 | `tag-tool.js` | Tag CRUD, bookmark management, related tags | — |
 | `api-tool.js` | General API utilities | — |
 
+- **§6c Conviction-weighted `newOrder` sorting (2026-05-26)**: `bitfinex-tool.js`, `shioaji-tool.js`, and `tdameritrade-tool.js` now sort `newOrder` by a 50/50 blend of normalized invested market value (`|count| × price`) and conviction (`1 / extrem`), so lower-`extrem` / more stable positions are submitted first. This replaces the older invested-amount insertion sort.
+- **Sizing note (2026-05-26)**: `stock-tool.js` and `bitfinex-tool.js` now consume TOTALDB `metrics` / `extrem` data for Kelly-based trade-count boosts and volatility-aware position sizing.
+
 ### 3.5 Utilities
 
 | Utility | Purpose |
@@ -203,7 +206,7 @@
 | `utility.js` | Validation (`isValidString`), auth middleware (`checkLogin`, `checkAdmin`), error handling (`HoError`), data formatters, file path helpers, crypto utilities |
 | `mime.js` | File type detection (23+ media, 10+ archive, 8+ doc, 6+ subtitle types), MIME mapping, extension utilities |
 | `sendWs.js` | WebSocket broadcast, TCP inter-process communication, Discord forwarding |
-| `twse.py` | Taiwan stock exchange Python helpers |
+| `twse.py` | Taiwan stock exchange Python helpers; Shioaji enum values are normalized with `str()` before comparisons/concatenation |
 | `myuzip.py` | Python ZIP/archive utilities |
 
 ---
@@ -322,7 +325,7 @@ Key API helper functions:
 | **Google Drive** | `googleapis` | Auto-upload, doc download, DB backup | GOOGLE_ID, GOOGLE_SECRET, GOOGLE_REDIRECT |
 | **Google Sheets** | `googleapis` | Data import/export | Same as above |
 | **Bitfinex** | `bitfinex-api-node` (patched) | Crypto trading, lending, rate calc | BITFINEX_KEY, BITFINEX_SECRET |
-| **Shioaji** | Python bridge | Taiwan stock real-time trading | SHIOAJI_ID, SHIOAJI_PW, SHIOAJI_APIKEY |
+| **Shioaji** | Python bridge (`twse.py`) | Taiwan stock real-time trading | SHIOAJI_ID, SHIOAJI_PW, SHIOAJI_APIKEY |
 | **TD Ameritrade** | Custom REST client | US stock trading & positions | TDAMERITRADE_KEY, TDAMERITRADE_SECRET |
 | **Yahoo Finance** | `yahoo-finance2` (patched) | Stock data, P/E ratios, history | — |
 | **Discord** | `discord.js` | Notification webhook | DISCORD_TOKEN, DISCORD_CHANNEL |
@@ -349,7 +352,9 @@ Key API helper functions:
 | `stockUser` | User-stock prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
 | `docUpdate` | Document sync status | — | — |
 | `verify` | 2FA verification codes | — | — |
-| `total` | Stock portfolio totals | — | — |
+| `total` | Stock/crypto portfolio totals, trading state, sizing inputs | owner, index, name, type, setype/sType, amount, count, pricecost, web, mid, times, mul, extrem, metrics | — |
+
+- **TOTALDB note (2026-05-26)**: `extrem` stores the `calStair` daily swing percentile, and `metrics` stores backtest outputs such as `winRate`, `avgWin`, `avgLoss`, `profitFactor`, and related fields. `recur_web` now propagates `web.metrics` from STOCKDB into TOTALDB so scheduled trading logic can reuse them.
 
 ### 6.2 Redis Usage
 
@@ -454,6 +459,9 @@ File Server (WSS /f)
 | `usseInit` | 600s (10m) | `USSE_TICKER=true` | US stock ticker WebSocket |
 | `twseInit` | 600s (10m) | `TWSE_TICKER=true` | Taiwan stock ticker (Shioaji) |
 
+- **§9a Kelly Criterion sizing boost**: After the normal position-control pass in `stock-tool.js` and `bitfinex-tool.js`, the system computes `kelly = p - (1-p)/b` from TOTALDB `metrics.winRate`, `metrics.avgWin`, and `metrics.avgLoss`. When `kelly > 50%`, it increments `bCount` for active buys or `sCount` for active sells. These metrics are propagated from STOCKDB `web.metrics` into TOTALDB via `recur_web`.
+- **§9b Volatility-normalized position size**: `stockFilterV4` (TWSE/USSE market-cap loop) and `calRate` (Bitfinex market-cap loop) now store `extrem` in the relevant `marketcapList` arrays, compute `value = max(0, 1 - extrem/0.4)`, and use it to derive capped position-size multiplier `mul` (default `1`, max `5`) from market-cap plus volatility inputs.
+
 ---
 
 ## 10. Current Test Coverage
@@ -467,7 +475,7 @@ File Server (WSS /f)
 
 ### 10.2 Current Coverage
 
-- **37 test suites passing** with **3808 tests** across `src/back/` (`util/`, `models/`, `controllers/`, `cmd/`)
+- **41 test suites passing** with **3992 tests** across the current Jest/Python test inventory
 - ESM-aware mocking via `jest.unstable_mockModule()` throughout
 - Python tests for archive utilities (`myuzip_test.py`) and TWSE helpers (`twse_test.py`)
 - Coverage hot-spots (≈100% line coverage where reachable): `util/utility.js`, `util/mime.js`, `util/sendWs.js`, `models/mongo-tool.js`, `models/redis-tool.js`, `models/tag-tool.js`, `models/api-tool-google.js`, `models/discord-tool.js`, `models/password-tool.js`, `models/external-tool.js`, `controllers/user-router.js`, `cmd/cmd.js`

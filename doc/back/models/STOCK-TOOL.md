@@ -4,7 +4,7 @@
 > **Lines**: ~4,620  
 > **Purpose**: Stock data management, trading algorithm backtesting, portfolio tracking  
 > **Stack**: Node.js · MongoDB · Redis · Yahoo Finance API · TWSE/TPEx Official APIs · Web Scraping  
-> **Last Updated**: 2026-07-17
+> **Last Updated**: 2026-05-26
 
 ---
 
@@ -55,7 +55,7 @@
 | Collection | Purpose | Key Fields |
 |------------|---------|------------|
 | `STOCKDB` | Stock master data | `_id`, `stock_index`, `stock_name`, `per`, `pdr`, `pbr`, `tag[]`, `stock_class`, `stock_gain_rate` |
-| `TOTALDB` | User portfolios | `_id`, `user`, `type`, `index`, `count`, `pricecost`, `pl`, `amount` |
+| `TOTALDB` | User portfolios & live trade state | `_id`, `user`, `setype`, `index`, `orig`, `count`, `pricecost`, `pl`, `amount`, `mid`, `web`, `times`, `wType`, `extrem`, `metrics`, `mul` |
 | `USERDB` | User accounts | `_id`, `username`, preferences |
 
 **Redis Cache:**
@@ -639,7 +639,8 @@ const mockPredictWarp = {
 4. Filters low-volume months
 5. Calculates price distribution (max, min, min_vol)
 6. Caches in Redis with TTL — stores `raw_list` (raw unadjusted), `adjustments` (events array), `ret_obj`, `etime`
-7. Returns interval data
+7. `recur_web` now propagates per-holding trading state back into `TOTALDB` for both TWSE and USSE paths: `web`, `mid`, `times`, `wType`, `extrem`, and `metrics: web.metrics || null`. This is what makes backtest metrics available to `stockStatus` for Kelly-based sizing.
+8. Returns interval data
 
 **Returns**: Historical price data with distribution analysis
 
@@ -672,9 +673,10 @@ const mockPredictWarp = {
 2. Queries STOCKDB with filters (PER, growth, margin)
 3. Applies pagination and sorting
 4. Builds suggestion data cache
-5. Tags filtered stocks
-6. Sends WebSocket updates
-7. Returns filtered results
+5. **§9b Volatility-normalized position size**: The market-cap enrichment loop now carries `extrem` inside `totalTwseMarketcapList` / `totalUsseMarketcapList`. After the market-cap-based `mcMul` is computed, it derives `volValue = max(0, 1 - extrem / 0.4)` and persists final `mul = min(5, mcMul + volValue)` with default baseline `1`. This sizing boost moved here from `getIntervalV2`'s old `recur_web` path.
+6. Tags filtered stocks
+7. Sends WebSocket updates
+8. Returns filtered results
 
 **Returns**: Array of matching stocks with metadata
 
@@ -767,18 +769,23 @@ const mockPredictWarp = {
 
 ### 4.2 stockStatus(newStr)
 
-**Purpose**: Legacy function - queries stocks without sType field.
+**Purpose**: Refreshes live portfolio status, recalculates trade suggestions from `TOTALDB` + broker state, and persists updated per-position trading fields.
 
 **Parameters**:
-- `newStr` (string): Query parameter (legacy)
+- `newStr` (string): Optional notification flag for WebSocket broadcasting
 
 **Logic Flow**:
-1. Queries TOTALDB for records missing sType
-2. Returns matching documents
+1. Queries `TOTALDB` for records missing `sType` (legacy selector used by live portfolio rows)
+2. Loads current positions/orders from both brokerage paths: Shioaji (TWSE) and TDAmeritrade (USSE)
+3. Reprices each holding, rebuilds `orig` / `amount` / `count` / `pl` / `order`, and resolves `newMid` stack state before calling `stockProcess()`
+4. Applies normal position-control adjustments and persists refreshed `suggestionData`
+5. **§9a Kelly Criterion sizing boost**: after position control, if `item.metrics` exists with `winRate > 0` and `avgLoss > 0`, computes `kelly = p - (1-p)/b` where `p = winRate / 100` and `b = avgWin / avgLoss`; when `kelly > 0.5`, it increments `bCount` for active buys and `sCount` for active sells
+6. **§6c Conviction-weighted newOrder sorting**: downstream Shioaji/TDAmeritrade execution paths now push all candidates first, then use `Array.sort()` on `newOrder` with a 50/50 composite score of invested market value (`|count| × price`) and conviction (`1 / extrem`). Smaller `extrem` values therefore rank earlier.
+7. Applies the emergency-stop fake-order guard when too many holdings have active `newMid` stacks, then writes updated state back to `TOTALDB`
 
-**Returns**: Array of legacy stock records
+**Returns**: Promise resolving after holdings are refreshed; execution candidates are exposed through `suggestionData` / downstream broker order queues
 
-**Side Effects**: MongoDB read
+**Side Effects**: MongoDB reads/writes, broker API reads, Redis reads for recalculation, optional WebSocket notifications
 
 ---
 
@@ -1224,6 +1231,8 @@ These three functions extract the duplicated newMid (price-breakout grid-shiftin
 ```
 
 ### 6.2 Testing Approach
+
+**Current Counts (2026-05-26)**: Repository-wide test coverage is **41 suites / 3992 tests**. `stock-tool` contributes **497 tests**.
 
 **Unit Tests (Priority 1)**
 

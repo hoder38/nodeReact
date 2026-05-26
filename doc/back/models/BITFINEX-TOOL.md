@@ -3,7 +3,7 @@
 **Module**: `/src/back/models/bitfinex-tool.js`  
 **Lines of Code**: ~3,230  
 **Purpose**: Bitfinex cryptocurrency lending & trading automation system  
-**Last Updated**: 2026-07-17
+**Last Updated**: 2026-05-26
 
 ---
 
@@ -46,6 +46,10 @@ The `bitfinex-tool.js` module serves as the core automation engine for the ANoMo
 - **Session Management**: Redis-backed state persistence across server restarts
 - **Sparse Data Safety**: Rate calculation arrays (orderbook and candle-based) padded to fixed 11-element length for robustness
 - **Merge Rate Tolerance**: Offers within `BITFINEX_MIN × MERGE_RATE_TOLERANCE` of a delete target are merged instead of exact-match only
+
+### Internal Trading Strategy Notes
+- **§6c Conviction-weighted `newOrder` sorting**: `startStatus()` now pushes all candidates first, then runs `Array.sort()` on a 50/50 composite of invested market value (`Math.abs(item.count) * priceData[item.index].lastPrice`) and conviction (`1 / extrem`). This replaced the older `orig - amount` insertion ordering; smaller `extrem` values rank earlier.
+- **§9a Kelly Criterion sizing boost**: After the standard position-control pass, `startStatus()` checks `item.metrics`. When `winRate > 0` and `avgLoss > 0`, it computes `kelly = p - (1-p)/b` with `p = winRate / 100` and `b = avgWin / avgLoss`. If `kelly > 0.5`, it increments `bCount` and/or `sCount` when buy/sell suggestions are active.
 
 ---
 
@@ -185,10 +189,11 @@ Fetches real-time ticker data and historical candle data for all supported curre
      })
      ```
 
-4. **Rate Persistence**
+4. **Rate Persistence / Strategy Metadata**
    - Calculate `maxRange[curType]` (highest high across all timeframes)
    - Store in Redis: `rate:bitfinex:${curType}` with 30-day expiry
-   - Store in MongoDB `totaldb` collection (likely time-series data)
+   - Store historical rate data in MongoDB `totaldb`
+   - `updateWeb` also upserts the shared strategy row used by trading bots, including `web`, `wType`, `mid`, `extrem`, and `metrics` (`bestMetrics`)
 
 5. **Final Rate Calculation** (`recurFinal`)
    - Apply `calStair()` algorithm to distribute offers across rate ranges
@@ -198,6 +203,13 @@ Fetches real-time ticker data and historical candle data for all supported curre
      - Historical high/low ranges
      - User-configured risk parameters
    - Store result in `finalRate[curType]`
+
+6. **Market-Cap / Volatility Multiplier Refresh**
+   - After CoinMarketCap data is fetched, user-owned trading rows build `mcList` entries as `{ _id, mc, extrem }`
+   - Market-cap sizing still establishes the base `mcMul`
+   - A volatility term is then added: `volValue = max(0, 1 - extrem / 0.4)`
+   - Final position multiplier becomes `mul = min(5, mcMul + volValue)` with default base `1`
+   - The persisted `mul` is later consumed by `startStatus()` when scaling `orig` and `times`
 
 #### Rate Array Padding (R1/R2 Safety)
 - `calOBRate` (orderbook-based rates) pads output to 11 elements with last known value when sparse orderbook data yields fewer entries.
@@ -299,6 +311,20 @@ finalRate['fUSD'] = 81500  // Calculated by calStair()
   weight: [ /* volume distribution array */ ]
 }
 ```
+
+**Strategy TOTALDB Upsert (`updateWeb`)**:
+```javascript
+{
+  index: 'tBTCUSD',
+  sType: 1,
+  web: web.arr,
+  wType: lastest_type,
+  mid: web.mid,
+  extrem: web.extrem,
+  metrics: bestMetrics
+}
+```
+- `metrics` is reused later by `startStatus()` for the Kelly sizing boost.
 
 ---
 
@@ -2139,6 +2165,7 @@ Updates Bitfinex bot configuration for a user. Validates all input parameters an
      );
    }
    ```
+   - When a new per-user `TOTALDB` trading row is inserted, it copies the shared `web`/`wType`/`mid`/`extrem` data and initializes `mul` as `1 + volValue`, where `volValue = max(0, 1 - extrem / 0.4)`.
 
 #### Returns
 - **Type**: `Promise<Array>` - Formatted bot configuration array (same as `getBot`)
@@ -2812,6 +2839,8 @@ return Promise.resolve();
 
 ## Testing Strategy
 
+- **Current count (2026-05-26)**: 3992 tests across 41 suites; `bitfinex-tool` accounts for 373 tests.
+
 ### Test Environment Setup
 
 #### Prerequisites
@@ -3471,13 +3500,14 @@ npm test -- bitfinex-tool.test.js --watch
 
 ## Documentation Maintenance
 
-**Last Updated**: 2026-07-17  
+**Last Updated**: 2026-05-26  
 **Reviewed By**: Senior QA/Test Automation Engineer  
 **Next Review**: 2026-08-19 (Quarterly)
 
 **Change Log**:
 - 2026-03-17: Initial comprehensive documentation created
 - 2026-05-19: Updated imports to include `resolveNewMidStack`, `scaleWebArr` from stock-tool.js. `startStatus` newMid pop/push logic now uses shared helper functions instead of inline duplication.
+- 2026-05-26: Documented conviction-weighted `newOrder` sorting, Kelly-based `startStatus()` count boost, volatility-normalized `mul` calculation, `mcList.extrem`, shared-row `metrics`, and the new-item `mul = 1 + volValue` initialization path.
 - Future updates should include:
   - New test scenarios as edge cases discovered
   - Updated snapshot data when data structures change
