@@ -959,16 +959,12 @@ export default {
                                         return Promise.resolve();
                                     } else {
                                         const newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
-                                        // §9b Volatility-normalized position size
-                                        const volValue = Math.max(0, 1 - (web.extrem || 0) / 0.4);
-                                        const volMul = item[index].mul ? item[index].mul + volValue : 1 + volValue;
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
                                             extrem: web.extrem,
-                                            mul: volMul,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -1198,16 +1194,12 @@ export default {
                                         return Promise.resolve();
                                     } else {
                                         const newWeb = adjustWeb(web.arr, web.mid, item[index].orig, true);
-                                        // §9b Volatility-normalized position size
-                                        const volValue = Math.max(0, 1 - (web.extrem || 0) / 0.4);
-                                        const volMul = item[index].mul ? item[index].mul + volValue : 1 + volValue;
                                         return Mongo('update', TOTALDB, {_id: item[index]._id}, {$set: {
                                             web: newWeb.arr,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
                                             extrem: web.extrem,
-                                            mul: volMul,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -1540,12 +1532,12 @@ export default {
                             if (stock.setype === 'twse') {
                                 if (marketcapList[isEtf] > 0) {
                                     mcap = Math.round(marketcapList[isEtf] / 1000);
-                                    totalTwseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                    totalTwseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id, extrem: stock.extrem});
                                 }
                             } else if (stock.setype === 'usse') {
                                 if (marketcapList[isEtf] > 0) {
                                     mcap = Math.round(marketcapList[isEtf] / 1000);
-                                    totalUsseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id});
+                                    totalUsseMarketcapList.push({mc: marketcapList[isEtf], _id: stock._id, extrem: stock.extrem});
                                 }
                             }
                         }
@@ -1615,11 +1607,19 @@ export default {
                 }
                 totalTwseMarketcapList.forEach(i => console.log(i));
                 totalUsseMarketcapList.forEach(i => console.log(i));
-                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: totalTwseMarketcapList[mIndex].mul ? totalTwseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                // §9b Volatility-normalized position size: mul = mcMul + volMul, cap at 5, default = 1
+                const calcFinalMul = (item) => {
+                    const volValue = Math.max(0, 1 - (item.extrem || 0) / 0.4);
+                    const mcMul = item.mul || 0;
+                    const combined = mcMul + volValue;
+                    const result = combined || 1;
+                    return result > 5 ? 5 : result;
+                };
+                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalTwseMarketcapList[mIndex])}}).then(mitems => {
                     console.log(mitems);
                     return updmulTwse(mIndex + 1);
                 }) : Promise.resolve();
-                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: totalUsseMarketcapList[mIndex].mul ? totalUsseMarketcapList[mIndex].mul : 0}}).then(mitems => {
+                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalUsseMarketcapList[mIndex])}}).then(mitems => {
                     console.log(mitems);
                     return updmulUsse(mIndex + 1);
                 }) : Promise.resolve();

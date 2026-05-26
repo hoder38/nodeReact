@@ -402,12 +402,13 @@ export const calWeb = curArr => {
                     }
                 }
                 console.log(mcList);
-                // §9b Volatility-normalized position size
+                // §9b Volatility-normalized position size: mul = mcMul + volMul, cap at 5, default = 1
                 const updmul = mIndex => (mIndex < mcList.length) ? (() => {
                     const volValue = Math.max(0, 1 - (mcList[mIndex].extrem || 0) / 0.4);
-                    const baseMul = mcList[mIndex].mul || 0;
-                    const finalMul = baseMul ? baseMul + volValue : 1 + volValue;
-                    return Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: finalMul}});
+                    const mcMul = mcList[mIndex].mul || 0;
+                    const combined = mcMul + volValue;
+                    const finalMul = combined || 1;
+                    return Mongo('update', TOTALDB, {_id: mcList[mIndex]._id}, {$set: {mul: finalMul > 5 ? 5 : finalMul}});
                 })().then(mitems => {
                     console.log(mitems);
                     return updmul(mIndex + 1);
