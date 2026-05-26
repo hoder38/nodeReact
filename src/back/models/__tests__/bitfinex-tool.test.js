@@ -5302,6 +5302,110 @@ describe('_recur_status — direct tests', () => {
         expect(result.length).toBe(2);
     });
 
+    // ── §6c Conviction-weighted sort ──
+    test('newOrder conviction sort — lower extrem ranks higher when invested amount equal', async () => {
+        const mkItem = (id, orig, extrem) => ({
+            _id: id, index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+            orig, mid: 40000, web: [100, -100], wType: 0, times: 1, extrem,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        });
+        mockStockProcess.mockReturnValue({ type: 0, buy: 100, sell: 100, bCount: 0.1, sCount: 0.1, str: 't', resetWeb: false });
+        // Both items have same orig and position → same invested amount
+        // itemA: extrem=0.05 (higher volatility), itemB: extrem=0.02 (lower = more reliable)
+        const item1 = mkItem('cv1', 10000, 0.05);
+        const item2 = mkItem('cv2', 10000, 0.02);
+        mockMongo
+            .mockResolvedValueOnce([{ ...item1 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 })
+            .mockResolvedValueOnce([{ ...item2 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 });
+
+        const ctx = mkCtx('rs_cv', {
+            items: [item1, item2],
+            state: {
+                position: { rs_cv: { fUSD: [
+                    { symbol: 'tBTCUSD', amount: 0.1, price: 50000, pl: 0 },
+                ] } },
+            },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result.length).toBe(2);
+        // item2 has lower extrem (0.02) → higher conviction → should rank first
+        expect(result[0].item._id).toBe('cv2');
+        expect(result[1].item._id).toBe('cv1');
+    });
+
+    test('newOrder conviction sort — blends invested amount and extrem', async () => {
+        const mkItem = (id, orig, extrem) => ({
+            _id: id, index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+            orig, mid: 40000, web: [100, -100], wType: 0, times: 1, extrem,
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        });
+        mockStockProcess.mockReturnValue({ type: 0, buy: 100, sell: 100, bCount: 0.1, sCount: 0.1, str: 't', resetWeb: false });
+        // item1: high invested (orig=20000, amount=5000 → invested=15000), bad conviction (extrem=0.10)
+        // item2: low invested (orig=10000, amount=8000 → invested=2000), great conviction (extrem=0.01)
+        // With 50/50 weight, item1's invested advantage should dominate
+        const item1 = mkItem('bl1', 20000, 0.10);
+        const item2 = mkItem('bl2', 10000, 0.01);
+        mockMongo
+            .mockResolvedValueOnce([{ ...item1 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 })
+            .mockResolvedValueOnce([{ ...item2 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 });
+
+        const ctx = mkCtx('rs_bl', {
+            items: [item1, item2],
+            state: {
+                position: { rs_bl: { fUSD: [
+                    { symbol: 'tBTCUSD', amount: 0.1, price: 50000, pl: 0 },
+                ] } },
+            },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result.length).toBe(2);
+        // item1: investedNorm=15000/15000=1.0, convNorm=(1/0.10)/100=0.1
+        // item2: investedNorm=2000/15000=0.133, convNorm=(1/0.01)/100=1.0
+        // item1 score = 0.5*1.0 + 0.5*0.1 = 0.55
+        // item2 score = 0.5*0.133 + 0.5*1.0 = 0.567 → item2 first
+        expect(result[0].item._id).toBe('bl2');
+    });
+
+    test('newOrder conviction sort — items without extrem treated as zero conviction', async () => {
+        const mkItem = (id, orig, extrem) => ({
+            _id: id, index: 'tBTCUSD', ing: 1, mul: 0, profit: 0,
+            orig, mid: 40000, web: [100, -100], wType: 0, times: 1,
+            ...(extrem !== undefined && { extrem }),
+            newMid: [], tmpPT: { price: 0, time: 0, type: '', tprice: 0 },
+            previous: { price: '', time: 0, type: '', tprice: 0 },
+        });
+        mockStockProcess.mockReturnValue({ type: 0, buy: 100, sell: 100, bCount: 0.1, sCount: 0.1, str: 't', resetWeb: false });
+        // item1: no extrem (old data), item2: has extrem=0.03
+        // Same invested amount → item2's conviction gives it the edge
+        const item1 = mkItem('ne1', 10000, undefined);
+        const item2 = mkItem('ne2', 10000, 0.03);
+        mockMongo
+            .mockResolvedValueOnce([{ ...item1 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 })
+            .mockResolvedValueOnce([{ ...item2 }])
+            .mockResolvedValueOnce({ modifiedCount: 1 });
+
+        const ctx = mkCtx('rs_ne', {
+            items: [item1, item2],
+            state: {
+                position: { rs_ne: { fUSD: [
+                    { symbol: 'tBTCUSD', amount: 0.1, price: 50000, pl: 0 },
+                ] } },
+            },
+        });
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        expect(result.length).toBe(2);
+        // item2 has conviction, item1 doesn't → item2 first
+        expect(result[0].item._id).toBe('ne2');
+        expect(result[1].item._id).toBe('ne1');
+    });
+
     test('mul > 0 → multiplies orig and times', async () => {
         const item = {
             _id: 'mul1', index: 'tBTCUSD', ing: 1, mul: 2, profit: 0,

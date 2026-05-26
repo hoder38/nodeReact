@@ -332,6 +332,7 @@ export const calWeb = curArr => {
                         web: web.arr,
                         wType: lastest_type,
                         mid: web.mid,
+                        extrem: web.extrem,
                         metrics: bestMetrics,
                     }).then(items => console.log(items));
                 } else {
@@ -342,6 +343,7 @@ export const calWeb = curArr => {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
+                                    extrem: web.extrem,
                                     metrics: bestMetrics,
                                 }});
                                 console.log(items);
@@ -351,6 +353,7 @@ export const calWeb = curArr => {
                                     web: web.arr,
                                     wType: lastest_type,
                                     mid: web.mid,
+                                    extrem: web.extrem,
                                     metrics: bestMetrics,
                                     times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
                                 }});
@@ -1268,17 +1271,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 web: item.web,
                 previous: item.previous,
             }});
-            let is_insert = false;
-            for (let i = 0; i < newOrder.length; i++) {
-                if ((item.orig - item.amount) > (newOrder[i].item.orig - newOrder[i].item.amount)) {
-                    newOrder.splice(i, 0, {item, suggestion});
-                    is_insert = true;
-                    break;
-                }
-            }
-            if (!is_insert) {
-                newOrder.push({item, suggestion});
-            }
+            newOrder.push({item, suggestion});
         };
 
         if (item.ing === 2) {
@@ -1351,6 +1344,18 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         data: -1,
         user: id,
     });
+    // §6c Conviction-weighted sort: 50% invested amount + 50% conviction (1/extrem)
+    if (newOrder.length > 1) {
+        const maxInvested = Math.max(...newOrder.map(e => e.item.orig - e.item.amount)) || 1;
+        const maxConviction = Math.max(...newOrder.map(e => e.item.extrem ? 1 / e.item.extrem : 0)) || 1;
+        newOrder.sort((a, b) => {
+            const aInvested = (a.item.orig - a.item.amount) / maxInvested;
+            const bInvested = (b.item.orig - b.item.amount) / maxInvested;
+            const aConviction = (a.item.extrem ? 1 / a.item.extrem : 0) / maxConviction;
+            const bConviction = (b.item.extrem ? 1 / b.item.extrem : 0) / maxConviction;
+            return (0.5 * bInvested + 0.5 * bConviction) - (0.5 * aInvested + 0.5 * aConviction);
+        });
+    }
     // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
     if (items.length > 0) {
         const shiftedCount = items.filter(it => it.newMid && it.newMid.length > 0).length;
@@ -2814,6 +2819,7 @@ export default {
                                         web: webitem[0].web,
                                         wType: webitem[0].wType,
                                         mid: webitem[0].mid,
+                                        extrem: webitem[0].extrem,
                                         times: Math.floor(item[index].amount / maxAmount * 10000) / 10000,
                                         //amount: item[index].amount,
                                         orig: item[index].amount,

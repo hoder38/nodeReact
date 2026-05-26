@@ -503,17 +503,7 @@ export const usseTDInit = () => checkOauth().then(() => {
                     });
                     const startStatus = () => cancelOrder().then(() => {
                         if (usseSuggestion[item.index]) {
-                            let is_insert = false;
-                            for (let i = 0; i < newOrder.length; i++) {
-                                if (item.amount > newOrder[i].item.amount) {
-                                    newOrder.splice(i, 0, {item, suggestion: usseSuggestion[item.index]});
-                                    is_insert = true;
-                                    break;
-                                }
-                            }
-                            if (!is_insert) {
-                                newOrder.push({item, suggestion: usseSuggestion[item.index]});
-                            }
+                            newOrder.push({item, suggestion: usseSuggestion[item.index]});
                         }
                         return recur_status(index + 1);
                     });
@@ -634,6 +624,18 @@ export const usseTDInit = () => checkOauth().then(() => {
                 }
             }
             return recur_status(0).then(() => {
+                // §6c Conviction-weighted sort: 50% cash amount + 50% conviction (1/extrem)
+                if (newOrder.length > 1) {
+                    const maxAmount = Math.max(...newOrder.map(e => e.item.amount)) || 1;
+                    const maxConviction = Math.max(...newOrder.map(e => e.item.extrem ? 1 / e.item.extrem : 0)) || 1;
+                    newOrder.sort((a, b) => {
+                        const aAmt = a.item.amount / maxAmount;
+                        const bAmt = b.item.amount / maxAmount;
+                        const aConv = (a.item.extrem ? 1 / a.item.extrem : 0) / maxConviction;
+                        const bConv = (b.item.extrem ? 1 / b.item.extrem : 0) / maxConviction;
+                        return (0.5 * bAmt + 0.5 * bConv) - (0.5 * aAmt + 0.5 * aConv);
+                    });
+                }
                 for (let i = 0; i < newOrder.length; i++) {
                     console.log(`${newOrder[i].item.index} ${newOrder[i].item.amount}`);
                 }

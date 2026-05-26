@@ -964,6 +964,7 @@ export default {
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
+                                            extrem: web.extrem,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -1198,6 +1199,7 @@ export default {
                                             mid: newWeb.mid,
                                             times: newWeb.times,
                                             wType: type,
+                                            extrem: web.extrem,
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -2183,6 +2185,7 @@ export default {
                                             wType: item[0].web.type,
                                             mid: newWeb.mid,
                                             times: newWeb.times,
+                                            extrem: item[0].web.extrem,
                                             amount: +cmd[2],
                                             orig: +cmd[2],
                                             //top: Math.floor(price * 1.2 * 100) / 100,
