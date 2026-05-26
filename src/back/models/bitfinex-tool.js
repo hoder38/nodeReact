@@ -286,7 +286,7 @@ export const calWeb = curArr => {
                 }
                 const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
                 //const str = `${pricePct}% ${m.maxAmount} ${m.returnPct}% ${m.buyHoldPct}% ${m.sharpe} ${m.sortino} ${m.maxDrawdownPct}% ${m.maxDrawdownDuration} ${m.winRate}% ${winLoss} ${m.profitFactor} ${m.tradesPerYear} ${m.calmar} ${raw_arr.length} ${Math.round(min_vol * 100) / 100}`;
-                const str = `${pricePct}% ${m.sortino} ${m.profitFactor}`;
+                const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
                 results.push({ type, str, metrics: m, rate: m.returnPct });
                 return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(rtemp => {
                     if (rtemp === 'data miss') {
