@@ -28,11 +28,13 @@ const suggestionData = {
 }
 let stringSent = 0;
 
+// Fetches the latest stock price; type/index identify the symbol, and previous returns [currentPrice, previousClose].
 export const getStockPrice = (type='twse', index, previous = false) => {
     switch(type) {
         case 'twse':
         let count = 0;
         const real = () => Api('url', `https://tw.stock.yahoo.com/quote/${index}`).then(raw_data => {
+            // Yahoo Taiwan sometimes serves the legacy center/table markup and sometimes the newer app layout.
             const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
             if (!center) {
                 let tabs = findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'app')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[0], 'div')[3], 'div')[0], 'div')[0], 'div')[0];
@@ -49,6 +51,7 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                 price = price === '-' ? 0 : Number(price.replace(/,/g, ''));
                 if (previous) {
                     let previousPrice = 0;
+                    // The overview widget can move when Yahoo injects an extra lightbox wrapper.
                     if (findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0]) {
                         findTag(findTag(findTag(findTag(findTag(findTag(findTag(findTag(tabs, 'div', 'main-2-QuoteOverview-Proxy')[0], 'div')[0], 'section')[0], 'div')[1], 'div')[1], 'div')[0], 'ul')[0], 'li').forEach(l => {
                             if (findTag(findTag(l, 'span')[0])[0] === '昨收') {
@@ -91,6 +94,7 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
             if (price[0] === '-') {
+                // Legacy Yahoo pages sometimes leave the quote cell empty and only expose the last traded price.
                 const last_price = findTag(findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0], 'td')[1])[0].match(/^(\d+(\.\d+)?|\-)/);
                 if (!last_price || !last_price[0]) {
                     return handleError(new HoError(`stock ${index} price get fail`));
@@ -101,12 +105,6 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                 price[0] = last_price[0];
             }
             price[0] = +price[0];
-            /*if (!price_only) {
-                const up = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[5], 'font')[0])[0].match(/^(.?\d+(\.\d+)?|\-)/);
-                if (up && up[0]) {
-                    price[0] = `${price[0]} ${up[0]}`;
-                }
-            }*/
             console.log(price[0]);
             return price[0];
         }).catch(err => {
@@ -115,34 +113,29 @@ export const getStockPrice = (type='twse', index, previous = false) => {
         });
         return real();
         case 'usse':
-        /*const up = getUssePrice();
-        if (up[index] && ((_dateFactory().getTime()/1000 - up[index].t) < 86400)) {
-            console.log(up[index]);
-            return up[index].p;
-        } else {*/
-            return getUsStock(index).then(ret => {
-                if (!ret.price) {
-                    if (previous) {
-                        return [0, 0];
-                    } else {
-                        return 0;
-                    }
-                }
+        return getUsStock(index).then(ret => {
+            if (!ret.price) {
                 if (previous) {
-                    console.log(ret.price);
-                    console.log(ret.previous);
-                    return [ret.price, ret.previous];
+                    return [0, 0];
                 } else {
-                    console.log(ret.price);
-                    return ret.price;
+                    return 0;
                 }
-            });
-        //}
+            }
+            if (previous) {
+                console.log(ret.price);
+                console.log(ret.previous);
+                return [ret.price, ret.previous];
+            } else {
+                console.log(ret.price);
+                return ret.price;
+            }
+        });
         default:
         return handleError(new HoError('stock type unknown!!!'));
     }
 }
 
+// Fetches basic stock metadata for the given market/code and returns the fields used by search, tags, and filters.
 export const getBasicStockData = (type, index) => {
     let count = 0;
     switch(type) {
@@ -152,6 +145,7 @@ export const getBasicStockData = (type, index) => {
             let i = 0;
             const form = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'form')[0];
             const table = findTag(form, 'table', 'zoom')[0] ? findTag(form, 'table', 'zoom')[0] : findTag(findTag(form, 'table')[0], 'table', 'zoom')[0];
+            // MOPS uses a fixed column order here, so each populated anchor cell maps by position.
             findTag(findTag(table, 'tr')[1], 'td').forEach(d => {
                 const as = findTag(d, 'a');
                 if (as.length > 0) {
@@ -168,6 +162,7 @@ export const getBasicStockData = (type, index) => {
                         break;
                         case 1:
                         result.stock_name = texts;
+                        // F-share naming needs extra China-related location tags for downstream search.
                         for (let t of texts) {
                             if (t.match(/^F/)) {
                                 result.stock_location.push('大陸');
@@ -197,6 +192,7 @@ export const getBasicStockData = (type, index) => {
                         result.stock_class = texts[0];
                         break;
                         case 5:
+                        // TWSE lists the year in the ROC calendar, so convert it to Gregorian.
                         result.stock_time = (Number(texts[0].match(/\d+$/)[0]) + 1911).toString();
                         break;
                     }
@@ -234,6 +230,7 @@ export const getBasicStockData = (type, index) => {
     }
 }
 
+// Builds normalized stock tags from market/code metadata and precomputed indexTag entries, returning [primaryStockName, validTags].
 export const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(type, index).then(basic => {
     let tags = new Set();
     indexTag.forEach(v => tags.add(v));
@@ -257,6 +254,7 @@ export const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(typ
     }
     let valid_tags = [];
     tags.forEach(i => {
+        // Re-validate and normalize every candidate tag before it is stored or compared.
         const valid_name = isValidString(i, 'name');
         if (valid_name) {
             valid_tags.push(valid_name.replace('&amp;', '&'));
@@ -265,6 +263,7 @@ export const handleStockTagV2 = (type, index, indexTag) => getBasicStockData(typ
     return [basic.stock_name[0], valid_tags];
 });
 
+// Extracts signed numeric values from the row named by type/text in raw data, returning an array or false.
 export const getParameterV2 = (data, type, text = null) => {
     const matchProfit = data.match(new RegExp('\\>' + type + '\\<\\/td\\>([\\s\\S]+?)\\<\\/tr\\>'));
     if (!matchProfit) {
@@ -274,11 +273,13 @@ export const getParameterV2 = (data, type, text = null) => {
         return false;
     }
     return matchProfit[1].match(/[^\>\<]*(\>[\d,]+\<)/g).map(v => {
+        // The source marks negative values with sign="-", so preserve the sign after stripping markup.
         const ret = Number(v.match(/\>[\d,]+\</)[0].replace(/[\>\<,]/g, ''))
         return v.match(/sign\=\"\-\"/) ? -ret : ret;
     });
 }
 
+// Test hooks for overriding retry and timing knobs in unit tests.
 let _statusDelay = 3000;
 export const _setStatusDelay = n => { _statusDelay = n; };
 let _maxRetry = MAX_RETRY;
@@ -294,6 +295,7 @@ export const _setOverrunDelay = n => { _overrunDelay = n; };
 let _annualDelay = 5000;
 export const _setAnnualDelay = n => { _annualDelay = n; };
 
+// Returns the first parsed value that matches any fallback code/label pair in raw_data.
 export const findFirstParameter = (raw_data, codes, label) => {
     for (const code of codes) {
         const result = getParameterV2(raw_data, code, label);
@@ -302,6 +304,9 @@ export const findFirstParameter = (raw_data, codes, label) => {
     return null;
 };
 
+// Returns the first full parsed row across fallback row codes.
+// TWSE filings often pack cumulative and prior-period values into the same row,
+// so callers sometimes need the untouched array instead of just the first value.
 export const findFirstParameterArray = (raw_data, codes, label) => {
     for (const code of codes) {
         const result = getParameterV2(raw_data, code, label);
@@ -310,6 +315,8 @@ export const findFirstParameterArray = (raw_data, codes, label) => {
     return null;
 };
 
+// Tries explicit [code, label] combinations for statement layouts that changed both
+// the numeric item code and the visible Chinese label between report templates.
 export const findFirstParameterPairs = (raw_data, pairs) => {
     for (const [code, label] of pairs) {
         const result = getParameterV2(raw_data, code, label);
@@ -318,6 +325,8 @@ export const findFirstParameterPairs = (raw_data, pairs) => {
     return null;
 };
 
+// Fallback row identifiers seen across TWSE/MOPS statement variants.
+// The filter walks these lists in order until it finds a compatible filing layout.
 export const PROFIT_CODES = [7900, 6100, 61001, 62000, 61000];
 export const PROFIT_LABEL = '繼續營業單位稅前淨利（淨損）';
 export const EQUITY_CODES = [3100, 31100, 31000];
@@ -332,9 +341,13 @@ export const NETVALUE_PAIRS = [
     ['3XXXX', '權益總計'],
 ];
 
+// Position-control thresholds keyed by suggestion type.
+// Each tuple is [trigger cash ratio, target cash ratio] relative to maxAmount.
 export const BUY_THRESHOLDS = { 7: [7/8, 3/4], 3: [5/8, 1/2], 6: [3/8, 1/4] };
 export const SELL_THRESHOLDS = { 9: [1/8, 1/4], 5: [3/8, 1/2], 8: [5/8, 3/4] };
 
+// Applies the suggested buy count, then keeps buying until idle cash falls back inside
+// the configured reserve band for the current strategy type.
 export const executeBuy = (suggest, amount, maxAmount, count, fee) => {
     let buyTrade = 0;
     const origCount = count;
@@ -346,6 +359,7 @@ export const executeBuy = (suggest, amount, maxAmount, count, fee) => {
     }
     const t = BUY_THRESHOLDS[suggest.type];
     if (t && amount > maxAmount * t[0]) {
+        // Pull excess cash down toward the strategy's target reserve level.
         let tmpAmount = amount - maxAmount * t[1];
         while ((tmpAmount - suggest.buy) > 0) {
             amount -= suggest.buy;
@@ -357,6 +371,8 @@ export const executeBuy = (suggest, amount, maxAmount, count, fee) => {
     return { amount, count, buyTrade, didBuy: count > origCount };
 };
 
+// Applies the suggested sell count, then forces extra sells if cash would otherwise stay
+// below the configured reserve band after fees.
 export const executeSell = (suggest, amount, maxAmount, count, fee) => {
     let sellTrade = 0;
     for (let j = 0; j < suggest.sCount; j++) {
@@ -367,6 +383,7 @@ export const executeSell = (suggest, amount, maxAmount, count, fee) => {
     }
     const t = SELL_THRESHOLDS[suggest.type];
     if (t && amount < maxAmount * t[0]) {
+        // Raise cash back toward the target reserve after applying sell fees.
         let tmpAmount = maxAmount * t[1] - amount;
         while ((tmpAmount - suggest.sell * (1 - fee)) > 0) {
             amount += (suggest.sell * (1 - fee));
@@ -380,6 +397,7 @@ export const executeSell = (suggest, amount, maxAmount, count, fee) => {
 };
 
 export default {
+    // Test helper: clears module-level flags and cached suggestion results.
     _resetFlags: function() {
         stockFiltering = false;
         stockIntervaling = false;
@@ -388,9 +406,12 @@ export default {
         suggestionData.twse = {};
         suggestionData.usse = {};
     },
+    // Test helper: exposes module-level flags for assertions.
     _getFlags: function() {
         return { stockFiltering, stockIntervaling, stockPredicting, stringSent };
     },
+    // Refreshes one stock's fundamentals and tags.
+    // TWSE data is reconstructed from MOPS filings, while USSE data comes from getUsStock.
     getSingleStockV2: function(type, obj, stage=0, back=false) {
         const date = _dateFactory();
         const index = obj.index;
@@ -434,6 +455,8 @@ export default {
                 const final_stage = price => {
                     return handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
                         let stock_default = [];
+                        // Keep manually managed tags and track only the defaults derived during
+                        // this refresh, so future runs can merge without duplicating user tags.
                         for (let t of tags) {
                             const normal = normalize(t);
                             if (!isDefaultTag(normal)) {
@@ -443,6 +466,8 @@ export default {
                                 }
                             }
                         }
+                        // profit / dividends / netValue are stored as per-share values, so the
+                        // existing pipeline scales them by equity before turning them into ratios.
                         const per = (profit <= 0) ? 9999 : Math.round(price / profit * equity * 10) / 100;
                         const pdr = (dividends <= 0) ? 9999 : Math.round(price / dividends * equity * 10) / 100;
                         const pbr = (netValue <= 0) ? 9999 : Math.round(price / netValue * equity * 10) / 100;
@@ -477,7 +502,6 @@ export default {
                             pbr,
                             latestQuarter,
                             latestYear,
-                            //tags: normal_tags,
                             important: 0,
                             stock_default,
                         }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
@@ -502,6 +526,8 @@ export default {
                     });
                 }
                 let wait_count = 0;
+                // Walk backward through MOPS filings until we can reconstruct the latest
+                // trailing fundamentals. Missing reports first try the alternate report type.
                 const recur_getTwseProfit = () => {
                     console.log(year);
                     console.log(quarter);
@@ -514,6 +540,8 @@ export default {
                                 if (not > 8) {
                                     return handleError(new HoError('cannot find stock data'));
                                 } else {
+                                    // MOPS may expose the same quarter under C or A reports.
+                                    // Only step back a quarter after both layouts fail.
                                     if (reportType === 'C') {
                                         reportType = 'A';
                                         return recur_getTwseProfit();
@@ -532,6 +560,7 @@ export default {
                             if (wait_count >= 10) {
                                 return handleError(new HoError('too much wait'));
                             } else {
+                                // Overrun is the TWSE throttle page; wait and retry the same request.
                                 wait_count++;
                                 console.log('wait');
                                 console.log(wait_count);
@@ -539,6 +568,8 @@ export default {
                             }
                         } else {
                             wait_count = 0;
+                            // Statement row identifiers drift between filing templates, so each
+                            // lookup uses the fallback code lists declared above.
                             let profitArr = findFirstParameterArray(raw_data, PROFIT_CODES, PROFIT_LABEL);
                             if (!profitArr) {
                                 return handleError(new HoError('cannot find stock profit'));
@@ -559,6 +590,8 @@ export default {
                             if (matchDividends && matchDividends[0] > dividends) {
                                 dividends = matchDividends[0];
                             }
+                            // Quarterly statements are cumulative. Convert them back into
+                            // single-quarter contributions before summing a trailing-year profit.
                             switch (quarter) {
                                 case 4:
                                 profit += profitArr[0];
@@ -570,6 +603,8 @@ export default {
                                     latestQuarter = quarter;
                                     latestYear = year;
                                 }
+                                // Some annual filings lag on dividends, so fall back to Q3 only
+                                // to collect the latest dividend row before finishing.
                                 if (dividends === 0) {
                                     quarter = 3;
                                     needDividends = true;
@@ -597,6 +632,8 @@ export default {
                             }
                             latestQuarter = quarter;
                             latestYear = year;
+                            // After the first matched quarter, continue from the previous Q4 so
+                            // the remaining walk stays aligned to full-year cumulative filings.
                             quarter = 4;
                             year--;
                             return recur_getTwseProfit();
@@ -606,6 +643,7 @@ export default {
                 return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
                     if (items.length > 0) {
                         id_db = items[0]._id;
+                        // Preserve previously saved non-default tags before refreshing derived ones.
                         for (let i of items[0].tags) {
                             if (items[0].stock_default) {
                                 if (!items[0].stock_default.includes(i)) {
@@ -629,6 +667,7 @@ export default {
                 return Mongo('find', STOCKDB, {type, index}, {limit: 1}).then(items => {
                     if (items.length > 0) {
                         id_db = items[0]._id;
+                        // Preserve previously saved non-default tags before refreshing derived ones.
                         for (let i of items[0].tags) {
                             if (items[0].stock_default) {
                                 if (!items[0].stock_default.includes(i)) {
@@ -642,6 +681,8 @@ export default {
                     return getUsStock(index, ['price', 'per', 'pdr', 'pbr', 'equity'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
                         console.log(ret);
                         let stock_default = [];
+                        // US stocks follow the same tag merge rule as TWSE: keep manual tags and
+                        // record only newly derived defaults in stock_default.
                         for (let t of tags) {
                             const normal = normalize(t);
                             if (!isDefaultTag(normal)) {
@@ -673,7 +714,6 @@ export default {
                             equity: ret.equity,
                             latestQuarter: ret.latestQuarter,
                             latestYear: ret.latestYear,
-                            //tags: normal_tags,
                             important: 0,
                             stock_default,
                         }).then(item => Mongo('update', STOCKDB, {_id: item[0]._id}, {$set: {tags: normal_tags}}).then(() => item[0]._id));
@@ -704,6 +744,8 @@ export default {
             return handleError(new HoError('stock type unknown!!!'));
         }
     },
+    // Recomputes PER/PDR/PBR with the latest live price while keeping the stored
+    // statement period so callers know which quarter the ratios were based on.
     getStockPERV2: function(id) {
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
@@ -725,6 +767,8 @@ export default {
             }
         });
     },
+    // Validates cached interval payloads and clears Redis entries that contain
+    // incomplete OHLC points, forcing a rebuild on the next interval request.
     testData: function() {
         return Mongo('find', STOCKDB, {}).then(items => {
             const recur_test = index => (index >= items.length) ? Promise.resolve() : Redis('hgetall', `interval: ${items[index].type}${items[index].index}`).then(item => {
@@ -768,6 +812,8 @@ export default {
             return recur_test(0);
         });
     },
+    // Removes stocks that were not refreshed in the latest screening cycle unless they
+    // still exist in TOTALDB. dryRun only prints the candidates.
     cleanUseless: function(dryRun = true) {
         const date = _dateFactory();
         let updateyear = date.getFullYear();
@@ -781,8 +827,9 @@ export default {
         } else if (month < 10) {
             updatequarter = 2;
         }
+        // The quarterly tag is appended during filtering; missing it means this stock was not
+        // touched in the latest run and is a cleanup candidate.
         const latestQuarter = `${updateyear}q${updatequarter}`;
-        //const latestQuarter = "美國";
         const keepList = [];
         console.log(`keep tag: ${latestQuarter}`);
         return Mongo('find', STOCKDB, {tags:{$nin:[latestQuarter]}}).then(items => {
@@ -808,6 +855,8 @@ export default {
             });
         });
     },
+    // Builds interval data, applies corporate-action adjustments, and prepares the
+    // derived stair-step web used by the backtest and suggestion pipeline.
     getIntervalV2: function(id, session) {
         const date = _dateFactory();
         let year = date.getFullYear();
@@ -867,9 +916,9 @@ export default {
                         validateIntervalData(interval_data, raw_arr, newAdjustments);
                         console.log(max);
                         console.log(min);
+                        // Track the recent liquidity floor for the debug output below.
                         let min_vol = 0;
                         for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
-                            //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
                                 if (!min_vol || (v.v && v.v < min_vol)) {
                                     min_vol = v.v;
@@ -894,12 +943,15 @@ export default {
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
-                            //update total
+                            // Re-run the backtest summary so STOCKDB and TOTALDB stay aligned on the
+                            // ladder type and metrics persisted for this symbol.
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const results = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
                                 const pricePct = Math.round((+price - web.mid) / web.mid * 10000) / 100;
+                                // Build the display string from a full-history backtest, then re-test from the
+                                // latest bar to decide which ladder type should be persisted for updates.
                                 const resultShow = type => {
                                     return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0)).then(temp => {
                                         if (temp === 'data miss') {
@@ -911,7 +963,6 @@ export default {
                                             return;
                                         }
                                         const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
-                                        //const str = `${pricePct}% ${m.maxAmount} ${m.returnPct}% ${m.buyHoldPct}% ${m.sharpe} ${m.sortino} ${m.maxDrawdownPct}% ${m.maxDrawdownDuration} ${m.winRate}% ${winLoss} ${m.profitFactor} ${m.tradesPerYear} ${m.calmar} ${raw_arr.length} ${min_vol}`;
                                         const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
                                         results.push({ type, str, metrics: m, rate: m.returnPct });
                                         return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true)).then(rtemp => {
@@ -941,11 +992,12 @@ export default {
                                         return Promise.resolve();
                                     }
                                 }
-                                //return loopShow(31).then(() => {
                                 return loopShow(0).then(() => {
                                     results.forEach(r => console.log(r.str));
                                     console.log(lastest_type);
                                     console.log('done');
+                                    // Use the middle profitable result for display so one extreme backtest
+                                    // does not dominate the label shown in the UI.
                                     const sorted = results.filter(r => r.metrics);
                                     sorted.sort((a, b) => b.rate - a.rate);
                                     const bestIdx = sorted.length > 0 ? Math.ceil(sorted.length / 2) - 1 : -1;
@@ -1085,14 +1137,6 @@ export default {
                     return getInit();
                 }).then(([raw_list, cached_adjustments, ret_obj, etime]) => {
                     let interval_data = null;
-                    /*if (month === 1) {
-                        year--;
-                        month = 12;
-                        month_str = completeZero(month.toString(), 2);
-                    } else {
-                        month--;
-                        month_str = completeZero(month.toString(), 2);
-                    }*/
                     let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
                     let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
                     let start_month = `${year}${month_str}`;
@@ -1104,9 +1148,9 @@ export default {
                     const rest_interval = () => {
                         console.log(max);
                         console.log(min);
+                        // Track the recent liquidity floor for the debug output below.
                         let min_vol = 0;
                         for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
-                            //min_vol = interval_data[vol_year][vol_month_str].raw.reduce((a,v) => (a && v.v > a) ? a: v.v, min_vol);
                             interval_data[vol_year][vol_month_str].raw.forEach(v => {
                                 if (!min_vol || (v.v && v.v < min_vol)) {
                                     min_vol = v.v;
@@ -1131,12 +1175,15 @@ export default {
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
-                            //update total
+                            // Re-run the backtest summary so STOCKDB and TOTALDB stay aligned on the
+                            // ladder type and metrics persisted for this symbol.
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const results = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
                                 const pricePct = Math.round((+price - web.mid) / web.mid * 10000) / 100;
+                                // First pass builds the UI label; the second pass picks the best
+                                // continuation type from the latest bar for future updates.
                                 const resultShow = type => {
                                     return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0, RANGE_INTERVAL, USSE_FEE)).then(temp => {
                                         if (temp === 'data miss') {
@@ -1149,7 +1196,6 @@ export default {
                                         }
                                         const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
                                         const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
-                                        //const str = `${pricePct}% ${m.maxAmount} ${m.returnPct}% ${m.buyHoldPct}% ${m.sharpe} ${m.sortino} ${m.maxDrawdownPct}% ${m.maxDrawdownDuration} ${m.winRate}% ${winLoss} ${m.profitFactor} ${m.tradesPerYear} ${m.calmar} ${raw_arr.length} ${min_vol}`;
                                         results.push({ type, str, metrics: m, rate: m.returnPct });
                                         return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE)).then(rtemp => {
                                             if (rtemp === 'data miss') {
@@ -1178,11 +1224,12 @@ export default {
                                         return Promise.resolve();
                                     }
                                 }
-                                //return loopShow(31).then(() => {
                                 return loopShow(0).then(() => {
                                     results.forEach(r => console.log(r.str));
                                     console.log(lastest_type);
                                     console.log('done');
+                                    // Use the middle profitable result for display so one extreme backtest
+                                    // does not dominate the label shown in the UI.
                                     const sorted = results.filter(r => r.metrics);
                                     sorted.sort((a, b) => b.rate - a.rate);
                                     const bestIdx = sorted.length > 0 ? Math.ceil(sorted.length / 2) - 1 : -1;
@@ -1217,6 +1264,7 @@ export default {
                     }
                     const get_mi = index => {
                         if (raw_list) {
+                            // Reuse cached monthly buckets first so Yahoo only fills the missing older window.
                             let isEnd = false;
                             for (let i = 0; i < 60; i++) {
                                 if (raw_list[year] && raw_list[year][month_str]) {
@@ -1353,6 +1401,7 @@ export default {
             }
         });
     },
+    // Serialize interval recalculation so each stock's ladder snapshot is refreshed atomically.
     getIntervalWarp: function(id, session) {
         if (stockIntervaling) {
             return handleError(new HoError('there is another inverval running'));
@@ -1366,6 +1415,7 @@ export default {
             return handleError(err);
         });
     },
+    // Rebuild the quarterly trade list, then sync each admin portfolio with the new candidates.
     stockFilterV4: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
         const date = _dateFactory();
         let updateyear = date.getFullYear();
@@ -1389,6 +1439,7 @@ export default {
         let filterList = [];
         const etfList = [];
         const marketcapList = [];
+        // Remove the previous filter tag set first; this job always rebuilds it from scratch.
         const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
             console.log(result.items.length);
             const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
@@ -1408,6 +1459,7 @@ export default {
             }).then(() => delFilter(index+1)) : Promise.resolve();
             return delFilter(0);
         });
+        // Pull the quarter tag page by page and annotate each candidate with ETF priority and market cap.
         const recur_query = () => StockTagTool.tagQuery(queried, `${updateyear}q${updatequarter}`, true, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
             console.log(queried);
             if (result.items.length < STOCK_FILTER_LIMIT) {
@@ -1454,6 +1506,7 @@ export default {
         });
         return clearName().then(() => recur_query()).then(filterList => {
             filterList.sort((a, b) => (a.etf !== b.etf) ? (b.etf - a.etf) : (b.mcap - a.mcap));
+            // Apply the per-index ETF quotas before recalculating each survivor's interval label.
             const filterList1 = [];
             let tw50 = 0;
             let tw100 = 0;
@@ -1519,7 +1572,7 @@ export default {
             }).then(() => addFilter(index+1)) : Promise.resolve(filterList);
             return addFilter(0);
         }).then(filterList => Mongo('find', USERDB, {perm: 1}).then(userlist => {
-            //檢查現有total中的stock名單
+            // 比對管理者目前 total 持股與最新篩選名單，產出進出清單並重算部位倍率。
             const inList = [];
             const outList = [];
             const compare_list = cIndex => (cIndex < userlist.length) ? Mongo('find', TOTALDB, {owner: userlist[cIndex]._id, sType: {$exists: false}}).then(items => {
@@ -1586,6 +1639,8 @@ export default {
                         return 0;
                     }
                 });
+                // Give the top ~20% market-cap names a larger base multiplier before §9b adds
+                // the volatility floor.
                 if (totalTwseMarketcapList.length > 2) {
                     const mcMiddle = Math.round(totalTwseMarketcapList.length / 5);
                     for (let i = 0; i < mcMiddle; i++) {
@@ -1630,6 +1685,7 @@ export default {
             return compare_list(0);
         }));
     },
+    // Prevent overlapping filter jobs and broadcast the rebuilt trade list when it finishes.
     stockFilterWarp: function(option=null, user={_id:'000000000000000000000000'}, session={}) {
         if (stockFiltering) {
             return handleError(new HoError('there is another filter running'));
@@ -1655,10 +1711,14 @@ export default {
             return handleError(err);
         });
     },
+    // Aggregate a user's total rows and create the two exchange buckets on first access.
     getStockTotal: function(user) {
         return Mongo('find', TOTALDB, {owner: user._id, sType: {$exists: false}}).then(items => {
+            // Build the portfolio summary from TOTALDB rows and ensure each exchange
+            // has a top-level cash bucket before formatting the response.
             if (items.length < 1) {
-                //new user
+                // First-time users start with empty TWSE/USSE summary rows so the
+                // portfolio response always contains both exchange sections.
                 return Mongo('insert', TOTALDB, {
                     owner: user._id,
                     index: 0,
@@ -1695,8 +1755,6 @@ export default {
                         profit: 0,
                         count: 1,
                         mid: 0,
-                        //plus: 0,
-                        //minus: 0,
                         current: 0,
                         str: '',
                         se: 0,
@@ -1715,20 +1773,21 @@ export default {
                     }],
                 })}));
             }
+            // twse accumulators
             let remain = 0;
             let totalName = '';
             let totalType = '';
             let profit = 0;
             let totalPrice = 0;
+            // usse accumulators
             let remain1 = 0;
             let totalName1 = '';
             let totalType1 = '';
             let profit1 = 0;
             let totalPrice1 = 0;
+            // Count stocks with non-empty newMid per exchange for "X of stock out of range" display
             let newMidCountTwse = 0;
             let newMidCountUsse = 0;
-            //let plus = 0;
-            //let minus = 0;
             const stock = [];
             const getStock = v => {
                 if (v.type === 'total') {
@@ -1743,62 +1802,56 @@ export default {
                     }
                     return Promise.resolve();
                 } else {
-                    //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
-                        if (v.newMid && v.newMid.length > 0) {
-                            if (v.setype === 'usse') {
-                                newMidCountUsse++;
-                            } else {
-                                newMidCountTwse++;
-                            }
-                        }
-                        let current = v.price * v.count;
-                        v.amount = v.profit ? (v.amount - v.profit) : v.amount;
-                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
-                        let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
-                        let se = 0;
+                    // Track stocks whose price has broken out of their web range (non-empty newMid stack)
+                    if (v.newMid && v.newMid.length > 0) {
                         if (v.setype === 'usse') {
-                            totalPrice1 += current;
-                            profit1 += y;
-                            se = 1;
+                            newMidCountUsse++;
                         } else {
-                            totalPrice += current;
-                            profit += y;
+                            newMidCountTwse++;
                         }
-                        //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                        //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                        //plus += p;
-                        //minus += m;
-                        if (v.clear) {
-                            v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
-                        }
-                        if (v.ing === 2) {
-                            v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
-                        }
-                        stock.push({
-                            name: v.name,
-                            type: v.type,
-                            //cost: v.cost,
-                            price: v.price,
-                            mid: v.mid,
-                            mul: Math.round(v.mul * 100) / 100,
-                            count: (v.setype === 'usse') ? v.count : v.count / 100,
-                            remain: Math.round(v.amount * 100) / 100,
-                            profit: p,
-                            //top: v.top,
-                            //bottom: v.bottom,
-                            //plus: p,
-                            //minus: m,
-                            current,
-                            str: v.str ? v.str : '',
-                            se,
-                            order: v.order,
-                        });
-                        return Promise.resolve();
-                    //});
+                    }
+                    let current = v.price * v.count;
+                    // Cleared positions may stash realized profit separately; normalize the
+                    // remaining cash basis before calculating the open-position summary.
+                    v.amount = v.profit ? (v.amount - v.profit) : v.amount;
+                    // p: lifetime P/L versus original allocation, y: day-over-day change.
+                    let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                    let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
+                    let se = 0;
+                    if (v.setype === 'usse') {
+                        totalPrice1 += current;
+                        profit1 += y;
+                        se = 1;
+                    } else {
+                        totalPrice += current;
+                        profit += y;
+                    }
+                    if (v.clear) {
+                        v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
+                    }
+                    if (v.ing === 2) {
+                        v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
+                    }
+                    stock.push({
+                        name: v.name,
+                        type: v.type,
+                        price: v.price,
+                        mid: v.mid,
+                        mul: Math.round(v.mul * 100) / 100,
+                        count: (v.setype === 'usse') ? v.count : v.count / 100,
+                        remain: Math.round(v.amount * 100) / 100,
+                        profit: p,
+                        current,
+                        str: v.str ? v.str : '',
+                        se,
+                        order: v.order,
+                    });
+                    return Promise.resolve();
                 }
             }
             const recurGet = index => {
                 if (index >= items.length) {
+                    // Prepend usse total summary row
                     if (totalName1) {
                         stock.unshift({
                             name: totalName1,
@@ -1808,13 +1861,12 @@ export default {
                             mid: 1,
                             remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
                             count: 1,
-                            //plus: Math.floor(plus * 100) / 100,
-                            //minus: Math.floor(minus * 100) / 100,
                             current: totalPrice1,
                             str: newMidCountUsse > 0 ? `${newMidCountUsse} of stock out of range` : '',
                             se: 1,
                         })
                     }
+                    // Prepend twse total summary row (inserted after usse so it appears first)
                     if (totalName) {
                         stock.unshift({
                             name: totalName,
@@ -1824,13 +1876,12 @@ export default {
                             mid: 1,
                             remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
                             count: 1,
-                            //plus: Math.floor(plus * 100) / 100,
-                            //minus: Math.floor(minus * 100) / 100,
                             current: totalPrice,
                             str: newMidCountTwse > 0 ? `${newMidCountTwse} of stock out of range` : '',
                             se: 0,
                         })
                     }
+                    // Sort stocks by current market value descending within each exchange, totals first
                     const orderbyStock = () => {
                         const twseS = [];
                         const usseS = [];
@@ -1877,7 +1928,6 @@ export default {
                             remain: remain1,
                             total: totalPrice1 + remain1,
                         }],
-                        //total: totalPrice + remain,
                         stock: orderbyStock(),
                     };
                 } else {
@@ -1887,6 +1937,10 @@ export default {
             return recurGet(0);
         });
     },
+    /**
+     * Parse portfolio maintenance commands, stage the resulting mutations, and
+     * optionally persist them back to TOTALDB when real=true.
+     */
     updateStockTotal: function(user, info, real = false) {
         //remaintwse 800 重設remain
         //delete twse2330 刪除股票
@@ -1909,7 +1963,6 @@ export default {
             let totalId1 = null;
 
             for (let v of items) {
-                //if (v.name === '投資部位' && v.type === 'total') {
                 if (v.type === 'total') {
                     if (v.setype === 'usse') {
                         remain1 = v.amount;
@@ -1924,13 +1977,17 @@ export default {
                     }
                 }
             }
+            // Collect inserts/updates/deletes first so a batch of commands can be
+            // previewed and then committed in one pass when real=true.
             const updateTotal = {};
             const removeTotal = [];
             const single = v => {
-                //const cmd = v.match(/(\d+|remain|delete)\s+(\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?/)
+                // Command shape: "<target> <value> [extra] [cost]" where target is
+                // remaintwse/remainusse/delete/clear/<setype+index>.
                 const cmd = v.match(/^([\da-zA-Z\-]+)\s+([\da-zA-Z\-]+|\-?\d+\.?\d*)\s*(\d+\.?\d*|amount)?\s*(cost)?$/);
                 if (cmd) {
                     let remainM = null;
+                    // remaintwse/remainusse directly overwrite the unallocated cash bucket.
                     if (remainM = cmd[1].match(/^remain(.*)$/)) {
                         switch(remainM[1]) {
                             case 'twse':
@@ -1943,6 +2000,8 @@ export default {
                             break;
                         }
                     } else if (cmd[1] === 'delete') {
+                        // delete <setype+index>: either mark the position for async cleanup
+                        // or liquidate it immediately, depending on the current runtime mode.
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
@@ -1988,14 +2047,12 @@ export default {
                                         }
                                         break;
                                     }
-                                    /*if (items[i]._id) {
-                                        removeTotal.push(items[i]._id);
-                                    }
-                                    items.splice(i, 1);*/
                                 });
                             }
                         }
                     } else if (cmd[1] === 'clear') {
+                        // clear <setype+index> keeps the position but flags it for the
+                        // cleanup flow that presents the "Clearing" status in summaries.
                         const setype = cmd[2].substring(0, 4);
                         const index = cmd[2].substring(4);
                         for (let i in items) {
@@ -2019,6 +2076,8 @@ export default {
                             if (index === items[i].index && setype === items[i].setype) {
                                 is_find = true;
                                 if (cmd[3] === 'amount') {
+                                    // "... amount" resets the capital allocation and rebuilds
+                                    // the web grid around the new target budget.
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
                                     if (!newWeb) {
                                         return handleError(new HoError(`Amount need large than ${Math.ceil(items[i].mid * (items[i].web.length - 1) / 3)}`));
@@ -2054,7 +2113,8 @@ export default {
                                         }
                                     }
                                 } else if (+cmd[2] >= 0 && +cmd[3] >= 0 && cmd[4]) {
-                                //} else if (cmd[4]) {
+                                    // "... <count> <cost> cost" rewrites the current position
+                                    // into an exact count/cost basis without recording a trade.
                                     items[i].count = +cmd[2];
                                     switch(setype) {
                                         case 'twse':
@@ -2076,6 +2136,9 @@ export default {
                                         }
                                     }
                                 } else if (!isNaN(+cmd[2])) {
+                                    // Numeric updates are treated as buy/sell commands; they
+                                    // adjust cash, position size, and the recent trade history
+                                    // used by the range logic.
                                     const orig_count = items[i].count;
                                     items[i].count += +cmd[2];
                                     if (items[i].count < 0) {
@@ -2152,30 +2215,14 @@ export default {
                                             }
                                         }
                                     });
-                                /*} else {
-                                    if (+cmd[2] > +cmd[3]) {
-                                        items[i].top = +cmd[2];
-                                        items[i].bottom = +cmd[3];
-                                    } else {
-                                        items[i].top = +cmd[3];
-                                        items[i].bottom = +cmd[2];
-                                    }
-                                    if (items[i]._id) {
-                                        if (updateTotal[items[i]._id]) {
-                                            updateTotal[items[i]._id].top = items[i].top;
-                                            updateTotal[items[i]._id].bottom = items[i].bottom;
-                                        } else {
-                                            updateTotal[items[i]._id] = {top: items[i].top, bottom: items[i].bottom};
-                                        }
-                                    }*/
                                 }
                                 break;
                             }
                         }
                         if (!is_find) {
                             if (+cmd[2] >= 0 && cmd[3] === 'amount') {
-                                //init amount
-                                //get web? arr mid count
+                                // For a brand-new position, clone the stock's web template and
+                                // seed the allocation without executing a buy/sell trade yet.
                                 const setype = cmd[1].substring(0, 4);
                                 const index = cmd[1].substring(4);
                                 return Mongo('find', STOCKDB, {type: setype, index}, {limit: 1}).then(item => {
@@ -2192,13 +2239,13 @@ export default {
                                     return getBasicStockData(setype, index).then(basic => getStockPrice(setype, basic.stock_index).then(price => {
                                         console.log(basic);
                                         items.push({
-                                            //加setype ind name加setype
                                             owner: user._id,
                                             setype,
                                             index: basic.stock_index,
+                                            // Keep the exchange prefix in the display name because
+                                            // update commands address positions as "<setype><index>".
                                             name: `${setype} ${basic.stock_index} ${basic.stock_name}`,
                                             type: basic.stock_ind ? `${basic.stock_class} ${basic.stock_ind}` : `${basic.stock_class}`,
-                                            //cost: 0,
                                             count: 0,
                                             web: newWeb.arr,
                                             wType: item[0].web.type,
@@ -2207,42 +2254,19 @@ export default {
                                             extrem: item[0].web.extrem,
                                             amount: +cmd[2],
                                             orig: +cmd[2],
-                                            //top: Math.floor(price * 1.2 * 100) / 100,
-                                            //bottom: Math.floor(price * 0.95 * 100) / 100,
                                             price,
                                             previous: {buy: [], sell: []},
                                             newMid: [],
                                             ing: 0,
-                                            //high: price,
                                         })
-                                        //remain -= cost;
-                                        //updateTotal[totalId] = {cost: remain};
                                     }));
                                 });
-                            /*} else if (cmd[4] && +cmd[2] > 0) {
-                                return getBasicStockData('twse', cmd[1]).then(basic => getStockPrice('twse', basic.stock_index).then(price => {
-                                    console.log(basic);
-                                    const cost = (+cmd[3] > 0) ? +cmd[3] : 0;
-                                    items.push({
-                                        owner: user._id,
-                                        index: basic.stock_index,
-                                        name: `${basic.stock_index} ${basic.stock_name}`,
-                                        type: basic.stock_class,
-                                        cost,
-                                        count: +cmd[2],
-                                        top: Math.floor(price * 1.2 * 100) / 100,
-                                        bottom: Math.floor(price * 0.95 * 100) / 100,
-                                        price,
-                                        high: price,
-                                    })
-                                    remain -= cost;
-                                    updateTotal[totalId] = {cost: remain};
-                                }));*/
                             }
                         }
                     }
                 }
             }
+            // Apply staged mutations only after every command has been parsed successfully.
             const updateReal = () => {
                 console.log(updateTotal);
                 console.log(removeTotal);
@@ -2262,76 +2286,71 @@ export default {
                 const recurRemove = index => (index >= removeTotal.length) ? rest() : Mongo('deleteMany', TOTALDB, {_id: removeTotal[index]}).then(() => recurRemove(index + 1));
                 return real ? recurUpdate(0) : rest();
             }
+            // Reuse the same formatter as getStockTotal so preview mode and persisted
+            // mode return identical portfolio summaries.
             const rest = () => {
                 let profit = 0;
                 let totalPrice = 0;
                 let profit1 = 0;
                 let totalPrice1 = 0;
+                // Count stocks with non-empty newMid per exchange for "X of stock out of range" display
                 let newMidCountTwse = 0;
                 let newMidCountUsse = 0;
-                //let plus = 0;
-                //let minus = 0;
                 const stock = [];
                 const getStock = v => {
                     if (v.type === 'total') {
                         return Promise.resolve();
                     } else {
-                        //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
-                            if (v.newMid && v.newMid.length > 0) {
-                                if (v.setype === 'usse') {
-                                    newMidCountUsse++;
-                                } else {
-                                    newMidCountTwse++;
-                                }
-                            }
-                            let se = 0;
-                            let current = v.price * v.count;
-                            v.amount = v.profit ? (v.amount - v.profit) : v.amount;
-                            let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
-                            let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
+                        // Track stocks whose price has broken out of their web range (non-empty newMid stack)
+                        if (v.newMid && v.newMid.length > 0) {
                             if (v.setype === 'usse') {
-                                totalPrice1 += current;
-                                profit1 += y;
-                                se = 1;
+                                newMidCountUsse++;
                             } else {
-                                totalPrice += current;
-                                profit += y;
+                                newMidCountTwse++;
                             }
-                            //const p = Math.floor((v.top * v.count - v.cost) * 100) / 100;
-                            //const m = Math.floor((v.bottom * v.count - v.cost) * 100) / 100;
-                            //plus += p;
-                            //minus += m;
-                            if (v.clear) {
-                                v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
-                            }
-                            if (v.ing === 2) {
-                                v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
-                            }
-                            stock.push({
-                                name: v.name,
-                                type: v.type,
-                                //cost: v.cost,
-                                price: v.price,
-                                mid: v.mid,
-                                mul: Math.round(v.mul * 100) / 100,
-                                count: (v.setype === 'usse') ? v.count : v.count / 100,
-                                remain: Math.round(v.amount * 100) / 100,
-                                profit: p,
-                                //top: v.top,
-                                //bottom: v.bottom,
-                                //plus: p,
-                                //minus: m,
-                                current,
-                                str: v.str ? v.str : '',
-                                se,
-                                order: v.order,
-                            });
-                            return Promise.resolve();
-                        //});
+                        }
+                        let se = 0;
+                        let current = v.price * v.count;
+                        // Cleared positions may stash realized profit separately; normalize the
+                        // remaining cash basis before calculating the open-position summary.
+                        v.amount = v.profit ? (v.amount - v.profit) : v.amount;
+                        // p: lifetime P/L versus original allocation, y: day-over-day change.
+                        let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
+                        let y = v.previousPrice ? ((v.price - v.previousPrice) * v.count) : 0;
+                        if (v.setype === 'usse') {
+                            totalPrice1 += current;
+                            profit1 += y;
+                            se = 1;
+                        } else {
+                            totalPrice += current;
+                            profit += y;
+                        }
+                        if (v.clear) {
+                            v.str = v.str ? `Clearing ${v.str}` : 'Clearing';
+                        }
+                        if (v.ing === 2) {
+                            v.str = v.str ? `Deleting ${v.str}` : 'Deleting';
+                        }
+                        stock.push({
+                            name: v.name,
+                            type: v.type,
+                            price: v.price,
+                            mid: v.mid,
+                            mul: Math.round(v.mul * 100) / 100,
+                            count: (v.setype === 'usse') ? v.count : v.count / 100,
+                            remain: Math.round(v.amount * 100) / 100,
+                            profit: p,
+                            current,
+                            str: v.str ? v.str : '',
+                            se,
+                            order: v.order,
+                        });
+                        return Promise.resolve();
                     }
                 }
                 const recurGet = index => {
                     if (index >= items.length) {
+                        // Prepend usse total summary row
                         if (totalName1) {
                             stock.unshift({
                                 name: totalName1,
@@ -2341,13 +2360,12 @@ export default {
                                 mid: 1,
                                 remain: `${(totalPrice1 + remain1 > 0) ? Math.round(profit1 / (totalPrice1 + remain1) * 10000) / 100 : 0}%`,
                                 count: 1,
-                                //plus: Math.floor(plus * 100) / 100,
-                                //minus: Math.floor(minus * 100) / 100,
                                 current: totalPrice1,
                                 str: newMidCountUsse > 0 ? `${newMidCountUsse} of stock out of range` : '',
                                 se: 1,
                             })
                         }
+                        // Prepend twse total summary row (inserted after usse so it appears first)
                         if (totalName) {
                             stock.unshift({
                                 name: totalName,
@@ -2357,13 +2375,12 @@ export default {
                                 mid: 1,
                                 remain: `${(totalPrice + remain > 0) ? Math.round(profit / (totalPrice + remain) * 10000) / 100 : 0}%`,
                                 count: 1,
-                                //plus: Math.floor(plus * 100) / 100,
-                                //minus: Math.floor(minus * 100) / 100,
                                 current: totalPrice,
                                 str: newMidCountTwse > 0 ? `${newMidCountTwse} of stock out of range` : '',
                                 se: 0,
                             })
                         }
+                        // Sort stocks by current market value descending within each exchange, totals first
                         const orderbyStock = () => {
                             const twseS = [];
                             const usseS = [];
@@ -2410,7 +2427,6 @@ export default {
                                 remain: remain1,
                                 total: totalPrice1 + remain1,
                             }],
-                            //total: totalPrice + remain,
                             stock: orderbyStock(),
                         };
                     } else {
@@ -2419,6 +2435,7 @@ export default {
                 }
                 return recurGet(0);
             }
+            // Guarantee both exchange summary rows exist before applying any commands.
             const checkTotal = () => {
                 if (!totalId1) {
                     return Mongo('insert', TOTALDB, {
@@ -2478,6 +2495,9 @@ export default {
     },
 }
 
+// Parse one month of TWSE CSV rows into the high/low/volume/day arrays used by interval_data.
+// Parse a TWSE monthly CSV payload, including quoted numeric fields that
+// contain commas, into per-day high/low/volume arrays.
 export const parseStockCsv = (raw_data, year, month_str) => {
     const high = [];
     const low = [];
@@ -2494,6 +2514,8 @@ export const parseStockCsv = (raw_data, year, month_str) => {
         for (let i of data_list) {
             let tmp_list_1 = [];
             const tmp_list = i.split(',');
+            // TWSE CSV rows may contain quoted numeric fields with embedded commas,
+            // so rebuild quoted segments before indexing into the parsed columns.
             for (let j in tmp_list) {
                 if (tmp_list[j].match(/^".*"$/)) {
                     tmp_list_1.push(tmp_list[j].replace(/"/g, ''));
@@ -2508,17 +2530,15 @@ export const parseStockCsv = (raw_data, year, month_str) => {
                     tmp_list_1.push(tmp_number);
                     tmp_index = -1;
                     tmp_number = '';
-                } else {
-                    if (tmp_index === -1) {
-                        tmp_list_1.push(tmp_list[j]);
-                    }
+                } else if (tmp_index === -1) {
+                    tmp_list_1.push(tmp_list[j]);
                 }
             }
             if (tmp_list_1[4] !== '--' && tmp_list_1[5] !== '--') {
                 high.push(Number(tmp_list_1[4]));
                 low.push(Number(tmp_list_1[5]));
                 vol.push(Number(tmp_list_1[8]));
-                // Extract day from date field "YYY/MM/DD"
+                // Keep only the day-of-month because the caller already groups data by year/month.
                 const dateParts = tmp_list_1[0].trim().split('/');
                 day.push(dateParts.length >= 3 ? Number(dateParts[2]) : 0);
             }
@@ -2550,6 +2570,8 @@ export const fetchTwseAdjustments = (stockIndex, stockType) => {
     const startDateTpex = `${date.getFullYear() - 5}/${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}`;
     const endDateTpex = `${date.getFullYear()}/${completeZero(date.getMonth() + 1, 2)}/${completeZero(date.getDate(), 2)}`;
 
+    // TWT49U exposes TWSE ex-right / ex-dividend reference prices; convert them into
+    // backward-adjustment ratios so older bars stay comparable with post-event trading.
     const fetchTwseExRight = () => {
         if (stockType === 2) return Promise.resolve();
         return Api('url', `https://www.twse.com.tw/rwd/zh/exRight/TWT49U?startDate=${startDate}&endDate=${endDate}&selectType=ALL&response=json`).then(raw => {
@@ -2569,6 +2591,8 @@ export const fetchTwseAdjustments = (stockIndex, stockType) => {
         }).catch(err => handleError(err, 'TWSE TWT49U'));
     };
 
+    // Capital reductions shrink share count and usually lift the reference price,
+    // so the backward ratio is inverted relative to ex-dividend adjustments.
     const fetchTwseReduction = () => {
         if (stockType === 2) return Promise.resolve();
         return Api('url', `https://www.twse.com.tw/rwd/zh/reducation/TWTAUU?startDate=${startDate}&endDate=${endDate}&response=json`).then(raw => {
@@ -2588,6 +2612,8 @@ export const fetchTwseAdjustments = (stockIndex, stockType) => {
         }).catch(err => handleError(err, 'TWSE TWTAUU'));
     };
 
+    // TPEx uses a different payload shape (`tables[0].data`) but the same idea:
+    // derive a price ratio from pre-event close versus exchange-published reference price.
     const fetchTpexExRight = () => {
         if (stockType === 3) return Promise.resolve();
         return Api('url', `https://www.tpex.org.tw/www/zh-tw/bulletin/exDailyQ?startDate=${startDateTpex}&endDate=${endDateTpex}&response=json`).then(raw => {
@@ -2619,6 +2645,8 @@ export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
     const adjustments = [];
     if (!stockData || !stockData.events) return adjustments;
 
+    // Yahoo events are timestamped at the action date, so use the latest earlier close
+    // as the baseline for dividend/capital-gain ratio calculations.
     const findCloseBefore = (eventTs) => {
         for (let i = timestamps.length - 1; i >= 0; i--) {
             if (timestamps[i] < eventTs && quotes.close[i]) {
@@ -2642,6 +2670,8 @@ export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
         }
     }
 
+    // Yahoo split events already provide the share conversion, so convert directly to
+    // the backward price ratio applied to pre-split data points.
     if (stockData.events.splits) {
         for (const ev of stockData.events.splits) {
             if (ev.numerator && ev.denominator) {
@@ -2701,6 +2731,8 @@ export const applyAdjustments = (interval_data, adjustments) => {
                     if (v.h > tmp_max) tmp_max = v.h;
                     if (!tmp_min || v.l < tmp_min) tmp_min = v.l;
                 });
+                // Refresh each month's range from adjusted prices so downstream web generation
+                // sees the same extrema as the flattened raw_arr.
                 adjData[y][m].max = tmp_max;
                 adjData[y][m].min = tmp_min;
             }
@@ -2751,7 +2783,8 @@ export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
     if (highLowInversion > 0) warnings.push(`${highLowInversion} data points where high < low`);
     if (zeroVolume > raw_arr.length * 0.5) warnings.push(`${zeroVolume}/${raw_arr.length} data points with zero volume`);
 
-    // Check for large price gaps without adjustment events
+    // Flag unusually large step changes; callers can compare the warning list with known
+    // corporate-action dates when deciding whether the interval series is trustworthy.
     const adjDates = new Set((adjustments || []).map(a => a.date));
     let gapCount = 0;
     for (let i = 1; i < raw_arr.length; i++) {
@@ -2784,6 +2817,7 @@ export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
     return { valid, warnings };
 };
 
+// Download a single TWSE annual report file to the staging path before Drive upload.
 const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
     const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
     if (!center) {
@@ -2817,9 +2851,11 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.co
     }
 });
 
+// Fetch up to five years of TWSE annual reports for one company into its Drive folder.
 export const getSingleAnnual = (year, folder, index) => {
     let annual_list = [];
     const recur_annual = (cYear, annual_folder) => {
+        // Walk backward year by year, skipping reports that are already uploaded or marked as read.
         if (!annual_list.includes(cYear.toString()) && !annual_list.includes(`read${cYear}`)) {
             const folderPath = `/mnt/stock/twse/${index}`;
             const filePath = `${folderPath}/tmp`;
@@ -2865,17 +2901,10 @@ export const getSingleAnnual = (year, folder, index) => {
     }));
 }
 
+// Refresh live price/status data for every tracked stock, recompute trade suggestions,
+// and persist the latest portfolio snapshot for downstream order generation.
 export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: false}}).then(items => {
-    /*const gp = getUssePrice();
-    const addStock = [];
-    items.forEach(t => {
-        if (t.setype === 'usse' && !gp[t.index]) {
-            addStock.push(t.index);
-        }
-    });
-    if (addStock.length > 0) {
-        usseSubStock(addStock, false);
-    }*/
+    // Broker positions/orders are loaded once per refresh cycle so every item uses the same snapshot.
     const ussePosition = getUssePosition();
     const usseOrder = getUsseOrder();
     console.log(ussePosition);
@@ -2901,7 +2930,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     }
                     const item = sitems[0];
                     let change_previous = false;
-                    //market cap multiple
+                    // Some entries store scaled fundamentals; normalize them before computing suggestions.
                     if (item.mul) {
                         item.orig = item.orig * item.mul;
                         item.times = Math.floor(item.times * item.mul);
@@ -2922,10 +2951,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                 break;
                             }
                         }
+                        // Keep a compact, human-readable pending-order summary on each stock item.
                         item.order = [];
                         for (let i = 0; i < usseOrder.length; i++) {
-                            //console.log(usseOrder[i].symbol);
-                            //console.log(item.index);
                             if (usseOrder[i].symbol === item.index) {
                                 const time = new Date(usseOrder[i].time * 1000);
                                 item.order.push(`${usseOrder[i].amount} ${usseOrder[i].type === 'MARKET' ? 'MARKET' : usseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
@@ -2942,10 +2970,9 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                                 break;
                             }
                         }
+                        // TWSE orders use the same summary format, with odd-lot quantities normalized.
                         item.order = [];
                         for (let i = 0; i < twseOrder.length; i++) {
-                            //console.log(twseOrder[i].symbol);
-                            //console.log(item.index);
                             if (twseOrder[i].symbol === item.index) {
                                 const time = new Date(twseOrder[i].time * 1000);
                                 item.order.push(`${twseOrder[i].type.match(/IntradayOdd$/) ? twseOrder[i].amount / 1000 : twseOrder[i].amount} ${!twseOrder[i].type.match(/^LMT/) ? 'MARKET' : twseOrder[i].price} ${time.getMonth() + 1}/${time.getDate()}`);
@@ -2954,11 +2981,14 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     }
                     console.log(item);
                     const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
-                    //new mid
+                    // Resolve any breakout-driven midpoint shifts before generating fresh buy/sell guidance.
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
                         console.log(nm);
                     });
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
+                    // Re-run the web whenever repeated breakouts push too many provisional mids onto the stack.
+                    // The preferred path rebuilds from cached interval data; the ratio fallback preserves behavior
+                    // when the cache is missing or the recalculation cannot produce a stable stair array.
                     const processResetWeb = (recalcCount) => {
                         if (!suggestion.resetWeb) return Promise.resolve();
                         item.newMid.push(suggestion.newMid);
@@ -3025,7 +3055,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         return processResetWeb(recalcCount);
                     };
                     return processResetWeb(0).then(() => {
-                    // §9a Kelly Criterion: boost trade count when kelly > 50%
+                    // §9a Kelly Criterion: boost trade count when the measured edge is strong enough
+                    // to justify one extra unit on both sides of the web.
                     if (item.metrics && item.metrics.winRate > 0 && item.metrics.avgLoss > 0) {
                         const p = item.metrics.winRate / 100;
                         const b = item.metrics.avgWin / item.metrics.avgLoss;
@@ -3035,9 +3066,12 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             if (suggestion.sell > 0) suggestion.sCount++;
                         }
                     }
+                    // Fold already queued manual quantities into the next suggested order size.
                     suggestion.buy = suggestion.buy + (item.bquantity ? item.bquantity : 0) + (item.boddquantity ? item.boddquantity : 0);
                     suggestion.sell = suggestion.sell + (item.squantity ? item.squantity : 0) + (item.soddquantity ? item.soddquantity : 0);
                     if (!item.clear) {
+                        // When the midpoint has shifted, rebalance toward the new target cash/holding band
+                        // by increasing the count of repeated buys or sells rather than altering unit size.
                         let count = 0;
                         let amount = item.amount;
                         if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] <= item.mid) {
@@ -3191,66 +3225,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     } else {
                         suggestionData['twse'][item.index] = suggestion;
                     }
-                    /*if (suggestion.type === 2) {
-                        if (Math.abs(suggestion.buy - item.bCurrent) + item.bCurrent > (1 + fee) * (1 + fee) * item.bCurrent) {
-                            item.bTarget = item.bCurrent;
-                            item.bCurrent = suggestion.buy;
-                        }
-                    } else if (price > item.bTarget * 1.05) {
-                        item.bCurrent = 0;
-                        item.bTarget = 0;
-                    }
-                    if (suggestion.type === 4) {
-                        if (Math.abs(suggestion.sell - item.sCurrent) + item.sCurrent > (1 + fee) * (1 + fee) * item.sCurrent) {
-                            item.sTarget = item.sCurrent;
-                            item.sCurrent = suggestion.sell;
-                        }
-                    } else if (price < item.sTarget * 0.95) {
-                        item.sCurrent = 0;
-                        item.sTarget = 0;
-                    }
-                    if (item.count > 0 && suggestion.type === 1 && price < item.price) {
-                        sendWs(`${item.name} SELL ALL NOW!!!`, 0, 0, true);
-                    }
-                    if (item.bTarget && price >= item.bTarget && price > item.price && item.amount >= price) {
-                        sendWs(`${item.name} BUY NOW!!!`, 0, 0, true);
-                    }
-                    if (item.sTarget && price <= item.sTarget && price < item.price && item.count > 0) {
-                        sendWs(`${item.name} SELL NOW!!!`, 0, 0, true);
-                    }*/
-                    /*
-                    const high = (!item.high || price > item.high) ? price : item.high;
-                    if (price > item.price) {
-                        if (price <= item.bottom * 1.05 && price >= item.bottom) {
-                            sendWs(`${item.name} BUY!!!`, 0, 0, true);
-                        }
-                    } else if (item.count > 0 && price < item.price) {
-                        if (high > item.top && price < item.top) {
-                            sendWs(`${item.name} SELL!!!`, 0, 0, true);
-                        } else {
-                            let midB = item.bottom;
-                            let midT = item.bottom * 1.2;
-                            while(midB < item.top) {
-                                if (high < midT) {
-                                    if (price < midB * 0.95 || price < high*0.9) {
-                                        sendWs(`${item.name} SELL!!!`, 0, 0, true);
-                                    }
-                                    break;
-                                }
-                                midB = midT;
-                                midT = midB * 1.2;
-                            }
-                        }
-                    }*/
+                    // Persist the derived suggestion snapshot used by UI displays and later order placement.
                     return Mongo('update', TOTALDB, {_id: item._id}, {$set : Object.assign({
                         price,
                         previousPrice,
                         str: suggestion.str,
-                        //sent: item.sent,
-                        //bTarget: item.bTarget,
-                        //bCurrent: item.bCurrent,
-                        //sTarget: item.sTarget,
-                        //sCurrent: item.sCurrent,
                         newMid: item.newMid,
                         mid: item.mid,
                         web: item.web,
@@ -3263,17 +3242,18 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                     });
                 });
             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), _statusDelay)))
-            //}).then(() => recur_price(index + 1));
         }
     }
     return recur_price(0).then(() => {
-        // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
-        // Items that are clearing (clear=true) or deleting (ing=2) are excluded from the count and not forced to fakeOrder
+        // §6d Emergency Stop: when too many active holdings have broken out of their web price range
+        // (non-empty newMid stack), zero all buy/sell counts to prevent trading until market stabilizes.
+        // Clearing/deleting items are excluded since they are already winding down positions.
         const activeItems = items.filter(it => it.index !== 0 && it.index && !it.clear && it.ing !== 2);
         if (activeItems.length > 0) {
             const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
             if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
                 console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
+                // Zero out all suggestion counts to convert real orders into fake orders
                 ['twse', 'usse'].forEach(setype => {
                     Object.keys(suggestionData[setype]).forEach(key => {
                         suggestionData[setype][key].bCount = 0;
@@ -3304,9 +3284,12 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     });
 });
 
+// Fetch the tracked stock universe for TWSE sector pages or major US index constituents.
 export const getStockListV2 = (type, year, month) => {
     switch(type) {
         case 'twse':
+        // MOPS sector membership is published by reporting quarter, so map the current
+        // month to the latest completed quarter before requesting the roster.
         let quarter = 3;
         if (month < 4) {
             quarter = 4;
@@ -3373,6 +3356,8 @@ export const getStockListV2 = (type, year, month) => {
             return stock_list;
         });
         case 'usse':
+        // Build one deduplicated US list from the three reference index pages.
+        // Each source exposes slightly different table shapes, so the parser branches per page.
         const list = ['Dow_Jones_Industrial_Average', 'Nasdaq-100', 'List_of_S%26P_500_companies'];
         const stock_list = [];
         const recur_get = index => {
@@ -3488,21 +3473,20 @@ export const resolveNewMidStack = (stack, price, mid, webArr, onPop) => {
     return scaleWebArr(stack, mid, webArr);
 };
 
+// Generate buy/sell suggestions for a single price probe against the current web.
+// Returns resetWeb when price escapes the ladder and a new midpoint must be derived.
 export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:[], sell:[]}, pOrig, pAmount, pCount, pPricecost, pPl, upLimit, pType = 0, sType = 0, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, now = Math.round(_dateFactory().getTime() / 1000), newMidDepth = 0) => {
     priceTimes = priceTimes ? priceTimes : 1;
-    //const now = Math.round(_dateFactory().getTime() / 1000);
-    //const t5 = (pType|16) === pType ? true : false;
     let is_buy = true;
     let is_sell = true;
     let bTimes = 1;
     let sTimes = 1;
     let bP = 8;
     let nowBP = priceArray.length - 1;
-    //let bAdd = sType === 0 ? 0 : 1;
-    //let sAdd = sType === 0 ? 0 : 1;
     let bAdd = 0;
     let sAdd = 0;
-    //let tmpB = 0;
+
+    // Walk downward through the web to find the nearest buy band and its σ depth.
     for (; nowBP >= 0; nowBP--) {
         if (Math.abs(priceArray[nowBP]) * (sType === 0 ? 1.001 : 1.0001) >= price) {
             break;
@@ -3512,23 +3496,17 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
     }
     if (nowBP === priceArray.length - 1) {
-    //if (bP > 6) {
         const newMid = calcResetMid(priceArray, fee, 1, newMidDepth);
         return {
             resetWeb: 1,
             newMid,
         }
-        //return {
-        //    str: 'SELL ALL',
-        //    type: 1,
-        //};
     }
+
     let sP = 0;
     let nowSP = 0;
+    // Walk upward through the web to find the nearest sell band and its σ depth.
     for (; nowSP < priceArray.length; nowSP++) {
-        /*if ((sP < 6) && (priceArray[nowSP] < 0)) {
-            tmpB = Math.abs(priceArray[nowSP]);
-        }*/
         if (Math.abs(priceArray[nowSP]) * (sType === 0 ? 0.999 : 0.9999) <= price) {
             break;
         }
@@ -3537,19 +3515,18 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         }
     }
     if (nowSP === 0) {
-    //if (sP < 2) {
         const newMid = calcResetMid(priceArray, fee, 2, newMidDepth);
         return {
             resetWeb: 2,
             newMid,
         }
     }
+
     if (previous.time) {
         if (previous.price >= price) {
             let previousP = priceArray.length - 1;
             let pP = 8;
             let pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
-            //let pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             for (; previousP >= 0; previousP--) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 1.001 : 1.0001) >= pPrice) {
                     break;
@@ -3562,28 +3539,17 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 nowBP = previousP > nowBP ? previousP : nowBP;
                 bP = pP > bP ? pP : bP;
             }
-            //console.log(now);
-            //console.log(previous.time);
-            //console.log(nowSP);
-            //console.log(nowBP);
-            //console.log(previousP);
             if (previous.type === 'buy') {
+                // Buying again must wait longer when price has fallen deeper into the web.
                 if ((now - previous.time) >= (ttime + (nowBP - previousP) * tinterval)) {
                     is_buy = true;
                     bTimes = bTimes * (nowBP - previousP + 1);
                 } else {
                     is_buy = false;
                 }
-                if ((now - previous.time) >= ttime) {
-                    is_sell = true;
-                } else {
-                    is_sell = false;
-                }
-                /*if (!previous.real) {
-                    is_buy = true;
-                    is_sell = true;
-                }*/
+                is_sell = (now - previous.time) >= ttime;
             } else if (previous.type === 'sell') {
+                // After a sell, both sides stay locked until the base cooldown expires.
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
                     is_sell = true;
@@ -3591,13 +3557,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_sell = false;
                     is_buy = false;
                 }
-                /*if (!previous.real) {
-                    is_buy = true;
-                    is_sell = true;
-                }*/
             }
             pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
-            //pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             previousP = 0;
             pP = 0;
             for (; previousP < priceArray.length; previousP++) {
@@ -3608,16 +3569,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     pP++;
                 }
             }
-            //if (pAmount > 0) {
-                nowSP = previousP < nowSP ? previousP : nowSP;
-                sP = pP < sP ? pP : sP;
-            //}
+            // Mirror the previous trade into the sell-side band so near-repeat sells are delayed too.
+            nowSP = previousP < nowSP ? previousP : nowSP;
+            sP = pP < sP ? pP : sP;
         }
         if (previous.price < price) {
             let previousP = 0;
             let pP = 0;
             let pPrice = ((previous.tprice && previous.tprice > previous.price) ? previous.tprice : previous.price) * (1 + fee) * (1 + fee);
-            //let pPrice = (previous.type === 'buy') ? previous.price * (1 + fee) * (1 + fee) : previous.price;
             for (; previousP < priceArray.length; previousP++) {
                 if (Math.abs(priceArray[previousP]) * (sType === 0 ? 0.999 : 0.9999) <= pPrice) {
                     break;
@@ -3630,27 +3589,15 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 nowSP = previousP < nowSP ? previousP : nowSP;
                 sP = pP < sP ? pP : sP;
             }
-            //console.log(now);
-            //console.log(previous.time);
-            //console.log(nowSP);
-            //console.log(nowBP);
-            //console.log(previousP);
             if (previous.type === 'sell') {
+                // Selling again must wait longer when price has risen deeper into the web.
                 if ((now - previous.time) >= (ttime + (previousP - nowSP) * tinterval)) {
                     is_sell = true;
                     sTimes = sTimes * (previousP - nowSP + 1);
                 } else {
                     is_sell = false;
                 }
-                if ((now - previous.time) >= ttime) {
-                    is_buy = true;
-                } else {
-                    is_buy = false;
-                }
-                /*if (!previous.real) {
-                    is_buy = true;
-                    is_sell = true;
-                }*/
+                is_buy = (now - previous.time) >= ttime;
             } else if (previous.type === 'buy') {
                 if ((now - previous.time) >= ttime) {
                     is_buy = true;
@@ -3659,13 +3606,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                     is_buy = false;
                     is_sell = false;
                 }
-                /*if (!previous.real) {
-                    is_buy = true;
-                    is_sell = true;
-                }*/
             }
             pPrice = ((previous.tprice && previous.tprice < previous.price) ? previous.tprice : previous.price) * (2 - (1 + fee) * (1 + fee));
-            //pPrice = (previous.type === 'sell') ? previous.price * (2 - (1 + fee) * (1 + fee)) : previous.price;
             previousP = priceArray.length - 1;
             pP = 8;
             for (; previousP >= 0; previousP--) {
@@ -3681,42 +3623,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
                 bP = pP > bP ? pP : bP;
             }
         }
-        //if (pType === 0 && previous.buy && previous.sell) {
-        /*if (previous.buy.length > 0 && previous.sell.length > 0) {
-            if (!t5) {
-                if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                    bAdd--;
-                }*//* else if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
-                    bAdd++;
-                }
-                if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
-                    sAdd++;
-                } else *//*if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                    sAdd--;
-                }
-            } else {
-                *//*if (previous.buy[0].price * 1.01 < Math.abs(priceArray[nowBP + 1])) {
-                    bAdd++;
-                } else*/ /*if (previous.buy[0].price * 0.99 > Math.abs(priceArray[nowBP + 1])) {
-                    bAdd--;
-                }
-                if (previous.sell[0].price * 1.01 < Math.abs(priceArray[nowSP - 1])) {
-                    sAdd--;
-                }*/ /*else if (previous.sell[0].price * 0.99 > Math.abs(priceArray[nowSP - 1])) {
-                    sAdd++;
-                }*/
-            //}
-            //console.log(previous);
-            /*console.log(Math.abs(priceArray[nowBP + 1]));
-            console.log(bAdd);
-            console.log(Math.abs(priceArray[nowSP - 1]));
-            console.log(sAdd);*/
-        //}
     }
-    /*console.log(nowBP);
-    console.log(nowSP);
-    console.log(bP);
-    console.log(sP);*/
+
     let buy = 0;
     let sell = 0;
     let str = '';
@@ -3725,38 +3633,24 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     let type = 0;
     bCount = bTimes * bCount * priceTimes;
     sCount = sTimes * sCount * priceTimes;
+
     const finalSell = () => {
-        /*if (pAmount <= sell * priceTimes * 2) {
-            sCount = Math.floor(pOrig / sell / 4 / priceTimes) * priceTimes;
-            if (type === 8 || type === 5 || type === 9) {
-                type = 0;
-            }
-        } else {*/
-            /*if (sCount < (2 * priceTimes) && (pAmount / price) < (2 * priceTimes)) {
-                sCount = 2 * priceTimes;
-            } else if (pCount <= (2 * priceTimes) && sCount > priceTimes) {
-                sCount = priceTimes;
-            }*/
-            if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
-                if (sell >= pPricecost) {
-                    //sCount = sTimes * priceTimes;
-                } else {
-                    sCount = 0;
-                    //sell = 0;
-                    if (type === 8 || type === 5 || type === 9) {
-                        type = 0;
-                    }
+        // If the position is only slightly underwater, avoid selling below cost once cash is already > 3/4 of pOrig.
+        if (pPricecost && pPl && pPl < 0 && -pPl < (pOrig * 1 / 4) && sCount > 0 && ((pAmount - pPl) / pOrig) > (3 / 4)) {
+            if (sell < pPricecost) {
+                sCount = 0;
+                if (type === 8 || type === 5 || type === 9) {
+                    type = 0;
                 }
             }
-        //}
+        }
         if (pCount === 0) {
             sCount = 0;
-            //sell = 0;
             if (type === 8 || type === 5 || type === 9) {
                 type = 0;
             }
         }
-        //維持賣掉後至剩1/4
+        // Cap the liquidation so the strategy keeps at least one-quarter of the original capital deployed.
         if (pAmount > 0 && ((pAmount + sCount * sell) > (pOrig * 3 / 4))) {
             let count = 0;
             let tmpAmount = pOrig * 3 / 4 - pAmount;
@@ -3772,29 +3666,10 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         if (pAmount == 0) {
             sCount = 4 * priceTimes;
         }
-        /*if (pAmount && sCount) {
-            const remain = pCount - sCount;
-            if (pCount < 3 * priceTimes) {
-                sCount = priceTimes;
-            } else if (pCount < 5 * priceTimes) {
-                sCount = 2 * priceTimes;
-            } else if (remain < 2 * priceTimes) {
-                sCount = sCount - 2 * priceTimes + remain;
-            }
-        }*/
     }
+
     const finalBuy = () => {
-        /*if (bCount < (2 * priceTimes) && pCount <= (2 * priceTimes)) {
-            bCount = 2 * priceTimes;
-        }*/
-        /*if (pPricecost && pPl && pPl < 0 && bCount > 0 && (pRemain < (1 / 4) || (!sType && pAmount < price))) {
-            if (buy <= pPricecost) {
-                //bCount = bTimes * priceTimes;
-            } else {
-                bCount = 0;
-                buy = 0;
-            }
-        }*/
+        // When the position is nearly empty, re-anchor the refill size to one quarter of the original capital.
         if (pCount < priceTimes * 2) {
             bCount = Math.floor(pOrig / buy / 4 / priceTimes) * priceTimes;
             if (buy > upLimit) {
@@ -3809,44 +3684,19 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             if (type === 6 || type === 3 || type === 7) {
                 type = 0;
             }
-            //buy = 0;
         }
-        /*if (pAmount && bCount) {
-            const nowC = Math.floor(pAmount / buy)
-            const remain = nowC - bCount;
-            if (nowC < 3 * priceTimes) {
-                bCount = priceTimes;
-            } else if (nowC < 5 * priceTimes) {
-                bCount = 2 * priceTimes;
-            } else if (remain < 2 * priceTimes) {
-                bCount = bCount - 2 * priceTimes + remain;
-            }
-        }*/
     }
+
     if (is_buy) {
-        /*if (bP > 4) {
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            bCount = bCount * 2;
-            str += `Buy ${buy} ( ${bCount} ) `;
-        } else {
-            buy = Math.round(Math.abs(priceArray[nowBP + 1]) * 100) / 100;
-            if (pType === 4 || pType === 3) {
-                sCount = sCount * 2;
-            }
-            str += `Buy ${buy} ( ${bCount} ) `;
-        }*/
+        // Deeper buy bands accumulate larger tranches as price moves further below the midpoint.
         if (bP < 3) {
             str += 'Buy too high ';
             bCount = 0;
         } else if (bP > 6) {
-            //type = 2;
-            //type = 3;
             type = 6;
-            //buy = Math.round(Math.abs(priceArray[nowBP]) * 100) / 100;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             bCount = bCount * (1 + bAdd);
-            //buy = Math.round(tmpB * 100) / 100;
             finalBuy();
             str += `Buy 3/4 ${buy} ( ${bCount} ) `;
         } else if (bP > 5) {
@@ -3858,7 +3708,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Buy 1/2 ${buy} ( ${bCount} ) `;
         } else if (bP > 4) {
             type = 7;
-            //type = 3;
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
             bCount = bCount * (1 + bAdd);
@@ -3867,11 +3716,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
         } else {
             buy = (nowBP > priceArray.length - 2) ? Math.abs(priceArray[priceArray.length - 1]) : Math.abs(priceArray[nowBP + 1]);
             buy = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(buy, false) : usseTicker(buy, false) : (sType === 1) ? bitfinexTicker(buy, false) : buy;
-            /*if (pType === 0) {
-                bCount = bCount * (2 + bAdd);
-            } else if (pType === 4 || pType === 3) {
-                bCount = bCount * 2;
-            }*/
             bCount = bCount * (1 + bAdd);
             finalBuy();
             str += `Buy ${buy} ( ${bCount} ) `;
@@ -3879,33 +3723,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     } else {
         bCount = 0;
     }
+
     if (is_sell) {
-        /*if (sP < 4) {
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 5 || pType === 4) {
-                sCount = sCount * 2;
-            }
-            str += `Sell ${sell} ( ${sCount} ) `;
-        } else {
-            sell = Math.round(Math.abs(priceArray[nowSP - 1]) * 100) / 100;
-            if (pType === 2 || pType === 4 || pType === 3) {
-                sCount = sCount * 2;
-            }
-            str += `Sell ${sell} ( ${sCount} ) `;
-        }*/
+        // Deeper sell bands unload larger tranches as price moves further above the midpoint.
         if (sP > 5) {
             str += 'Sell too low ';
             sCount = 0;
         } else if (sP < 2) {
-            //type = 4;
-            //type = 5;
             type = 8;
-            //sell = Math.round(Math.abs(priceArray[nowSP]) * 100) / 100;
-            /*if (pType === 0) {
-                sCount = sCount * (2 + sAdd);
-            } else if (pType === 5 || pType === 4 || pType === 3) {
-                sCount = sCount * 2;
-            }*/
             sCount = sCount * (1 + sAdd);
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
@@ -3913,11 +3738,6 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Sell 3/4 ${sell} ( ${sCount} ) `;
         } else if (sP < 3) {
             type = 5;
-            /*if (pType === 0) {
-                sCount = sCount * (2 + sAdd);
-            } else if (pType === 5 || pType === 4 || pType === 3) {
-                sCount = sCount * 2;
-            }*/
             sCount = sCount * (1 + sAdd);
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
@@ -3925,25 +3745,14 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
             str += `Sell 1/2 ${sell} ( ${sCount} ) `;
         } else if (sP < 4) {
             type = 9;
-            //type = 5;
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
-            /*if (pType === 0) {
-                sCount = sCount * (2 + sAdd);
-            } else if (pType === 5 || pType === 4) {
-                sCount = sCount * 2;
-            }*/
             sCount = sCount * (1 + sAdd);
             finalSell();
             str += `Sell 1/4 ${sell} ( ${sCount} ) `;
         } else {
             sell = (nowSP < 1) ? Math.abs(priceArray[0]) : Math.abs(priceArray[nowSP - 1]);
             sell = (sType === 0) ? (fee === TRADE_FEE) ? twseTicker(sell) : usseTicker(sell) : (sType === 1) ? bitfinexTicker(sell) : sell;
-            /*if (pType === 0) {
-                sCount = sCount * (2 + sAdd);
-            } else if (pType === 2 || pType === 4 || pType === 3) {
-                sCount = sCount * 2;
-            }*/
             sCount = sCount * (1 + sAdd);
             finalSell();
             str += `Sell ${sell} ( ${sCount} ) `;
@@ -3951,7 +3760,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     } else {
         sCount = 0;
     }
-    // Fee-aware dead zone (§3c): suppress signals too close to previous trade price
+
+    // Fee-aware dead zone (§3c): suppress signals too close to previous trade price.
     if (previous.time && previous.price) {
         const deadZone = previous.price * fee * 3;
         if (buy > 0 && bCount > 0 && Math.abs(buy - previous.price) <= deadZone) {
@@ -3974,6 +3784,8 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     };
 }
 
+// Backtest the web strategy against historical candles with adaptive web resets,
+// intra-candle path simulation, and portfolio-level performance metrics.
 export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = false, len = 200, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, sType = 0) => {
     const now = Math.round(_dateFactory().getTime() / 1000);
     const fullRun = len <= 0;
@@ -3992,10 +3804,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     let web = null;
     let maxAmount = 0;
     let amount = 0;
-    // Metrics tracking
     const equityCurve = [];
-    const buyLog = [];   // { price, count, idx }
-    const sellLog = [];  // { price, count, idx, profit }
+    const buyLog = [];   // FIFO inventory for round-trip attribution.
+    const sellLog = [];  // Completed sell legs with realized profit snapshots.
     let peakEquity = 0;
     let maxDrawdown = 0;
     let drawdownStart = 0;
@@ -4008,7 +3819,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     let totalWin = 0;
     let totalLoss = 0;
 
-    // ── Phase 1: Find start position ──
+    // Phase 1: locate the first candle that places price back inside the computed web.
     const scanLimit = fullRun ? 0 : (len - 1);
     const calStairLen = sType === 0 ? false : (fullRun ? false : (len * 3));
     if (!reverse) {
@@ -4075,8 +3886,8 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         }
     }
 
-    // ── Helpers ──
     const newPrevious = (tradeType, tradePrice, time = Math.round(_dateFactory().getTime() / 1000)) => {
+        // Keep recent trades sorted by best price so stockProcess can enforce its cooldown bands.
         if (tradeType === 'buy') {
             let is_insert = false;
             for (let k = 0; k < priviousTrade.buy.length; k++) {
@@ -4120,11 +3931,11 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         while (suggest.resetWeb) {
             if (suggest.resetWeb === 1) stopLoss++;
             newMid.push(suggest.newMid);
-            // Stack depth limit: recalculate from recent history
+            // Once the temporary midpoint stack grows too deep, rebuild a fresh web from broader history.
             if (newMid.length >= MAX_NEWMID_STACK) {
                 recalcCount++;
                 if (recalcCount > 2) {
-                    // Safety: stop after 3 recalculations to prevent infinite loop
+                    // Hard stop prevents pathological reset loops on malformed or ultra-volatile data.
                     newMid = [];
                     newArr = web.arr;
                     break;
@@ -4170,6 +3981,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 amount = r.amount; count = r.count; buyTrade += r.buyTrade;
             }
         } else if (suggest.buy && candle.l <= suggest.buy) {
+            // Above a shifted midpoint, execute the price trigger but drop directional type bias.
             if (suggest.bCount === 0 && suggest.buy) newPrevious('buy', suggest.buy, tradeTime);
             const r = executeBuy({ ...suggest, type: 0 }, amount, maxAmount, count, fee);
             if (r.didBuy) {
@@ -4200,6 +4012,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     };
 
     const recordSell = (sellPrice, soldCount, idx) => {
+        // Match sells against the oldest buys so win/loss metrics reflect full round trips.
         let remaining = soldCount;
         const netSell = sellPrice * (1 - fee);
         while (remaining > 0 && buyLog.length > 0) {
@@ -4222,7 +4035,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         }
     };
 
-    // ── Phase 2: Main simulation loop with OHLC two-pass ──
+    // Phase 2: simulate each candle as a two-step path through its extremes.
     const tlength = fullRun ? 1 : Math.max(startI - len + 1, 1);
     const lastNode = his_arr[tlength];
     peakEquity = maxAmount;
@@ -4247,13 +4060,12 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             return 'data miss';
         }
 
-        // OHLC two-pass: determine which extreme to visit first
         const h = his_arr[i].h;
         const l = his_arr[i].l;
         const candle = his_arr[i - 1] || his_arr[i];
         let prices;
         if (h && l) {
-            // Visit the extreme closer to prevClose first, then the other
+            // Approximate the intraday path by touching the closer extreme first.
             const distH = Math.abs(prevClose - h);
             const distL = Math.abs(prevClose - l);
             prices = (distH <= distL) ? [h, l] : [l, h];
@@ -4277,7 +4089,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         prevClose = l || h || prevClose;
         privious = his_arr[i];
 
-        // Track equity
+        // Mark-to-market uses the candle low so drawdown stats stay conservative.
         const equity = amount + ((his_arr[i].l || 0) * count * (1 - fee));
         equityCurve.push(equity);
         if (equity > peakEquity) {
@@ -4293,31 +4105,27 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             if (currentDrawdownStart < 0) currentDrawdownStart = equityCurve.length - 1;
         }
     }
-    // Close remaining drawdown duration
     if (currentDrawdownStart >= 0) {
         const ddDuration = equityCurve.length - currentDrawdownStart;
         if (ddDuration > maxDrawdownDuration) maxDrawdownDuration = ddDuration;
     }
 
-    // ── Phase 3: Liquidate remaining position ──
+    // Phase 3: liquidate anything left so the report closes all open risk.
     amount += (lastNode.l * count * (1 - fee));
-    // Record forced liquidation as sells for round-trip matching
     if (count > 0 && lastNode.l) {
         recordSell(lastNode.l, count, tlength);
     }
     count = 0;
 
-    // ── Phase 4: Compute metrics ──
+    // Phase 4: derive summary performance metrics from the simulated equity curve.
     const tradeDays = equityCurve.length;
     const returnPct = maxAmount > 0 ? Math.round((amount / maxAmount - 1) * 10000) / 100 : 0;
     const buyHoldPct = his_arr[startI].l ? (Math.round((lastNode.h / his_arr[startI].l - 1) * 10000) / 100) : 0;
 
-    // Annualize (assume ~250 trading days/year)
     const years = tradeDays / 250;
     const returnAnnualPct = years > 0 ? Math.round(((amount / maxAmount) ** (1 / years) - 1) * 10000) / 100 : 0;
     const tradesPerYear = years > 0 ? Math.round(sellTrade / years * 100) / 100 : 0;
 
-    // Daily returns for Sharpe/Sortino
     let sharpe = 0;
     let sortino = 0;
     if (equityCurve.length > 1) {
@@ -4370,6 +4178,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     };
 }
 
+// Choose a histogram size with the Freedman–Diaconis rule so the stair adapts to data density.
 export const computeBinCount = (raw_arr, stair_start = 0, len = false) => {
     const maxlen = (len && ((stair_start + len) < raw_arr.length)) ? (stair_start + len) : raw_arr.length;
     const n = maxlen - stair_start;
@@ -4389,6 +4198,7 @@ export const computeBinCount = (raw_arr, stair_start = 0, len = false) => {
     return Math.max(MIN_BINS, Math.min(MAX_BINS, bins));
 }
 
+// Build a logarithmically spaced ladder so equal step counts represent equal percentage moves.
 export const logArray = (max, min, pos=100) => {
     const logMax = Math.log(max);
     const logMin = Math.log(min);
@@ -4403,6 +4213,7 @@ export const logArray = (max, min, pos=100) => {
     }
 }
 
+// Construct the staircase web from OHLCV history by distributing decayed volume across log-price bins.
 export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, len = false) => {
     const binCount = loga.arr.length;
     const single_arr = [];
@@ -4417,7 +4228,7 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
         let s = 0;
         let e = binCount;
         for (let j = 0; j < binCount; j++) {
-        if (raw_arr[i].l >= loga.arr[j]) {
+            if (raw_arr[i].l >= loga.arr[j]) {
                 s = j;
             }
             if (raw_arr[i].h <= loga.arr[j]) {
@@ -4425,7 +4236,7 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
                 break;
             }
         }
-        // §2b Volume-time decay: recent data weighted more heavily
+        // §2b Volume-time decay: recent data weighted more heavily.
         const dayAge = i - stair_start;
         const monthsAgo = dayAge / 21;
         const decayWeight = Math.exp(-VOLUME_DECAY_LAMBDA * monthsAgo);
@@ -4435,6 +4246,7 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
         if ((e - s) === 0) {
             final_arr[s] += weightedVol;
         } else {
+            // Spread each candle's volume uniformly across the bins its price range traversed.
             const v = weightedVol / (e - s);
             for (let j = s; j < e; j++) {
                 final_arr[j] += v;
@@ -4446,16 +4258,14 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     const nd = [];
     final_arr.forEach((v, i) => {
         vol += v;
+        // Convert cumulative volume into σ cut points using NORMAL_DISTRIBUTION thresholds.
         while (vol >= (volsum / 100 * NORMAL_DISTRIBUTION[j]) && j < NORMAL_DISTRIBUTION.length) {
-            //console.log(i);
             nd.push(i);
-            //nd.push(Math.pow(1 + loga.diff, i) * min);
             j++;
         }
     });
     const sort_arr = [...single_arr].sort((a,b) => a - b);
-    //console.log(final_arr);
-    // Extrem fallback chain (§2d): NORMAL_DISTRIBUTION[len-3] → [len-2] → [len-1] → false
+    // Extrem fallback chain (§2d): NORMAL_DISTRIBUTION[len-3] → [len-2] → [len-1] → false.
     const ndLen = NORMAL_DISTRIBUTION.length;
     let extremIdx = ndLen - 3;
     const web = {
@@ -4494,16 +4304,16 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
             }
             return arr;
         };
-        // use actual distribution data for each σ layer
+        // Preserve the observed σ spacing instead of forcing symmetric layer widths.
         const upLayers = [
-            buildSteps(nd[4] - nd[3]),  // mid → 1σ
-            buildSteps(nd[5] - nd[4]),  // 1σ → 2σ
-            buildSteps(nd[6] - nd[5]),  // 2σ → 3σ
+            buildSteps(nd[4] - nd[3]), // mid → 1σ
+            buildSteps(nd[5] - nd[4]), // 1σ → 2σ
+            buildSteps(nd[6] - nd[5]), // 2σ → 3σ
         ];
         const downLayers = [
-            buildSteps(nd[3] - nd[2]),  // mid → 1σ
-            buildSteps(nd[2] - nd[1]),  // 1σ → 2σ
-            buildSteps(nd[1] - nd[0]),  // 2σ → 3σ
+            buildSteps(nd[3] - nd[2]), // mid → 1σ
+            buildSteps(nd[2] - nd[1]), // 1σ → 2σ
+            buildSteps(nd[1] - nd[0]), // 2σ → 3σ
         ];
         const result = [-web.mid];
         let temp = web.mid;
@@ -4529,10 +4339,10 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
         return result;
     }
     web.arr = calWeb();
-    //console.log(web);
     return web;
 }
 
+// Resize the web when capital changes so step density still matches available position size.
 const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     if (amount === 0) {
         return {
@@ -4559,7 +4369,8 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
             return false;
         }
     }
-    // Parse array into σ-boundary markers and step layers
+
+    // Negative entries mark σ boundaries; positive entries are tradable steps inside each band.
     const boundaries = [];
     const layers = [];
     let current = [];
@@ -4576,11 +4387,10 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     if (boundaries.length === 0) {
         return { arr: webArr, mid: webMid };
     }
-    // Mid boundary = 4th negative (or last if fewer than 4)
+
     const midIdx = Math.min(3, boundaries.length - 1);
-    // Normal distribution probability per σ band
     const sigmaProbs = [34.13, 13.59, 2.15];
-    // Weight each layer by σ-band probability (closer to mid = higher weight = keep more)
+    // Keep more steps near the midpoint because those σ bands carry most of the distribution mass.
     const weights = layers.map((_, i) => {
         const dist = i <= midIdx ? midIdx - i : i - midIdx - 1;
         return dist < sigmaProbs.length ? sigmaProbs[dist] : 0.5;
@@ -4591,12 +4401,10 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     }
     const totalWeight = weights.reduce((sum, w, i) => sum + (layers[i].length > 0 ? w : 0), 0);
     const totalToKeep = Math.max(1, Math.round(totalSteps * amount / maxAmount));
-    // Allocate kept steps per layer proportionally to probability weight
     const keepCounts = layers.map((layer, i) => {
         if (layer.length === 0) return 0;
         return Math.min(layer.length, Math.max(1, Math.round(totalToKeep * weights[i] / totalWeight)));
     });
-    // Evenly space kept steps within each layer
     const thinLayer = (steps, keep) => {
         if (keep >= steps.length) return steps;
         if (keep <= 0) return [];
@@ -4607,7 +4415,8 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
         }
         return result;
     };
-    // Reassemble: layers[0] boundary[0] layers[1] boundary[1] ... boundary[N-1] layers[N]
+
+    // Reassemble the web with the original σ boundaries preserved and each layer thinned in place.
     const new_arr = [];
     for (let i = 0; i < layers.length; i++) {
         thinLayer(layers[i], keepCounts[i]).forEach(v => new_arr.push(v));
@@ -4621,6 +4430,7 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     };
 }
 
+// Bitfinex quote precision helper.
 const bitfinexTicker = (price, large = true) => {
     if (price < 100) {
         if (large) {
@@ -4643,6 +4453,7 @@ const bitfinexTicker = (price, large = true) => {
     }
 }
 
+// US quote precision helper.
 const usseTicker = (price, large = true) => {
     if (price < 1) {
         if (large) {
@@ -4659,6 +4470,7 @@ const usseTicker = (price, large = true) => {
     }
 }
 
+// TWSE tick-size helper.
 const twseTicker = (price, large = true) => {
     if (price < 10) {
         if (large) {
@@ -4699,6 +4511,7 @@ const twseTicker = (price, large = true) => {
     }
 }
 
+// Parse Macrotrends market-cap text and normalize K/M/B/T suffixes into raw dollar values.
 export const parseMacrotrendsMarketCap = raw_data => {
     let cap = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
     let m;
@@ -4721,6 +4534,7 @@ export const parseMacrotrendsMarketCap = raw_data => {
     }
 };
 
+// Parse a single Macrotrends ratio card and return its numeric value.
 export const parseMacrotrendsRatio = raw_data => {
     let r = findTag(findTag(findTag(findTag(findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'div', 'main_content_container')[0], 'div', 'sub_main_content_container')[0], 'div', 'main_content')[0], 'div')[1], 'span')[0];
     let m;
@@ -4732,10 +4546,10 @@ export const parseMacrotrendsRatio = raw_data => {
     return m ? Number(m[0]) : 9999;
 };
 
+// Fetch US quote data and fall back to Macrotrends when Yahoo omits valuation fields.
 export const getUsStock = (index, stat = ['price'], single = false) => {
     const ret = {};
     let count = 0;
-    //Market Cap (intraday) Trailing P/E Price/Book (mrq)
     const fetchPer = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/pe-ratio`).then(raw => { ret['per'] = parseMacrotrendsRatio(raw); });
     const fetchPbr = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/price-book`).then(raw => { ret['pbr'] = parseMacrotrendsRatio(raw); });
     const fetchEquity = idx => Api('url', `https://www.macrotrends.net/stocks/charts/${idx}/${idx}/net-worth`).then(raw => {
@@ -4763,6 +4577,7 @@ export const getUsStock = (index, stat = ['price'], single = false) => {
                 if (!wantEquity && !wantPer && !wantPbr) {
                     return handleError(new HoError(`usa stock parse NA ${index}`));
                 }
+                // BRK-B is the Yahoo symbol, while Macrotrends expects BRK.B.
                 const idx = (index === 'BRK-B') ? 'BRK.B' : index;
                 let chain = Promise.resolve();
                 if (wantEquity) {
@@ -4796,4 +4611,5 @@ export const getUsStock = (index, stat = ['price'], single = false) => {
     return real();
 }
 
+// Return cached suggestion data for the requested market.
 export const getSuggestionData = (type = 'twse') => suggestionData[type];

@@ -11,7 +11,7 @@ import Api from './api-tool.js'
 import { handleError, HoError, isValidString } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
 
-//system
+// Exchange-level Bitfinex clients and market snapshots shared across all users.
 let bfx = new BFX({ apiKey: BITFINEX_KEY, apiSecret: BITFINEX_SECRET });
 let rest = bfx.rest(2, { transform: true });
 let finalRate = {};
@@ -19,7 +19,7 @@ let maxRange = {};
 let currentRate = {};
 let priceData = {};
 
-//user
+// Per-user runtime state keyed by user id.
 let userWs = {};
 let userOk = {};
 let updateTime = {};
@@ -39,13 +39,30 @@ const closeCredit = {};
 let ledger = {};
 let position = {};
 
-// ── Test seams (underscore-prefixed: not part of public API) ──
-// These exist solely to enable unit testing without networked Bitfinex calls.
+// Underscore-prefixed exports are test seams, not part of the production API.
+/**
+ * Replace the shared Bitfinex client used by the module.
+ *
+ * @param {Object} newBfx Mock or real BFX instance with a `rest()` factory.
+ * @returns {void}
+ */
 export const _setSystemBfx = (newBfx) => {
     bfx = newBfx;
     rest = newBfx.rest(2, { transform: true });
 };
+
+/**
+ * Return the current shared REST client.
+ *
+ * @returns {Object} Bitfinex REST v2 client.
+ */
 export const _getSystemRest = () => rest;
+
+/**
+ * Clear all module-scoped caches so each test starts from a clean state.
+ *
+ * @returns {void}
+ */
 export const _resetState = () => {
     finalRate = {};
     maxRange = {};
@@ -67,6 +84,12 @@ export const _resetState = () => {
     ledger = {};
     position = {};
 };
+
+/**
+ * Snapshot the current module-scoped state for assertions in unit tests.
+ *
+ * @returns {Object} References to the current shared state containers.
+ */
 export const _getState = () => ({
     finalRate, maxRange, currentRate, priceData,
     userWs, userOk, updateTime, extremRate,
@@ -74,6 +97,13 @@ export const _getState = () => ({
     deleteOffer, deleteOrder, fakeOrder,
     credit, closeCredit, ledger, position,
 });
+
+/**
+ * Merge selected state fragments into the current module-scoped caches.
+ *
+ * @param {Object} partial Partial state tree to merge into the shared module state.
+ * @returns {void}
+ */
 export const _setState = (partial) => {
     if (partial.priceData) priceData = { ...priceData, ...partial.priceData };
     if (partial.currentRate) currentRate = { ...currentRate, ...partial.currentRate };
@@ -98,16 +128,16 @@ export const _setState = (partial) => {
     }
 };
 
-//wallet history
-//credit history
-//5m candle x
-
+/**
+ * Rebuild funding-rate buckets and supporting spot-price snapshots for supported coins.
+ *
+ * @param {string[]} curArr Funding symbols to refresh.
+ * @returns {Promise<void>} Resolves after the cached rates are updated and the Bitfinex WS refresh is emitted.
+ */
 export const calRate = curArr => {
+    // Refresh spot reference data first so later web/risk calculations can reuse the latest prices.
     const recurPrice = index => {
         if (index >= SUPPORT_PRICE.length) {
-            /*if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
-                sendWs(`Bitfinex Daily Change: ${priceData[TBTC_SYM].dailyChange} ${priceData[TETH_SYM].dailyChange}` , 0, 0, true);
-            }*/
             return Promise.resolve();
         } else {
             return rest.ticker(SUPPORT_PRICE[index]).then(ticker => {
@@ -137,6 +167,7 @@ export const calRate = curArr => {
         const hl = [];
         const weight = [];
         return rest.candles({symbol: curType, timeframe: '1m', period: 'p2', query: {limit: 1440}}).then(entries => {
+            // Build expanding lookback windows plus price-bucketed volume for the percentile ladder.
             const calHL = (start, end, startHigh = -1, startLow = -1, vol = 0) => {
                 for (let i = start; i < end; i++) {
                     if (!entries[i]) {
@@ -146,8 +177,6 @@ export const calRate = curArr => {
                     const low = entries[i]['low'] * BITFINEX_EXP;
                     const wi = Math.floor(high / BITFINEX_MIN);
                     weight[wi] = weight[wi] ? weight[wi] + entries[i].volume : entries[i].volume;
-                    //console.log(high);
-                    //console.log(low);
                     if (high > startHigh) {
                         startHigh = high;
                     }
@@ -172,6 +201,7 @@ export const calRate = curArr => {
             hl.push(calHL(320, 640, hl[6].high, hl[6].low, hl[6].vol));
             hl.push(calHL(640, 1280, hl[7].high, hl[7].low, hl[7].vol));
             hl.push(calHL(1280, 2560, hl[8].high, hl[8].low, hl[8].vol));
+            // Translate the live funding order book into percentile checkpoints matching DISTRIBUTION.
             const calOBRate = orderBooks => {
                 let volsum = 0;
                 let vol = 0;
@@ -203,6 +233,7 @@ export const calRate = curArr => {
                 while (rate.length < 11) rate.push(fill);
                 return rate.reverse();
             }
+            // Convert the 24h candle distribution into the same 11 checkpoints used by the order book.
             const calTenthRate = (hl, weight) => {
                 const rate = [hl[9].low];
                 let i = 0;
@@ -225,13 +256,12 @@ export const calRate = curArr => {
             const OBRate = calOBRate(orderBooks);
             const tenthRate = calTenthRate(hl, weight);
             maxRange[curType] = tenthRate[1] - tenthRate[9];
+            // Use the more conservative of historical distribution vs. live book, then cap below MAX_RATE.
             finalRate[curType] = tenthRate.map((v, k) => (v > OBRate[k] || !OBRate[k]) ? (v - 1) : (OBRate[k] - 1));
             finalRate[curType] = finalRate[curType].map(v => (v >= MAX_RATE) ? MAX_RATE - 1 : v);
             console.log(`${curType} RATE: ${finalRate[curType]}`);
             console.log(OBRate);
             console.log(tenthRate);
-            //console.log(currentRate[curType]);
-            //console.log(maxRange[curType]);
         });
     }));
     const recurType = index => (index >= curArr.length) ? Promise.resolve(sendWs({
@@ -241,12 +271,19 @@ export const calRate = curArr => {
     return recurPrice(0).then(() => recurType(0));
 }
 
+/**
+ * Build the Bitfinex web arrays from 6h candles and persist the derived strategy metadata.
+ *
+ * @param {string[]} curArr Funding pairs to analyze.
+ * @returns {Promise<void>} Resolves after TOTALDB webs and user multipliers are refreshed.
+ */
 export const calWeb = curArr => {
     const recurType = index => (index >= curArr.length) ? Promise.resolve() : (SUPPORT_PAIR[FUSD_SYM].indexOf(curArr[index]) !== -1) ? singleCal(curArr[index], index).then(() => recurType(index + 1)) : recurType(index + 1);
     const singleCal = (curType, index) => rest.candles({symbol: curType, timeframe: '6h', query: {limit: 3600}}).then(entries => {
         let max = 0;
         let min = 0;
         let min_vol = 0;
+        // Convert OHLCV candles into the compact shape expected by the web/backtest helpers.
         const raw_arr = entries.map(v => {
             if (!max || max < v.high) {
                 max = v.high;
@@ -275,6 +312,7 @@ export const calWeb = curArr => {
         let lastest_rate = 0;
         const pricePct = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100;
         const resultShow = type => {
+            // First score the full history, then rerun on the latest window to pick the live-facing type.
             return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
                 if (temp === 'data miss') {
                     return;
@@ -285,7 +323,6 @@ export const calWeb = curArr => {
                     return;
                 }
                 const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
-                //const str = `${pricePct}% ${m.maxAmount} ${m.returnPct}% ${m.buyHoldPct}% ${m.sharpe} ${m.sortino} ${m.maxDrawdownPct}% ${m.maxDrawdownDuration} ${m.winRate}% ${winLoss} ${m.profitFactor} ${m.tradesPerYear} ${m.calmar} ${raw_arr.length} ${Math.round(min_vol * 100) / 100}`;
                 const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
                 results.push({ type, str, metrics: m, rate: m.returnPct });
                 return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(rtemp => {
@@ -309,10 +346,10 @@ export const calWeb = curArr => {
                 return Promise.resolve();
             }
         }
-        //return loopShow(31).then(() => {
         return loopShow(0).then(() => {
             const sorted = results.filter(r => r.metrics);
             sorted.sort((a, b) => b.rate - a.rate);
+            // Persist the middle profitable candidate instead of the single top outlier to reduce overfitting.
             const bestIdx = sorted.length > 0 ? Math.ceil(sorted.length / 2) - 1 : -1;
             const bestStr = bestIdx >= 0 ? sorted[bestIdx].str : 'no less than mid point';
             const bestMetrics = bestIdx >= 0 ? sorted[bestIdx].metrics : null;
@@ -349,6 +386,7 @@ export const calWeb = curArr => {
                                 }});
                                 console.log(items);
                             } else {
+                                // User-owned entries also need `times` rescaled to the refreshed web capacity.
                                 const maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
                                 const items = await Mongo('update', TOTALDB, {_id: item[i]._id}, {$set: {
                                     web: web.arr,
@@ -368,9 +406,9 @@ export const calWeb = curArr => {
             return updateWeb();
         });
     });
-    //return recurPrice(0).then(() => recurType(0));
     const coinList = SUPPORT_COIN.map(v => v.replace('f', '')).join(',');
     console.log(coinList);
+    // After the webs are refreshed, update each user's size multiplier from market-cap rank and volatility.
     return recurType(0).then(() => Fetch(`https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${coinList}&convert=USD`, {
         method: 'GET',
         headers: {
@@ -420,10 +458,17 @@ export const calWeb = curArr => {
     }));
 }
 
-// ── Pure module-level helpers (extracted from setWsOffer for testability) ──
-//
-// processOrderRest: updates an item's previous-trade ledger and persists to Mongo.
-// Pure with respect to closures (only uses Mongo, TOTALDB, RANGE_BITFINEX_INTERVAL).
+/**
+ * Update an item's previous-trade ledger after a REST-reported fill and persist it.
+ *
+ * @param {number} amount Signed fill amount; positive = buy, negative = sell.
+ * @param {number} price Fill price.
+ * @param {number|string} oid Exchange order id used for duplicate detection.
+ * @param {number} time Fill timestamp in seconds.
+ * @param {Object} item TOTALDB item whose `previous` ledger will be updated.
+ * @param {boolean} fake Whether the fill is synthetic and should preserve the original trade time.
+ * @returns {Promise<Object|void>} Mongo update promise, or a resolved promise when the fill is a duplicate.
+ */
 export const processOrderRest = (amount, price, oid, time, item, fake) => {
     const tradeType = amount > 0 ? 'buy' : 'sell';
     if (tradeType === 'buy') {
@@ -433,6 +478,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 console.log('order duplicate');
                 return Promise.resolve();
             } else if (price < item.previous.buy[k].price) {
+                // Keep buy fills sorted from low to high so downstream range checks stay deterministic.
                 item.previous.buy.splice(k, 0, {price, time, id: oid});
                 is_insert = true;
                 break;
@@ -447,6 +493,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 tprice: item.previous.tprice ? 0 : item.previous.price,
                 time: item.previous.time,
                 type: 'buy',
+                // Fake fills keep the original timestamp while trimming historical buys to the replay window.
                 buy: item.previous.buy.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                 sell: item.previous.sell,
             }
@@ -466,6 +513,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 console.log('order duplicate');
                 return Promise.resolve();
             } else if (price > item.previous.sell[k].price) {
+                // Keep sell fills sorted from high to low for the same price-ladder comparisons.
                 item.previous.sell.splice(k, 0, {price, time, id: oid});
                 is_insert = true;
                 break;
@@ -480,6 +528,7 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
                 tprice: item.previous.tprice ? 0 : item.previous.price,
                 time: item.previous.time,
                 type: 'sell',
+                // Fake fills keep the original timestamp while trimming historical sells to the replay window.
                 sell: item.previous.sell.filter(v => (time - v.time < RANGE_BITFINEX_INTERVAL) ? true : false),
                 buy: item.previous.buy,
             }
@@ -498,8 +547,15 @@ export const processOrderRest = (amount, price, oid, time, item, fake) => {
     }});
 };
 
-// checkRisk: pure helper — returns true if `risk` matches any entry's `.risk` in any of the passed arrays.
+/**
+ * Check whether a risk bucket already exists in any candidate order list.
+ *
+ * @param {number} risk Risk bucket to search for.
+ * @param {...Object[]} arr Candidate arrays containing entries with a `risk` field.
+ * @returns {boolean} True when the risk bucket is already present.
+ */
 export const checkRisk = (risk, ...arr) => {
+    // Risk values below 1 are treated as disabled sentinels and should never match.
     if (risk < 1) {
         return false;
     }
@@ -513,11 +569,17 @@ export const checkRisk = (risk, ...arr) => {
     return false;
 };
 
-// closeRestCredit: pure helper that drains closeCredit[id] queue via userRest.closeFunding.
-// Module-level so it can be unit tested in isolation.
+/**
+ * Close and drain any queued funding credits for a user.
+ *
+ * @param {string} id User id key for the module-scoped close queue.
+ * @param {Object} userRest User-scoped Bitfinex REST client.
+ * @returns {Promise<void>}
+ */
 export const closeRestCredit = async (id, userRest) => {
     if (closeCredit[id] && closeCredit[id].length > 0) {
         console.log(closeCredit[id]);
+        // Snapshot and clear the queue first so concurrently added ids wait for the next pass.
         const close_id = closeCredit[id].splice(0, closeCredit[id].length);
         for (let i = 0; i < close_id.length; i++) {
             const result = await userRest.closeFunding({id: Number(close_id[i])});
@@ -526,17 +588,18 @@ export const closeRestCredit = async (id, userRest) => {
     }
 };
 
-// ---------------------------------------------------------------------------
-// WS event handler factories (Phase C — extracted from setWsOffer for testability).
-// Each factory takes the per-user `id` (and where needed `curArr`/`uid`) and returns
-// the callback bound to module-scoped state (offer/credit/position/order/...). This
-// lets tests invoke handlers directly without going through setWsOffer's 2000-line
-// closure or the bfx-api-node-rest mock plumbing.
+// WebSocket event handler factories that bind per-user identifiers to module-scoped caches.
 // ---------------------------------------------------------------------------
 
+/**
+ * Sync a wallet payload into the funding or margin cache for one user.
+ * Funding and margin balances feed different UI panels, so the handler keeps
+ * separate caches and emits distinct WebSocket update codes for each bucket.
+ */
 export const makeOnWalletUpdate = (id) => wallet => {
     SUPPORT_COIN.forEach((t, i) => {
         if (wallet.currency === t.substr(1)) {
+            // Funding balances back lendable funds, while margin balances back open positions.
             if (wallet.type === 'funding') {
                 available[id][t] = {
                     avail: wallet.balanceAvailable,
@@ -562,6 +625,10 @@ export const makeOnWalletUpdate = (id) => wallet => {
     });
 };
 
+/**
+ * Update an existing funding offer in the in-memory cache.
+ * WebSocket broadcasts are throttled so rapid order-book churn does not flood clients.
+ */
 export const makeOnFundingOfferUpdate = (id) => fo => {
     if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
     if (!offer[id][fo.symbol]) offer[id][fo.symbol] = [];
@@ -575,16 +642,21 @@ export const makeOnFundingOfferUpdate = (id) => fo => {
         }
     }
     const now = Math.round(new Date().getTime() / 1000);
+    // Offer updates can arrive in bursts, so only push a refresh after the debounce window.
     if ((now - updateTime[id]['offer']) > UPDATE_ORDER) {
         updateTime[id]['offer'] = now;
         sendWs({type: 'bitfinex', data: -1, user: id});
     }
 };
 
+/**
+ * Insert a new funding offer, or refresh the timestamp/status if Bitfinex replays it.
+ */
 export const makeOnFundingOfferNew = (id) => fo => {
     if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
     console.log(`${fo.symbol} ${id} offer new`);
     if (!offer[id][fo.symbol]) offer[id][fo.symbol] = [];
+    // Reconnects can replay a "new" event for an offer we already cached.
     let isExist = false;
     for (let i = 0; i < offer[id][fo.symbol].length; i++) {
         if (fo.id === offer[id][fo.symbol][i].id) {
@@ -607,6 +679,9 @@ export const makeOnFundingOfferNew = (id) => fo => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Remove a funding offer from the cache when Bitfinex marks it closed.
+ */
 export const makeOnFundingOfferClose = (id) => fo => {
     if (SUPPORT_COIN.indexOf(fo.symbol) === -1) return;
     console.log(`${fo.symbol} ${id} offer close`);
@@ -620,8 +695,10 @@ export const makeOnFundingOfferClose = (id) => fo => {
             }
         }
         if (!is_exist) {
+            // Close events can win the race against the local cache; keep a short tombstone list
+            // so later reconciliation does not resurrect an already-closed offer.
             deleteOffer.push(fo.id);
-            // L3: cap deleteOffer to prevent unbounded growth
+            // Keep the tombstone buffer bounded even if the exchange emits a long close burst.
             if (deleteOffer.length > OFFER_MAX * 5) {
                 deleteOffer.splice(0, deleteOffer.length - OFFER_MAX * 5);
             }
@@ -629,6 +706,9 @@ export const makeOnFundingOfferClose = (id) => fo => {
     }
 };
 
+/**
+ * Update an existing funding credit entry without rebuilding the whole credit snapshot.
+ */
 export const makeOnFundingCreditUpdate = (id) => fc => {
     if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
     if (!credit[id][fc.symbol]) credit[id][fc.symbol] = [];
@@ -645,12 +725,16 @@ export const makeOnFundingCreditUpdate = (id) => fc => {
         }
     }
     const now = Math.round(new Date().getTime() / 1000);
+    // Credits also refresh frequently, so reuse the same throttled push pattern as offers/orders.
     if ((now - updateTime[id]['credit']) > UPDATE_ORDER) {
         updateTime[id]['credit'] = now;
         sendWs({type: 'bitfinex', data: -1, user: id});
     }
 };
 
+/**
+ * Append a newly opened funding credit and immediately refresh the client view.
+ */
 export const makeOnFundingCreditNew = (id) => fc => {
     if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
     if (!credit[id][fc.symbol]) credit[id][fc.symbol] = [];
@@ -667,6 +751,9 @@ export const makeOnFundingCreditNew = (id) => fc => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Remove a funding credit once Bitfinex reports it as closed.
+ */
 export const makeOnFundingCreditClose = (id) => fc => {
     if (SUPPORT_COIN.indexOf(fc.symbol) === -1) return;
     if (credit[id][fc.symbol]) {
@@ -680,7 +767,11 @@ export const makeOnFundingCreditClose = (id) => fc => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Update an open position and keep it grouped by the funding currency bucket.
+ */
 export const makeOnPositionUpdate = (id) => fc => {
+    // Positions come through as trading pairs (for example tBTCUSD); normalize them to fUSD/fBTC buckets.
     const symbol = `f${fc.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
     if (!position[id][symbol]) position[id][symbol] = [];
@@ -692,6 +783,7 @@ export const makeOnPositionUpdate = (id) => fc => {
             if (fc.lp) {
                 position[id][symbol][j].lp = Math.round(fc.liquidationPrice * 1000) / 1000;
             }
+            // Bitfinex sometimes sends a falsy pl on incremental updates; keep the last known value in that case.
             if (!fc.pl) {
                 console.log('pl is null');
                 console.log(fc);
@@ -702,12 +794,16 @@ export const makeOnPositionUpdate = (id) => fc => {
         }
     }
     const now = Math.round(new Date().getTime() / 1000);
+    // Position marks can move rapidly, so debounce downstream refreshes.
     if ((now - updateTime[id]['position']) > UPDATE_ORDER) {
         updateTime[id]['position'] = now;
         sendWs({type: 'bitfinex', data: -1, user: id});
     }
 };
 
+/**
+ * Cache a newly opened position so later update/close events can reconcile against it.
+ */
 export const makeOnPositionNew = (id) => fc => {
     console.log(fc);
     const symbol = `f${fc.symbol.substr(-3)}`;
@@ -725,7 +821,11 @@ export const makeOnPositionNew = (id) => fc => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Remove a closed position and fold its realized P/L back into the paired TOTALDB record.
+ */
 export const makeOnPositionClose = (id, curArr, uid) => fc => {
+    // Close payloads also arrive as trading pairs, so normalize before looking up cached positions.
     const symbol = `f${fc.symbol.substr(-3)}`;
     console.log(fc);
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
@@ -734,6 +834,7 @@ export const makeOnPositionClose = (id, curArr, uid) => fc => {
             if (position[id][symbol][j].id === fc.id) {
                 const lastP = position[id][symbol].splice(j, 1);
                 console.log(lastP);
+                // Match the closed position back to the configured pair so realized profit stays in sync.
                 for (let i = 0; i < curArr.length; i++) {
                     if (curArr[i].type === symbol && curArr[i].pair) {
                         for (let k = 0; k < curArr[i].pair.length; k++) {
@@ -745,6 +846,7 @@ export const makeOnPositionClose = (id, curArr, uid) => fc => {
                                     }
                                     const profit = items[0].profit ? items[0].profit + Number(lastP[0].pl) : Number(lastP[0].pl);
                                     console.log(profit);
+                                    // Mirror the persisted profit in the margin cache used by the UI.
                                     margin[id][`f${items[0].index.substr(-3)}`][items[0].index] = profit;
                                     return Mongo('update', TOTALDB, {_id: items[0]._id}, {$set : {profit}}).then(result => {
                                         console.log(result);
@@ -766,6 +868,9 @@ export const makeOnPositionClose = (id, curArr, uid) => fc => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Update an active order in place and throttle downstream refreshes.
+ */
 export const makeOnOrderUpdate = (id) => os => {
     const symbol = `f${os.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
@@ -783,18 +888,23 @@ export const makeOnOrderUpdate = (id) => os => {
         }
     }
     const now = Math.round(new Date().getTime() / 1000);
+    // Orders can churn quickly during partial fills, so debounce UI refreshes here too.
     if ((now - updateTime[id]['order']) > UPDATE_ORDER) {
         updateTime[id]['order'] = now;
         sendWs({type: 'bitfinex', data: -1, user: id});
     }
 };
 
+/**
+ * Cache a newly opened order, or refresh the timestamp if the exchange replays the event.
+ */
 export const makeOnOrderNew = (id) => os => {
     const symbol = `f${os.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
     console.log(`${symbol} ${id} order new`);
     console.log(os);
     if (!order[id][symbol]) order[id][symbol] = [];
+    // Bitfinex can resend the same order-open event after reconnects, so dedupe by id.
     let isExist = false;
     for (let i = 0; i < order[id][symbol].length; i++) {
         if (os.id === order[id][symbol][i].id) {
@@ -818,6 +928,9 @@ export const makeOnOrderNew = (id) => os => {
     sendWs({type: 'bitfinex', data: -1, user: id});
 };
 
+/**
+ * Remove a closed order and reconcile executed quantity back into TOTALDB when needed.
+ */
 export const makeOnOrderClose = (id, curArr, uid) => os => {
     const symbol = `f${os.symbol.substr(-3)}`;
     if (SUPPORT_COIN.indexOf(symbol) === -1) return;
@@ -835,6 +948,7 @@ export const makeOnOrderClose = (id, curArr, uid) => os => {
         }
     }
     if (!is_exist) {
+        // If the order is already gone from the local cache, preserve the executed delta for later cleanup.
         const amount = (os.amountOrig - os.amount < 0) ? (1 - BITFINEX_FEE) * (os.amountOrig - os.amount) : os.amountOrig - os.amount;
         if (amount !== 0) {
             deleteOrder.push({
@@ -845,6 +959,7 @@ export const makeOnOrderClose = (id, curArr, uid) => os => {
             });
         }
     }
+    // Only recent non-exchange closes feed TOTALDB; older events have already been reconciled elsewhere.
     if ((Math.round(os.mtsCreate / 1000) + ORDER_INTERVAL) >= Math.round(new Date().getTime() / 1000) && !os.type.includes('EXCHANGE') && (os.status.includes('EXECUTED') || os.status.includes('INSUFFICIENT BALANCE'))) {
         for (let i = 0; i < curArr.length; i++) {
             if (curArr[i].type === symbol && curArr[i].pair) {
@@ -873,11 +988,14 @@ export const makeOnOrderClose = (id, curArr, uid) => os => {
     }
 };
 
-// Phase A — initialBook extracted to module-level for direct testability.
-// Uses module-scoped state (offer/credit/order/position/available/margin/updateTime)
-// keyed by id; userRest is the per-user bfx-api-node-rest client.
+/**
+ * Refresh the full REST snapshot for wallets, offers, credits, orders, and positions.
+ * This is the recovery path after startup/reconnect, so each collection is rebuilt from
+ * Bitfinex data and then swapped into the per-user caches in one pass.
+ */
 export const initialBookFn = (id, userRest) => {
     const now = Math.round(new Date().getTime() / 1000);
+    // Skip the expensive REST bootstrap unless the cached snapshot is stale.
     if ((now - updateTime[id]['book']) > UPDATE_BOOK) {
         updateTime[id]['book'] = now;
         return userRest.wallets().then(wallet => {
@@ -906,6 +1024,7 @@ export const initialBookFn = (id, userRest) => {
                 }
             });
         }).then(() => userRest.fundingOffers('')).then(fos => {
+            // Rebuild the offer map from scratch so reconnects do not append duplicate entries.
             const risk = {};
             const temp = {};
             fos.forEach(v => {
@@ -921,13 +1040,15 @@ export const initialBookFn = (id, userRest) => {
                         rate: v.rate,
                         period: v.period,
                         status: v.status,
-                        // L1: floor at OFFER_MAX - RISK_MAX when OFFER_MAX > RISK_MAX
+                        // Risk starts with the first RISK_MAX offers and then stays floored so the UI
+                        // still gets a deterministic value once the countdown has been exhausted.
                         risk: risk[v.symbol] > 0 ? risk[v.symbol]-- : (OFFER_MAX > RISK_MAX ? OFFER_MAX - RISK_MAX : 0),
                     });
                 }
             });
             offer[id] = temp;
         }).then(() => userRest.fundingCredits('')).then(fcs => {
+            // Replace the credit cache atomically so websocket deltas apply to a clean baseline.
             const temp = {};
             fcs.forEach(v => {
                 if (SUPPORT_COIN.indexOf(v.symbol) !== -1) {
@@ -946,6 +1067,7 @@ export const initialBookFn = (id, userRest) => {
             });
             credit[id] = temp;
         }).then(() => userRest.activeOrders()).then(os => {
+            // Active orders are rebuilt by symbol bucket because later handlers mutate them in place.
             const temp = {};
             os.forEach(v => {
                 const symbol = `f${v.symbol.substr(-3)}`;
@@ -965,6 +1087,7 @@ export const initialBookFn = (id, userRest) => {
             });
             order[id] = temp;
         }).then(() => userRest.positions()).then(ps => {
+            // Positions are also rebuilt from scratch to realign websocket state after reconnects.
             const temp = {};
             ps.forEach(v => {
                 const symbol = `f${v.symbol.substr(-3)}`;
@@ -990,13 +1113,18 @@ export const initialBookFn = (id, userRest) => {
     }
 };
 
-// ── Extracted recur_status: processes TOTALDB items, returns newOrder[] ──
+/**
+ * Recompute pending orders for one TOTALDB item batch and return the new order payloads.
+ * The helper is kept at module scope so tests can drive the reconciliation logic directly.
+ */
 export const _recur_status = async ({ id, uid, current, userRest, items }) => {
     const newOrder = [];
     fakeOrder[id][current.type] = [];
 
     for (let idx = 0; idx < items.length; idx++) {
         let item = items[idx];
+        // Recompute the working bankroll from persisted fields on every pass so
+        // prior loop mutations do not leak into the next iteration.
         if (item.mul) {
             item.orig = item.orig * item.mul;
             item.times = Math.floor(item.times * item.mul * 10000) / 10000;
@@ -1005,6 +1133,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         console.log('margin');
         console.log(margin[id]);
         const clearP = (current.clear === true || current.clear[item.index] === true) ? true : false;
+        // Reset the live position snapshot before folding in the current holdings.
         item.count = 0;
         item.pricecost = 0;
         item.pl = 0;
@@ -1012,6 +1141,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             item.orig += item.profit;
         }
         item.amount = item.orig;
+        // Unrealized P/L is treated as deployable capital for the next decision.
         if (position[id][current.type]) {
             position[id][current.type].forEach(v => {
                 if (v.symbol === item.index) {
@@ -1020,6 +1150,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 }
             });
         }
+        // Holdings reduce remaining cash and preserve the latest entry cost for stockProcess().
         if (position[id][current.type]) {
             position[id][current.type].forEach(v => {
                 if (v.symbol === item.index) {
@@ -1033,9 +1164,11 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
 
         const cancelOrder = async () => {
             if (order[id][current.type]) {
+                // Only cancel strategy-owned orders for this symbol; EXCHANGE orders are managed elsewhere.
                 const real_id = order[id][current.type].filter(v => (v.symbol === item.index && !v.type.includes('EXCHANGE')));
                 console.log(real_id);
                 for (const entry of real_id) {
+                    // Leave partial fills alone so the loop does not immediately re-open them.
                     if (entry.status && entry.status.includes('PARTIALLY FILLED')) continue;
                     await userRest.cancelOrder(entry.id);
                     await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
@@ -1046,6 +1179,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         };
 
         const startStatus = async () => {
+            // Re-read before trading so this pass uses the latest persisted ladder state.
             const nitem = await Mongo('find', TOTALDB, {_id: item._id});
             if (nitem.length < 1) {
                 return handleError(new HoError(`miss ${item.index}`));
@@ -1079,6 +1213,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                     }
                 });
             }
+            // Apply the pending newMid stack before asking stockProcess() for the next ladder action.
             let newArr = resolveNewMidStack(item.newMid, +priceData[item.index].lastPrice, item.mid, item.web, (nm) => {
                 console.log(nm);
             });
@@ -1086,7 +1221,9 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             const processResetWeb = (recalcCount) => {
                 if (!suggestion.resetWeb) return Promise.resolve();
                 item.newMid.push(suggestion.newMid);
-                // Stack depth limit: recalculate from half history via candles
+                // A deep newMid stack means price has lived outside the original web for too long.
+                // Rebuild from candles when possible so §6c continues from a fresh ladder instead of
+                // endlessly shifting the old one.
                 if (item.newMid.length >= MAX_NEWMID_STACK) {
                     recalcCount++;
                     if (recalcCount > 2) {
@@ -1104,6 +1241,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                             });
                             let fraction = 2;
                             let recalcWeb = null;
+                            // Retry with progressively shorter windows until calStair() finds a stable web.
                             while (fraction <= 8) {
                                 const halfLen = Math.max(Math.floor(raw_arr.length / fraction), 20);
                                 const bins = computeBinCount(raw_arr, 0, halfLen);
@@ -1118,6 +1256,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                                 item.newMid = [];
                                 newArr = item.web;
                             } else {
+                                // Fall back to scaling the existing ladder to the newest shifted midpoint.
                                 const ratio = item.newMid[item.newMid.length - 1] / item.mid;
                                 item.mid = item.newMid[item.newMid.length - 1];
                                 item.web = item.web.map(v => v * ratio);
@@ -1125,6 +1264,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                                 newArr = item.web;
                             }
                         } else {
+                            // No candles returned: preserve spacing by applying the same midpoint ratio.
                             const ratio = item.newMid[item.newMid.length - 1] / item.mid;
                             item.mid = item.newMid[item.newMid.length - 1];
                             item.web = item.web.map(v => v * ratio);
@@ -1134,6 +1274,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                         suggestion = stockProcess(+priceData[item.index].lastPrice, newArr, item.times, item.previous, item.orig, clearP ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 1, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, undefined, item.newMid.length);
                         return processResetWeb(recalcCount);
                     }).catch(() => {
+                        // On candle fetch failure, keep trading with a rescaled ladder instead of aborting the loop.
                         const ratio = item.newMid[item.newMid.length - 1] / item.mid;
                         item.mid = item.newMid[item.newMid.length - 1];
                         item.web = item.web.map(v => v * ratio);
@@ -1161,6 +1302,8 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             let count = 0;
             let amount = clearP ? 0 : item.amount;
+            // When the shifted midpoint sits below the base mid, preserve extra cash only down to the
+            // target band; anything above that can still add ladder buys.
             if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] <= item.mid) {
                 if (suggestion.buy > 0 && amount > item.orig * 5 / 8) {
                     let tmpAmount = amount - item.orig / 2;
@@ -1216,6 +1359,8 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             count = 0;
             amount = item.amount;
+            // Mirror the buy-side guardrails when price has shifted above mid: sell only until the
+            // account returns to the target cash band for the current ladder state.
             if (item.newMid.length > 0 && item.newMid[item.newMid.length - 1] >= item.mid) {
                 if (suggestion.sell > 0 && amount < item.orig * 3 / 8) {
                     let tmpAmount = item.orig / 2 - amount;
@@ -1229,6 +1374,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                     }
                 }
             } else if (item.newMid.length <= 0) {
+                // Without a shifted stack, suggestion.type determines which sell target band applies.
                 if (suggestion.sell > 0) {
                     if (suggestion.type === 9) {
                         if (amount < item.orig / 8) {
@@ -1271,6 +1417,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             console.log(suggestion);
             priceData[item.index].str2 = suggestion.str;
+            // Clamp the staged counts to what the current position size and cash balance can actually fill.
             if (item.count < suggestion.sCount * 4 / 3) {
                 suggestion.sCount = item.count;
             }
@@ -1282,6 +1429,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                     suggestion.bCount = (item.amount < 0) ? 0 : Math.floor(item.amount / suggestion.buy * 10000) / 10000;
                 }
             }
+            // Persist any ladder recalculation before the later order-submission phase reads newOrder.
             await Mongo('update', TOTALDB, {_id: item._id}, {$set : {
                 newMid: item.newMid,
                 mid: item.mid,
@@ -1291,6 +1439,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             newOrder.push({item, suggestion});
         };
 
+        // ing=2 means unwind now: cancel resting orders, market-close leftovers, then remove the item.
         if (item.ing === 2) {
             const delTotal = async () => {
                 await Mongo('deleteMany', TOTALDB, {_id: item._id});
@@ -1306,6 +1455,7 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
                 }, userRest);
                 await or.submit();
                 await new Promise(resolve => setTimeout(resolve, API_WAIT * 1000));
+                // Keep the local order cache in sync without re-adding entries already seen or queued for deletion.
                 let isExist = false;
                 for (let i = 0; i < order[id][current.type].length; i++) {
                     if (or[0].id === order[id][current.type][i].id) {
@@ -1337,11 +1487,13 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             }
             await delTotal();
         } else if (item.ing === 1) {
+            // ing=1 is the normal active path: refresh orders and recompute the next suggestion.
             if (+priceData[item.index].lastPrice) {
                 await cancelOrder();
                 await startStatus();
             }
         } else {
+            // ing=0 waits for the enter_mid gate before the strategy is allowed to start trading.
             current.enter_mid = current.enter_mid ? current.enter_mid : 0;
             if ((+priceData[item.index].lastPrice - item.mid) / item.mid * 100 < current.enter_mid) {
                 await Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}});
@@ -1374,13 +1526,15 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
             return (0.5 * bMV + 0.5 * bConviction) - (0.5 * aMV + 0.5 * aConviction);
         });
     }
-    // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
-    // Items that are clearing or deleting (ing=2) are excluded from the count and not forced to fakeOrder
+    // §6d Emergency Stop: when too many active holdings have broken out of their web price range
+    // (non-empty newMid stack), zero all buy/sell counts to prevent trading until market stabilizes.
+    // Clearing (current.clear) and deleting (ing=2) items are excluded since they are already winding down.
     const activeItems = items.filter(it => it.ing !== 2 && !(current.clear === true || (current.clear && current.clear[it.index] === true)));
     if (activeItems.length > 0) {
         const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
         if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
             console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
+            // Zero out suggestion counts only for non-clearing/non-deleting entries
             newOrder.forEach(entry => {
                 if (!entry.item.clear && entry.item.ing !== 2 && !(current.clear === true || (current.clear && current.clear[entry.item.index] === true))) {
                     entry.suggestion.bCount = 0;
@@ -1392,7 +1546,10 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
     return newOrder;
 };
 
-// ── Extracted recur_NewOrder: submits sell/buy orders from newOrder[] ──
+/**
+ * Submit the sell leg first and then the buy leg for each suggestion prepared by _recur_status().
+ * The queue already reflects §6c sorting and any §6d emergency-stop zeroing before it reaches here.
+ */
 export const _recur_NewOrder = async ({ id, uid, current, userRest, newOrder }) => {
     for (let idx = 0; idx < newOrder.length; idx++) {
         const item = newOrder[idx].item;
@@ -1576,8 +1733,12 @@ export const _recur_NewOrder = async ({ id, uid, current, userRest, newOrder }) 
     });
 };
 
+/**
+ * Coordinate a user's Bitfinex funding/trading session: ensure the authenticated WS exists,
+ * refresh wallet/order snapshots, rebalance lending offers, and reconcile trade state.
+ */
 export const setWsOffer = (id, curArr=[], uid) => {
-    //檢查跟設定active
+    // Only keep active configs that have enough data to either lend or drive the trade bot.
     curArr = curArr.filter(v => (v.isActive && ((v.riskLimit > 0 && v.waitTime > 0 && v.amountLimit > 0) || (v.isTrade && v.pair))) ? true : false);
     if (curArr.length < 1) {
         return Promise.resolve();
@@ -1599,8 +1760,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
     }
     const userBfx = new BFX({ apiKey: userKey, apiSecret: userSecret });
     const userRest = userBfx.rest(2, { transform: true });
-    // closeRestCredit / processOrderRest extracted to module-level for testability;
-    // bind them to this user's id/userRest below.
+    // Bind the module-level helpers to this user's REST client for the current run.
     const _closeRestCredit = () => closeRestCredit(id, userRest);
     const _processOrderRest = processOrderRest;
     if (!userWs[id] || !userOk[id]) {
@@ -1714,8 +1874,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
 
     const initialBook = () => initialBookFn(id, userRest);
 
-    // checkRisk extracted to module-level (above, exported)
-
+    // Manage one funding currency: refresh lending offers, recycle stale orders, and trigger
+    // any simulated fills that were queued while the trade bot could not place a real order.
     const singleLoan = current => {
         if (current.riskLimit > 0 && current.waitTime > 0 && current.amountLimit > 0) {
         } else {
@@ -1734,6 +1894,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
         console.log(MR2);
         console.log(KAM);
         const DR = [];
+        // Keep dynamic-rate tiers sorted from low to high so getDR() can pick the first
+        // tenor whose minimum rate is already satisfied by the current offer.
         const pushDR = (rate, day) => {
             if (rate > 0 && day >= 2 && day <= 120) {
                 const DRT = {
@@ -1763,11 +1925,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
         pushDR(current.dynamic, 30);
         pushDR(current.dynamicRate1, current.dynamicDay1);
         pushDR(current.dynamicRate2, current.dynamicDay2);
-        //const DR = (current.dynamic > 0) ? current.dynamic/36500*BITFINEX_EXP : 0;
+        // Track repeated extreme-rate readings so the trade bot can widen or tighten exposure
+        // only after a sustained move instead of reacting to a single noisy tick.
         const extremRateCheck = () => {
-            /*if (!current.isTrade || !current.interval || !current.amount || !current.loss_stop || !current.low_point || !current.pair || current.pair.length < 1) {
-                return false;
-            }*/
             if (current.isTrade && current.pair) {
             } else {
                 if (!extremRate[id][current.type]) {
@@ -1828,8 +1988,7 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
             }
         }
-        // adjust offer & history
-        //keep cash
+        // Refresh funding-wallet cash and reserve the configured keepAmount before sizing offers.
         const calKeepCash = () => userRest.wallets().then(wallet => {
             for (let i = 0; i < wallet.length; i++){
                 if (wallet[i].type === 'funding' && wallet[i].currency === current.type.substr(1)) {
@@ -1842,18 +2001,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 }
             }
             console.log(available[id]);
-            let kp = available[id][current.type] ? available[id][current.type].avail : 0;
-            /*if (current.isKeep) {
-                if (priceData[TBTC_SYM].dailyChange < COIN_MAX || priceData[TETH_SYM].dailyChange < COIN_MAX) {
-                    const dailyChange = (priceData[TBTC_SYM].dailyChange < priceData[TETH_SYM].dailyChange) ? priceData[TBTC_SYM].dailyChange : priceData[TETH_SYM].dailyChange;
-                    kp = kp * (50 - ((COIN_MAX - dailyChange) / (COIN_MAX - COIN_MAX_MAX) * 50)) / 100;
-                }
-            }*/
-            /*if (current.keepAmountRate1 > 0 && current.keepAmountMoney1 > 0 && currentRate[current.type].rate < (current.keepAmountRate1 / 100 * BITFINEX_EXP)) {
-                return kp - current.keepAmountMoney1;
-            } else {*/
+            const kp = available[id][current.type] ? available[id][current.type].avail : 0;
             return current.keepAmount ? kp - current.keepAmount : kp;
-            //}
         });
         return calKeepCash().then(keep_available => {
             console.log(keep_available);
@@ -1923,13 +2072,9 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         })
                     }
                 });
-                //console.log('needdelete');
-                //console.log(needDelete);
             }
-            //produce new
+            // Produce new offers to fill empty slots up to OFFER_MAX.
             const newOffer = risk => {
-                //console.log('keep available');
-                //console.log(keep_available);
                 if (risk > RISK_MAX) {
                     risk = RISK_MAX;
                 }
@@ -1976,13 +2121,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         });
                     }
                     keep_available = keep_available - amount;
-                    //risk = risk < 1 ? 0 : risk-1;
                     risk--;
                 }
-                //console.log('needNew');
-                //console.log(needNew);
             }
-            //merge new & delete
+            // Merge new offers with delete candidates — cancel only when no matching retain exists.
             const mergeOffer = () => {
                 const checkDelete = (rate, amount) => {
                     for (let i = 0; i < needDelete.length; i++) {
@@ -2129,6 +2271,8 @@ export const setWsOffer = (id, curArr=[], uid) => {
         });
     }
 
+    // Handle margin trading adjustments for one funding symbol by moving funds between
+    // funding and margin wallets until the pair allocation matches current.amount.
     const singleTrade = current => {
         console.log('singleTrade');
         if (current.isTrade && current.pair) {
@@ -2136,19 +2280,17 @@ export const setWsOffer = (id, curArr=[], uid) => {
             return Promise.resolve();
         }
         let min_available = 5000;
-        //return Promise.resolve();
-        //if (current.amount > 0 && current.rate_ratio <= 1 && current.rate_ratio > 0) {
         if (current.amount > 0 && current.rate_ratio > 0) {
             if (extremRate[id][current.type].lowTriggeredAt && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].lowTriggeredAt) <= EXTREM_DURATION && extremRate[id][current.type].highTriggeredAt < extremRate[id][current.type].lowTriggeredAt) {
                 console.log('is low');
                 min_available = 0;
-                //current.amount = current.amount + current.amount * current.rate_ratio;
             } else if (extremRate[id][current.type].highTriggeredAt && (Math.round(new Date().getTime() / 1000) - extremRate[id][current.type].highTriggeredAt) <= EXTREM_DURATION && extremRate[id][current.type].highTriggeredAt > extremRate[id][current.type].lowTriggeredAt) {
                 console.log('is high');
                 min_available = 10000;
-                //current.amount = current.amount - current.amount * current.rate_ratio;
             }
         }
+        // Calculate the amount that must move to or from margin so the live position
+        // converges on current.amount before placing or clearing pair trades.
         const getAM = () => {
             console.log(current);
             let needTrans = 0;
@@ -2161,14 +2303,6 @@ export const setWsOffer = (id, curArr=[], uid) => {
                 needTrans = current.amount;
             }
             console.log(`need trans: ${needTrans}`);
-            //let needTrans = needAmount;
-            //check need amount
-            /*if (needTrans > 0) {
-                if (margin[id][current.type]) {
-                    needTrans = needTrans - margin[id][current.type].avail;
-                }
-            }*/
-            //const needTrans = (current.used > 0) ? current.amount - current.used : current.amount;
             let availableMargin = 0;
             if (needTrans > 1 && current.clear !== true) {
                 return userRest.wallets().then(wallet => {
@@ -2334,14 +2468,11 @@ export const setWsOffer = (id, curArr=[], uid) => {
             }
         }).then(() => {
             const now = Math.round(new Date().getTime() / 1000);
-            //console.log(`STcount ${updateTime[id]['trade']}`);
-            /*if (updateTime[id]['trade'] % Math.ceil(ORDER_INTERVAL / RATE_INTERVAL) !== Math.floor(180 / RATE_INTERVAL)) {
-                return Promise.resolve();
-            }*/
             if ((now - updateTime[id]['trade']) < ORDER_INTERVAL) {
                 return Promise.resolve();
             }
-            //auto cancel credit
+            // Auto-cancel open funding credits that have stayed inactive past the
+            // current threshold checks so they can be re-priced or re-issued.
             const closecredit_recur = async () => {
                 if (!credit[id][current.type]) return;
                 for (let index = 0; index < credit[id][current.type].length; index++) {
@@ -2410,8 +2541,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                         return Promise.resolve();
                     } else {
                         const os = oss[index];
+                        // Reconcile each recent margin trade fill back into the local order state.
                         const symbol = `f${os.symbol.substr(-3)}`;
                         if (SUPPORT_COIN.indexOf(symbol) !== -1) {
+                            // Ignore exchange wallet fills here; only margin pair closes affect this path.
                             if (!os.orderType.includes('EXCHANGE')) {
                                 for (let i = 0; i < curArr.length; i++) {
                                     if (curArr[i].type === symbol && curArr[i].pair) {
@@ -2419,9 +2552,10 @@ export const setWsOffer = (id, curArr=[], uid) => {
                                             if (curArr[i].pair[j].type === os.symbol) {
                                                 console.log('HISTORY');
                                                 console.log(os);
-                                                //console.log(`${os.symbol} order executed`);
+                                                // Apply the execution fee adjustment before updating holdings.
                                                 const amount = os.execAmount < 0 ? (1 - BITFINEX_FEE) * os.execAmount : os.execAmount;
                                                 if (amount !== 0) {
+                                                    // Load the tracked TOTALDB row for this pair and record the close fill.
                                                     return Mongo('find', TOTALDB, {owner: uid, sType: 1, index: os.symbol}).then(items => {
                                                         console.log(items);
                                                         if (items.length < 1) {
@@ -2499,6 +2633,17 @@ export const setWsOffer = (id, curArr=[], uid) => {
     return initialBook().then(() => _closeRestCredit()).then(() => recurLoan());
 }
 
+/**
+ * Reset the Bitfinex module runtime state.
+ *
+ * Closes all active user WebSocket connections, clears per-user caches, and forces
+ * the shared Bitfinex REST clients/snapshots to be rebuilt on the next cycle. When
+ * `update` is true, keep the trade timer but refresh the book/offer/credit/
+ * position snapshots so rate data can be reloaded without a full disconnect.
+ *
+ * @param {boolean} [update=false] Whether to do a partial snapshot refresh only.
+ * @returns {Promise<void>|void}
+ */
 export const resetBFX = (update=false) => {
     console.log('BFX reset');
     const closeWs = async () => {
@@ -2715,7 +2860,6 @@ export default {
                             }
                         });
                         data['pair'] = pairArr;
-                    //}
                 } else {
                     data['pair'] = [];
                 }
@@ -2883,7 +3027,6 @@ export default {
             }
             if (items[0].bitfinex) {
                 const bitfinex = items[0].bitfinex.filter(v => (v.type === type) ? false : true);
-                //console.log(bitfinex);
                 return Mongo('update', USERDB, {_id: id}, {$set: {bitfinex}}).then(user => {
                     console.log(user);
                     if (userWs[userID]) {
@@ -3241,6 +3384,13 @@ export default {
     }
 }
 
+/**
+ * Map the supported Bitfinex coins against a user's saved config into the
+ * frontend-facing summary objects, including pair text and current state flags.
+ *
+ * @param {Array<Object>} bitfinex User Bitfinex config entries.
+ * @returns {Array<Object>} Supported coin summaries for the UI.
+ */
 const returnSupport = bitfinex => bitfinex ? SUPPORT_COIN.map(v => {
     for (let i of bitfinex) {
         if (i.type === v) {
