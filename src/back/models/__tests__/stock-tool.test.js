@@ -163,6 +163,19 @@ jest.unstable_mockModule('../shioaji-tool.js', () => ({
 const mockSendWs = jest.fn();
 jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs }));
 
+// --- logger ---
+jest.unstable_mockModule('../../util/logger.js', () => ({
+    default: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        fatal: jest.fn(),
+        trace: jest.fn(),
+        child: jest.fn().mockReturnThis(),
+    }),
+}));
+
 // ---------------------------------------------------------------------------
 // Dynamic import — all mocks registered above
 // ---------------------------------------------------------------------------

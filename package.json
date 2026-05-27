@@ -68,6 +68,8 @@
     "passport-local": "^1.0.0",
     "password-generator": "^2.3.2",
     "pdfjs-dist": "^2.5.207",
+    "pino": "^8.21.0",
+    "pino-pretty": "^10.3.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-redux": "^7.2.2",

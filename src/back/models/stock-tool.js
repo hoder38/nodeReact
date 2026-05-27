@@ -4,7 +4,6 @@ import { STOCKDB, CACHE_EXPIRE, STOCK_FILTER_LIMIT, STOCK_FILTER, MAX_RETRY, TOT
 import Htmlparser from 'htmlparser2'
 import fsModule from 'fs'
 import yahooFinance from 'yahoo-finance2'
-const { existsSync: FsExistsSync } = fsModule;
 import Mkdirp from 'mkdirp'
 import Redis from '../models/redis-tool.js'
 import Mongo from '../models/mongo-tool.js'
@@ -16,7 +15,10 @@ import { getTwsePosition, getTwseOrder } from '../models/shioaji-tool.js'
 import { handleError, HoError, findTag, completeZero, addPre, isValidString, toValidName, convertTimestampToDate } from '../util/utility.js'
 import { getExtname } from '../util/mime.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
 
+const log = createLogger('stock')
+const { existsSync: FsExistsSync } = fsModule;
 const StockTagTool = TagTool(STOCKDB);
 
 let stockFiltering = false;
@@ -68,11 +70,10 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                         });
                     }
 
-                    console.log(price);
-                    console.log(previousPrice);
+                    log.debug({ price, previousPrice }, 'getStockPrice result');
                     return [price, previousPrice];
                 } else {
-                    console.log(price);
+                    log.debug({ price }, 'getStockPrice single');
                     return price;
                 }
             }
@@ -90,7 +91,7 @@ export const getStockPrice = (type='twse', index, previous = false) => {
             }
             const price = findTag(findTag(findTag(findTag(table, 'tr')[1], 'td')[2], 'b')[0])[0].match(/^(\d+(\.\d+)?|\-)/);
             if (!price || !price[0]) {
-                console.log(raw_data);
+                log.debug({ raw_data }, 'yahoo raw response');
                 return handleError(new HoError(`stock ${index} price get fail`));
             }
             if (price[0] === '-') {
@@ -105,10 +106,10 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                 price[0] = last_price[0];
             }
             price[0] = +price[0];
-            console.log(price[0]);
+            log.debug({ price: price[0] }, 'parsed price');
             return price[0];
         }).catch(err => {
-            console.log(count);
+            log.debug({ count }, 'retry count');
             return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), count * 1000));
         });
         return real();
@@ -122,11 +123,10 @@ export const getStockPrice = (type='twse', index, previous = false) => {
                 }
             }
             if (previous) {
-                console.log(ret.price);
-                console.log(ret.previous);
+                log.debug({ price: ret.price, previous: ret.previous }, 'yahoo price result');
                 return [ret.price, ret.previous];
             } else {
-                console.log(ret.price);
+                log.debug({ price: ret.price }, 'yahoo price fallback');
                 return ret.price;
             }
         });
@@ -201,7 +201,7 @@ export const getBasicStockData = (type, index) => {
             });
             return result;
         }).catch(err => {
-            console.log(count);
+            log.debug({ count }, 'basic data retry');
             return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), _retryDelay));
         });
         return real();
@@ -221,7 +221,7 @@ export const getBasicStockData = (type, index) => {
                 return result;
             });
         }).catch(err => {
-            console.log(`${index} ${count}`);
+            log.debug({ index, count }, 'basic data attempt');
             return (++count > _maxRetry) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real1()), _retryDelay));
         });
         return real1();
@@ -471,9 +471,7 @@ export default {
                         const per = (profit <= 0) ? 9999 : Math.round(price / profit * equity * 10) / 100;
                         const pdr = (dividends <= 0) ? 9999 : Math.round(price / dividends * equity * 10) / 100;
                         const pbr = (netValue <= 0) ? 9999 : Math.round(price / netValue * equity * 10) / 100;
-                        console.log(per);
-                        console.log(pdr);
-                        console.log(pbr);
+                        log.debug({ per, pdr, pbr }, 'valuation ratios');
                         const retObj = () => id_db ? Mongo('update', STOCKDB, {_id: id_db}, {$set: {
                             price,
                             profit,
@@ -529,8 +527,7 @@ export default {
                 // Walk backward through MOPS filings until we can reconstruct the latest
                 // trailing fundamentals. Missing reports first try the alternate report type.
                 const recur_getTwseProfit = () => {
-                    console.log(year);
-                    console.log(quarter);
+                    log.debug({ year, quarter }, 'financial quarter');
                     return Api('url', `https://mopsov.twse.com.tw/server-java/t164sb01?step=1&CO_ID=${index}&SYEAR=${year}&SSEASON=${quarter}&REPORT_ID=${reportType}`, {big5: true}).then(raw_data => {
                         if (findTag(Htmlparser.parseDOM(raw_data), 'h4')[0]) {
                             if (latestQuarter) {
@@ -562,8 +559,7 @@ export default {
                             } else {
                                 // Overrun is the TWSE throttle page; wait and retry the same request.
                                 wait_count++;
-                                console.log('wait');
-                                console.log(wait_count);
+                                log.debug({ wait_count }, 'waiting for TWSE throttle');
                                 return new Promise((resolve, reject) => setTimeout(() => resolve(recur_getTwseProfit()), _overrunDelay));
                             }
                         } else {
@@ -595,10 +591,7 @@ export default {
                             switch (quarter) {
                                 case 4:
                                 profit += profitArr[0];
-                                console.log(profit);
-                                console.log(equity);
-                                console.log(netValue);
-                                console.log(dividends);
+                                log.debug({ profit, equity, netValue, dividends }, 'financial data');
                                 if (!latestQuarter) {
                                     latestQuarter = quarter;
                                     latestYear = year;
@@ -616,10 +609,7 @@ export default {
                                 case 3:
                                 case 2:
                                 if (needDividends) {
-                                    console.log(profit);
-                                    console.log(equity);
-                                    console.log(netValue);
-                                    console.log(dividends);
+                                    log.debug({ profit, equity, netValue, dividends }, 'financial data retry');
                                     return getStockPrice(type, index).then(price => final_stage(price));
                                 }
                                 profit += profitArr[2];
@@ -679,7 +669,7 @@ export default {
                         }
                     }
                     return getUsStock(index, ['price', 'per', 'pdr', 'pbr', 'equity'], back).then(ret => handleStockTagV2(type, index, obj.tag).then(([name, tags]) => {
-                        console.log(ret);
+                        log.debug({ ret }, 'filter v4 step result');
                         let stock_default = [];
                         // US stocks follow the same tag merge rule as TWSE: keep manual tags and
                         // record only newly derived defaults in stock_default.
@@ -775,20 +765,17 @@ export default {
                 const getInit = () => item ? [JSON.parse(item.raw_list), item.ret_obj, item.etime] : [null, 0, -1];
                 return getInit();
             }).then(([raw_list, ret_obj, etime]) => {
-                console.log(items[index].index + items[index].name);
+                log.debug({ stock: items[index].index + items[index].name }, 'processing stock');
                 if (!raw_list) {
-                    console.log(`${items[index].type} ${items[index].index} data empty`);
+                    log.warn({ type: items[index].type, index: items[index].index }, 'data empty');
                 } else {
                     let isnull = false;
                     for (let i in raw_list) {
-                        console.log(i);
+                        log.debug({ i }, 'interval year');
                         for (let j in raw_list[i]) {
                             for (let k = 0; k < raw_list[i][j].raw.length; k++) {
                                 if (!raw_list[i][j].raw[k].h || !raw_list[i][j].raw[k].l) {
-                                    console.log(j);
-                                    console.log(k);
-                                    console.log(raw_list[i][j].raw[k]);
-                                    console.log(`${items[index].type} ${items[index].index} data miss`);
+                                    log.warn({ type: items[index].type, index: items[index].index, i: j, k, raw: raw_list[i][j].raw[k] }, 'interval data missing');
                                     Redis('hmset', `interval: ${items[index].type}${items[index].index}`, {
                                             raw_list: false,
                                             ret_obj: 0,
@@ -831,15 +818,15 @@ export default {
         // touched in the latest run and is a cleanup candidate.
         const latestQuarter = `${updateyear}q${updatequarter}`;
         const keepList = [];
-        console.log(`keep tag: ${latestQuarter}`);
+        log.info({ latestQuarter }, 'keep tag');
         return Mongo('find', STOCKDB, {tags:{$nin:[latestQuarter]}}).then(items => {
             const recur_remove = index => (index >= items.length) ? Promise.resolve() : Mongo('find', TOTALDB, {index: items[index].index, setype: items[index].type}, {limit: 1}).then(stock => {
                 if (stock.length < 1) {
                     if (dryRun) {
-                        console.log(`dry run ${items[index].type} ${items[index].index} ${items[index].name}`);
+                        log.info({ type: items[index].type, index: items[index].index, name: items[index].name }, 'dry run skip');
                         return recur_remove(index + 1);
                     } else {
-                        console.log(`remove ${items[index].type} ${items[index].index} ${items[index].name}`);
+                        log.info({ type: items[index].type, index: items[index].index, name: items[index].name }, 'removing stock');
                         return Mongo('deleteMany', STOCKDB, {_id: items[index]._id}).then(() => recur_remove(index + 1));
                     }
                 } else {
@@ -849,8 +836,7 @@ export default {
             });
             return recur_remove(0).then(() => {
                 if (keepList.length > 0) {
-                    console.log("In total but out of list:");
-                    keepList.forEach(k => console.log(k));
+                    log.info({ keepList }, 'stocks in total but out of filter list');
                 }
             });
         });
@@ -866,8 +852,7 @@ export default {
         let vol_year = year;
         let vol_month = month;
         let vol_month_str = month_str;
-        console.log(year);
-        console.log(month_str);
+        log.debug({ year, month_str }, 'interval data period');
         return Mongo('find', STOCKDB, {_id: id}, {limit: 1}).then(items => {
             if (items.length < 1) {
                 return handleError(new HoError('can not find stock!!!'));
@@ -895,8 +880,7 @@ export default {
                             month--;
                             month_str = completeZero(month.toString(), 2);
                         }
-                        console.log(year);
-                        console.log(month_str);
+                        log.debug({ year, month_str }, 'recur interval period');
                         if (!is_stop && index < 60 && raw_arr.length <= 1000) {
                             return recur_mi(type, index);
                         }
@@ -914,8 +898,7 @@ export default {
                             min = adjMin;
                         }
                         validateIntervalData(interval_data, raw_arr, newAdjustments);
-                        console.log(max);
-                        console.log(min);
+                        log.debug({ max, min }, 'price range');
                         // Track the recent liquidity floor for the debug output below.
                         let min_vol = 0;
                         for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
@@ -933,13 +916,13 @@ export default {
                                 vol_month_str = completeZero(vol_month.toString(), 2);
                             }
                         }
-                        console.log(min_vol);
+                        log.debug({ min_vol }, 'min volume');
                         const bins = computeBinCount(raw_arr);
                         const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min);
-                        console.log(web);
+                        log.debug({ web }, 'computed web');
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
-                            console.log(item);
+                            log.debug({ item }, 'web update result');
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
@@ -993,9 +976,8 @@ export default {
                                     }
                                 }
                                 return loopShow(0).then(() => {
-                                    results.forEach(r => console.log(r.str));
-                                    console.log(lastest_type);
-                                    console.log('done');
+                                    results.forEach(r => log.debug({ str: r.str }, 'backtest result'));
+                                    log.debug({ lastest_type }, 'backtest done');
                                     // Use the middle profitable result for display so one extreme backtest
                                     // does not dominate the label shown in the UI.
                                     const sorted = results.filter(r => r.metrics);
@@ -1146,8 +1128,7 @@ export default {
                     let min_vol = 0;
                     let latestAdjustments = cached_adjustments;
                     const rest_interval = () => {
-                        console.log(max);
-                        console.log(min);
+                        log.debug({ max, min }, 'price range');
                         // Track the recent liquidity floor for the debug output below.
                         let min_vol = 0;
                         for (let i = 12; (i > 0) && interval_data[vol_year] && interval_data[vol_year][vol_month_str]; i--) {
@@ -1165,13 +1146,13 @@ export default {
                                 vol_month_str = completeZero(vol_month.toString(), 2);
                             }
                         }
-                        console.log(min_vol);
+                        log.debug({ min_vol }, 'min volume');
                         const bins = computeBinCount(raw_arr);
                         const loga = logArray(max, min, bins);
                         const web = calStair(raw_arr, loga, min, 0, USSE_FEE);
-                        console.log(web);
+                        log.debug({ web }, 'computed web');
                         return Mongo('update', STOCKDB, {_id: id}, {$set: {web}}).then(item => {
-                            console.log(item);
+                            log.debug({ item }, 'web update result');
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
@@ -1225,9 +1206,8 @@ export default {
                                     }
                                 }
                                 return loopShow(0).then(() => {
-                                    results.forEach(r => console.log(r.str));
-                                    console.log(lastest_type);
-                                    console.log('done');
+                                    results.forEach(r => log.debug({ str: r.str }, 'backtest result'));
+                                    log.debug({ lastest_type }, 'backtest done');
                                     // Use the middle profitable result for display so one extreme backtest
                                     // does not dominate the label shown in the UI.
                                     const sorted = results.filter(r => r.metrics);
@@ -1433,7 +1413,7 @@ export default {
         if (!option) {
             option = STOCK_FILTER;
         }
-        console.log(`filter update: ${updateyear}q${updatequarter}`);
+        log.info({ year: updateyear, quarter: updatequarter }, 'filter update');
         let last = false;
         let queried = 0;
         let filterList = [];
@@ -1441,7 +1421,7 @@ export default {
         const marketcapList = [];
         // Remove the previous filter tag set first; this job always rebuilds it from scratch.
         const clearName = () => StockTagTool.tagQuery(queried, option.name, true, 0, option.sortName, option.sortType, user, {}, STOCK_FILTER_LIMIT).then(result => {
-            console.log(result.items.length);
+            log.debug({ count: result.items.length }, 'MOPS query result count');
             const delFilter = index => (index < result.items.length) ? StockTagTool.delTag(result.items[index]._id, option.name, user).then(del_result => {
                 sendWs({
                     type: 'stock',
@@ -1461,7 +1441,7 @@ export default {
         });
         // Pull the quarter tag page by page and annotate each candidate with ETF priority and market cap.
         const recur_query = () => StockTagTool.tagQuery(queried, `${updateyear}q${updatequarter}`, true, 0, option.sortName, option.sortType, user, session, STOCK_FILTER_LIMIT).then(result => {
-            console.log(queried);
+            log.debug({ queried }, 'queried stock count');
             if (result.items.length < STOCK_FILTER_LIMIT) {
                 last = true;
             }
@@ -1472,11 +1452,11 @@ export default {
             const recur_ETFMcap = index => {
                 if (index < result.items.length) {
                     const i = result.items[index];
-                    console.log(i.type + ' ' + i.index);
+                    log.debug({ type: i.type, index: i.index }, 'filter candidate');
                     return getStockPrice(i.type, i.index).then(price => {
                         etfList.push(i.type + ' ' + i.index);
                         i.mcap = (i.equity && price) ? i.equity * price : 0;
-                        console.log(i.mcap);
+                        log.debug({ mcap: i.mcap }, 'market cap');
                         marketcapList.push(i.mcap);
                         if (i.tags.indexOf('tw50') !== -1) {
                             i.etf = 5;
@@ -1491,7 +1471,7 @@ export default {
                         } else {
                             i.etf = 0;
                         }
-                        console.log(i.etf);
+                        log.debug({ etf: i.etf }, 'ETF flag');
                         filterList.push(i);
                         return recur_ETFMcap(index + 1);
                     });
@@ -1517,9 +1497,7 @@ export default {
             const usseNum = Math.floor(USSE_NUM / 3);
             const stage3 = iIndex => {
                 if (iIndex < filterList.length) {
-                    console.log(filterList[iIndex].index);
-                    console.log(filterList[iIndex].etf);
-                    console.log(filterList[iIndex].mcap);
+                    log.debug({ index: filterList[iIndex].index, etf: filterList[iIndex].etf, mcap: filterList[iIndex].mcap }, 'filter candidate');
                     if (filterList[iIndex].etf === 5 && tw50 < twseNum) {
                         tw50++;
                     } else if (filterList[iIndex].etf === 4 && tw100 < twseNum) {
@@ -1534,8 +1512,7 @@ export default {
                         return stage3(iIndex + 1);
                     }
                     return this.getIntervalWarp(filterList[iIndex]._id, session).then(([result, index]) => {
-                        console.log(filterList[iIndex].name);
-                        console.log(result);
+                        log.debug({ name: filterList[iIndex].name, result }, 'filter upsert result');
                         filterList[iIndex].name = filterList[iIndex].name + result;
                         filterList1.push(filterList[iIndex]);
                     }).catch(err => {
@@ -1552,7 +1529,7 @@ export default {
                     return Promise.resolve();
                 }
             }
-            console.log('stage three');
+            log.info('filter stage three');
             return stage3(0).then(() => filterList1);
         }).then(filterList => {
             const addFilter = index => (index < filterList.length) ? StockTagTool.addTag(filterList[index]._id, option.name, user).then(add_result => {
@@ -1664,8 +1641,7 @@ export default {
                         totalUsseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
                     }
                 }
-                totalTwseMarketcapList.forEach(i => console.log(i));
-                totalUsseMarketcapList.forEach(i => console.log(i));
+                log.debug({ twseList: totalTwseMarketcapList, usseList: totalUsseMarketcapList }, 'marketcap lists');
                 // §9b Volatility-normalized position size: mul = mcMul + volMul, cap at 5, default = 1
                 const calcFinalMul = (item) => {
                     const volValue = 1 + Math.max(0, 1 - (item.extrem || 0) / 0.4);
@@ -1673,11 +1649,11 @@ export default {
                     return (mcMul > volValue) ? mcMul : volValue;
                 };
                 const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalTwseMarketcapList[mIndex])}}).then(mitems => {
-                    console.log(mitems);
+                    log.debug({ mitems }, 'twse mul update');
                     return updmulTwse(mIndex + 1);
                 }) : Promise.resolve();
                 const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalUsseMarketcapList[mIndex])}}).then(mitems => {
-                    console.log(mitems);
+                    log.debug({ mitems }, 'usse mul update');
                     return updmulUsse(mIndex + 1);
                 }) : Promise.resolve();
                 return updmulTwse(0).then(() => updmulUsse(0).then(() => compare_list(cIndex + 1)));
@@ -1694,7 +1670,7 @@ export default {
         return this.stockFilterV4(option, user, session).then(obj => {
             stockFiltering = false;
             const number = obj.filter.length;
-            console.log(`End: ${number}`);
+            log.info({ number }, 'filter complete');
             sendWs(`stock filter: ${number}`, 0, 0, true);
             obj.filter.forEach(i => {
                 sendWs(i.type + ' ' + i.index + ' ' + i.name, 0, 0, true);
@@ -2237,7 +2213,7 @@ export default {
                                         return handleError(new HoError(`Amount need large than ${Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)}`));
                                     }
                                     return getBasicStockData(setype, index).then(basic => getStockPrice(setype, basic.stock_index).then(price => {
-                                        console.log(basic);
+                                        log.debug({ basic }, 'basic stock data');
                                         items.push({
                                             owner: user._id,
                                             setype,
@@ -2268,11 +2244,7 @@ export default {
             }
             // Apply staged mutations only after every command has been parsed successfully.
             const updateReal = () => {
-                console.log(updateTotal);
-                console.log(removeTotal);
-                console.log(remain);
-                console.log(remain1);
-                console.log(items);
+                log.debug({ updateTotal, removeTotal, remain, remain1, items }, 'updateStockTotal reconciliation');
                 const singleUpdate = v => {
                     if (!v._id) {
                         return Mongo('insert', TOTALDB, v);
@@ -2813,7 +2785,7 @@ export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
     if (monthCount < 6) warnings.push(`Only ${monthCount} months of data (expected 12+)`);
 
     const valid = nanCount === 0 && zeroPrice === 0;
-    if (warnings.length > 0) console.log('Data validation warnings:', warnings);
+    if (warnings.length > 0) log.warn({ warnings }, 'data validation warnings');
     return { valid, warnings };
 };
 
@@ -2821,12 +2793,12 @@ export const validateIntervalData = (interval_data, raw_arr, adjustments) => {
 const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.com.tw/server-java/t57sb01?id=&key=&step=1&co_id=${index}&year=${year-1911}&seamon=&mtype=F&dtype=F04`, {referer: 'https://doc.twse.com.tw/'}).then(raw_data => {
     const center = findTag(findTag(findTag(Htmlparser.parseDOM(raw_data), 'html')[0], 'body')[0], 'center')[0];
     if (!center) {
-        console.log(raw_data);
+        log.debug({ raw_data }, 'annual report step1 response');
         return handleError(new HoError('cannot find form'));
     }
     const form = findTag(center, 'form')[0];
     if (!form) {
-        console.log(raw_data);
+        log.debug({ raw_data }, 'annual report step2 response');
         return handleError(new HoError('cannot find form'));
     }
     const tds = findTag(findTag(findTag(findTag(form, 'table')[0], 'table')[0], 'tr')[1], 'td');
@@ -2841,7 +2813,7 @@ const getTwseAnnual = (index, year, filePath) => Api('url', `https://doc.twse.co
     if (!filename) {
         return handleError(new HoError('cannot find annual location'));
     }
-    console.log(filename);
+    log.info({ filename }, 'downloading annual report');
     if (getExtname(filename).ext === '.zip') {
         return Api('url', `https://doc.twse.com.tw/server-java/t57sb01?step=9&kind=F&co_id=${index}&filename=${filename}`, {referer: 'https://doc.twse.com.tw/'}, {filePath}).then(() => filename);
     } else {
@@ -2896,7 +2868,7 @@ export const getSingleAnnual = (year, folder, index) => {
         for (let i of metadataList) {
             annual_list.push(getExtname(i.title).front);
         }
-        console.log(annual_list);
+        log.debug({ annual_list }, 'annual report list');
         return recur_annual(year, annualList[0].id);
     }));
 }
@@ -2907,12 +2879,10 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     // Broker positions/orders are loaded once per refresh cycle so every item uses the same snapshot.
     const ussePosition = getUssePosition();
     const usseOrder = getUsseOrder();
-    console.log(ussePosition);
-    console.log(usseOrder);
+    log.debug({ ussePosition, usseOrder }, 'USSE portfolio state');
     const twsePosition = getTwsePosition();
     const twseOrder = getTwseOrder();
-    console.log(twsePosition);
-    console.log(twseOrder);
+    log.debug({ twsePosition, twseOrder }, 'TWSE portfolio state');
     const recur_price = index => {
         if (index >= items.length) {
             if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
@@ -2979,11 +2949,11 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     }
-                    console.log(item);
+                    log.debug({ item }, 'stock status item');
                     const fee = items[index].setype === 'usse' ? USSE_FEE : TRADE_FEE;
                     // Resolve any breakout-driven midpoint shifts before generating fresh buy/sell guidance.
                     let newArr = resolveNewMidStack(item.newMid, price, item.mid, item.web, (nm) => {
-                        console.log(nm);
+                        log.debug({ nm }, 'newMid value');
                     });
                     let suggestion = stockProcess(price, newArr, item.times, item.previous, item.orig, item.clear ? 0 : item.amount, item.count, item.pricecost, item.pl, Math.abs(item.web[0]), item.wType, 0, fee, undefined, undefined, undefined, item.newMid.length);
                     // Re-run the web whenever repeated breakouts push too many provisional mids onto the stack.
@@ -3203,7 +3173,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                             }
                         }
                     }
-                    console.log(suggestion.str);
+                    log.info({ str: suggestion.str }, 'trade suggestion');
                     if (USSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'usse') {
                     } else if (TWSE_TICKER(ENV_TYPE) && CHECK_STOCK(ENV_TYPE) && item.setype === 'twse') {
                     } else if (newStr && (!stringSent || stringSent !== _dateFactory().getDay() + 1)) {
@@ -3252,7 +3222,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
         if (activeItems.length > 0) {
             const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
             if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
-                console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
+                log.warn({ shiftedCount, total: activeItems.length }, 'emergency stop triggered — forcing fakeOrder');
                 // Zero out all suggestion counts to convert real orders into fake orders
                 ['twse', 'usse'].forEach(setype => {
                     Object.keys(suggestionData[setype]).forEach(key => {
@@ -3352,7 +3322,7 @@ export const getStockListV2 = (type, year, month) => {
                     }
                 }
             });
-            console.log(stock_list);
+            log.debug({ stock_list }, 'fetched stock list');
             return stock_list;
         });
         case 'usse':
@@ -3362,8 +3332,7 @@ export const getStockListV2 = (type, year, month) => {
         const stock_list = [];
         const recur_get = index => {
             if (index >= list.length) {
-                console.log(stock_list.length);
-                console.log(stock_list);
+                log.debug({ count: stock_list.length, stock_list }, 'stock list parsed');
                 return stock_list;
             } else {
                 return Api('url', `https://en.wikipedia.org/wiki/${list[index]}`).then(raw_data => {
@@ -3835,8 +3804,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             if (his_arr[startI].h < web.mid) {
                 privious = his_arr[startI + 1];
                 if (his_arr[startI + 1].h === null) {
-                    console.log(startI);
-                    console.log(his_arr[startI + 1]);
+                    log.debug({ startI, nextCandle: his_arr[startI + 1] }, 'backtest sell walk start');
                     return 'data miss';
                 }
                 break;
@@ -3874,8 +3842,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 startI++;
                 privious = his_arr[startI + 1];
                 if (his_arr[startI + 1].h === null) {
-                    console.log(startI);
-                    console.log(his_arr[startI + 1]);
+                    log.debug({ startI, nextCandle: his_arr[startI + 1] }, 'backtest buy walk start');
                     return 'data miss';
                 }
                 break;
@@ -4055,8 +4022,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             checkweb++;
         }
         if (his_arr[i].h === null || his_arr[i].l === null) {
-            console.log(i);
-            console.log(his_arr[i]);
+            log.debug({ i, candle: his_arr[i] }, 'backtest candle');
             return 'data miss';
         }
 
@@ -4558,7 +4524,7 @@ export const getUsStock = (index, stat = ['price'], single = false) => {
     });
     const real = () => yahooFinance.quote(index).then(result => {
         if (!result) {
-            console.log(`getUsStock result ${index} empty`);
+            log.warn({ index }, 'getUsStock result empty');
             return Promise.resolve(ret);
         }
         if (stat.indexOf('price') !== -1) {
@@ -4605,7 +4571,7 @@ export const getUsStock = (index, stat = ['price'], single = false) => {
         }
         return Promise.resolve(ret);
     }).catch(err => {
-        console.log(`${index} ${count}`);
+        log.debug({ index, count }, 'getUsStock attempt');
         return (single || (++count > _maxRetry)) ? handleError(err) : new Promise((resolve, reject) => setTimeout(() => resolve(real()), _retryDelay));
     });
     return real();

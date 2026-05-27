@@ -170,6 +170,20 @@ jest.unstable_mockModule('htmlparser2', () => ({
 const mockSendWs = jest.fn();
 jest.unstable_mockModule('../../util/sendWs.js', () => ({ default: mockSendWs }));
 
+// ── logger.js mock ───────────────────────────────────────────
+const mockLog = {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    fatal: jest.fn(),
+    trace: jest.fn(),
+    child: jest.fn().mockReturnThis(),
+};
+jest.unstable_mockModule('../../util/logger.js', () => ({
+    default: () => mockLog,
+}));
+
 // ── utility.js mock (inline isValidString-lite + HoError) ─
 class MockHoError extends Error {
     constructor(msg) { super(msg); this.name = 'HoError'; }
@@ -341,19 +355,17 @@ describe('default.parent', () => {
 // ════════════════════════════════════════════════════════════
 describe('default.closeCredit', () => {
     test('first call creates closeCredit entry', async () => {
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        mockLog.debug.mockClear();
         await defaultExport.closeCredit('newUser1', 12345);
-        expect(consoleSpy).toHaveBeenCalled();
-        consoleSpy.mockRestore();
+        expect(mockLog.debug).toHaveBeenCalled();
     });
 
     test('subsequent call appends to existing array', async () => {
-        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+        mockLog.debug.mockClear();
         await defaultExport.closeCredit('newUser2', 100);
         await defaultExport.closeCredit('newUser2', 200);
         // Just verify both promise chains resolve
-        expect(consoleSpy).toHaveBeenCalled();
-        consoleSpy.mockRestore();
+        expect(mockLog.debug).toHaveBeenCalled();
     });
 });
 
@@ -2748,7 +2760,7 @@ describe('singleLoan - deep money flows', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith('manual');
+        expect(mockLog.debug).toHaveBeenCalledWith('manual rate mode');
         expect(mockRest.cancelFundingOffer).not.toHaveBeenCalled();
     });
 
@@ -2796,7 +2808,7 @@ describe('singleLoan - deep money flows', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith('miss tXYZUSD');
+        expect(mockLog.warn).toHaveBeenCalledWith({ symbol: 'tXYZUSD' }, 'fake order symbol missing');
     });
 
     test('checkFakeOrder: sell order missing symbol → skips with log', async () => {
@@ -2821,7 +2833,7 @@ describe('singleLoan - deep money flows', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith('miss tXYZUSD');
+        expect(mockLog.warn).toHaveBeenCalledWith({ symbol: 'tXYZUSD' }, 'fake order symbol missing');
     });
 
     // ── extremRate init branches (L1226, 1243, 1260) ──
@@ -3197,7 +3209,7 @@ describe('singleTrade.getAM - deep money flows', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith('is low');
+        expect(mockLog.info).toHaveBeenCalledWith('extreme low rate detected');
     });
 
     test('highTriggeredAt: recent extreme high → min_available = 10000', async () => {
@@ -3214,7 +3226,7 @@ describe('singleTrade.getAM - deep money flows', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith('is high');
+        expect(mockLog.info).toHaveBeenCalledWith('extreme high rate detected');
     });
 
     test('margin not pre-existing → creates new margin entry (clear=true path)', async () => {
@@ -3497,7 +3509,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // enter_mid=-100 → (60000-50000)/50000*100=20 > -100 → skip, log 'enter_mid'
-        expect(consoleSpy).toHaveBeenCalledWith('enter_mid');
+        expect(mockLog.debug).toHaveBeenCalledWith(expect.objectContaining({ pctFromMid: expect.any(Number) }), 'enter_mid');
     });
 
     test('recur_status: ing=1, valid lastPrice → runs cancelOrder + startStatus with stockProcess', async () => {
@@ -4016,7 +4028,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // accountTrades returned a match → processOrderRest should have been called
-        expect(consoleSpy).toHaveBeenCalledWith('HISTORY');
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ order: expect.any(Object) }), 'trade history event');
     });
 
     test('recur_status: buy type=7 with amount > 7/8 orig → multiplies bCount', async () => {
@@ -4061,7 +4073,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // type=7, amount(9500) > orig*7/8(8750) → bCount multiplied
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'buy order');
     });
 
     test('recur_status: sell type=9 with amount < 1/8 orig → multiplies sCount', async () => {
@@ -4107,7 +4119,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // type=9, amount(500) < orig/8(1250) → sCount multiplied
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'sell order');
     });
 
     test('trade error → updateTime.trade rewound by 2*RATE_INTERVAL', async () => {
@@ -4209,7 +4221,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'buy order');
     });
 
     test('recur_status: type=6 buy with loop → bCount multiplied', async () => {
@@ -4234,7 +4246,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'buy order');
     });
 
     test('recur_status: type=5 sell with loop → sCount multiplied', async () => {
@@ -4261,7 +4273,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'sell order');
     });
 
     test('recur_status: type=8 sell with loop → sCount multiplied', async () => {
@@ -4287,7 +4299,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await flushTimers();
         await p.catch(() => {});
 
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('sell'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'sell order');
     });
 
     test('recur_status: newMid pop loop → clears stack (tmpPT removed)', async () => {
@@ -4644,7 +4656,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // type=7, amount(9500) > orig*7/8(8750), buy*times=100 << tmpAmount(2000) → loop executes
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('buy'));
+        expect(mockLog.info).toHaveBeenCalledWith(expect.objectContaining({ symbol: expect.any(String) }), 'buy order');
     });
 
     // ── order_avail insufficient → bCount zeroed (L2279-2281) ──
@@ -4672,7 +4684,7 @@ describe('recur_status + recur_NewOrder paths', () => {
         await p.catch(() => {});
 
         // order_avail ≈ 0, needed = bCount * buy * 2/3 = 3666 → zeroed, no buy logged
-        expect(consoleSpy).not.toHaveBeenCalledWith(expect.stringContaining('buy tBTCUSD'));
+        expect(mockLog.info).not.toHaveBeenCalledWith(expect.objectContaining({ symbol: 'tBTCUSD' }), 'buy order');
     });
 
     // ── submitOrderBuy quota exhausted → or1 = null (L2290-2292) ──

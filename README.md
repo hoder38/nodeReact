@@ -48,4 +48,13 @@ docker exec -it reactnode-file-server node ./src/back/cmd/cmd.js
 
 docker compose -f docker-compose.dev.yml logs -f | -C 100
 
+# Dev (human-readable, colorized)
+docker logs reactnode-server
+
+# Filter by module/level with jq (production JSON mode)
+docker logs reactnode-server | jq 'select(.modek=='stock' and .level>=40)'
+
+#set log level:
+LOG_LEVEL=info # suppress debug in production
+
 docker system prune -a
