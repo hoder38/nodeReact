@@ -6779,4 +6779,71 @@ describe('_recur_status — emergency stop (§6d)', () => {
         const anyReal = result.some(e => e.suggestion.bCount > 0 || e.suggestion.sCount > 0);
         expect(anyReal).toBe(true);
     });
+
+    test('ing=2 items excluded from emergency stop count', async () => {
+        // 3 items: 2 with non-empty newMid but 1 has ing=2 → only 1 active shifted out of 2 active (50%, not >50%)
+        const items = [
+            mkItem('e7', [38000]),
+            { ...mkItem('e8', [35000]), ing: 2 },
+            mkItem('e9', []),
+        ];
+        _setState({
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
+            margin: { em3: { fUSD: {} } },
+            order: { em3: { fUSD: [] } },
+            fakeOrder: { em3: { fUSD: [] } },
+            position: { em3: { fUSD: null } },
+        });
+        mockMongo.mockImplementation((op, col, query) => {
+            if (op === 'find' && query && query._id) {
+                const it = items.find(i => i._id === query._id);
+                return Promise.resolve(it ? [{ ...it, newMid: [...it.newMid] }] : []);
+            }
+            if (op === 'deleteMany') return Promise.resolve({});
+            return Promise.resolve({});
+        });
+        const ctx = {
+            id: 'em3', uid: 'em3',
+            current: { type: 'fUSD', clear: {}, enter_mid: 0 },
+            userRest: mockRest,
+            items,
+        };
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        // ing=2 item excluded: 1 shifted out of 2 active = 50%, not >50%, so no emergency stop
+        const anyReal = result.some(e => e.suggestion.bCount > 0 || e.suggestion.sCount > 0);
+        expect(anyReal).toBe(true);
+    });
+
+    test('clear items excluded from emergency stop count', async () => {
+        // 3 items: 2 with non-empty newMid but 1 is in current.clear → only 1 active shifted out of 2 active (50%)
+        const items = [
+            mkItem('e10', [38000]),
+            mkItem('e11', [35000]),
+            mkItem('e12', []),
+        ];
+        _setState({
+            priceData: { tBTCUSD: { lastPrice: 50000 } },
+            margin: { em4: { fUSD: {} } },
+            order: { em4: { fUSD: [] } },
+            fakeOrder: { em4: { fUSD: [] } },
+            position: { em4: { fUSD: null } },
+        });
+        mockMongo.mockImplementation((op, col, query) => {
+            if (op === 'find' && query && query._id) {
+                const it = items.find(i => i._id === query._id);
+                return Promise.resolve(it ? [{ ...it, newMid: [...it.newMid] }] : []);
+            }
+            return Promise.resolve({});
+        });
+        const ctx = {
+            id: 'em4', uid: 'em4',
+            current: { type: 'fUSD', clear: { tBTCUSD: true }, enter_mid: 0 },
+            userRest: mockRest,
+            items,
+        };
+        const result = await runWithFlush(() => _recur_status_fn(ctx));
+        // All items have same index tBTCUSD which is in clear, so activeItems is empty → no emergency stop
+        const anyReal = result.some(e => e.suggestion.bCount > 0 || e.suggestion.sCount > 0);
+        expect(anyReal).toBe(true);
+    });
 });

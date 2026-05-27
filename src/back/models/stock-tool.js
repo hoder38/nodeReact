@@ -3268,7 +3268,8 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
     }
     return recur_price(0).then(() => {
         // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
-        const activeItems = items.filter(it => it.index !== 0 && it.index);
+        // Items that are clearing (clear=true) or deleting (ing=2) are excluded from the count and not forced to fakeOrder
+        const activeItems = items.filter(it => it.index !== 0 && it.index && !it.clear && it.ing !== 2);
         if (activeItems.length > 0) {
             const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
             if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {

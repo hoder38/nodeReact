@@ -1375,13 +1375,17 @@ export const _recur_status = async ({ id, uid, current, userRest, items }) => {
         });
     }
     // §6d Emergency Stop: if >EMERGENCY_STOP_THRESHOLD% of items have non-empty newMid, force all to fakeOrder
-    if (items.length > 0) {
-        const shiftedCount = items.filter(it => it.newMid && it.newMid.length > 0).length;
-        if (shiftedCount > items.length * EMERGENCY_STOP_THRESHOLD / 100) {
-            console.log(`[emergency stop] ${shiftedCount}/${items.length} items have non-empty newMid — forcing fakeOrder`);
+    // Items that are clearing or deleting (ing=2) are excluded from the count and not forced to fakeOrder
+    const activeItems = items.filter(it => it.ing !== 2 && !(current.clear === true || (current.clear && current.clear[it.index] === true)));
+    if (activeItems.length > 0) {
+        const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
+        if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
+            console.log(`[emergency stop] ${shiftedCount}/${activeItems.length} items have non-empty newMid — forcing fakeOrder`);
             newOrder.forEach(entry => {
-                entry.suggestion.bCount = 0;
-                entry.suggestion.sCount = 0;
+                if (!entry.item.clear && entry.item.ing !== 2 && !(current.clear === true || (current.clear && current.clear[entry.item.index] === true))) {
+                    entry.suggestion.bCount = 0;
+                    entry.suggestion.sCount = 0;
+                }
             });
         }
     }

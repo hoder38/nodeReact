@@ -9212,4 +9212,36 @@ describe('stockStatus emergency stop (§6d)', () => {
         const anySuggestion = Object.values(data).some(s => s.bCount > 0 || s.sCount > 0);
         expect(anySuggestion).toBe(true);
     });
+
+    test('clear/ing=2 items excluded from emergency stop count', async () => {
+        // 4 items: 3 with non-empty newMid but 2 are clear/ing=2 → only 1 active shifted out of 2 active (50%, not >50%)
+        const items = [
+            makeItem('s7', 'AAPL', [550]),
+            { ...makeItem('s8', 'GOOG', [580]), clear: true },
+            { ...makeItem('s9', 'NFLX', [570]), ing: 2 },
+            makeItem('s10', 'MSFT', []),
+        ];
+        let callCount = 0;
+        mockMongo.mockImplementation((op, col, query) => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve(items);
+            if (op === 'find') {
+                const item = items.find(it => it._id === query._id);
+                return Promise.resolve(item ? [item] : []);
+            }
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 500, regularMarketPreviousClose: 498,
+        });
+        mockGetUssePosition.mockReturnValue([]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        // clear/ing=2 excluded: 1 shifted out of 2 active = 50%, not >50%, so no emergency stop
+        const anySuggestion = Object.values(data).some(s => s.bCount > 0 || s.sCount > 0);
+        expect(anySuggestion).toBe(true);
+    });
 });

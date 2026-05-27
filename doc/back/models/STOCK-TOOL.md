@@ -781,7 +781,7 @@ const mockPredictWarp = {
 4. Applies normal position-control adjustments and persists refreshed `suggestionData`
 5. **§9a Kelly Criterion sizing boost**: after position control, if `item.metrics` exists with `winRate > 0` and `avgLoss > 0`, computes `kelly = p - (1-p)/b` where `p = winRate / 100` and `b = avgWin / avgLoss`; when `kelly > 0.5`, it increments `bCount` for active buys and `sCount` for active sells
 6. **§6c Conviction-weighted newOrder sorting**: downstream Shioaji/TDAmeritrade execution paths now push all candidates first, then use `Array.sort()` on `newOrder` with a 50/50 composite score of invested market value (`|count| × price`) and conviction (`1 / extrem`). Smaller `extrem` values therefore rank earlier.
-7. Applies the emergency-stop fake-order guard when too many holdings have active `newMid` stacks, then writes updated state back to `TOTALDB`
+7. Applies the emergency-stop fake-order guard when too many active holdings have active `newMid` stacks (items with `clear = true` or `ing = 2` are excluded), then writes updated state back to `TOTALDB`
 
 **Returns**: Promise resolving after holdings are refreshed; execution candidates are exposed through `suggestionData` / downstream broker order queues
 
@@ -843,7 +843,7 @@ const mockPredictWarp = {
 6. Respects time intervals and trading hours
 7. **Price breakout**: If price falls below array → returns `{resetWeb: 1, newMid}` via `calcResetMid(priceArray, fee, 1, newMidDepth)`. If above → `{resetWeb: 2, newMid}` via `calcResetMid(priceArray, fee, 2, newMidDepth)`. The graduated shift multiplier is `1 + 0.5 × newMidDepth` (1σ → 1.5σ → 2σ → ...).
 8. **Position control**: When newMid stack is non-empty, adjusts order sizes. If `newMid[last] ≤ mid` and amount > orig×5/8: buy at orig×1/2. If `newMid[last] ≥ mid` and amount < orig×3/8: sell at orig×1/2. Empty stack uses default logic.
-9. **Emergency stop (§6d)**: If >50% of items have non-empty newMid stacks, all new orders become fake orders until next newMid recalculation cycle.
+9. **Emergency stop (§6d)**: If >50% of active items have non-empty newMid stacks, all new orders become fake orders until next newMid recalculation cycle. Items that are clearing (`clear = true`) or deleting (`ing = 2`) are excluded from the count and not forced to fake order.
 
 **Returns**:
 ```javascript
@@ -2355,5 +2355,5 @@ RETRY_DELAY = 60000        // 60 seconds
 **END OF DOCUMENTATION**
 
 *Generated for stock-tool.js (~4,620 lines)*  
-*Last Updated: 2026-07-17*
+*Last Updated: 2026-05-27*
 

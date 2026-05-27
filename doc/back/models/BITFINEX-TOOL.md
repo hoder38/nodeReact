@@ -49,6 +49,7 @@ The `bitfinex-tool.js` module serves as the core automation engine for the ANoMo
 
 ### Internal Trading Strategy Notes
 - **§6c Conviction-weighted `newOrder` sorting**: `startStatus()` now pushes all candidates first, then runs `Array.sort()` on a 50/50 composite of invested market value (`Math.abs(item.count) * priceData[item.index].lastPrice`) and conviction (`1 / extrem`). This replaced the older `orig - amount` insertion ordering; smaller `extrem` values rank earlier.
+- **§6d Emergency stop**: If >50% of active items have non-empty `newMid` stacks, all new orders become fake orders. Items that are clearing (`current.clear` matches the item's index) or deleting (`ing = 2`) are excluded from the count and not forced to fake order.
 - **§9a Kelly Criterion sizing boost**: After the standard position-control pass, `startStatus()` checks `item.metrics`. When `winRate > 0` and `avgLoss > 0`, it computes `kelly = p - (1-p)/b` with `p = winRate / 100` and `b = avgWin / avgLoss`. If `kelly > 0.5`, it increments `bCount` and/or `sCount` when buy/sell suggestions are active.
 
 ---
@@ -3508,6 +3509,7 @@ npm test -- bitfinex-tool.test.js --watch
 - 2026-03-17: Initial comprehensive documentation created
 - 2026-05-19: Updated imports to include `resolveNewMidStack`, `scaleWebArr` from stock-tool.js. `startStatus` newMid pop/push logic now uses shared helper functions instead of inline duplication.
 - 2026-05-26: Documented conviction-weighted `newOrder` sorting, Kelly-based `startStatus()` count boost, volatility-normalized `mul` calculation, `mcList.extrem`, shared-row `metrics`, and the new-item `mul = 1 + volValue` initialization path.
+- 2026-05-27: Emergency stop (§6d) now excludes clearing (`current.clear`) and deleting (`ing = 2`) items from the shifted count and from being forced to fake order.
 - Future updates should include:
   - New test scenarios as edge cases discovered
   - Updated snapshot data when data structures change
