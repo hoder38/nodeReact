@@ -1725,6 +1725,8 @@ export default {
             let totalType1 = '';
             let profit1 = 0;
             let totalPrice1 = 0;
+            let newMidCountTwse = 0;
+            let newMidCountUsse = 0;
             //let plus = 0;
             //let minus = 0;
             const stock = [];
@@ -1742,6 +1744,13 @@ export default {
                     return Promise.resolve();
                 } else {
                     //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                        if (v.newMid && v.newMid.length > 0) {
+                            if (v.setype === 'usse') {
+                                newMidCountUsse++;
+                            } else {
+                                newMidCountTwse++;
+                            }
+                        }
                         let current = v.price * v.count;
                         v.amount = v.profit ? (v.amount - v.profit) : v.amount;
                         let p = current + v.amount - (v.mul ? v.orig * v.mul : v.orig);
@@ -1802,7 +1811,7 @@ export default {
                             //plus: Math.floor(plus * 100) / 100,
                             //minus: Math.floor(minus * 100) / 100,
                             current: totalPrice1,
-                            str: '',
+                            str: newMidCountUsse > 0 ? `${newMidCountUsse} of stock out of range` : '',
                             se: 1,
                         })
                     }
@@ -1818,7 +1827,7 @@ export default {
                             //plus: Math.floor(plus * 100) / 100,
                             //minus: Math.floor(minus * 100) / 100,
                             current: totalPrice,
-                            str: '',
+                            str: newMidCountTwse > 0 ? `${newMidCountTwse} of stock out of range` : '',
                             se: 0,
                         })
                     }
@@ -2258,6 +2267,8 @@ export default {
                 let totalPrice = 0;
                 let profit1 = 0;
                 let totalPrice1 = 0;
+                let newMidCountTwse = 0;
+                let newMidCountUsse = 0;
                 //let plus = 0;
                 //let minus = 0;
                 const stock = [];
@@ -2266,6 +2277,13 @@ export default {
                         return Promise.resolve();
                     } else {
                         //return getStockPrice(v.setype ? v.setype : 'twse', v.index).then(price => {
+                            if (v.newMid && v.newMid.length > 0) {
+                                if (v.setype === 'usse') {
+                                    newMidCountUsse++;
+                                } else {
+                                    newMidCountTwse++;
+                                }
+                            }
                             let se = 0;
                             let current = v.price * v.count;
                             v.amount = v.profit ? (v.amount - v.profit) : v.amount;
@@ -2326,7 +2344,7 @@ export default {
                                 //plus: Math.floor(plus * 100) / 100,
                                 //minus: Math.floor(minus * 100) / 100,
                                 current: totalPrice1,
-                                str: '',
+                                str: newMidCountUsse > 0 ? `${newMidCountUsse} of stock out of range` : '',
                                 se: 1,
                             })
                         }
@@ -2342,7 +2360,7 @@ export default {
                                 //plus: Math.floor(plus * 100) / 100,
                                 //minus: Math.floor(minus * 100) / 100,
                                 current: totalPrice,
-                                str: '',
+                                str: newMidCountTwse > 0 ? `${newMidCountTwse} of stock out of range` : '',
                                 se: 0,
                             })
                         }

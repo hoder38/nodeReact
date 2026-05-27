@@ -5215,11 +5215,118 @@ describe('getStockTotal additional paths', () => {
         const nonTotal = result.stock.filter(v => v.type !== 'total');
         expect(nonTotal.length).toBe(4);
     });
+
+    test('stocks with non-empty newMid → total str shows count out of range', async () => {
+        const items = [
+            { _id: 'total-twse', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total', count: 1 },
+            { _id: 'total-usse', type: 'total', setype: 'usse', amount: 500000, name: 'usse total', count: 1 },
+            {
+                _id: 'us1', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 50000, orig: 50000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+                newMid: [140],
+            },
+            {
+                _id: 'us2', type: 'Tech', setype: 'usse', index: 'MSFT', name: 'msft',
+                price: 300, count: 5, amount: 40000, orig: 40000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+                newMid: [280],
+            },
+            {
+                _id: 'tw1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 200, amount: 100000, orig: 100000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+                newMid: [480],
+            },
+            {
+                _id: 'tw2', type: 'Fin', setype: 'twse', index: '2882', name: 'cathay',
+                price: 40, count: 5000, amount: 200000, orig: 200000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+                newMid: [],
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.getStockTotal({ _id: 'user1' });
+        const twseTotal = result.stock.find(v => v.type === 'total' && v.se === 0);
+        const usseTotal = result.stock.find(v => v.type === 'total' && v.se === 1);
+        expect(twseTotal.str).toBe('1 of stock out of range');
+        expect(usseTotal.str).toBe('2 of stock out of range');
+    });
+
+    test('stocks with all empty newMid → total str is empty', async () => {
+        const items = [
+            { _id: 'total-twse', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total', count: 1 },
+            { _id: 'total-usse', type: 'total', setype: 'usse', amount: 500000, name: 'usse total', count: 1 },
+            {
+                _id: 'tw1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 200, amount: 100000, orig: 100000,
+                mul: 0, clear: false, ing: 0, str: '', order: null, profit: 0,
+                newMid: [],
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.getStockTotal({ _id: 'user1' });
+        const twseTotal = result.stock.find(v => v.type === 'total' && v.se === 0);
+        const usseTotal = result.stock.find(v => v.type === 'total' && v.se === 1);
+        expect(twseTotal.str).toBe('');
+        expect(usseTotal.str).toBe('');
+    });
 });
 
 // ===========================================================================
-// updateStockTotal — delete with CHECK_STOCK (lines 2122-2147) + count trade (2242-2316)
+// getStockTotal / updateStockTotal — newMid count in total str
 // ===========================================================================
+describe('updateStockTotal newMid count in total str', () => {
+    test('stocks with non-empty newMid → total str shows count out of range', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total' },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000, name: 'usse total' },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+                newMid: [470],
+            },
+            {
+                _id: 'st2', type: 'Tech', setype: 'usse', index: 'AAPL', name: 'apple',
+                price: 150, count: 10, amount: 30000, orig: 30000,
+                web: [130, 140, -150, 160, 170], mid: 150, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+                newMid: [140, 130],
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.updateStockTotal({ _id: 'u1' }, ['remaintwse 1000000'], false);
+        const twseTotal = result.stock.find(v => v.type === 'total' && v.se === 0);
+        const usseTotal = result.stock.find(v => v.type === 'total' && v.se === 1);
+        expect(twseTotal.str).toBe('1 of stock out of range');
+        expect(usseTotal.str).toBe('1 of stock out of range');
+    });
+
+    test('stocks with empty newMid → total str is empty', async () => {
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000, name: 'twse total' },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000, name: 'usse total' },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: 500, count: 100, amount: 50000, orig: 50000,
+                web: [450, 460, 470, -480, 490, 500], mid: 480, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+                newMid: [],
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        const result = await StockTool.updateStockTotal({ _id: 'u1' }, ['remaintwse 1000000'], false);
+        const twseTotal = result.stock.find(v => v.type === 'total' && v.se === 0);
+        const usseTotal = result.stock.find(v => v.type === 'total' && v.se === 1);
+        expect(twseTotal.str).toBe('');
+        expect(usseTotal.str).toBe('');
+    });
+});
 describe('updateStockTotal additional paths', () => {
     afterEach(() => {
         mockCheckStock.mockReturnValue(false);
