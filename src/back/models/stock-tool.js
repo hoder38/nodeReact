@@ -3223,9 +3223,14 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
             const shiftedCount = activeItems.filter(it => it.newMid && it.newMid.length > 0).length;
             if (shiftedCount > activeItems.length * EMERGENCY_STOP_THRESHOLD / 100) {
                 log.warn({ shiftedCount, total: activeItems.length }, 'emergency stop triggered — forcing fakeOrder');
-                // Zero out all suggestion counts to convert real orders into fake orders
+                // Zero out suggestion counts to convert real orders into fake orders,
+                // but exempt clearing/deleting items so they can finish winding down.
+                const exemptKeys = new Set(
+                    items.filter(it => it.clear || it.ing === 2).map(it => `${it.setype}:${it.index}`)
+                );
                 ['twse', 'usse'].forEach(setype => {
                     Object.keys(suggestionData[setype]).forEach(key => {
+                        if (exemptKeys.has(`${setype}:${key}`)) return;
                         suggestionData[setype][key].bCount = 0;
                         suggestionData[setype][key].sCount = 0;
                     });

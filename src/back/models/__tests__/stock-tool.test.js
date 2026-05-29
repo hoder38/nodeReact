@@ -9226,6 +9226,56 @@ describe('stockStatus emergency stop (§6d)', () => {
         expect(anySuggestion).toBe(true);
     });
 
+    test('clear/ing=2 items retain suggestion counts when emergency stop triggers', async () => {
+        // 4 items: 2 active with newMid (100% > 50% → emergency stop triggers),
+        // plus 1 clear and 1 ing=2, both excluded from count AND not forced to fake order
+        const items = [
+            makeItem('s11', 'AAPL', [550]),
+            makeItem('s12', 'GOOG', [580]),
+            { ...makeItem('s13', 'NFLX', [570]), clear: true },
+            { ...makeItem('s14', 'AMZN', [560]), ing: 2 },
+        ];
+        let callCount = 0;
+        mockMongo.mockImplementation((op, col, query) => {
+            callCount++;
+            if (callCount === 1) return Promise.resolve(items);
+            if (op === 'find') {
+                const item = items.find(it => it._id === query._id);
+                return Promise.resolve(item ? [item] : []);
+            }
+            return Promise.resolve({});
+        });
+        mockYahooFinance.quote.mockResolvedValue({
+            regularMarketPrice: 500, regularMarketPreviousClose: 498,
+        });
+        mockCheckStock.mockReturnValue(true);
+        mockUsseTicker.mockReturnValue(true);
+        // Provide broker positions so clear/ing=2 items have shares (count>0),
+        // ensuring line 3182 doesn't zero sCount for the clear item.
+        mockGetUssePosition.mockReturnValue([
+            { symbol: 'NFLX', price: 400, amount: 100 },
+            { symbol: 'AMZN', price: 450, amount: 50 },
+            { price: 500 },
+        ]);
+        mockGetTwsePosition.mockReturnValue([]);
+        mockGetUsseOrder.mockReturnValue([]);
+        mockGetTwseOrder.mockReturnValue([]);
+        await stockStatus(false);
+        const data = getSuggestionData('usse');
+        // Active items should have bCount=0, sCount=0 due to emergency stop
+        expect(data['AAPL'].bCount).toBe(0);
+        expect(data['AAPL'].sCount).toBe(0);
+        expect(data['GOOG'].bCount).toBe(0);
+        expect(data['GOOG'].sCount).toBe(0);
+        // Clear item should retain sell signal (not zeroed by emergency stop)
+        expect(data['NFLX'].sCount).toBeGreaterThan(0);
+        // Deleting item should retain buy signal (not zeroed by emergency stop)
+        expect(data['AMZN'].bCount).toBeGreaterThan(0);
+        // Reset mocks changed by this test (clearAllMocks doesn't remove mockReturnValue)
+        mockCheckStock.mockImplementation(() => false);
+        mockUsseTicker.mockImplementation(() => false);
+    });
+
     test('clear/ing=2 items excluded from emergency stop count', async () => {
         // 4 items: 3 with non-empty newMid but 2 are clear/ing=2 → only 1 active shifted out of 2 active (50%, not >50%)
         const items = [
