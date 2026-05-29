@@ -17,11 +17,10 @@
 4. [`init()` — Bot Initialization & Command Router](#4-init--bot-initialization--command-router)
 5. [`discordSend(msg)` — Outbound Notification](#5-discordsendmsg--outbound-notification)
 6. [`help(msg)` — Help Command Handler](#6-helpmsg--help-command-handler)
-7. [`checkDoc(msg)` — Document Status Query](#7-checkdocmsg--document-status-query)
-8. [`schwabAuth(msg)` — Schwab/TD OAuth URL](#8-schwabauthmsg--schwabtd-oauth-url)
-9. [`schwabCode(msg, code)` — Schwab/TD Token Exchange](#9-schwabcodemsg-code--schwabtd-token-exchange)
-10. [Cross-Cutting Concerns](#10-cross-cutting-concerns)
-11. [Mock Strategy](#11-mock-strategy)
+7. [`schwabAuth(msg)` — Schwab/TD OAuth URL](#7-schwabauthmsg--schwabtd-oauth-url)
+8. [`schwabCode(msg, code)` — Schwab/TD Token Exchange](#8-schwabcodemsg-code--schwabtd-token-exchange)
+9. [Cross-Cutting Concerns](#9-cross-cutting-concerns)
+10. [Mock Strategy](#10-mock-strategy)
 
 ---
 
@@ -29,7 +28,7 @@
 
 `discord-tool.js` provides a Discord bot that serves two purposes:
 
-1. **Inbound**: Listens for user commands in a configured Discord channel and dispatches them to handler functions (document check, Schwab OAuth, help).
+1. **Inbound**: Listens for user commands in a configured Discord channel and dispatches them to handler functions (Schwab OAuth, help).
 2. **Outbound**: Exposes a `discordSend()` default export used by other modules (notably `sendWs.js`) to push system notifications to the Discord channel.
 
 The module maintains a **module-level mutable `channel` reference** (`let channel = null`) that is set during initialization and shared across all functions — a critical architectural detail for testing.
@@ -40,11 +39,9 @@ The module maintains a **module-level mutable `channel` reference** (`let channe
 
 | Import | Source | Purpose |
 |--------|--------|---------|
-| `DOCDB` | `../constants.js` | MongoDB collection name (`'docUpdate'`) for document status queries |
 | `DISCORD_TOKEN` | `../../../ver.js` | Bot authentication token (`process.env.DISCORD_TOKEN`) |
 | `DISCORD_CHANNEL` | `../../../ver.js` | Target channel ID (`process.env.DISCORD_CHANNEL`) |
 | `Discord` | `discord.js` | Discord.js client library |
-| `Mongo` | `../models/mongo-tool.js` | MongoDB CRUD wrapper — `Mongo(operation, collection, ...args)` → Promise |
 | `generateAuthUrl` | `../models/tdameritrade-tool.js` | Generates Schwab/TD Ameritrade OAuth authorization URL (no-arg, returns string) |
 | `getToken` | `../models/tdameritrade-tool.js` | Exchanges authorization code for access token — `getToken(code)` → Promise |
 
@@ -57,7 +54,6 @@ The module maintains a **module-level mutable `channel` reference** (`let channe
 | `init` | Named export (`export const`) | Public | Initializes Discord client, registers event handlers, logs in |
 | `discordSend` | Default export (`export default function`) | Public | Sends a message to the configured Discord channel |
 | `help` | `const` | Private (module-scoped) | Replies with command list |
-| `checkDoc` | `const` | Private (module-scoped) | Queries MongoDB and replies with document status |
 | `schwabAuth` | `const` | Private (module-scoped) | Replies with Schwab OAuth URL |
 | `schwabCode` | `const` | Private (module-scoped) | Exchanges auth code for token via TD Ameritrade API |
 
@@ -93,7 +89,6 @@ init()
  │     └─ ELSE → Parse with regex: /<@.*> ([^\s]*)(.*)/
  │           ├─ IF no match (cmd is null) → SKIP (no-op)
  │           └─ IF match → switch on cmd[1].toLowerCase():
- │                 ├─ 'checkdoc'  → checkDoc(msg)
  │                 ├─ 'schwab'    → schwabAuth(msg)
  │                 ├─ 'schwabcode'→ schwabCode(msg, cmd[2].trim())
  │                 ├─ 'help'      → help(msg)  (explicit)
@@ -126,7 +121,7 @@ init()
 **Simulated `message` event — valid command:**
 ```json
 {
-  "content": "<@987654321098765432> checkDoc",
+  "content": "<@987654321098765432> schwab",
   "author": { "bot": false, "id": "111222333444555666" }
 }
 ```
@@ -149,13 +144,13 @@ init()
 | 4.1 | `ready` event fires | Client connects successfully | Logs bot tag, retrieves channel from cache, sends greeting |
 | 4.2 | Message from bot (`msg.author.bot === true`) | Bot-authored message | No command processing; only `console.log` calls |
 | 4.3 | Message from user, no mention/command pattern | `"hello world"` (no `<@...>` prefix) | Regex returns `null`; no command dispatched |
-| 4.4 | Message from user, command = `checkdoc` | `"<@id> checkDoc"` | Calls `checkDoc(msg)` |
-| 4.5 | Message from user, command = `CHECKDOC` (case) | `"<@id> CHECKDOC"` | `toLowerCase()` normalizes → calls `checkDoc(msg)` |
-| 4.6 | Message from user, command = `schwab` | `"<@id> schwab"` | Calls `schwabAuth(msg)` |
-| 4.7 | Message from user, command = `schwabcode` with arg | `"<@id> schwabCode ABC123"` | Calls `schwabCode(msg, "ABC123")` |
-| 4.8 | Message from user, command = `schwabcode` no arg | `"<@id> schwabCode"` | `cmd[2]` is `""`, trim → `""`, calls `schwabCode(msg, "")` |
-| 4.9 | Message from user, command = `help` | `"<@id> help"` | Calls `help(msg)` |
-| 4.10 | Message from user, unknown command | `"<@id> unknown"` | Falls through to `default` → calls `help(msg)` |
+| 4.4 | Message from user, command = `schwab` | `"<@id> schwab"` | Calls `schwabAuth(msg)` |
+| 4.5 | Message from user, command = `SCHWAB` (case) | `"<@id> SCHWAB"` | `toLowerCase()` normalizes → calls `schwabAuth(msg)` |
+| 4.6 | Message from user, command = `schwabcode` with arg | `"<@id> schwabCode ABC123"` | Calls `schwabCode(msg, "ABC123")` |
+| 4.7 | Message from user, command = `schwabcode` no arg | `"<@id> schwabCode"` | `cmd[2]` is `""`, trim → `""`, calls `schwabCode(msg, "")` |
+| 4.8 | Message from user, command = `help` | `"<@id> help"` | Calls `help(msg)` |
+| 4.9 | Message from user, unknown command | `"<@id> unknown"` | Falls through to `default` → calls `help(msg)` |
+| 4.10 | Message from user, command = `SchwabCode` (mixed case) | `"<@id> SchwabCode ABC123"` | `toLowerCase()` normalizes → calls `schwabCode(msg, "ABC123")` |
 | 4.11 | `shardError` event fires | WebSocket error | Logs error via `console.error` |
 | 4.12 | `error` event fires | General Discord error | Logs error via `console.error` |
 
@@ -169,7 +164,7 @@ init()
 | 4.16 | Message with special regex characters in mention | `"<@!123456> help"` | Regex `<\@.*\>` matches `<@!123456>` — still works due to greedy `.*` |
 | 4.17 | Message with mention only, no command | `"<@id> "` | Regex requires `([^\s]*)` — may match empty string, `cmd[1]` is `""` → `default` case → `help` |
 | 4.18 | Message with newlines in content | `"<@id> help\nextra"` | Regex `.` does not match `\n` by default; captures up to newline |
-| 4.19 | Multiple mentions in a single message | `"<@id1> <@id2> checkDoc"` | Greedy `.*` in `<\@.*\>` matches through both mentions; `cmd[1]` depends on regex backtracking |
+| 4.19 | Multiple mentions in a single message | `"<@id1> <@id2> schwab"` | Greedy `.*` in `<\@.*\>` matches through both mentions; `cmd[1]` depends on regex backtracking |
 | 4.20 | `channel` is `null` after init (race condition) | `discordSend()` called before `ready` fires | `channel` still `null`; send silently skipped |
 
 #### Error Handling
@@ -281,7 +276,7 @@ const help = (msg) → Promise<Discord.Message>
 
 ```
 help(msg)
- └─ msg.reply('\nCommand:\ncheckDoc\nschwab\nschwabCode code')
+ └─ msg.reply('\nCommand:\nschwab\nschwabCode code')
 ```
 
 ### Side Effects
@@ -294,13 +289,12 @@ help(msg)
 
 **Expected reply content:**
 ```
-\nCommand:\ncheckDoc\nschwab\nschwabCode code
+\nCommand:\nschwab\nschwabCode code
 ```
 
 Rendered in Discord:
 ```
 Command:
-checkDoc
 schwab
 schwabCode code
 ```
@@ -316,108 +310,7 @@ schwabCode code
 
 ---
 
-## 7. `checkDoc(msg)` — Document Status Query
-
-### Purpose
-
-Queries the `docUpdate` MongoDB collection and replies with a formatted list of all document records (type and date).
-
-### Function Signature
-
-```javascript
-const checkDoc = (msg) → Promise<Discord.Message>
-```
-
-**Parameters:**
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `msg` | `Discord.Message` | Yes | The incoming Discord message to reply to |
-
-**Returns**: Promise chain — `Mongo('find', DOCDB)` → format → `msg.reply()`
-
-### Logic Flow
-
-```
-checkDoc(msg)
- ├─ Mongo('find', 'docUpdate')
- │   ├─ ON SUCCESS: doclist (Array)
- │   │   ├─ Reduce array to formatted string:
- │   │   │   accumulator starts as '' (empty string)
- │   │   │   each doc appends: '\ntype: ${v.type}, date: ${v.date}'
- │   │   └─ msg.reply(formattedString)
- │   └─ ON ERROR: err
- │       └─ msg.reply(err.message)
-```
-
-### Side Effects
-
-| Side Effect | Details |
-|-------------|---------|
-| **MongoDB read** | Executes `find` on `docUpdate` collection (no filter — returns all documents) |
-| **Discord message** | Replies with formatted document list or error message |
-
-### Snapshot Testing Data
-
-**MongoDB response (success, multiple docs):**
-```json
-[
-  { "_id": "abc123", "type": "backup", "date": "2026-03-15" },
-  { "_id": "def456", "type": "stock", "date": "2026-03-16" },
-  { "_id": "ghi789", "type": "media", "date": "2026-03-17" }
-]
-```
-
-**Expected reply:**
-```
-\ntype: backup, date: 2026-03-15\ntype: stock, date: 2026-03-16\ntype: media, date: 2026-03-17
-```
-
-**MongoDB response (empty collection):**
-```json
-[]
-```
-
-**Expected reply:** `""` (empty string)
-
-**MongoDB error:**
-```json
-{ "message": "MongoNetworkError: connection refused" }
-```
-
-### Comprehensive Test Scenarios (100% Coverage)
-
-#### Logical Branches
-
-| # | Scenario | Mongo Result | Expected Reply |
-|---|----------|-------------|----------------|
-| 7.1 | Multiple documents found | Array of 3 docs | Newline-separated `type: ..., date: ...` string |
-| 7.2 | Single document found | Array of 1 doc | `"\ntype: backup, date: 2026-03-15"` |
-| 7.3 | Empty collection | `[]` | `""` (empty string from reduce with initial `''`) |
-| 7.4 | MongoDB error (connection) | Promise rejects | `msg.reply(err.message)` with error text |
-
-#### Edge Cases
-
-| # | Scenario | Data | Expected Behavior |
-|---|----------|------|-------------------|
-| 7.5 | Document missing `type` field | `{ date: "2026-01-01" }` | Reply contains `"type: undefined"` |
-| 7.6 | Document missing `date` field | `{ type: "backup" }` | Reply contains `"date: undefined"` |
-| 7.7 | Very large collection (1000+ docs) | Array of 1000+ | Reply may exceed Discord 2000-char limit |
-| 7.8 | Document fields contain special chars | `{ type: "<script>", date: "N/A" }` | Rendered as-is in reply |
-| 7.9 | `DOCDB` constant references non-existent collection | Mongo creates it lazily | Returns `[]` (empty array) |
-
-#### Error Handling
-
-| # | Scenario | Trigger | Expected Behavior |
-|---|----------|---------|-------------------|
-| 7.10 | MongoDB connection refused | DB down | `.catch` → `msg.reply(err.message)` |
-| 7.11 | MongoDB authentication error | Wrong credentials | `.catch` → `msg.reply(err.message)` |
-| 7.12 | `msg.reply()` fails in `.then` | Discord network error | Unhandled rejection (`.catch` only covers Mongo errors) |
-| 7.13 | `msg.reply()` fails in `.catch` | Discord network error during error reporting | Double-unhandled rejection |
-
----
-
-## 8. `schwabAuth(msg)` — Schwab/TD OAuth URL
+## 7. `schwabAuth(msg)` — Schwab/TD OAuth URL
 
 ### Purpose
 
@@ -463,14 +356,14 @@ https://api.schwabapi.com/v1/oauth/authorize?redirect_uri=https://anomopi.com/ca
 
 | # | Scenario | Input | Expected Behavior |
 |---|----------|-------|-------------------|
-| 8.1 | Valid generation | Discord message | `msg.reply()` called with URL from `generateAuthUrl()` |
-| 8.2 | `generateAuthUrl()` returns URL with undefined vars | Missing env vars | URL contains `"undefined"` segments |
-| 8.3 | `msg.reply()` rejects | Network failure | Unhandled rejection |
-| 8.4 | URL contains special characters | Redirect URI with encoding | Passed as-is to Discord |
+| 7.1 | Valid generation | Discord message | `msg.reply()` called with URL from `generateAuthUrl()` |
+| 7.2 | `generateAuthUrl()` returns URL with undefined vars | Missing env vars | URL contains `"undefined"` segments |
+| 7.3 | `msg.reply()` rejects | Network failure | Unhandled rejection |
+| 7.4 | URL contains special characters | Redirect URI with encoding | Passed as-is to Discord |
 
 ---
 
-## 9. `schwabCode(msg, code)` — Schwab/TD Token Exchange
+## 8. `schwabCode(msg, code)` — Schwab/TD Token Exchange
 
 ### Purpose
 
@@ -545,34 +438,34 @@ schwabCode(msg, code)
 
 | # | Scenario | `code` Value | Expected Behavior |
 |---|----------|-------------|-------------------|
-| 9.1 | Valid code, token exchange succeeds | `"AUTH_CODE_123"` | `getToken()` called → `msg.reply("Update token Successed!!!")` |
-| 9.2 | Valid code, token exchange fails | `"EXPIRED_CODE"` | `getToken()` rejects → `msg.reply(err.message)` |
-| 9.3 | Empty string code | `""` | Falsy → `msg.reply("Need input code!!!")` |
+| 8.1 | Valid code, token exchange succeeds | `"AUTH_CODE_123"` | `getToken()` called → `msg.reply("Update token Successed!!!")` |
+| 8.2 | Valid code, token exchange fails | `"EXPIRED_CODE"` | `getToken()` rejects → `msg.reply(err.message)` |
+| 8.3 | Empty string code | `""` | Falsy → `msg.reply("Need input code!!!")` |
 
 #### Edge Cases
 
 | # | Scenario | `code` Value | Expected Behavior |
 |---|----------|-------------|-------------------|
-| 9.4 | Code with leading/trailing spaces | `"  ABC  "` | Truthy; passed to `getToken()` as-is (spaces already trimmed by caller via `cmd[2].trim()`) |
-| 9.5 | Code with special characters | `"code%3Dvalue&extra"` | Passed as-is to `getToken()` |
-| 9.6 | Very long code string | 10000-char string | Passed to `getToken()`; may fail at HTTP layer |
-| 9.7 | Numeric-like code | `"12345"` | Truthy string; passed to `getToken()` |
-| 9.8 | Code is whitespace only | `" "` (space) | Truthy; passed to `getToken()` (note: `cmd[2].trim()` in caller would make this `""`) |
+| 8.4 | Code with leading/trailing spaces | `"  ABC  "` | Truthy; passed to `getToken()` as-is (spaces already trimmed by caller via `cmd[2].trim()`) |
+| 8.5 | Code with special characters | `"code%3Dvalue&extra"` | Passed as-is to `getToken()` |
+| 8.6 | Very long code string | 10000-char string | Passed to `getToken()`; may fail at HTTP layer |
+| 8.7 | Numeric-like code | `"12345"` | Truthy string; passed to `getToken()` |
+| 8.8 | Code is whitespace only | `" "` (space) | Truthy; passed to `getToken()` (note: `cmd[2].trim()` in caller would make this `""`) |
 
 #### Error Handling
 
 | # | Scenario | Trigger | Expected Behavior |
 |---|----------|---------|-------------------|
-| 9.9 | `getToken()` throws synchronously | Internal error | Unhandled exception (not wrapped in try/catch) |
-| 9.10 | `getToken()` rejects with error without `.message` | Non-standard error | `msg.reply(undefined)` |
-| 9.11 | `msg.reply()` fails in success path | Discord network error | Unhandled rejection |
-| 9.12 | `msg.reply()` fails in error path | Discord network error during error reporting | Unhandled rejection |
+| 8.9 | `getToken()` throws synchronously | Internal error | Unhandled exception (not wrapped in try/catch) |
+| 8.10 | `getToken()` rejects with error without `.message` | Non-standard error | `msg.reply(undefined)` |
+| 8.11 | `msg.reply()` fails in success path | Discord network error | Unhandled rejection |
+| 8.12 | `msg.reply()` fails in error path | Discord network error during error reporting | Unhandled rejection |
 
 ---
 
-## 10. Cross-Cutting Concerns
+## 9. Cross-Cutting Concerns
 
-### 10.1 Module State Management
+### 9.1 Module State Management
 
 The `channel` variable is module-scoped mutable state (`let channel = null`). This creates:
 
@@ -580,16 +473,16 @@ The `channel` variable is module-scoped mutable state (`let channel = null`). Th
 - **Test isolation risk**: Tests must reset `channel` state between runs or mock at the module level
 - **No re-initialization path**: Calling `init()` twice creates a second client without cleaning up the first
 
-### 10.2 Error Handling Gaps
+### 9.2 Error Handling Gaps
 
 | Location | Issue |
 |----------|-------|
 | `client.login(DISCORD_TOKEN)` (line 45) | No `.catch()` — rejected Promise is unhandled |
 | `channel.send('Nice to serve you!!!')` (line 13) | No `.catch()` — network errors during greeting are unhandled |
-| `checkDoc` `.catch` path (line 50) | If `msg.reply()` itself fails inside `.catch()`, no secondary handler |
+| `schwabCode` `.catch` path (line 47) | If `msg.reply()` itself fails inside `.catch()`, no secondary handler |
 | `schwabCode` success path (line 54) | `msg.reply()` rejection not caught |
 
-### 10.3 Regex Analysis
+### 9.3 Regex Analysis
 
 **Pattern**: `/\<\@.*\> ([^\s]*)(.*)/`
 
@@ -608,7 +501,7 @@ The `channel` variable is module-scoped mutable state (`let channel = null`). Th
 - No `^` anchor: match can start mid-string
 - No `$` anchor: trailing content captured in group 2
 
-### 10.4 Security Considerations
+### 9.4 Security Considerations
 
 | Concern | Details |
 |---------|---------|
@@ -620,21 +513,20 @@ The `channel` variable is module-scoped mutable state (`let channel = null`). Th
 
 ---
 
-## 11. Mock Strategy
+## 10. Mock Strategy
 
-### 11.1 Required Mocks
+### 10.1 Required Mocks
 
 | Dependency | Mock Approach | Notes |
 |------------|---------------|-------|
 | `discord.js` | Full module mock | Mock `Client` constructor, `channels.cache.get()`, event registration |
-| `Mongo` | Module mock (`jest.mock`) | Return controlled Promises for `find` operations |
 | `generateAuthUrl` | Module mock | Return static URL string |
 | `getToken` | Module mock | Return resolving/rejecting Promises |
 | `DISCORD_TOKEN` | Module mock | Provide test token string |
 | `DISCORD_CHANNEL` | Module mock | Provide test channel ID |
 | `console.log` / `console.error` | `jest.spyOn` | Verify logging behavior |
 
-### 11.2 Discord.js Client Mock Structure
+### 10.2 Discord.js Client Mock Structure
 
 ```javascript
 // Representative mock structure (strategy only — not implementation)
@@ -642,7 +534,7 @@ const mockSend = jest.fn();
 const mockReply = jest.fn();
 const mockChannel = { id: 'test-channel', send: mockSend };
 const mockMessage = {
-  content: '<@123> checkDoc',
+  content: '<@123> schwab',
   author: { bot: false },
   reply: mockReply
 };
@@ -654,7 +546,7 @@ const mockClient = {
 };
 ```
 
-### 11.3 Test Isolation Strategy
+### 10.3 Test Isolation Strategy
 
 1. **Module state reset**: The `channel` variable must be reset between tests. This requires either:
    - Re-importing the module per test (`jest.resetModules()`)
@@ -662,7 +554,7 @@ const mockClient = {
 2. **Event handler capture**: Mock `client.on()` to capture registered handlers, then invoke them directly in tests
 3. **Async timing**: `ready` event is asynchronous; tests must simulate event emission order
 
-### 11.4 Suggested Test File Location
+### 10.4 Suggested Test File Location
 
 Per §11.8 of OUTLINE.md:
 ```

@@ -42,20 +42,21 @@
 | Import | Source | Purpose |
 |--------|--------|---------|
 | `PASSWORD_PRIVATE_KEY`, `PASSWORD_SALT` | `ver.js` | AES-256 encryption key and salt (environment secrets) |
-| `ALGORITHM`, `PASSWORDDB` | `constants.js` | Cipher algorithm name (`aes-256-ctr`) and MongoDB collection name |
+| `ALGORITHM`, `ALGORITHM_LEGACY`, `PASSWORDDB` | `constants.js` | Cipher algorithm name (`aes-256-gcm`), legacy algorithm (`aes-256-ctr`), and MongoDB collection name |
 | `TagTool`, `isDefaultTag`, `normalize` | `tag-tool.js` | Tag management: factory for `PasswordTagTool`, tag normalization & filtering |
 | `Mongo`, `objectID` | `mongo-tool.js` | MongoDB CRUD wrapper and ObjectID generator |
 | `isValidString`, `handleError`, `HoError`, `userPWCheck` | `utility.js` | Input validation, error construction, and user-password verification |
-| `crypto` (destructured) | Node built-in | `createCipheriv`, `createDecipheriv`, `randomBytes`, `createDecipher` |
+| `crypto` (destructured) | Node built-in | `createCipheriv`, `createDecipheriv`, `randomBytes` |
 | `PasswordGenerator` | `password-generator` | Random password generation with configurable character classes |
 
 ### Module-Level Initialization
 
 ```js
 const PasswordTagTool = TagTool(PASSWORDDB);
+const keyBuffer = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
 ```
 
-A `TagTool` instance bound to the `PASSWORDDB` collection, used by `editRow` and `getPassword` to call `setLatest()`.
+A `TagTool` instance bound to the `PASSWORDDB` collection, plus a module-level precomputed 32-byte key buffer reused by `encrypt()`, `decrypt()`, and `decryptLegacyCTR()`. `PasswordTagTool` is used by `editRow` and `getPassword` to call `setLatest()`.
 
 ---
 
@@ -579,7 +580,7 @@ getPassword(uid, userPW, user, session, type = null)
 | 9 | `uid` is invalid | handleError "uid not vaild!!!" |
 | 10 | Valid uid, record not found | handleError "can not find password object!!!" |
 | 11 | Valid uid, wrong owner | Mongo find returns empty → handleError |
-| 12 | Stored password is corrupted (not in `iv:encrypted` format) | `decrypt()` may throw → Promise rejects |
+| 12 | Stored password is corrupted (not in supported 2-part/3-part format) | `decrypt()` may throw → Promise rejects |
 | 13 | `prePassword` field is missing from legacy record | `decrypt(undefined)` → runtime error |
 | 14 | Session is null/undefined | `setLatest` may throw (fire-and-forget) |
 
@@ -606,7 +607,7 @@ getPassword(uid, userPW, user, session, type = null)
 
 ### 7.1 Purpose
 
-Generates a random 12-character password using the `password-generator` library with a character class determined by the `type` parameter.
+Generates a random 16-character password using the `password-generator` library with a character class determined by the `type` parameter.
 
 ### 7.2 Invocation & Authentication
 
@@ -623,28 +624,28 @@ generatePW(type)
 ### 7.3 Logic Flow
 
 ```
-1. If type === 3 → PasswordGenerator(12, false, /[0-9]/)
-2. Else if type === 2 → PasswordGenerator(12, false, /[0-9a-zA-Z]/)
-3. Else (default) → PasswordGenerator(12, false, /[0-9a-zA-Z!@#$%]/)
+1. If type === 3 → PasswordGenerator(16, false, /[0-9]/)
+2. Else if type === 2 → PasswordGenerator(16, false, /[0-9a-zA-Z]/)
+3. Else (default) → PasswordGenerator(16, false, /[0-9a-zA-Z!@#$%]/)
 ```
 
 ### 7.4 Returns & Side Effects
 
 | Outcome | Return Value | Side Effects |
 |---------|-------------|-------------|
-| `type === 3` | 12-char numeric string | None |
-| `type === 2` | 12-char alphanumeric string | None |
-| Other | 12-char alphanumeric + special chars string | None |
+| `type === 3` | 16-char numeric string | None |
+| `type === 2` | 16-char alphanumeric string | None |
+| Other | 16-char alphanumeric + special chars string | None |
 
 ### 7.5 Snapshot Testing Data
 
 | Input | Expected Pattern | Example |
 |-------|-----------------|---------|
-| `generatePW(3)` | `/^[0-9]{12}$/` | `"482937105628"` |
-| `generatePW(2)` | `/^[0-9a-zA-Z]{12}$/` | `"aB3kQ9mR7xYz"` |
-| `generatePW(1)` | `/^[0-9a-zA-Z!@#$%]{12}$/` | `"aB3!Q9#mR7$z"` |
-| `generatePW(0)` | `/^[0-9a-zA-Z!@#$%]{12}$/` | `"x@4Km#9$Rz2!"` |
-| `generatePW(null)` | `/^[0-9a-zA-Z!@#$%]{12}$/` | — |
+| `generatePW(3)` | `/^[0-9]{16}$/` | "4829371056281945" |
+| `generatePW(2)` | `/^[0-9a-zA-Z]{16}$/` | "aB3kQ9mR7xYz4LpN" |
+| `generatePW(1)` | `/^[0-9a-zA-Z!@#$%]{16}$/` | "aB3!Q9#mR7$z2@Lp" |
+| `generatePW(0)` | `/^[0-9a-zA-Z!@#$%]{16}$/` | "x@4Km#9$Rz2!Lp7Q" |
+| `generatePW(null)` | `/^[0-9a-zA-Z!@#$%]{16}$/` | — |
 
 ### 7.6 Comprehensive Test Scenarios (100% Coverage)
 
@@ -652,11 +653,11 @@ generatePW(type)
 
 | # | Scenario | Branch | Expected Outcome |
 |---|----------|--------|-----------------|
-| 1 | `type === 3` | First ternary branch | 12-char digits-only string |
-| 2 | `type === 2` | Second ternary branch | 12-char alphanumeric string |
-| 3 | `type === 1` | Default (else) branch | 12-char alphanumeric + special chars |
-| 4 | `type === 0` | Default (else) branch | 12-char alphanumeric + special chars |
-| 5 | `type === undefined` / `null` | Default branch (`!== 3` and `!== 2`) | 12-char alphanumeric + special chars |
+| 1 | `type === 3` | First ternary branch | 16-char digits-only string |
+| 2 | `type === 2` | Second ternary branch | 16-char alphanumeric string |
+| 3 | `type === 1` | Default (else) branch | 16-char alphanumeric + special chars |
+| 4 | `type === 0` | Default (else) branch | 16-char alphanumeric + special chars |
+| 5 | `type === undefined` / `null` | Default branch (`!== 3` and `!== 2`) | 16-char alphanumeric + special chars |
 
 #### Edge Cases
 
@@ -667,7 +668,7 @@ generatePW(type)
 | 8 | Negative number `-1` | Falls to default branch |
 | 9 | `type = 3.0` (float) | `3.0 === 3` → digits-only branch |
 | 10 | Call multiple times in succession | Each call returns a different random value (non-deterministic) |
-| 11 | Always returns exactly 12 characters | Verify `.length === 12` for all types |
+| 11 | Always returns exactly 16 characters | Verify `.length === 16` for all types |
 
 #### Error Handling
 
@@ -676,12 +677,11 @@ generatePW(type)
 | 12 | `PasswordGenerator` library throws | Synchronous exception propagated to caller |
 
 ---
-
 ## 8. Internal Function: `encrypt`
 
 ### 8.1 Purpose
 
-Encrypts a plaintext string using AES-256-CTR with a random 16-byte initialization vector (IV). Returns the IV and ciphertext as a colon-separated hex string.
+Encrypts a plaintext string using AES-256-GCM with a random 12-byte initialization vector (IV). Returns the IV, authentication tag, and ciphertext as a colon-separated hex string.
 
 ### 8.2 Invocation & Authentication
 
@@ -698,53 +698,53 @@ encrypt(text) // module-internal, not exported
 ### 8.3 Logic Flow
 
 ```
-1. Generate random 16-byte IV via randomBytes(16)
-2. Derive 32-byte key: Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32)
-   → Takes PASSWORD_PRIVATE_KEY hex bytes, pads/truncates to exactly 32 bytes
-3. Create AES-256-CTR cipher with key and IV
-4. Encrypt: cipher.update(text) + cipher.final()
-5. Return: iv.toString('hex') + ':' + encrypted.toString('hex')
+1. Generate random 12-byte IV via randomBytes(12)
+2. Key buffer: module-level const, derived as Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32)
+3. Create AES-256-GCM cipher with keyBuffer and IV
+4. Encrypt: cipher.update(text, 'utf8') + cipher.final()
+5. Get 16-byte authTag via cipher.getAuthTag()
+6. Return: iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted.toString('hex')
 ```
 
 ### 8.4 Returns & Side Effects
 
 | Outcome | Return Value | Side Effects |
 |---------|-------------|-------------|
-| Success | `"<32-hex-char-iv>:<hex-ciphertext>"` | None (pure function aside from random IV) |
+| Success | `"<24-hex-char-iv>:<32-hex-char-authTag>:<hex-ciphertext>"` | None (pure function aside from random IV) |
 
 ### 8.5 Snapshot Testing Data
 
 **Output Format**:
 ```
-"a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8:9f8e7d6c5b4a3f2e"
+"a1b2c3d4e5f6a7b8a1b2c3d4:9f8e7d6c5b4a3f2e1a2b3c4d5e6f7a8b:ciphertextHex"
 ```
 
-- IV portion: always 32 hex characters (16 bytes)
-- Separator: single colon `:`
+- IV portion: always 24 hex characters (12 bytes)
+- Auth tag: always 32 hex characters (16 bytes)
+- Separator: colons `:`
 - Ciphertext: variable length hex string
 
 ### 8.6 Comprehensive Test Scenarios (100% Coverage)
 
 | # | Scenario | Expected Outcome |
 |---|----------|-----------------|
-| 1 | Encrypt a normal ASCII string | Returns `iv:ciphertext` format; IV is 32 hex chars |
-| 2 | Encrypt empty string `""` | Returns valid format (IV + empty or minimal ciphertext) |
+| 1 | Encrypt a normal ASCII string | Returns `iv:authTag:ciphertext` format; IV is 24 hex chars and authTag is 32 hex chars |
+| 2 | Encrypt empty string `""` | Returns valid 3-part GCM format |
 | 3 | Encrypt string with special characters `!@#$%^&*()` | Returns valid encrypted format |
 | 4 | Encrypt very long string (1000+ chars) | Returns valid format with proportionally longer ciphertext |
 | 5 | Encrypt same string twice | Different results (random IV ensures uniqueness) |
 | 6 | Round-trip: `decrypt(encrypt(text)) === text` | Verified for various inputs |
 | 7 | Unicode string input | Encrypt succeeds; round-trip preserves UTF-8 |
-| 8 | `PASSWORD_PRIVATE_KEY` is shorter than 32 bytes | Buffer.alloc(32) padding compensates; encrypt still works |
+| 8 | `PASSWORD_PRIVATE_KEY` is shorter than 32 bytes | Precomputed `keyBuffer` padding compensates; encrypt still works |
 | 9 | `PASSWORD_PRIVATE_KEY` is exactly 32 hex chars (16 bytes) | Key padded to 32 bytes with zeros |
-| 10 | `PASSWORD_PRIVATE_KEY` is malformed / not valid hex | `Buffer.from(..., 'hex')` may produce unexpected key → cipher may still operate but with wrong key |
+| 10 | GCM output includes auth tag | Auth tag is present as the middle segment of the 3-part format |
 
 ---
-
 ## 9. Internal Function: `decrypt`
 
 ### 9.1 Purpose
 
-Decrypts a ciphertext string produced by `encrypt()`. Parses the IV from the colon-separated format and uses AES-256-CTR to recover the plaintext.
+Decrypts a ciphertext string. Auto-detects format: 3-part (GCM) or 2-part (legacy CTR). For GCM, verifies the authentication tag.
 
 ### 9.2 Invocation & Authentication
 
@@ -754,53 +754,59 @@ decrypt(text) // module-internal, not exported
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `text` | String | ✅ | Encrypted string in `"iv:ciphertext"` format |
+| `text` | String | ✅ | Encrypted string in `"iv:authTag:ciphertext"` (GCM) or `"iv:ciphertext"` (legacy CTR) format |
 
 **Authentication**: N/A — internal function.
 
 ### 9.3 Logic Flow
 
 ```
-1. Split text on ':' → textParts array
-2. IV = Buffer.from(textParts.shift(), 'hex')  → first segment
-3. encryptedText = Buffer.from(textParts.join(':'), 'hex')  → remaining segments rejoined
-   ⚠ NOTE: join(':') handles edge case where ciphertext itself contained ':'
-4. Derive key (same as encrypt): Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32)
-5. Create AES-256-CTR decipher with key and IV
-6. Decrypt: decipher.update(encryptedText) + decipher.final()
-7. Return decrypted.toString()
+1. Split text on ':' → parts array
+2. If parts.length === 3 → GCM format:
+   a. IV = Buffer.from(parts[0], 'hex') (12 bytes)
+   b. authTag = Buffer.from(parts[1], 'hex') (16 bytes)
+   c. encryptedText = Buffer.from(parts[2], 'hex')
+   d. Create AES-256-GCM decipher with keyBuffer and IV
+   e. Set authTag via decipher.setAuthTag()
+   f. Decrypt and return plaintext
+3. If parts.length === 2 → legacy CTR format:
+   a. IV = Buffer.from(parts[0], 'hex') (16 bytes)
+   b. encryptedText = Buffer.from(parts[1], 'hex')
+   c. Create AES-256-CTR decipher with keyBuffer and IV using ALGORITHM_LEGACY
+   d. Decrypt and return plaintext
 ```
 
 ### 9.4 Returns & Side Effects
 
 | Outcome | Return Value | Side Effects |
 |---------|-------------|-------------|
-| Success | Original plaintext string | None |
-| Malformed input | Throws error | None |
+| Success (GCM) | Original plaintext string | None |
+| Success (legacy CTR) | Original plaintext string | None |
+| Malformed / tampered input | Throws error | None |
 
 ### 9.5 Comprehensive Test Scenarios (100% Coverage)
 
 | # | Scenario | Expected Outcome |
 |---|----------|-----------------|
-| 1 | Decrypt output of `encrypt("hello")` | Returns `"hello"` |
-| 2 | Decrypt output for special characters | Returns exact original string |
-| 3 | Decrypt output for empty string | Returns `""` |
-| 4 | Decrypt output for Unicode string | Returns original UTF-8 string |
-| 5 | Input with no colon separator | `textParts` has 1 element; IV parsing may fail or produce garbage |
-| 6 | Input is empty string `""` | Split produces `[""]`; Buffer.from fails or produces empty buffer → error |
-| 7 | Input is `null` or `undefined` | `text.split` throws TypeError |
-| 8 | IV portion is not valid hex | `Buffer.from(invalidHex, 'hex')` produces partial buffer → decipher may fail |
-| 9 | Ciphertext portion is tampered | Decipher produces garbage or throws (CTR mode does not authenticate) |
-| 10 | Wrong `PASSWORD_PRIVATE_KEY` used to decrypt | Returns garbage plaintext (no integrity check in CTR mode) |
-| 11 | Input has multiple colons (legitimate format from `textParts.join(':')`) | Correctly reassembles ciphertext after first colon |
+| 1 | Decrypt output of `encrypt("hello")` | Returns `"hello"` via 3-part GCM path |
+| 2 | Decrypt legacy `iv:ciphertext` record | Returns original plaintext via 2-part CTR path |
+| 3 | Decrypt output for special characters | Returns exact original string |
+| 4 | Decrypt output for empty string | Returns `""` |
+| 5 | Decrypt output for Unicode string | Returns original UTF-8 string |
+| 6 | Input with no colon separator | Unsupported 1-part format → throws |
+| 7 | Input is empty string `""` | Split produces `[""]`; unsupported format → throws |
+| 8 | Input is `null` or `undefined` | `text.split` throws TypeError |
+| 9 | GCM authTag is tampered | `decipher.final()` throws authentication error |
+| 10 | GCM ciphertext is tampered | Authentication failure → throws |
+| 11 | Wrong `PASSWORD_PRIVATE_KEY` used with GCM data | Authentication failure → throws |
+| 12 | Wrong `PASSWORD_PRIVATE_KEY` used with legacy CTR data | Returns garbage plaintext (legacy CTR has no integrity check) |
 
 ---
-
 ## 10. Exported Function: `updatePasswordCipher`
 
 ### 10.1 Purpose
 
-Batch migration utility that re-encrypts all password records from a legacy encryption format (single-part hex, using deprecated `createDecipher`) to the current IV-based format (using `createCipheriv`). Processes records sequentially via recursion.
+Batch migration utility that re-encrypts all password records from CTR format (2-part `iv:ciphertext`) to GCM format (3-part `iv:authTag:ciphertext`). Processes records sequentially via reduce chain.
 
 ### 10.2 Invocation & Authentication
 
@@ -817,48 +823,54 @@ No parameters. Intended to be run as an admin/CLI operation.
 
 ```
 1. Mongo.find PASSWORDDB {} → fetch ALL password records
-2. Define recursive function recur_cipher(index):
-   a. Base case: index >= items.length → resolve
-   b. Check if password needs migration:
-      - Split password on ':'; if only 1 part → legacy format
-      - Decrypt using createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY) (deprecated API)
-      - Strip last 4 characters from decrypted string (legacy salt/padding)
-      - Set newPass = trimmed plaintext
-   c. Check if prePassword needs migration (same logic)
-   d. If either newPass or newPrePass is non-null:
-      - Re-encrypt BOTH using encrypt() (new IV-based format)
-      - Mongo.update the record with new password + prePassword
-      - Recurse to index + 1
-   e. If neither needs migration → recurse to index + 1
-3. Start recursion at index 0
+2. Filter malformed records: any with password or prePassword that has no ':' (1-part) → log IDs in error and reject
+3. Filter records needing migration: any where password or prePassword has exactly 2 parts (CTR format)
+4. For each record to migrate, build $set independently:
+   a. If password is 2-part: decryptLegacyCTR(password) → encrypt() → $set.password
+   b. If prePassword is 2-part: decryptLegacyCTR(prePassword) → encrypt() → $set.prePassword
+5. Sequential updates via reduce chain: Mongo.update(PASSWORDDB, {_id}, {$set: update})
+6. console.log the count of migrated records
 ```
 
 ### 10.4 Returns & Side Effects
 
 | Outcome | Return Value | Side Effects |
 |---------|-------------|-------------|
-| Success (all migrated) | `Promise<void>` | All legacy-format records updated in DB with new IV-based encryption |
-| Success (none to migrate) | `Promise<void>` | No DB writes |
+| Success (records migrated) | `Promise<void>` | Matching CTR fields updated in DB to 3-part GCM format; migration count logged |
+| Success (already all GCM) | `Promise<void>` | No DB writes; logs `0 records migrated` summary |
+| Malformed 1-part record detected | Promise rejects | No migration for that batch; malformed `_id` values included in error |
 | Partial migration (error mid-batch) | Promise rejects | Some records updated, others not (no transaction) |
 
 ### 10.5 Snapshot Testing Data
 
-**Legacy Record (Pre-Migration)**:
+**Mixed-format Record Set (Pre-Migration)**:
 ```json
-{
-  "_id": "507f1f77bcf86cd799439011",
-  "password": "a1b2c3d4e5f6",
-  "prePassword": "f6e5d4c3b2a1"
-}
+[
+  {
+    "_id": "507f1f77bcf86cd799439011",
+    "password": "<32-hex-iv>:<ctr-ciphertext>",
+    "prePassword": "<32-hex-iv>:<ctr-ciphertext>"
+  },
+  {
+    "_id": "507f1f77bcf86cd799439012",
+    "password": "<24-hex-iv>:<32-hex-authTag>:<gcm-ciphertext>",
+    "prePassword": "<32-hex-iv>:<ctr-ciphertext>"
+  }
+]
 ```
 
 **Migrated Record (Post-Migration)**:
 ```json
 {
-  "_id": "507f1f77bcf86cd799439011",
-  "password": "<32-hex-iv>:<hex-ciphertext>",
-  "prePassword": "<32-hex-iv>:<hex-ciphertext>"
+  "_id": "507f1f77bcf86cd799439012",
+  "password": "<24-hex-iv>:<32-hex-authTag>:<gcm-ciphertext>",
+  "prePassword": "<24-hex-iv>:<32-hex-authTag>:<gcm-ciphertext>"
 }
+```
+
+**Representative console output:**
+```
+2 record(s) migrated to GCM (15 total)
 ```
 
 ### 10.6 Comprehensive Test Scenarios (100% Coverage)
@@ -867,46 +879,42 @@ No parameters. Intended to be run as an admin/CLI operation.
 
 | # | Scenario | Branch | Expected Outcome |
 |---|----------|--------|-----------------|
-| 1 | Empty collection (no records) | `index >= items.length` immediately | Resolves with no DB updates |
-| 2 | Single record, both fields legacy format | Both `split(':').length === 1` → decrypt + re-encrypt both | Record updated with new format |
-| 3 | Single record, only `password` is legacy | `newPass` set, `newPrePass` null | ⚠ Both re-encrypted (line 309: `newPrePass = encrypt(newPrePass)` where `newPrePass` is null → potential bug) |
-| 4 | Single record, only `prePassword` is legacy | `newPass` null, `newPrePass` set | ⚠ Both re-encrypted (`newPass = encrypt(null)` → potential bug) |
-| 5 | Single record, both already migrated (contain ':') | Neither condition true | Skip to next index, no update |
-| 6 | Multiple records, mixed legacy and migrated | Recursive processing | Only legacy records updated |
-| 7 | Multiple records, all legacy | All processed sequentially | All records updated |
-| 8 | Multiple records, none legacy | All skipped | No DB updates |
+| 1 | Empty collection (no records) | No malformed, no migrations needed | Resolves with `0 records migrated (0 already GCM)` output |
+| 2 | All records already GCM | `toMigrate.length === 0` | No DB writes; logs already-GCM summary |
+| 3 | Single record, both fields CTR | Both split lengths are `2` | Record updated with 3-part GCM values in both fields |
+| 4 | Single record, only `password` is CTR | Only `$set.password` populated | Record updated without touching `prePassword` |
+| 5 | Single record, only `prePassword` is CTR | Only `$set.prePassword` populated | Record updated without touching `password` |
+| 6 | Multiple records, mixed CTR and GCM | Filter + reduce chain | Only CTR fields are migrated |
+| 7 | Malformed 1-part record exists | `malformed.length > 0` | Rejects with `_id` list in error message |
 
 #### Edge Cases
 
 | # | Scenario | Expected Outcome |
 |---|----------|-----------------|
-| 9 | Legacy password decrypts to string shorter than 4 chars | `substr(0, dec.length - 4)` produces empty or negative-length string |
-| 10 | Legacy password decrypts to exactly 4 chars | `substr(0, 0)` → empty string encrypted |
-| 11 | Hundreds/thousands of records | Recursive processing; verify no stack overflow |
-| 12 | Record missing `password` field | `items[index].password.split` throws TypeError |
-| 13 | Record missing `prePassword` field | `items[index].prePassword.split` throws TypeError |
-| 14 | `PASSWORD_PRIVATE_KEY` incompatible with legacy `createDecipher` | Decryption throws → Promise rejects |
+| 8 | Record missing `password` field | `.split(':')` throws TypeError before migration |
+| 9 | Record missing `prePassword` field | `.split(':')` throws TypeError before migration |
+| 10 | Hundreds/thousands of records | Sequential reduce prevents concurrent write bursts; migration remains ordered |
+| 11 | Legacy CTR decrypt fails on corrupt data | `decryptLegacyCTR()` throws → Promise rejects at that record |
+| 12 | New GCM record includes auth tag | 3-part value is skipped as already migrated |
 
 #### Error Handling
 
 | # | Scenario | Expected Outcome |
 |---|----------|-----------------|
-| 15 | Mongo find rejects | Promise rejects before recursion starts |
-| 16 | Mongo update rejects mid-batch (e.g., record 3 of 10) | Promise rejects; records 1–2 already migrated, 3+ not |
-| 17 | Legacy `createDecipher` throws on corrupt data | Promise rejects at that record |
-| 18 | `encrypt()` throws during re-encryption | Promise rejects at that record |
+| 13 | Mongo find rejects | Promise rejects before filtering starts |
+| 14 | Mongo update rejects mid-batch (e.g., record 3 of 10) | Promise rejects; earlier records remain migrated |
+| 15 | `encrypt()` throws during re-encryption | Promise rejects at that record |
+| 16 | Malformed `_id` list is long | Error message still includes comma-separated IDs for diagnostics |
 
 #### Known Code Observations
 
 | # | Observation | Impact |
 |---|------------|--------|
-| 19 | When only one of `newPass`/`newPrePass` is non-null, the other is `null` but both are passed to `encrypt()` (lines 309–310) | `encrypt(null)` will attempt `cipher.update(null)` — verify behavior |
-| 20 | Uses deprecated `crypto.createDecipher` (no IV) for legacy decryption | Node.js may emit deprecation warning; functionality intact |
-| 21 | Last 4 characters stripped from legacy decrypted text (line 300, 305) | Assumes legacy format appended 4-char salt/padding — verify with actual legacy data |
-| 22 | No transactional safety — partial migration possible on failure | Migration should be idempotent (already-migrated records skipped on re-run) |
+| 17 | Uses `decryptLegacyCTR()` helper instead of deprecated `createDecipher` | Migration stays on supported crypto APIs |
+| 18 | Builds `$set` per field independently | Avoids `encrypt(null)` / partial-field corruption bug from prior implementation |
+| 19 | No transactional safety — partial migration possible on failure | Re-running is safe because already-migrated 3-part fields are skipped |
 
 ---
-
 ## 11. Cross-Cutting Concerns
 
 ### 11.1 Encryption Security Tests
@@ -916,10 +924,10 @@ No parameters. Intended to be run as an admin/CLI operation.
 | 1 | Round-trip: `decrypt(encrypt(plaintext)) === plaintext` for various inputs | Core correctness guarantee |
 | 2 | Different plaintexts produce different ciphertexts | Non-determinism from random IV |
 | 3 | Same plaintext encrypted twice produces different ciphertexts | IV randomness |
-| 4 | Ciphertext format always matches `^[0-9a-f]+:[0-9a-f]+$` | Format invariant |
-| 5 | Key derivation produces consistent 32-byte buffer | Key stability |
-| 6 | Tampering with IV portion → decryption produces garbage | CTR mode behavior |
-| 7 | Tampering with ciphertext portion → decryption produces garbage | CTR mode behavior |
+| 4 | New ciphertext format always matches `^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$` | GCM write-format invariant |
+| 5 | Key derivation produces consistent 32-byte `keyBuffer` | Key stability |
+| 6 | Tampering with GCM authTag causes decryption failure | Authentication guarantee |
+| 7 | Legacy 2-part CTR ciphertext still decrypts during migration window | Backward compatibility |
 
 ### 11.2 Ownership Enforcement Tests
 
@@ -969,7 +977,8 @@ No parameters. Intended to be run as an admin/CLI operation.
 | `crypto.randomBytes` | Optional: deterministic mock for snapshot tests | Makes encrypt output predictable |
 | `PasswordGenerator` | Controlled mock | Return fixed string for snapshot; verify regex arg for branch |
 | `PASSWORD_PRIVATE_KEY` | Test fixture value | Must be valid hex for crypto operations |
-| `ALGORITHM` | `'aes-256-ctr'` | Match production constant |
+| `ALGORITHM` | `'aes-256-gcm'` | Match production constant |
+| `ALGORITHM_LEGACY` | `'aes-256-ctr'` | Legacy constant for backward compatibility |
 | `PASSWORDDB` | `'password'` or test collection name | Match production constant |
 
 ### 12.2 Test File Location

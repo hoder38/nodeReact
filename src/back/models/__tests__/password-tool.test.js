@@ -9,7 +9,8 @@ let mockTagToolInstance, mockIsDefaultTag, mockNormalize;
 let mockPasswordGenerator;
 
 const PASSWORDDB = 'password';
-const ALGORITHM = 'aes-256-ctr';
+const ALGORITHM = 'aes-256-gcm';
+const ALGORITHM_LEGACY = 'aes-256-ctr';
 const PASSWORD_PRIVATE_KEY = '0123456789abcdef0123456789abcdef';
 
 // --- node-fetch (prevents test pollution) ---
@@ -27,6 +28,7 @@ jest.unstable_mockModule('../../../../ver.js', () => ({
 
 jest.unstable_mockModule('../../constants.js', () => ({
     ALGORITHM,
+    ALGORITHM_LEGACY,
     PASSWORDDB,
 }));
 
@@ -481,34 +483,44 @@ describe('password-tool.js', () => {
     describe('generatePW', () => {
         test('type=3 → digits only', () => {
             PasswordTool.generatePW(3);
-            expect(mockPasswordGenerator).toHaveBeenCalledWith(12, false, /[0-9]/);
+            expect(mockPasswordGenerator).toHaveBeenCalledWith(16, false, /[0-9]/);
         });
 
         test('type=2 → alphanumeric', () => {
             PasswordTool.generatePW(2);
-            expect(mockPasswordGenerator).toHaveBeenCalledWith(12, false, /[0-9a-zA-Z]/);
+            expect(mockPasswordGenerator).toHaveBeenCalledWith(16, false, /[0-9a-zA-Z]/);
         });
 
         test('type=1 → alphanumeric + special', () => {
             PasswordTool.generatePW(1);
-            expect(mockPasswordGenerator).toHaveBeenCalledWith(12, false, /[0-9a-zA-Z!@#$%]/);
+            expect(mockPasswordGenerator).toHaveBeenCalledWith(16, false, /[0-9a-zA-Z!@#$%]/);
         });
 
         test('type=undefined → default (alphanumeric + special)', () => {
             PasswordTool.generatePW();
-            expect(mockPasswordGenerator).toHaveBeenCalledWith(12, false, /[0-9a-zA-Z!@#$%]/);
+            expect(mockPasswordGenerator).toHaveBeenCalledWith(16, false, /[0-9a-zA-Z!@#$%]/);
         });
     });
 
     // ─── encrypt/decrypt (tested through newRow + getPassword) ───
     describe('encrypt/decrypt round-trip', () => {
-        test('encrypts and decrypts correctly', async () => {
+        test('encrypts with GCM format (iv:authTag:ciphertext)', async () => {
             mockMongo.mockResolvedValue([{ _id: 'id' }]);
             await PasswordTool.newRow(baseData(), USER);
             const encrypted = mockMongo.mock.calls[0][2].password;
 
-            // Verify format: hex_iv:hex_ciphertext
-            expect(encrypted).toMatch(/^[0-9a-f]+:[0-9a-f]+$/);
+            // GCM format: 3 hex parts
+            expect(encrypted).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
+            const parts = encrypted.split(':');
+            expect(parts).toHaveLength(3);
+            expect(parts[0]).toHaveLength(24);  // 12-byte IV = 24 hex chars
+            expect(parts[1]).toHaveLength(32);  // 16-byte authTag = 32 hex chars
+        });
+
+        test('encrypts and decrypts correctly', async () => {
+            mockMongo.mockResolvedValue([{ _id: 'id' }]);
+            await PasswordTool.newRow(baseData(), USER);
+            const encrypted = mockMongo.mock.calls[0][2].password;
 
             mockMongo.mockResolvedValue([{ important: 0, password: encrypted }]);
             const result = await PasswordTool.getPassword('id', '', USER, 's');
@@ -542,17 +554,64 @@ describe('password-tool.js', () => {
             expect(mockMongo).toHaveBeenCalledWith('find', PASSWORDDB, {});
         });
 
-        test('all migrated items → resolves without error', async () => {
+        test('all GCM items (3-part) → resolves without migration', async () => {
             mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'aa:bb', prePassword: 'cc:dd' },
+                { _id: 'r1', password: 'aa:bb:cc', prePassword: 'dd:ee:ff' },
             ]);
             await updatePasswordCipher();
+            // Only the initial find call, no update calls
             expect(mockMongo).toHaveBeenCalledTimes(1);
         });
 
-        test('legacy password field (no colon) → rejects with error listing IDs', async () => {
+        test('CTR items (2-part) → migrates to GCM', async () => {
+            // Create real CTR-encrypted data for migration
+            const { createCipheriv, randomBytes } = await import('crypto');
+            const key = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
+            const iv = randomBytes(16);
+            const cipher = createCipheriv('aes-256-ctr', key, iv);
+            let enc = cipher.update('mySecret', 'utf8');
+            enc = Buffer.concat([enc, cipher.final()]);
+            const ctrCiphertext = iv.toString('hex') + ':' + enc.toString('hex');
+
+            mockMongo
+                .mockResolvedValueOnce([
+                    { _id: 'r1', password: ctrCiphertext, prePassword: ctrCiphertext },
+                ])
+                .mockResolvedValue(1);
+            await updatePasswordCipher();
+            // find + 1 update call
+            expect(mockMongo).toHaveBeenCalledTimes(2);
+            expect(mockMongo).toHaveBeenCalledWith('update', PASSWORDDB, { _id: 'r1' }, expect.objectContaining({
+                $set: expect.objectContaining({
+                    password: expect.stringMatching(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/),
+                    prePassword: expect.stringMatching(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/),
+                }),
+            }));
+        });
+
+        test('mixed: only password needs migration → $set has only password', async () => {
+            const { createCipheriv, randomBytes } = await import('crypto');
+            const key = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
+            const iv = randomBytes(16);
+            const cipher = createCipheriv('aes-256-ctr', key, iv);
+            let enc = cipher.update('pw', 'utf8');
+            enc = Buffer.concat([enc, cipher.final()]);
+            const ctrCiphertext = iv.toString('hex') + ':' + enc.toString('hex');
+
+            mockMongo
+                .mockResolvedValueOnce([
+                    { _id: 'r1', password: ctrCiphertext, prePassword: 'aa:bb:cc' },
+                ])
+                .mockResolvedValue(1);
+            await updatePasswordCipher();
+            const updateCall = mockMongo.mock.calls[1];
+            expect(updateCall[3].$set.password).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
+            expect(updateCall[3].$set).not.toHaveProperty('prePassword');
+        });
+
+        test('legacy 1-part record → rejects with error listing IDs', async () => {
             mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'deadbeef', prePassword: 'cc:dd' },
+                { _id: 'r1', password: 'deadbeef', prePassword: 'cc:dd:ee' },
             ]);
             await expect(updatePasswordCipher()).rejects.toMatchObject({
                 message: expect.stringContaining('r1'),
@@ -561,29 +620,20 @@ describe('password-tool.js', () => {
 
         test('legacy prePassword field (no colon) → rejects with error listing IDs', async () => {
             mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'aa:bb', prePassword: 'deadbeef' },
+                { _id: 'r1', password: 'aa:bb:cc', prePassword: 'deadbeef' },
             ]);
             await expect(updatePasswordCipher()).rejects.toMatchObject({
                 message: expect.stringContaining('r1'),
             });
         });
 
-        test('multiple items all migrated → resolves', async () => {
-            mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'aa:bb', prePassword: 'cc:dd' },
-                { _id: 'r2', password: 'ee:ff', prePassword: 'gg:hh' },
-            ]);
-            await updatePasswordCipher();
-            expect(mockMongo).toHaveBeenCalledTimes(1);
-        });
-
-        test('mixed: one legacy + one migrated → rejects listing legacy ID only', async () => {
+        test('mixed: one legacy + one CTR → rejects listing legacy ID only', async () => {
             mockMongo.mockResolvedValue([
                 { _id: 'r1', password: 'deadbeef', prePassword: 'deadbeef' },
                 { _id: 'r2', password: 'aa:bb', prePassword: 'cc:dd' },
             ]);
             await expect(updatePasswordCipher()).rejects.toMatchObject({
-                message: expect.stringContaining('1 legacy'),
+                message: expect.stringContaining('1 malformed'),
             });
         });
     });

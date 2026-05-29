@@ -1,5 +1,5 @@
 import { PASSWORD_PRIVATE_KEY } from '../../../ver.js'
-import { ALGORITHM, PASSWORDDB } from '../constants.js'
+import { ALGORITHM, ALGORITHM_LEGACY, PASSWORDDB } from '../constants.js'
 import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { isValidString, handleError, HoError, userPWCheck } from '../util/utility.js'
@@ -266,35 +266,78 @@ export default {
         });
     },
     generatePW: function(type) {
-        return (type === 3) ? PasswordGenerator(12, false, /[0-9]/) : (type === 2) ? PasswordGenerator(12, false, /[0-9a-zA-Z]/) : PasswordGenerator(12, false, /[0-9a-zA-Z!@#$%]/);
+        return (type === 3) ? PasswordGenerator(16, false, /[0-9]/) : (type === 2) ? PasswordGenerator(16, false, /[0-9a-zA-Z]/) : PasswordGenerator(16, false, /[0-9a-zA-Z!@#$%]/);
     },
 }
 
+const keyBuffer = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
+
 function encrypt(text) {
-    const iv = randomBytes(16);
-    const cipher = createCipheriv(ALGORITHM, Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex'), iv);
-    let encrypted = cipher.update(text);
+    const iv = randomBytes(12);
+    const cipher = createCipheriv(ALGORITHM, keyBuffer, iv);
+    let encrypted = cipher.update(text, 'utf8');
     encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
+    const authTag = cipher.getAuthTag();
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted.toString('hex');
 }
 
 function decrypt(text) {
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift(), 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = createDecipheriv(ALGORITHM, Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex'), iv);
+    const parts = text.split(':');
+    if (parts.length === 3) {
+        const iv = Buffer.from(parts[0], 'hex');
+        const authTag = Buffer.from(parts[1], 'hex');
+        const encryptedText = Buffer.from(parts[2], 'hex');
+        const decipher = createDecipheriv(ALGORITHM, keyBuffer, iv);
+        decipher.setAuthTag(authTag);
+        let decrypted = decipher.update(encryptedText);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        return decrypted.toString('utf8');
+    }
+    // Legacy CTR format: iv:ciphertext
+    const iv = Buffer.from(parts[0], 'hex');
+    const encryptedText = Buffer.from(parts[1], 'hex');
+    const decipher = createDecipheriv(ALGORITHM_LEGACY, keyBuffer, iv);
     let decrypted = decipher.update(encryptedText);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
 }
 
 export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(items => {
-    const legacyIds = items
-        .filter(item => item.password.split(':').length === 1 || item.prePassword.split(':').length === 1)
-        .map(item => item._id);
-    if (legacyIds.length > 0) {
-        return handleError(new HoError(`found ${legacyIds.length} legacy cipher record(s): ${legacyIds.join(', ')}`));
+    const malformed = items.filter(item =>
+        item.password.split(':').length === 1 || item.prePassword.split(':').length === 1
+    );
+    if (malformed.length > 0) {
+        return handleError(new HoError(`found ${malformed.length} malformed record(s): ${malformed.map(i => i._id).join(', ')}`));
     }
-    log.info({ count: items.length }, 'all password records use current cipher format');
-    return Promise.resolve();
+    const toMigrate = items.filter(item =>
+        item.password.split(':').length === 2 || item.prePassword.split(':').length === 2
+    );
+    if (toMigrate.length === 0) {
+        log.info({ count: items.length }, 'all password records use GCM format');
+        console.log(`0 records migrated (${items.length} already GCM)`);
+        return Promise.resolve();
+    }
+    return toMigrate.reduce((chain, item) => chain.then(() => {
+        const update = {};
+        if (item.password.split(':').length === 2) {
+            update.password = encrypt(decryptLegacyCTR(item.password));
+        }
+        if (item.prePassword.split(':').length === 2) {
+            update.prePassword = encrypt(decryptLegacyCTR(item.prePassword));
+        }
+        return Mongo('update', PASSWORDDB, { _id: item._id }, { $set: update });
+    }), Promise.resolve()).then(() => {
+        log.info({ migrated: toMigrate.length, total: items.length }, 'CTR→GCM migration complete');
+        console.log(`${toMigrate.length} record(s) migrated to GCM (${items.length} total)`);
+    });
 });
+
+function decryptLegacyCTR(text) {
+    const parts = text.split(':');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encryptedText = Buffer.from(parts[1], 'hex');
+    const decipher = createDecipheriv(ALGORITHM_LEGACY, keyBuffer, iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+}

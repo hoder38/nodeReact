@@ -144,7 +144,7 @@ const callStrategy = (username, password) =>
 // =====================================================================
 // 4. HELPER: Build a test Express app with LoginRouter mounted
 // =====================================================================
-function buildApp(url = null) {
+function buildApp(url = null, sessionOverrides = null) {
   const app = Express();
   app.use(Express.json());
   app.use(Express.urlencoded({ extended: true }));
@@ -160,7 +160,7 @@ function buildApp(url = null) {
       req.session = { destroy: jest.fn() };
     } else {
       req.isAuthenticated = () => false;
-      req.session = { regenerate: (cb) => cb(null), save: (cb) => cb(null) };
+      req.session = { regenerate: (cb) => cb(null), save: (cb) => cb(null), ...(sessionOverrides || {}) };
     }
     // Always provide req.logIn for passport compatibility (handles 2 and 3 arg forms)
     if (!req.logIn) {
@@ -461,6 +461,16 @@ describe('login-router.js', () => {
         .post('/api/login')
         .send({ username: 'testuser', password: TEST_PASSWORD });
       expect(res.status).toBe(401);
+    });
+
+    test('session.regenerate error returns 500', async () => {
+      mockMongo.mockResolvedValueOnce([TEST_USER]);
+      mockBcryptCompare.mockResolvedValueOnce(true);
+      const app = buildApp(null, { regenerate: (cb) => cb(new Error('regenerate failed')) });
+      const res = await request(app)
+        .post('/api/login')
+        .send({ username: 'testuser', password: TEST_PASSWORD });
+      expect(res.status).toBe(500);
     });
   });
 

@@ -373,7 +373,6 @@ Key API helper functions:
 | `passwordUser` | User-password prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
 | `stock` | Stock entries | type, index, per, tags, important | 5 compound indexes |
 | `stockUser` | User-stock prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
-| `docUpdate` | Document sync status | — | — |
 | `total` | Stock/crypto portfolio totals, trading state, sizing inputs | owner, index, name, type, setype/sType, amount, count, pricecost, web, mid, times, mul, extrem, metrics | — |
 
 - **TOTALDB note (2026-05-26)**: `extrem` stores the `calStair` daily swing percentile, and `metrics` stores backtest outputs such as `winRate`, `avgWin`, `avgLoss`, `profitFactor`, and related fields. `recur_web` now propagates `web.metrics` from STOCKDB into TOTALDB so scheduled trading logic can reuse them.
@@ -430,10 +429,20 @@ Browser                    Main Server              File Server
 | `perm = 2` | Content admin | Adult content access, stock filtering |
 | `perm ≤ 32` | Granular levels | Bitwise permission support |
 
-### 7.3 Security Mechanisms
+### 7.3 Session Security
 
-- **Session**: Redis-backed, 3-day HTTPS-only secure cookies
-- **Password storage**: bcrypt with server-side pepper (user auth), AES-256-CTR (password manager)
+| Property | Value | Purpose |
+|----------|-------|---------|
+| `cookie.secure` | `true` | HTTPS-only cookie transmission |
+| `cookie.httpOnly` | `true` | Prevents JavaScript access to session cookie |
+| `cookie.sameSite` | `'lax'` | CSRF protection; `'lax'` chosen over `'strict'` for cascading login compatibility |
+| `cookie.maxAge` | 3 days | Session expiry |
+| Session regeneration | On login | Prevents session fixation attacks via `req.session.regenerate()` |
+
+### 7.4 Security Mechanisms
+
+- **Session**: Redis-backed, 3-day secure / httpOnly cookies with `sameSite: 'lax'`; session regenerated on login
+- **Password storage**: bcrypt with server-side pepper (user auth), AES-256-GCM (password manager; legacy AES-256-CTR read support during migration)
 - **userPWCheck**: async, Redis-cached (70s TTL) with `crypto.timingSafeEqual`, bcrypt fallback
 - **Nginx auth sub-request**: `/auth` endpoint for file download authorization
 - **CORS**: Explicit `Access-Control-Allow-Credentials` on file server
@@ -592,7 +601,7 @@ File Server (WSS /f)
 | **Authentication** | Invalid credentials, session expiry, concurrent sessions |
 | **Authorization** | Privilege escalation (perm 0 → admin routes), owner-only operations |
 | **Input Validation** | SQL/NoSQL injection in search, XSS in names/tags, path traversal in file ops |
-| **Encryption** | Password decryption with wrong key, salt tampering, algorithm downgrade |
+| **Encryption** | Password decryption with wrong key, salt tampering, GCM auth tag verification, CTR→GCM migration |
 | **Session** | Cookie security flags, Redis session fixation, cross-server session sync |
 | **File Access** | Unauthorized file download, nginx auth sub-request bypass |
 

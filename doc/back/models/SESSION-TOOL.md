@@ -46,6 +46,8 @@ export default function (express) {
             cookie: {
                 maxAge: 86400 * 1000 * 3,
                 secure: true,
+                httpOnly: true,
+                sameSite: 'lax',
             },
             store: new redisStore({
                 client: Redis.createClient(SESS_PORT(ENV_TYPE), SESS_IP(ENV_TYPE), {auth_pass: SESS_PWD}),
@@ -188,6 +190,8 @@ This module itself does not perform user authentication. However, it configures 
 - `SESS_SECRET` signs session cookies (tamper detection)
 - `SESS_PWD` authenticates the Redis connection (data-plane security)
 - `cookie.secure: true` enforces HTTPS-only cookie transmission
+- `cookie.httpOnly: true` prevents JavaScript access to session cookie (XSS mitigation)
+- `cookie.sameSite: 'lax'` provides CSRF protection; `'lax'` chosen over `'strict'` for cascading login compatibility
 
 ### 3.4 Returns & Side Effects
 
@@ -199,7 +203,9 @@ This module itself does not perform user authentication. However, it configures 
         secret: String,                // Session signing secret
         cookie: {
             maxAge: 259200000,         // 3 days in ms (86400 * 1000 * 3)
-            secure: true               // HTTPS-only
+            secure: true,              // HTTPS-only
+            httpOnly: true,            // No JS access
+            sameSite: 'lax'            // CSRF protection
         },
         store: RedisStore,             // connect-redis instance
         resave: false,                 // Don't re-save unchanged sessions
@@ -247,6 +253,8 @@ This module itself does not perform user authentication. However, it configures 
 | `config.secret` | `process.env.SESS_SECRET` | Strict equality |
 | `config.cookie.maxAge` | `259200000` (exactly) | Numeric equality |
 | `config.cookie.secure` | `true` | Boolean strict |
+| `config.cookie.httpOnly` | `true` | Boolean strict |
+| `config.cookie.sameSite` | `'lax'` | String equality |
 | `config.resave` | `false` | Boolean strict |
 | `config.saveUninitialized` | `false` | Boolean strict |
 | `config.store` | Instance of `RedisStore` | `instanceof` check |
@@ -343,6 +351,8 @@ Redis.createClient(
 | AL-06 | Cross-server session sharing | Same Redis store, same secret | User authenticated on Main Server (port 8082/3389) is recognized by File Server (port 8084/3391) |
 | AL-07 | Session fixation resistance | `saveUninitialized: false` + `resave: false` | Pre-authentication session IDs are not persisted, mitigating fixation attacks |
 | AL-08 | Redis password prevents unauthorized store access | `auth_pass` configured | External processes cannot read/write session data without the Redis password |
+| AL-09 | Cookie httpOnly flag prevents XSS | `config.cookie.httpOnly === true` | Session cookie cannot be read by client-side JavaScript |
+| AL-10 | Cookie sameSite prevents CSRF | `config.cookie.sameSite === 'lax'` | Cookie not sent on cross-origin requests (except top-level navigations) |
 
 ---
 
@@ -393,8 +403,8 @@ Per OUTLINE.md §11.7 — Session-specific security tests:
 | ST-04 | Session fixation | Verify session ID regenerates after login (`req.session.regenerate`) | Session fixation attack |
 | ST-05 | Cookie tampering | Modify session cookie value → request should be rejected | Session hijacking |
 | ST-06 | Redis network isolation | Verify Redis port is not exposed externally in production | Direct Redis access |
-| ST-07 | Missing `httpOnly` flag | Verify express-session defaults `httpOnly: true` (default behavior) | XSS session theft |
-| ST-08 | `SameSite` cookie attribute | Verify behavior with/without `SameSite` attribute | CSRF via session cookie |
+| ST-07 | Explicit `httpOnly` flag | Verify `httpOnly: true` blocks JavaScript access to the session cookie | XSS session theft |
+| ST-08 | Explicit `SameSite=lax` cookie attribute | Verify top-level navigation remains compatible while cross-site subrequests are restricted | CSRF via session cookie |
 
 ---
 

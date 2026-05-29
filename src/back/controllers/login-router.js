@@ -62,13 +62,18 @@ export default function(url=null) {
             url,
         } : {apiOK: true})
     })
-    router.post('/api/login', Passport.authenticate('local'), function(req, res) {
-        req.logIn(req.user, function(err) {
-            console.log('auth ok');
-            res.json(Object.assign({
-                loginOK: true,
-                id: req.user.username,
-            }, url? {url} : {}))
+    router.post('/api/login', Passport.authenticate('local'), function(req, res, next) {
+        const user = req.user;
+        req.session.regenerate(function(err) {
+            if (err) return handleError(err, next);
+            req.logIn(user, function(err) {
+                if (err) return handleError(err, next);
+                console.log('auth ok');
+                res.json(Object.assign({
+                    loginOK: true,
+                    id: req.user.username,
+                }, url? {url} : {}))
+            })
         })
     })
     router.all('/api*', function(req, res, next) {

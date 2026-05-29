@@ -110,6 +110,20 @@ describe('session-tool', () => {
             expect(result.config.cookie.secure).toBe(true);
         });
 
+        test('should set config.cookie.httpOnly to true', () => {
+            const mockExpress = { session: jest.fn() };
+            const result = sessionTool(mockExpress);
+
+            expect(result.config.cookie.httpOnly).toBe(true);
+        });
+
+        test('should set config.cookie.sameSite to lax', () => {
+            const mockExpress = { session: jest.fn() };
+            const result = sessionTool(mockExpress);
+
+            expect(result.config.cookie.sameSite).toBe('lax');
+        });
+
         test('should set config.resave to false', () => {
             const mockExpress = { session: jest.fn() };
             const result = sessionTool(mockExpress);
@@ -140,7 +154,9 @@ describe('session-tool', () => {
                 cookie: {
                     maxAge: 259200000,
                     secure: true,
-                },
+                   httpOnly: true,
+                   sameSite: 'lax',
+               },
                 store: expect.any(MockRedisStore),
                 resave: false,
                 saveUninitialized: false,
@@ -286,6 +302,8 @@ describe('session-tool', () => {
                 cookie: {
                     maxAge: expect.any(Number),
                     secure: expect.any(Boolean),
+                    httpOnly: true,
+                    sameSite: 'lax',
                 },
                 resave: expect.any(Boolean),
                 saveUninitialized: expect.any(Boolean),

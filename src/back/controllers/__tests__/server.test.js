@@ -126,7 +126,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
  
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
-  DOCDB: 'docUpdate',
   TOTALDB: 'total',
   RE_WEBURL: /^https?:\/\//,
   QUERY_LIMIT: 20,
@@ -159,7 +158,8 @@ jest.unstable_mockModule('../../constants.js', () => ({
   USSE_ORDER_INTERVAL: 86400,
   TWSE_ORDER_INTERVAL: 86400,
   STOCK_FILTER_LIMIT: 100,
-  ALGORITHM: 'aes-256-ctr',
+  ALGORITHM: 'aes-256-gcm',
+  ALGORITHM_LEGACY: 'aes-256-ctr',
   KINDLE_LIMIT: 52428800,
   UNACTIVE_DAY: 5,
   UNACTIVE_HIT: 10,

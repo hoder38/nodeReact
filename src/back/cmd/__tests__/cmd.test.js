@@ -85,7 +85,6 @@ jest.unstable_mockModule('../../config.js', () => ({
 jest.unstable_mockModule('../../constants.js', () => ({
   USERDB: 'user',
   DRIVE_LIMIT: 100,
-  DOCDB: 'docUpdate',
   STORAGEDB: 'storage',
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
@@ -459,12 +458,6 @@ describe('cmd.js', () => {
     test('valid collection "total"', async () => {
       mockMongo.mockResolvedValueOnce([]);
       await dbDump('total');
-      expect(mockMkdirp).toHaveBeenCalled();
-    });
-
-    test('valid collection "docUpdate"', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      await dbDump('docUpdate');
       expect(mockMkdirp).toHaveBeenCalled();
     });
 

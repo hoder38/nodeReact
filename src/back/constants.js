@@ -12,7 +12,7 @@ export const USERDB = 'user'
 export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
 export const PASSWORDDB = 'password'
-export const DOCDB = 'docUpdate'
+
 export const TOTALDB = 'total'
 
 //basic set
@@ -48,7 +48,8 @@ export const ORDER_INTERVAL = 3600 * 6;
 export const USSE_ORDER_INTERVAL = 86400;
 export const TWSE_ORDER_INTERVAL = 86400;
 export const STOCK_FILTER_LIMIT = 100;
-export const ALGORITHM = 'aes-256-ctr';
+export const ALGORITHM = 'aes-256-gcm';
+export const ALGORITHM_LEGACY = 'aes-256-ctr';
 export const KINDLE_LIMIT = 52428800;
 // DEPRECATED: replaced by 2σ boundary from web array in shioaji-tool & tdameritrade-tool
 //export const USSE_ENTER_MID = 5;
@@ -744,7 +745,6 @@ export const BACKUP_COLLECTION = [
     STORAGEDB,
     STOCKDB,
     PASSWORDDB,
-    DOCDB,
     `${STORAGEDB}User`,
     `${STOCKDB}User`,
     `${PASSWORDDB}User`,

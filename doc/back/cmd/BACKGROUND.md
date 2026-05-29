@@ -61,7 +61,7 @@ function bgError(err, type) {
 | `MAX_RETRY` | 10 | count |
 | `USERDB` | `'user'` | collection name |
 | `STOCKDB` | `'stock'` | collection name |
-| `BACKUP_COLLECTION` | `['user','storage','stock','password','docUpdate','storageUser','stockUser','passwordUser']` | array |
+| `BACKUP_COLLECTION` | `['user','storage','stock','password','storageUser','stockUser','passwordUser']` | array |
 
 ### Feature Flags (Dev vs Release)
 
@@ -505,7 +505,7 @@ Performs database backups on the **2nd of each month** (collection-level dumps +
 3. Inner function `allBackup()`:
    a. Capture `sd = new Date()` and format `backupDate` as `YYYYMMDD`.
    b. Define `singleBackup(index)`:
-      - Iterate `BACKUP_COLLECTION` array (8 collections).
+      - Iterate `BACKUP_COLLECTION` array (7 collections).
       - For each: `dbDump(collection, backupDate)` (shell `mongodump`).
       - After all: `googleBackupDb(backupDate)` — upload to Google Drive.
    c. Define `wholeBackup()`:
@@ -530,7 +530,7 @@ Performs database backups on the **2nd of each month** (collection-level dumps +
 ### Returns & Side Effects
 
 - **Return**: Never-resolving promise chain.
-- **DB reads**: All 8 collections in `BACKUP_COLLECTION` via `mongodump`.
+- **DB reads**: All 7 collections in `BACKUP_COLLECTION` via `mongodump`.
 - **Filesystem writes**: Dump files to backup directory; whole system image via `dd`.
 - **Google Drive API**: `googleBackupDb` (DB dumps), `googleBackupWhole` (system image).
 - **WebSocket**: Success notification for whole backup; error notifications.
@@ -545,7 +545,7 @@ Performs database backups on the **2nd of each month** (collection-level dumps +
   featureFlag: 'DB_BACKUP',
   enabled: { dev: false, release: true },
   concurrencyGuard: null,
-  collections: ['user','storage','stock','password','docUpdate','storageUser','stockUser','passwordUser'],
+  collections: ['user','storage','stock','password','storageUser','stockUser','passwordUser'],
   schedule: {
     dbBackup: { date: 2 },                        // 2nd of every month
     wholeBackup: { date: 3, months: [1,4,7,10] }  // 3rd of Feb/May/Aug/Nov (0-indexed)

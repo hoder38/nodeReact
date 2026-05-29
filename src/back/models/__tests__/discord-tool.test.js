@@ -4,12 +4,11 @@
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 
-let mockMongo, mockGenerateAuthUrl, mockGetToken;
+let mockGenerateAuthUrl, mockGetToken;
 let mockChannelSend, mockClientOn, mockClientLogin, mockCacheGet;
 
 const DISCORD_TOKEN = 'test-token';
 const DISCORD_CHANNEL = 'test-channel-id';
-const DOCDB = 'docUpdate';
 
 // --- node-fetch (prevents test pollution) ---
 jest.unstable_mockModule('node-fetch', () => ({
@@ -19,19 +18,10 @@ jest.unstable_mockModule('node-fetch', () => ({
     })),
 }));
 
-jest.unstable_mockModule('../../constants.js', () => ({
-    DOCDB,
-}));
-
 jest.unstable_mockModule('../../../../ver.js', () => ({
     PASSWORD_SALT: 'test_salt_',
     DISCORD_TOKEN,
     DISCORD_CHANNEL,
-}));
-
-mockMongo = jest.fn();
-jest.unstable_mockModule('../../models/mongo-tool.js', () => ({
-    default: mockMongo,
 }));
 
 mockGenerateAuthUrl = jest.fn();
@@ -138,34 +128,6 @@ describe('discord-tool.js', () => {
             mockMsg.content = '<@123> unknown';
             eventHandlers['message'](mockMsg);
             expect(mockMsg.reply).toHaveBeenCalledWith(expect.stringContaining('Command'));
-        });
-
-        test('checkdoc → queries Mongo and replies', async () => {
-            mockMongo.mockResolvedValue([
-                { type: 'pdf', date: '2024-01' },
-                { type: 'doc', date: '2024-02' },
-            ]);
-            mockMsg.content = '<@123> checkdoc';
-            eventHandlers['message'](mockMsg);
-            await new Promise(r => setTimeout(r, 50));
-            expect(mockMongo).toHaveBeenCalledWith('find', DOCDB);
-            expect(mockMsg.reply).toHaveBeenCalledWith(expect.stringContaining('pdf'));
-        });
-
-        test('checkdoc case insensitive → CHECKDOC works', async () => {
-            mockMongo.mockResolvedValue([]);
-            mockMsg.content = '<@123> CHECKDOC';
-            eventHandlers['message'](mockMsg);
-            await new Promise(r => setTimeout(r, 50));
-            expect(mockMongo).toHaveBeenCalledWith('find', DOCDB);
-        });
-
-        test('checkdoc Mongo error → replies with error message', async () => {
-            mockMongo.mockRejectedValue(new Error('db down'));
-            mockMsg.content = '<@123> checkdoc';
-            eventHandlers['message'](mockMsg);
-            await new Promise(r => setTimeout(r, 50));
-            expect(mockMsg.reply).toHaveBeenCalledWith('db down');
         });
 
         test('schwab → replies with auth URL', () => {

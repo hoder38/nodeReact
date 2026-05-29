@@ -1,4 +1,4 @@
-import { USERDB, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, BACKUP_LIMIT, TOTALDB } from '../constants.js'
+import { USERDB, STORAGEDB, STOCKDB, PASSWORDDB, BACKUP_LIMIT, TOTALDB } from '../constants.js'
 import { ENV_TYPE, PASSWORD_SALT } from '../../../ver.js'
 import { BACKUP_PATH } from '../config.js'
 import readline from 'readline'
@@ -17,7 +17,7 @@ import bcryptModule from 'bcrypt'
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
 
 export const dbDump = (collection, backupDate=null) => {
-    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
+    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
         return handleError(new HoError('Collection not find'));
     }
     if (!backupDate) {
@@ -42,7 +42,7 @@ export const dbDump = (collection, backupDate=null) => {
 }
 
 const dbRestore = collection => {
-    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
+    if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
         return handleError(new HoError('Collection not find'));
     }
     const folderPath = `${BACKUP_PATH(ENV_TYPE)}/${collection}`;
@@ -184,8 +184,6 @@ rl.on('line', line => {
         console.log('help:');
         console.log('stock type index mode');
         console.log('stocklist type');
-        //console.log('drive batchNumber [single username]');
-        console.log('doc am|jp|tw [time]');
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');

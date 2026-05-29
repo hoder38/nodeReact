@@ -16,14 +16,13 @@
    - 2.3 [testdata](#23-testdata)
    - 2.4 [cleanstock](#24-cleanstock)
    - 2.5 [doc](#25-doc)
-   - 2.6 [checkdoc](#26-checkdoc)
-   - 2.7 [complete](#27-complete)
-   - 2.8 [dbdump](#28-dbdump)
-   - 2.9 [dbrestore](#29-dbrestore)
-   - 2.10 [randomsend](#210-randomsend)
-   - 2.11 [resettotal](#211-resettotal)
-   - 2.12 [updatepassword](#212-updatepassword)
-   - 2.13 [default (help)](#213-default-help)
+   - 2.6 [complete](#26-complete)
+   - 2.7 [dbdump](#27-dbdump)
+   - 2.8 [dbrestore](#28-dbrestore)
+   - 2.9 [randomsend](#29-randomsend)
+   - 2.10 [resettotal](#210-resettotal)
+   - 2.11 [updatepassword](#211-updatepassword)
+   - 2.12 [default (help)](#212-default-help)
 3. [Helper Functions](#3-helper-functions)
    - 3.1 [cmdUpdateDrive](#31-cmdupdatedrive)
    - 3.2 [dbDump](#32-dbdump-function)
@@ -42,7 +41,7 @@
 
 | Import | Source | Purpose |
 |--------|--------|---------|
-| `USERDB`, `DRIVE_LIMIT`, `DOCDB`, `STORAGEDB`, `STOCKDB`, `PASSWORDDB`, `RANDOM_EMAIL`, `BACKUP_LIMIT`, `TOTALDB` | `../constants.js` | Collection names & config constants |
+| `USERDB`, `DRIVE_LIMIT`, `STORAGEDB`, `STOCKDB`, `PASSWORDDB`, `RANDOM_EMAIL`, `BACKUP_LIMIT`, `TOTALDB` | `../constants.js` | Collection names & config constants |
 | `ENV_TYPE` | `../../../ver.js` | Environment selector (`'dev'` / `'release'`) |
 | `BACKUP_PATH` | `../config.js` | Env-aware backup folder path function |
 | `readline` | Node.js built-in | `createInterface` for stdin line-based reading |
@@ -63,7 +62,6 @@
 | `STORAGEDB` | `'storage'` | Storage collection (also `storageUser`, `storageDir`) |
 | `STOCKDB` | `'stock'` | Stock collection (also `stockUser`, `stockDir`) |
 | `PASSWORDDB` | `'password'` | Password collection (also `passwordUser`, `passwordDir`) |
-| `DOCDB` | `'docUpdate'` | Document update tracking collection |
 | `TOTALDB` | `'total'` | Stock portfolio totals collection |
 | `BACKUP_LIMIT` | `1000` | Documents per backup file chunk |
 | `DRIVE_LIMIT` | `100` | Default Drive batch size |
@@ -349,7 +347,7 @@ doc am 202603             # Download with specific time parameter
 
 #### Returns & Side Effects
 - **Console**: `'doc'` then `'done'`.
-- **DB**: Reads from `user` collection; `autoDoc` may update `docUpdate` collection.
+- **DB**: Reads from `user` collection.
 - **External API**: Government / institutional data APIs (Census, Federal Reserve, etc.).
 - **File system**: Downloaded documents stored via Google Drive integration.
 
@@ -368,44 +366,7 @@ doc am 202603             # Download with specific time parameter
 
 ---
 
-### 2.6 `checkdoc`
-
-#### Purpose
-Verify document entries by dumping the entire `docUpdate` collection to console.
-
-#### Logic Flow (Lines 252–254)
-1. Log `'checkdoc'`.
-2. Call `Mongo('find', DOCDB)` — `DOCDB = 'docUpdate'`, no filter (returns all documents).
-3. Log the full result array.
-
-#### Invocation
-```
-checkdoc
-```
-
-#### Returns & Side Effects
-- **Console**: `'checkdoc'`, then the full JSON array of all `docUpdate` documents.
-- **DB**: Read-only on `docUpdate` collection.
-- **Note**: Does **not** log `'done'` — logs the document array directly.
-
-#### Snapshot Testing Data
-```
-Input:   "checkdoc"
-Output:  "checkdoc\n[ { _id: ..., ... }, { _id: ..., ... }, ... ]\n"
-```
-
-#### Test Scenarios
-
-| ID | Scenario | Input | Expected Behavior | Priority |
-|----|----------|-------|-------------------|----------|
-| CD-01 | Normal execution | `checkdoc` | Logs entire `docUpdate` collection | 🟡 High |
-| CD-02 | Empty collection | `checkdoc` (no docs) | Logs `[]` | 🟢 Medium |
-| CD-03 | DB error | `checkdoc` (DB down) | Error caught, label `'CMD checkdoc'` | 🟢 Medium |
-| CD-04 | Ignores args | `checkdoc foo` | Extra args ignored | 🟢 Low |
-
----
-
-### 2.7 `complete`
+### 2.6 `complete`
 
 #### Purpose
 Complete MIME tags for storage entries. Optionally pass `'add'` to modify behavior.
@@ -436,7 +397,7 @@ complete add              # Run with 'add' modifier
 
 ---
 
-### 2.8 `dbdump`
+### 2.7 `dbdump`
 
 #### Purpose
 Backup a MongoDB collection to the filesystem in chunked JSON files.
@@ -446,7 +407,7 @@ Backup a MongoDB collection to the filesystem in chunked JSON files.
 2. Call `dbDump(cmd[1])` where `cmd[1]` is the collection name.
 3. **`dbDump` function** (exported):
    1. **Validate collection** against whitelist (line 35):
-      - Allowed: `'accessToken'`, `'total'`, `'user'`, `'storage'`, `'stock'`, `'password'`, `'docUpdate'`, `'storageUser'`, `'stockUser'`, `'passwordUser'`, `'storageDir'`, `'stockDir'`, `'passwordDir'`
+      - Allowed: `'accessToken'`, `'total'`, `'user'`, `'storage'`, `'stock'`, `'password'`, `'storageUser'`, `'stockUser'`, `'passwordUser'`, `'storageDir'`, `'stockDir'`, `'passwordDir'`
    2. If not in whitelist → `handleError(new HoError('Collection not find'))`.
    3. Generate `backupDate` string: `YYYYMMDD` format from current date (lines 38–40).
    4. Compute `folderPath`: `BACKUP_PATH(ENV_TYPE)/{backupDate}/{collection}`.
@@ -494,7 +455,6 @@ Output:  "dbdump\n1000\n250\ndone\n"
 | `STORAGEDB` | `storage` |
 | `STOCKDB` | `stock` |
 | `PASSWORDDB` | `password` |
-| `DOCDB` | `docUpdate` |
 | `${STORAGEDB}User` | `storageUser` |
 | `${STOCKDB}User` | `stockUser` |
 | `${PASSWORDDB}User` | `passwordUser` |
@@ -510,7 +470,7 @@ Output:  "dbdump\n1000\n250\ndone\n"
 | DD-02 | All valid collections | `dbdump stock`, `dbdump total`, etc. | Each passes whitelist check | 🟡 High |
 | DD-03 | Invalid collection | `dbdump sessions` | `HoError('Collection not find')` | 🔴 Critical |
 | DD-04 | Missing collection arg | `dbdump` | `cmd[1]` = `undefined` → fails whitelist → error | 🔴 Critical |
-| DD-05 | Empty collection (0 docs) | `dbdump docUpdate` (empty) | Creates folder, no files written, logs `'done'` | 🟡 High |
+| DD-05 | Empty collection (0 docs) | `dbdump user` (empty) | Creates folder, no files written, logs `'done'` | 🟡 High |
 | DD-06 | Large collection (>1000) | `dbdump storage` (3500 docs) | Creates files `0`, `1`, `2`, `3`; logs `1000`, `1000`, `1000`, `500` | 🟡 High |
 | DD-07 | Folder already exists | `dbdump user` (run twice same day) | `FsExistsSync` returns true, skips Mkdirp, overwrites files | 🟢 Medium |
 | DD-08 | Filesystem write error | `dbdump user` (read-only disk) | `FsWriteFile` rejects → caught by `.catch` | 🟢 Medium |
@@ -518,7 +478,7 @@ Output:  "dbdump\n1000\n250\ndone\n"
 
 ---
 
-### 2.9 `dbrestore`
+### 2.8 `dbrestore`
 
 #### Purpose
 Restore a MongoDB collection from previously dumped JSON files.
@@ -573,7 +533,7 @@ Fields `_id`, `userId`, `owner` are converted to MongoDB ObjectID **only if** th
 
 ---
 
-### 2.10 `randomsend`
+### 2.9 `randomsend`
 
 #### Purpose
 Manage and execute a gift exchange (Secret Santa) — list participants, edit the participant list, or send randomized assignments via email.
@@ -666,7 +626,7 @@ Output:  "randomsend\n[ { name: 'sky', mail: '...' }, ... ]\ndone\n"  (hoder rem
 
 ---
 
-### 2.11 `resettotal`
+### 2.10 `resettotal`
 
 #### Purpose
 Reset stock portfolio totals — either the `newMid` (new middle-price) array or the `profit` value — for a specific stock exchange.
@@ -739,7 +699,7 @@ resettotal profit bfx       # Reset profit for Bitfinex entries
 
 ---
 
-### 2.12 `updatepassword`
+### 2.11 `updatepassword`
 
 #### Purpose
 Re-encrypt all stored password entries with the current cipher configuration.
@@ -768,7 +728,7 @@ updatepassword
 
 ---
 
-### 2.13 `default` (Help)
+### 2.12 `default` (Help)
 
 #### Purpose
 Display the help text listing all available commands when an unknown/empty command is entered.
@@ -781,7 +741,6 @@ help:
 stock type index mode
 stocklist type
 doc am|jp|tw [time]
-checkdoc
 complete [add]
 dbdump collection
 dbrestore collection
@@ -819,7 +778,7 @@ Also contains commented-out help lines for `drive` and `external`.
 
 ### 3.2 `dbDump` Function (Lines 34–57)
 
-Exported as named export. See [§2.8](#28-dbdump) for detailed coverage.
+Exported as named export. See [§2.7](#27-dbdump) for detailed coverage.
 
 **Key implementation details**:
 - Uses `BACKUP_LIMIT = 1000` as page size for chunked reads.
@@ -829,7 +788,7 @@ Exported as named export. See [§2.8](#28-dbdump) for detailed coverage.
 
 ### 3.3 `dbRestore` Function (Lines 59–89)
 
-See [§2.9](#29-dbrestore) for detailed coverage.
+See [§2.8](#28-dbrestore) for detailed coverage.
 
 **Key implementation details**:
 - Restore path does **not** include date: `{BACKUP_PATH}/{collection}/` (user must manually place files).
@@ -840,7 +799,7 @@ See [§2.9](#29-dbrestore) for detailed coverage.
 
 ### 3.4 `randomSend` Function (Lines 91–162)
 
-See [§2.10](#210-randomsend) for detailed coverage.
+See [§2.9](#29-randomsend) for detailed coverage.
 
 **Key implementation details**:
 - Operates on in-memory `sendList` (reference to `RANDOM_EMAIL` constant array).
@@ -852,7 +811,7 @@ See [§2.10](#210-randomsend) for detailed coverage.
 
 ### 3.5 `resetTotal` Function (Lines 164–195)
 
-See [§2.11](#211-resettotal) for detailed coverage.
+See [§2.10](#210-resettotal) for detailed coverage.
 
 **Key implementation details**:
 - Uses `Object.assign(find, {newMid/profit: {$exists: true}})` which **mutates** the `find` object.
@@ -925,12 +884,10 @@ The `External` import is also commented out (line 11).
 | `stocklist` | `[type]` | — | Exchange API | Console output only |
 | `testdata` | — | `stock`, `total` (write) | — | Test data insertion |
 | `cleanstock` | `[remove]` | `stock` (read/delete) | — | Deletes useless entries if `remove` |
-| `doc` | `<am\|jp\|tw> [time]` | `user` (read), `docUpdate` (write) | Government data APIs, Google Drive | Document download & storage |
-| `checkdoc` | — | `docUpdate` (read) | — | Console output only |
+| `doc` | `<am\|jp\|tw> [time]` | `user` (read) | Government data APIs, Google Drive | Document download & storage |
 | `complete` | `[add]` | `storage` (read/write) | — | MIME tag updates |
 | `dbdump` | `<collection>` | Target collection (read) | — | Filesystem: backup files created |
 | `dbrestore` | `<collection>` | Target collection (write) | — | Filesystem: reads backup files |
-| `randomsend` | `<list\|edit\|send> [param]` | — | Google API (email send) | In-memory list mutation; emails sent |
 | `resettotal` | `<newmid\|profit> <bfx\|twse\|usse>` | `total` (write) | — | Resets `newMid` / `profit` fields |
 | `updatepassword` | — | `password` (write) | — | Re-encrypts all passwords |
 
@@ -968,16 +925,13 @@ The `External` import is also commented out (line 11).
 | DOC-05 | doc | Missing region | `doc` | `undefined` region | 🔴 Critical |
 | DOC-06 | doc | Invalid region | `doc eu` | Depends on `autoDoc` validation | 🟡 High |
 | DOC-07 | doc | No admin users | `doc am` | Empty userlist, likely no-op | 🟢 Medium |
-| CD-01 | checkdoc | Normal execution | `checkdoc` | Logs full `docUpdate` collection | 🟡 High |
-| CD-02 | checkdoc | Empty collection | `checkdoc` | Logs `[]` | 🟢 Medium |
-| CD-03 | checkdoc | DB error | `checkdoc` (DB down) | Error caught | 🟢 Medium |
 | CM-01 | complete | Default mode | `complete` | `completeMimeTag(undefined)` | 🟡 High |
 | CM-02 | complete | Add mode | `complete add` | `completeMimeTag('add')` | 🟡 High |
 | CM-03 | complete | Unknown modifier | `complete delete` | Depends on downstream | 🟢 Medium |
 | DD-01 | dbdump | Valid collection | `dbdump user` | Creates backup files | 🔴 Critical |
 | DD-03 | dbdump | Invalid collection | `dbdump sessions` | `HoError('Collection not find')` | 🔴 Critical |
 | DD-04 | dbdump | Missing arg | `dbdump` | Fails whitelist | 🔴 Critical |
-| DD-05 | dbdump | Empty collection | `dbdump docUpdate` | Folder created, no files | 🟡 High |
+| DD-05 | dbdump | Empty collection | `dbdump user` (empty) | Folder created, no files | 🟡 High |
 | DD-06 | dbdump | Large collection | `dbdump storage` (3500 docs) | 4 chunk files | 🟡 High |
 | DD-09 | dbdump | Date format | `dbdump user` (2026-03-08) | Folder `20260308` | 🟡 High |
 | DR-01 | dbrestore | Valid restore | `dbrestore user` | Inserts non-duplicate docs | 🔴 Critical |

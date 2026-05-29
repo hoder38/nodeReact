@@ -142,7 +142,7 @@ export async function userPWCheck(user, pw) {
 
 ---
 
-## 4. High — Encryption Mode (AES-256-CTR → AES-256-GCM)
+## 4. High — Encryption Mode (AES-256-CTR → AES-256-GCM) — ✅ IMPLEMENTED
 
 ### Problem
 
@@ -273,7 +273,7 @@ This function migrates old-format records (`password.split(':').length === 1`) t
 
 ---
 
-## 7. Medium — Password Generation Strength
+## 7. Medium — Password Generation Strength — ✅ IMPLEMENTED
 
 ### Problem
 
@@ -463,12 +463,13 @@ export function userPWCheck(user, pw) {
 
 ---
 
-## 12. Low — Session Security Hardening
+## 12. Low — Session Security Hardening — ✅ IMPLEMENTED
 
 ### Current State (from OUTLINE.md §7.3)
 
-- Redis-backed sessions with 3-day secure cookies
-- HTTPS-only cookies
+- Redis-backed sessions with 3-day secure, httpOnly cookies
+- `sameSite: 'lax'` for CSRF protection and cascading login compatibility
+- Session regeneration on login to mitigate fixation
 
 ### Recommendation
 
@@ -487,7 +488,7 @@ Upgrading the encryption (§4, §5) and hashing (§3) requires careful migration
 
 1. ✅ Removed `console.log` credential leaks from `password-tool.js` — replaced with pino `log.debug`/`log.info` (§2)
 2. ✅ Migrated `password-router.js` to pino structured logging (§8)
-3. ✅ Removed deprecated `createDecipher` — `updatePasswordCipher` now validates that no legacy records remain instead of migrating (§6)
+3. ✅ Removed deprecated `createDecipher` — migration now uses `decryptLegacyCTR()` + `createDecipheriv` instead of the deprecated API (§6)
 4. ✅ Removed 2FA verification mechanism entirely (§9) — deleted `VERIFYDB`, `/api/user/verify`, frontend verify button, login verify fallback
 
 ### Phase 2: User password hashing upgrade — ✅ IMPLEMENTED
@@ -502,15 +503,14 @@ Upgrading the encryption (§4, §5) and hashing (§3) requires careful migration
 3. ✅ Added `resetpassword <pw>` command to `cmd.js` — resets ALL users to bcrypt hash
 4. ✅ Removed `randomSend` and `checkdoc` commands from `cmd.js`
 
-### Phase 3: Password manager encryption upgrade
+### Phase 3: Password manager encryption upgrade — ✅ IMPLEMENTED
 
-1. **Deploy new encrypt/decrypt** supporting both CTR (legacy read) and GCM (new write).
-2. **Run batch migration**: Modify `updatePasswordCipher` to:
-   a. Decrypt with old key derivation + CTR.
-   b. Re-encrypt with new KDF + GCM.
-   c. Update storage format to include auth tag.
-3. **Remove CTR support** after all records are migrated.
-4. **Verify**: Count records not matching the new `ivHex:authTagHex:ciphertextHex` format.
+1. ✅ `ALGORITHM` changed to `'aes-256-gcm'`, added `ALGORITHM_LEGACY = 'aes-256-ctr'` for backward compat (§4)
+2. ✅ `encrypt()` rewritten: GCM with 12-byte IV, authTag, returns `ivHex(24):authTagHex(32):ciphertextHex`
+3. ✅ `decrypt()` auto-detects format: 3-part → GCM, 2-part → legacy CTR
+4. ✅ `updatePasswordCipher()` rewritten as CTR→GCM batch migration: rejects malformed 1-part records, migrates 2-part CTR to 3-part GCM, builds `$set` per-field independently, prints migration count
+5. ✅ `generatePW` length increased from 12 to 16 characters (§7)
+6. ✅ Session hardening: `httpOnly: true`, `sameSite: 'lax'`, session regeneration on login (§12)
 
 ### Storage format evolution
 
@@ -528,19 +528,19 @@ v3 (target):   ivHex:authTagHex:ciphertextHex    (createCipheriv, AES-256-GCM + 
 |---|-------|----------|--------|---------|
 | 1 | console.log leaks encrypted passwords | 🔴 Critical | Low | [§2](#2-critical--credential-leaks-via-consolelog) |
 | 2 | MD5 user password hashing | 🔴 Critical | Medium | [§3](#3-critical--user-password-hashing-md5--bcryptargon2) |
-| 3 | AES-256-CTR lacks authentication | 🟠 High | Medium | [§4](#4-high--encryption-mode-aes-256-ctr--aes-256-gcm) |
+| 3 | ~~AES-256-CTR lacks authentication~~ | ~~🟠 High~~ | ~~Medium~~ | [§4](#4-high--encryption-mode-aes-256-ctr--aes-256-gcm) — **IMPLEMENTED** |
 | 4 | No key derivation function | 🟠 High | Medium | [§5](#5-high--key-derivation-zero-pad--proper-kdf) |
 | 5 | Deprecated createDecipher API | 🟠 High | Low | [§6](#6-high--deprecated-createdecipher-in-migration-code) |
-| 6 | Weak password generation defaults | 🟡 Medium | Low | [§7](#7-medium--password-generation-strength) |
+| 6 | ~~Weak password generation defaults~~ | ~~🟡 Medium~~ | ~~Low~~ | [§7](#7-medium--password-generation-strength) — **IMPLEMENTED** |
 | 7 | Unmigrated logging (console.log) | 🟡 Medium | Low | [§8](#8-medium--logging-migration-consolelog--pino) |
 | 8 | ~~2FA: 4-digit code, no rate limit~~ | ~~🟡 Medium~~ | ~~Medium~~ | [§9](#9-medium--2fa-improvements) — **REMOVED** |
 | 9 | prePassword history depth of 1 | 🔵 Low | Low | [§10](#10-low--prepassword-history-mechanism) |
 | 10 | userPWCheck in-memory, no brute-force limit | 🔵 Low | Medium | [§11](#11-low--userpwcheck-timing--session-scope) |
-| 11 | Session cookie hardening | 🔵 Low | Low | [§12](#12-low--session-security-hardening) |
+| 11 | ~~Session cookie hardening~~ | ~~🔵 Low~~ | ~~Low~~ | [§12](#12-low--session-security-hardening) — **IMPLEMENTED** |
 
 ---
 
-> **Document Version**: 1.1  
-> **Created**: 2026-05-28  
-> **Updated**: 2026-05-29 — Phase 1 implemented, §9 (2FA) removed  
+> **Document Version**: 1.3
+> **Created**: 2026-05-28
+> **Updated**: 2026-06-01 — Phase 3 implemented (§4 GCM, §7 16-char passwords, §12 session hardening)
 > **Source Analysis**: `password-tool.js` (324 lines), `password-router.js` (135 lines), `utility.js:109-118` (`userPWCheck`), OUTLINE.md §7, PASSWORD-TOOL.md

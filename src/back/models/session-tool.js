@@ -11,6 +11,8 @@ export default function (express) {
             cookie: {
                 maxAge: 86400 * 1000 * 3,
                 secure: true,
+                httpOnly: true,
+                sameSite: 'lax',
             },
             store: new redisStore({
                 client: Redis.createClient(SESS_PORT(ENV_TYPE), SESS_IP(ENV_TYPE), {auth_pass: SESS_PWD}),

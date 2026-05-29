@@ -34,7 +34,7 @@
 | `GAME_LIST`, `GAME_LIST_CH` | `constants.js` | Game genre translations |
 | `MUSIC_LIST`, `MUSIC_LIST_WEB` | `constants.js` | Music streaming platforms |
 | `CACHE_EXPIRE` | `constants.js` | Redis cache TTL (seconds) |
-| `STORAGEDB`, `DOCDB` | `constants.js` | MongoDB collection names |
+| `STORAGEDB` | `constants.js` | MongoDB collection name |
 | `MONTH_NAMES`, `MONTH_SHORTS` | `constants.js` | Date parsing utilities |
 
 ### Module Architecture
@@ -757,7 +757,6 @@ The module contains numerous internal helper functions not exported but critical
 
 | Function | Purpose |
 |----------|---------|
-| `updateDocDate()` | Updates document date in `DOCDB` for tracking last scrape |
 | `findTag()` | DOM traversal utility (from `utility.js`) |
 | `toValidName()` | Sanitizes filenames (from `utility.js`) |
 | `normalize()` | Tag normalization (from `tag-tool.js`) |
