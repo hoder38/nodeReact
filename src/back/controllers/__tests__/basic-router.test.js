@@ -89,7 +89,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
   USERDB: 'user',
-  VERIFYDB: 'verify',
+ 
   STATIC_PATH: '/test/public',
   RE_WEBURL: /^https?:\/\//,
   QUERY_LIMIT: 20,

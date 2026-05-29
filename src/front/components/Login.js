@@ -20,7 +20,7 @@ class Login extends React.Component {
         this.setState(this._input.getValue())
     }
     _handleSubmit = () => {
-        if (isValidString(this.state.username, 'name') && (isValidString(this.state.password, 'passwd') || isValidString(this.state.password, 'verify'))) {
+        if (isValidString(this.state.username, 'name') && isValidString(this.state.password, 'passwd')) {
             doLogin(this.state.username, this.state.password)
             .then(() => {
                 this.setState(this._input.initValue())

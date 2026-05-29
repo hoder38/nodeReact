@@ -57,18 +57,6 @@ describe('isValidString', () => {
     });
   });
 
-  describe('type: verify', () => {
-    test('valid 4-digit codes', () => {
-      expect(isValidString('1234', 'verify')).toBeTruthy();
-      expect(isValidString('0000', 'verify')).toBeTruthy();
-    });
-    test('invalid codes', () => {
-      expect(isValidString('123', 'verify')).toBeFalsy();
-      expect(isValidString('12345', 'verify')).toBeFalsy();
-      expect(isValidString('abcd', 'verify')).toBeFalsy();
-    });
-  });
-
   describe('type: altpwd', () => {
     test('valid alt passwords', () => {
       expect(isValidString('ab', 'altpwd')).toBeTruthy();

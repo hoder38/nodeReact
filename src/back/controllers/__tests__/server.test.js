@@ -122,7 +122,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   DEV: 'dev',
   USERDB: 'user',
   STORAGEDB: 'storage',
-  VERIFYDB: 'verify',
+ 
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
   DOCDB: 'docUpdate',

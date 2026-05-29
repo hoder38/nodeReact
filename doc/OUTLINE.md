@@ -155,7 +155,7 @@
 |--------|-------|---------------|
 | **login-router** | `/api/login`, `/api/logout` | POST login (passport local), GET logout |
 | **basic-router** | `/api/getuser`, `/api/testLogin`, `/api/getPath` | User info, auth test, session path |
-| **user-router** | `/api/user/act/:uid?`, `/api/user/verify` | CRUD users, 2FA verification codes |
+| **user-router** | `/api/user/act/:uid?` | CRUD users |
 | **storage-router** | `/api/storage/*` | File listing, metadata, tag queries |
 | **password-router** | `/api/password/*` | Encrypted password CRUD, decrypt, generate |
 | **stock-router** | `/api/stock/*` | Stock data, P/E ratios, portfolio totals |
@@ -374,7 +374,6 @@ Key API helper functions:
 | `stock` | Stock entries | type, index, per, tags, important | 5 compound indexes |
 | `stockUser` | User-stock prefs | userId, name, mtime | `userId_1_name_1`, `userId_1_mtime_1` |
 | `docUpdate` | Document sync status | — | — |
-| `verify` | 2FA verification codes | — | — |
 | `total` | Stock/crypto portfolio totals, trading state, sizing inputs | owner, index, name, type, setype/sType, amount, count, pricecost, web, mid, times, mul, extrem, metrics | — |
 
 - **TOTALDB note (2026-05-26)**: `extrem` stores the `calStair` daily swing percentile, and `metrics` stores backtest outputs such as `winRate`, `avgWin`, `avgLoss`, `profitFactor`, and related fields. `recur_web` now propagates `web.metrics` from STOCKDB into TOTALDB so scheduled trading logic can reuse them.
@@ -413,7 +412,6 @@ Browser                    Main Server              File Server
    │                          │  passport.authenticate  │
    │                          │  (local strategy)       │
    │                          │  MD5 hash compare       │
-   │                          │  OR 4-digit verify code │
    │  ◄── {loginOK, url} ────│                         │
    │                          │                         │
    │  POST /f/api/login       │                         │
@@ -436,7 +434,6 @@ Browser                    Main Server              File Server
 
 - **Session**: Redis-backed, 3-day HTTPS-only secure cookies
 - **Password storage**: MD5 hash (user auth), AES-256-CTR (password manager)
-- **2FA**: 4-digit verification code (185s expiry) via `/api/user/verify`
 - **Nginx auth sub-request**: `/auth` endpoint for file download authorization
 - **CORS**: Explicit `Access-Control-Allow-Credentials` on file server
 - **SSL/TLS**: Let's Encrypt certificates, TLSv1/1.1/1.2
@@ -526,7 +523,7 @@ File Server (WSS /f)
 
 | Module | File(s) | Test Focus | Priority |
 |--------|---------|-----------|----------|
-| **Validation** | `util/utility.js` | `isValidString()` for all types (name, passwd, verify, url, email, int, perm, uid, desc) | 🔴 Critical |
+| **Validation** | `util/utility.js` | `isValidString()` for all types (name, passwd, url, email, int, perm, uid, desc) | 🔴 Critical |
 | **Auth Helpers** | `util/utility.js` | `checkAdmin()`, `userPWCheck()`, `checkLogin()` | 🔴 Critical |
 | **Error Handling** | `util/utility.js` | `HoError` construction, `handleError()` behavior | 🟡 High |
 | **File Type Detection** | `util/mime.js` | `extType()` for all 60+ extensions, edge cases | 🔴 Critical |
@@ -545,7 +542,7 @@ File Server (WSS /f)
 
 | Scope | Test Focus | Dependencies |
 |-------|-----------|-------------|
-| **Authentication** | Login/logout flow, session creation, 2FA verification, cascading login | MongoDB, Redis |
+| **Authentication** | Login/logout flow, session creation, cascading login | MongoDB, Redis |
 | **User CRUD** | Create/read/update/delete users, permission enforcement | MongoDB |
 | **Password Manager** | CRUD + encryption round-trip + password generation | MongoDB, crypto |
 | **Storage Queries** | Tag-based search, pagination, sort, bookmarks, parent categories | MongoDB |
@@ -591,7 +588,7 @@ File Server (WSS /f)
 
 | Area | Test Cases |
 |------|-----------|
-| **Authentication** | Invalid credentials, session expiry, concurrent sessions, 2FA bypass attempts |
+| **Authentication** | Invalid credentials, session expiry, concurrent sessions |
 | **Authorization** | Privilege escalation (perm 0 → admin routes), owner-only operations |
 | **Input Validation** | SQL/NoSQL injection in search, XSS in names/tags, path traversal in file ops |
 | **Encryption** | Password decryption with wrong key, salt tampering, algorithm downgrade |

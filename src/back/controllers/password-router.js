@@ -4,7 +4,9 @@ import TagTool from '../models/tag-tool.js'
 import PasswordTool from '../models/password-tool.js'
 import { checkLogin, handleError, getPasswordItem } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'
+import createLogger from '../util/logger.js'
 
+const log = createLogger('password-router');
 const router = Express.Router();
 const PasswordTagTool = TagTool(PASSWORDDB);
 
@@ -13,7 +15,7 @@ router.use(function(req, res, next) {
 });
 
 router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('password');
+    log.debug('password');
     PasswordTagTool.tagQuery(Number(req.params.page), req.params.name, req.params.exactly === 'true' ? true : false, Number(req.params.index), req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getPasswordItem(req.user, result.items),
         parentList: result.parentList,
@@ -23,7 +25,7 @@ router.get('/get/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:na
 });
 
 router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d+)/:name?/:exactly(true|false)?/:index(\\d+)?', function(req, res, next) {
-    console.log('password get single');
+    log.debug('password get single');
     const page = Number(req.params.page);
     if (page === 0 && req.params.name) {
         PasswordTagTool.searchTags(req.session).resetArray();
@@ -37,7 +39,7 @@ router.get('/getSingle/:sortName(name|mtime|count)/:sortType(desc|asc)/:page(\\d
 });
 
 router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(req, res, next){
-    console.log('password reset');
+    log.debug('password reset');
     PasswordTagTool.resetQuery(req.params.sortName, req.params.sortType, req.user, req.session).then(result => res.json({
         itemList: getPasswordItem(req.user, result.items),
         parentList: result.parentList,
@@ -45,12 +47,12 @@ router.get('/reset/:sortName(name|mtime|count)/:sortType(desc|asc)', function(re
 });
 
 router.get('/single/:uid', function(req, res, next) {
-    console.log('password single');
+    log.debug('password single');
     PasswordTagTool.singleQuery(req.params.uid, req.user, req.session).then(result => result.empty ? res.json(result) : res.json({item: getPasswordItem(req.user, [result.item])})).catch(err => handleError(err, next));
 });
 
 router.post('/getOptionTag', function(req, res,next) {
-    console.log('password option tag');
+    log.debug('password option tag');
     let optionList = new Set();
     req.body.tags.length > 0 ? PasswordTagTool.getRelativeTag(req.body.tags, req.user, [...optionList]).then(relative => {
         const reli = relative.length < 5 ? relative.length : 5;
@@ -62,7 +64,7 @@ router.post('/getOptionTag', function(req, res,next) {
 });
 
 router.put('/addTag/:tag', function(req, res, next) {
-    console.log('password addTag');
+    log.debug('password addTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : PasswordTagTool.addTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -76,7 +78,7 @@ router.put('/addTag/:tag', function(req, res, next) {
 });
 
 router.put('/delTag/:tag', function(req, res, next) {
-    console.log('password delTag');
+    log.debug('password delTag');
     const recur = index => (index >= req.body.uids.length) ? Promise.resolve(res.json({apiOK: true})) : PasswordTagTool.delTag(req.body.uids[index], req.params.tag, req.user, false).then(result => {
         if (result.id) {
             sendWs({
@@ -90,7 +92,7 @@ router.put('/delTag/:tag', function(req, res, next) {
 });
 
 router.post('/newRow', function(req, res, next) {
-    console.log('new password');
+    log.debug('new password');
     PasswordTool.newRow(req.body, req.user).then(result => {
         sendWs({
             type: 'password',
@@ -101,7 +103,7 @@ router.post('/newRow', function(req, res, next) {
 });
 
 router.put('/editRow/:uid', function(req, res, next) {
-    console.log('edit password');
+    log.debug('edit password');
     PasswordTool.editRow(req.params.uid, req.body, req.user, req.session).then(() => {
         sendWs({
             type: 'password',
@@ -112,7 +114,7 @@ router.put('/editRow/:uid', function(req, res, next) {
 });
 
 router.put('/delRow/:uid', function(req, res, next) {
-    console.log('del password');
+    log.debug('del password');
     PasswordTool.delRow(req.params.uid, req.body.userPW, req.user).then(() => {
         sendWs({
             type: 'password',
@@ -123,12 +125,12 @@ router.put('/delRow/:uid', function(req, res, next) {
 });
 
 router.put('/getPW/:uid/:type?', function(req, res, next) {
-    console.log('get password');
+    log.debug('get password');
     PasswordTool.getPassword(req.params.uid, req.body.userPW, req.user, req.session, req.params.type).then(result => res.json({password: result.password})).catch(err => handleError(err, next));
 });
 
 router.get('/generate/:type(\\d)', function(req, res, next) {
-    console.log('generate password');
+    log.debug('generate password');
     res.json({password: PasswordTool.generatePW(Number(req.params.type))});
 });
 

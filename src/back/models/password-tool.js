@@ -4,8 +4,11 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { isValidString, handleError, HoError, userPWCheck } from '../util/utility.js'
 import crypto from 'crypto'
-const { createCipheriv, createDecipheriv, randomBytes, createDecipher } = crypto;
+const { createCipheriv, createDecipheriv, randomBytes } = crypto;
 import PasswordGenerator from 'password-generator'
+import createLogger from '../util/logger.js'
+
+const log = createLogger('password');
 
 const PasswordTagTool = TagTool(PASSWORDDB);
 
@@ -88,8 +91,7 @@ export default {
             tags: setArr,
             important,
         }).then(item => {
-            console.log(item);
-            console.log('save end');
+            log.debug({ id: item[0]._id }, 'password row saved');
             return {id: item[0]._id};
         });
     },
@@ -191,7 +193,7 @@ export default {
                 prePassword: pws[0].password,
                 utime: Math.round(new Date().getTime() / 1000),
             } : {});
-            console.log(update_data);
+            log.debug({ id: pws[0]._id, fields: Object.keys(update_data) }, 'password row updated');
             PasswordTagTool.setLatest(pws[0]._id, session).catch(err => handleError(err, 'Set latest'));
             return Mongo('update', PASSWORDDB, {
                 _id: pws[0]._id,
@@ -287,38 +289,12 @@ function decrypt(text) {
 }
 
 export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(items => {
-    const recur_cipher = index => {
-        if (index >= items.length) {
-            return Promise.resolve();
-        } else {
-            let newPass = null;
-            let newPrePass = null;
-            if (items[index].password.split(':').length === 1) {
-                const decipher = createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-                let dec = decipher.update(items[index].password, 'hex', 'utf8');
-                dec += decipher.final('utf8');
-                newPass = dec.substr(0, dec.length - 4);
-            }
-            if (items[index].prePassword.split(':').length === 1) {
-                const decipher = createDecipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-                let dec = decipher.update(items[index].prePassword, 'hex', 'utf8');
-                dec += decipher.final('utf8');
-                newPrePass = dec.substr(0, dec.length - 4);
-            }
-            if (newPass || newPrePass) {
-                newPass = newPass ? encrypt(newPass) : items[index].password;
-                newPrePass = newPrePass ? encrypt(newPrePass) : items[index].prePassword;
-                return Mongo('update', PASSWORDDB, {_id: items[index]._id}, {$set: {
-                    password: newPass,
-                    prePassword: newPrePass,
-                }}).then(item => {
-                    console.log(item);
-                    return recur_cipher(index + 1);
-                })
-            } else {
-                return recur_cipher(index + 1);
-            }
-        }
+    const legacyIds = items
+        .filter(item => item.password.split(':').length === 1 || item.prePassword.split(':').length === 1)
+        .map(item => item._id);
+    if (legacyIds.length > 0) {
+        return handleError(new HoError(`found ${legacyIds.length} legacy cipher record(s): ${legacyIds.join(', ')}`));
     }
-    return recur_cipher(0)
+    log.info({ count: items.length }, 'all password records use current cipher format');
+    return Promise.resolve();
 });

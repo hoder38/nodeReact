@@ -298,22 +298,6 @@ describe('isValidString', () => {
         });
     });
 
-    // ── verify ──
-    describe('type=verify', () => {
-        test('4-digit code', () => {
-            expect(isValidString('1234', 'verify')).toBe('1234');
-        });
-        test('3 digits invalid', () => {
-            expect(isValidString('123', 'verify')).toBe(false);
-        });
-        test('5 digits invalid', () => {
-            expect(isValidString('12345', 'verify')).toBe(false);
-        });
-        test('letters invalid', () => {
-            expect(isValidString('abcd', 'verify')).toBe(false);
-        });
-    });
-
     // ── altpwd ──
     describe('type=altpwd', () => {
         test('valid alphanumeric 2-char', () => {

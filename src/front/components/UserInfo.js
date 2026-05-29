@@ -100,20 +100,12 @@ class UserInfo extends React.Component {
             }
         }), `Would you sure to delete USER: ${this.props.user.name} ?`)
     }
-    _showCode = () => {
-        api('/api/user/verify').then(info => alert(info.verify)).catch(err => this.props.addalert(err));
-    }
     render() {
         const editClick = () => {
             this.setState(Object.assign({
                 edit: !this.state.edit
             }, this._input.initValue(this.props.user)))
         }
-        const verify_btn = this.props.user.verify ? (
-            <button className="btn btn-primary" type="button" onClick={this._showCode}>
-                <i className="glyphicon glyphicon-barcode"></i>
-            </button>
-        ) : '';
         const edit_btn = this.props.user.newable ? '' : (
             <button className="btn btn-warning" type="button" onClick={editClick}>
                 <i className={this.state.edit ? 'glyphicon glyphicon-check' : 'glyphicon glyphicon-edit'}></i>
@@ -143,7 +135,6 @@ class UserInfo extends React.Component {
                         <div className="panel-body">
                             {edit_btn}
                             {remove_btn}
-                            {verify_btn}
                         </div>
                         <div className="panel-footer">
                             <div className="row">

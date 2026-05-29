@@ -187,28 +187,7 @@ describe('Login', () => {
     expect(addalert).toHaveBeenCalledWith('user name or password is not vaild!!!');
   });
 
-  test('submit: username valid, passwd falsy, verify truthy → doLogin path', async () => {
-    testLogin.mockRejectedValue('no');
-    isValidString.mockImplementation((val, type) => {
-      if (type === 'name') return 'ok';
-      if (type === 'passwd') return '';
-      if (type === 'verify') return 'ok';
-      return '';
-    });
-    doLogin.mockResolvedValue();
-
-    let container;
-    await act(async () => {
-      const r = render(<Login addalert={addalert} />);
-      container = r.container;
-    });
-    await act(async () => { fireEvent.submit(container.querySelector('form')); });
-
-    expect(doLogin).toHaveBeenCalled();
-    expect(history.goBack).toHaveBeenCalled();
-  });
-
-  test('submit: username valid, passwd+verify falsy → else branch', async () => {
+  test('submit: username valid, passwd falsy → else branch', async () => {
     testLogin.mockRejectedValue('no');
     isValidString.mockImplementation((val, type) => {
       if (type === 'name') return 'ok';

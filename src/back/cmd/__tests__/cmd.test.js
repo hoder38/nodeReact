@@ -99,7 +99,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   // Other constants utility.js needs
   RE_WEBURL: /^(url:)?(?:https?:\/\/).+/,
   STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
-  VERIFYDB: 'verify',
+ 
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [],
   STOCK_PARENT: [],

@@ -379,29 +379,11 @@ log.debug('password query');
 
 ---
 
-## 9. Medium — 2FA Improvements
+## 9. ~~Medium — 2FA Improvements~~ (REMOVED)
 
-### Current Implementation
-
-Per [OUTLINE.md §7.3](../../OUTLINE.md):
-- 4-digit verification code with 185-second expiry
-- Delivered via `/api/user/verify` endpoint
-- Used as alternative login method
-
-### Issues
-
-1. **4-digit code**: Only 10,000 possibilities — susceptible to brute force without rate limiting.
-2. **185-second window**: Relatively long; increases exposure to interception.
-3. **No rate limiting documented**: An attacker could attempt all 10,000 codes within the expiry window.
-4. **Delivery mechanism unclear**: If sent via unencrypted channel, interception is possible.
-
-### Recommendation
-
-1. **Increase to 6 digits** (1,000,000 possibilities) — standard for TOTP (RFC 6238).
-2. **Add rate limiting**: Maximum 5 attempts per code issuance; lock account after 3 failed code issuances.
-3. **Reduce expiry to 90 seconds**: Shorter window reduces exposure.
-4. **Consider TOTP**: Replace custom codes with standard TOTP (e.g., `otpauth://` QR codes for authenticator apps like Google Authenticator, Authy). Libraries: `otplib` or `speakeasy`.
-5. **Document delivery channel**: Clarify how codes reach users (email, SMS, push) and ensure the channel is encrypted.
+> **Status**: The entire 2FA verification mechanism was removed from the codebase as of Phase 1 implementation.
+> The 4-digit verify code feature (`VERIFYDB`, `/api/user/verify`, frontend verify button) has been
+> deleted from both frontend and backend. This section is no longer applicable.
 
 ---
 
@@ -501,11 +483,12 @@ export function userPWCheck(user, pw) {
 
 Upgrading the encryption (§4, §5) and hashing (§3) requires careful migration. Recommended order:
 
-### Phase 1: Immediate fixes (no data migration)
+### Phase 1: Immediate fixes (no data migration) — ✅ IMPLEMENTED
 
-1. ✅ Remove `console.log` credential leaks from `password-tool.js` (§2)
-2. ✅ Migrate `password-router.js` to pino structured logging (§8)
-3. ✅ Remove deprecated `createDecipher` if migration is complete (§6)
+1. ✅ Removed `console.log` credential leaks from `password-tool.js` — replaced with pino `log.debug`/`log.info` (§2)
+2. ✅ Migrated `password-router.js` to pino structured logging (§8)
+3. ✅ Removed deprecated `createDecipher` — `updatePasswordCipher` now validates that no legacy records remain instead of migrating (§6)
+4. ✅ Removed 2FA verification mechanism entirely (§9) — deleted `VERIFYDB`, `/api/user/verify`, frontend verify button, login verify fallback
 
 ### Phase 2: User password hashing upgrade
 
@@ -545,13 +528,14 @@ v3 (target):   ivHex:authTagHex:ciphertextHex    (createCipheriv, AES-256-GCM + 
 | 5 | Deprecated createDecipher API | 🟠 High | Low | [§6](#6-high--deprecated-createdecipher-in-migration-code) |
 | 6 | Weak password generation defaults | 🟡 Medium | Low | [§7](#7-medium--password-generation-strength) |
 | 7 | Unmigrated logging (console.log) | 🟡 Medium | Low | [§8](#8-medium--logging-migration-consolelog--pino) |
-| 8 | 2FA: 4-digit code, no rate limit | 🟡 Medium | Medium | [§9](#9-medium--2fa-improvements) |
+| 8 | ~~2FA: 4-digit code, no rate limit~~ | ~~🟡 Medium~~ | ~~Medium~~ | [§9](#9-medium--2fa-improvements) — **REMOVED** |
 | 9 | prePassword history depth of 1 | 🔵 Low | Low | [§10](#10-low--prepassword-history-mechanism) |
 | 10 | userPWCheck in-memory, no brute-force limit | 🔵 Low | Medium | [§11](#11-low--userpwcheck-timing--session-scope) |
 | 11 | Session cookie hardening | 🔵 Low | Low | [§12](#12-low--session-security-hardening) |
 
 ---
 
-> **Document Version**: 1.0  
+> **Document Version**: 1.1  
 > **Created**: 2026-05-28  
+> **Updated**: 2026-05-29 — Phase 1 implemented, §9 (2FA) removed  
 > **Source Analysis**: `password-tool.js` (324 lines), `password-router.js` (135 lines), `utility.js:109-118` (`userPWCheck`), OUTLINE.md §7, PASSWORD-TOOL.md

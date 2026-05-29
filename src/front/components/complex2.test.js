@@ -1567,7 +1567,7 @@ describe('UserInfo', () => {
   const defProps = (userOverrides = {}) => ({
     user: {
       id: 'u1', name: 'user1', auto: '', perm: 0, desc: 'desc',
-      unDay: 30, unHit: 10, newable: false, delable: true, verify: false,
+      unDay: 30, unHit: 10, newable: false, delable: true,
       editAuto: true, ...userOverrides,
     },
     addalert: jest.fn(),
@@ -1586,16 +1586,6 @@ describe('UserInfo', () => {
   test('newable user starts in edit mode', () => {
     const { container } = render(<UserInfo {...defProps({ newable: true })} />);
     expect(container.querySelector('.glyphicon-ok')).toBeTruthy();
-  });
-
-  test('verify button shows when user.verify truthy', () => {
-    const { container } = render(<UserInfo {...defProps({ verify: true })} />);
-    expect(container.querySelector('.glyphicon-barcode')).toBeTruthy();
-  });
-
-  test('no verify button when user.verify falsy', () => {
-    const { container } = render(<UserInfo {...defProps({ verify: false })} />);
-    expect(container.querySelector('.glyphicon-barcode')).toBeFalsy();
   });
 
   test('edit toggle shows check icon', () => {
@@ -1796,29 +1786,6 @@ describe('UserInfo', () => {
       await flushPromises();
     });
     expect(props.addalert).toHaveBeenCalledWith('del err');
-  });
-
-  test('_showCode: api success calls alert', async () => {
-    window.alert = jest.fn();
-    api.mockResolvedValueOnce({ verify: 'code123' });
-    const props = defProps({ verify: true });
-    const { container } = render(<UserInfo {...props} />);
-    await act(async () => {
-      fireEvent.click(container.querySelector('.glyphicon-barcode').parentElement);
-      await flushPromises();
-    });
-    expect(window.alert).toHaveBeenCalledWith('code123');
-  });
-
-  test('_showCode: api error', async () => {
-    api.mockRejectedValueOnce('verify err');
-    const props = defProps({ verify: true });
-    const { container } = render(<UserInfo {...props} />);
-    await act(async () => {
-      fireEvent.click(container.querySelector('.glyphicon-barcode').parentElement);
-      await flushPromises();
-    });
-    expect(props.addalert).toHaveBeenCalledWith('verify err');
   });
 
   test('_handleChange updates state', () => {

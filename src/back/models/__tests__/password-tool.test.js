@@ -62,6 +62,10 @@ jest.unstable_mockModule('password-generator', () => ({
     default: mockPasswordGenerator,
 }));
 
+jest.unstable_mockModule('../../util/logger.js', () => ({
+    default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
+}));
+
 const mod = await import('../../models/password-tool.js');
 const PasswordTool = mod.default;
 const { updatePasswordCipher } = mod;
@@ -538,76 +542,49 @@ describe('password-tool.js', () => {
             expect(mockMongo).toHaveBeenCalledWith('find', PASSWORDDB, {});
         });
 
-        test('already migrated items → skips update', async () => {
+        test('all migrated items → resolves without error', async () => {
             mockMongo.mockResolvedValue([
                 { _id: 'r1', password: 'aa:bb', prePassword: 'cc:dd' },
             ]);
             await updatePasswordCipher();
-            // Only the find call, no update
             expect(mockMongo).toHaveBeenCalledTimes(1);
         });
 
-        test('legacy password field → re-encrypts and updates', async () => {
-            const cryptoMod = await import('crypto'); const createCipher = cryptoMod.default.createCipher;
-            const cipher = createCipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-            let enc = cipher.update('mypass' + 'salt', 'utf8', 'hex');
-            enc += cipher.final('hex');
-            const cipherPre = createCipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-            let encPre = cipherPre.update('oldpass' + 'salt', 'utf8', 'hex');
-            encPre += cipherPre.final('hex');
-
-            mockMongo.mockResolvedValueOnce([
-                { _id: 'r1', password: enc, prePassword: encPre },
-            ]).mockResolvedValue({ ok: 1 });
-
-            await updatePasswordCipher();
-            expect(mockMongo).toHaveBeenCalledWith('update', PASSWORDDB, { _id: 'r1' }, expect.objectContaining({
-                $set: expect.objectContaining({
-                    password: expect.stringContaining(':'),
-                    prePassword: expect.stringContaining(':'),
-                }),
-            }));
+        test('legacy password field (no colon) → rejects with error listing IDs', async () => {
+            mockMongo.mockResolvedValue([
+                { _id: 'r1', password: 'deadbeef', prePassword: 'cc:dd' },
+            ]);
+            await expect(updatePasswordCipher()).rejects.toMatchObject({
+                message: expect.stringContaining('r1'),
+            });
         });
 
-        test('only password legacy, prePassword already migrated → re-encrypts password only', async () => {
-            const cryptoMod = await import('crypto'); const createCipher = cryptoMod.default.createCipher;
-            const cipher = createCipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-            let enc = cipher.update('mypass' + 'salt', 'utf8', 'hex');
-            enc += cipher.final('hex');
-
-            mockMongo.mockResolvedValueOnce([
-                { _id: 'r1', password: enc, prePassword: 'aa:bb' },
-            ]).mockResolvedValue({ ok: 1 });
-
-            await updatePasswordCipher();
-            const updateCall = mockMongo.mock.calls[1];
-            expect(updateCall[3].$set.password).toContain(':');
-            expect(updateCall[3].$set.prePassword).toBe('aa:bb');
+        test('legacy prePassword field (no colon) → rejects with error listing IDs', async () => {
+            mockMongo.mockResolvedValue([
+                { _id: 'r1', password: 'aa:bb', prePassword: 'deadbeef' },
+            ]);
+            await expect(updatePasswordCipher()).rejects.toMatchObject({
+                message: expect.stringContaining('r1'),
+            });
         });
 
-        test('multiple items → processes recursively', async () => {
+        test('multiple items all migrated → resolves', async () => {
             mockMongo.mockResolvedValue([
                 { _id: 'r1', password: 'aa:bb', prePassword: 'cc:dd' },
                 { _id: 'r2', password: 'ee:ff', prePassword: 'gg:hh' },
             ]);
             await updatePasswordCipher();
-            // Only find call — both already migrated
             expect(mockMongo).toHaveBeenCalledTimes(1);
         });
 
-        test('mixed: first legacy + second migrated → updates first only', async () => {
-            const cryptoMod = await import('crypto'); const createCipher = cryptoMod.default.createCipher;
-            const cipher = createCipher(ALGORITHM, PASSWORD_PRIVATE_KEY);
-            let enc = cipher.update('test' + 'salt', 'utf8', 'hex');
-            enc += cipher.final('hex');
-
-            mockMongo.mockResolvedValueOnce([
-                { _id: 'r1', password: enc, prePassword: enc },
+        test('mixed: one legacy + one migrated → rejects listing legacy ID only', async () => {
+            mockMongo.mockResolvedValue([
+                { _id: 'r1', password: 'deadbeef', prePassword: 'deadbeef' },
                 { _id: 'r2', password: 'aa:bb', prePassword: 'cc:dd' },
-            ]).mockResolvedValue({ ok: 1 });
-
-            await updatePasswordCipher();
-            expect(mockMongo).toHaveBeenCalledWith('update', PASSWORDDB, { _id: 'r1' }, expect.any(Object));
+            ]);
+            await expect(updatePasswordCipher()).rejects.toMatchObject({
+                message: expect.stringContaining('1 legacy'),
+            });
         });
     });
 });

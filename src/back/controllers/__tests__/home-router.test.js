@@ -57,7 +57,7 @@ jest.unstable_mockModule('../../config.js', () => ({
 }));
 
 jest.unstable_mockModule('../../constants.js', () => ({
-  STORAGEDB: 'storage', USERDB: 'user', VERIFYDB: 'verify',
+  STORAGEDB: 'storage', USERDB: 'user',
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
 }));
 

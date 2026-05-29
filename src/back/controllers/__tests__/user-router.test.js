@@ -6,7 +6,6 @@
  *   PUT  /act/:uid?   — edit user (auto, kindle, desc, perm, unDay, unHit, newPwd, name)
  *   POST /act/:uid?   — add new user (admin only)
  *   PUT  /del/:uid    — delete user (admin only, cannot delete owner)
- *   GET  /verify      — get/create 2FA verification code
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
 import { createHash } from 'crypto';
@@ -53,7 +52,7 @@ jest.unstable_mockModule('../../config.js', () => ({
 }));
 
 jest.unstable_mockModule('../../constants.js', () => ({
-  USERDB: 'user', VERIFYDB: 'verify', STORAGEDB: 'storage',
+  USERDB: 'user', STORAGEDB: 'storage',
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
@@ -195,11 +194,6 @@ describe('user-router.js', () => {
       const res = await request(app).put('/del/aabbccddeeff001122334455');
       expect(res.status).toBe(401);
     });
-
-    test('unauthenticated GET /verify returns 401', async () => {
-      const res = await request(app).get('/verify');
-      expect(res.status).toBe(401);
-    });
   });
 
   // ---------------------------------------------------------------
@@ -213,7 +207,6 @@ describe('user-router.js', () => {
       expect(res.body.user_info).toHaveLength(1);
       expect(res.body.user_info[0].name).toBe('user1');
       expect(res.body.user_info[0].newable).toBe(false);
-      expect(res.body.user_info[0].verify).toBe(true);
     });
 
     test('regular user info includes formatted auto and kindle', async () => {
@@ -249,13 +242,12 @@ describe('user-router.js', () => {
       expect(res.body.user_info.length).toBe(4); // template + 3 users
     });
 
-    test('admin list: owner user (perm=1) has unDay/unHit/verify, not delable', async () => {
+    test('admin list: owner user (perm=1) has unDay/unHit, not delable', async () => {
       mockMongo.mockResolvedValueOnce([ADMIN]);
       const res = await request(app).get('/act').set('x-test-user', u(ADMIN));
       const adminEntry = res.body.user_info[1]; // index 0 is template
       expect(adminEntry.unDay).toBe(5);
       expect(adminEntry.unHit).toBe(10);
-      expect(adminEntry.verify).toBe(true);
       expect(adminEntry.delable).toBeUndefined();
     });
 
@@ -757,44 +749,6 @@ describe('user-router.js', () => {
         .set('x-test-user', u(ADMIN)).send({ userPW: 'x' });
       expect(res.status).toBe(400);
       expect(res.text).toContain('passwd');
-    });
-  });
-
-  // ---------------------------------------------------------------
-  // GET /verify — 2FA code
-  // ---------------------------------------------------------------
-  describe('GET /verify — 2FA verification code', () => {
-    test('returns existing verify code if one exists', async () => {
-      mockMongo.mockResolvedValueOnce({}); // deleteMany expired
-      mockMongo.mockResolvedValueOnce([{ verify: '1234', uid: ADMIN._id }]); // find existing
-      const res = await request(app).get('/verify').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body.verify).toBe('1234');
-    });
-
-    test('creates new verify code if none exists', async () => {
-      mockMongo.mockResolvedValueOnce({}); // deleteMany
-      mockMongo.mockResolvedValueOnce([]); // no existing
-      mockMongo.mockResolvedValueOnce([{ verify: '5678' }]); // insert
-      const res = await request(app).get('/verify').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(200);
-      expect(res.body.verify).toBe('5678');
-    });
-
-    test('cleans expired verifies (older than 185s)', async () => {
-      mockMongo.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce([{ verify: '9999' }]);
-      await request(app).get('/verify').set('x-test-user', u(ADMIN));
-      // First call is deleteMany with utime < now - 185
-      expect(mockMongo.mock.calls[0][0]).toBe('deleteMany');
-      expect(mockMongo.mock.calls[0][1]).toBe('verify');
-      expect(mockMongo.mock.calls[0][2].utime.$lt).toBeDefined();
-    });
-
-    test('DB error returns 500', async () => {
-      mockMongo.mockRejectedValueOnce(new Error('verify fail'));
-      const res = await request(app).get('/verify').set('x-test-user', u(ADMIN));
-      expect(res.status).toBe(500);
     });
   });
 });

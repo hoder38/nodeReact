@@ -59,7 +59,7 @@ jest.unstable_mockModule('../../config.js', () => ({
 }));
 
 jest.unstable_mockModule('../../constants.js', () => ({
-  USERDB: 'user', VERIFYDB: 'verify', STORAGEDB: 'storage',
+  USERDB: 'user', STORAGEDB: 'storage',
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   RE_WEBURL: /^https?:\/\//, STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
   STOCKDB: 'stock', PASSWORDDB: 'password',
@@ -120,6 +120,10 @@ jest.unstable_mockModule('../../models/password-tool.js', () => ({
 const mockSendWs = jest.fn();
 jest.unstable_mockModule('../../util/sendWs.js', () => ({
   default: mockSendWs,
+}));
+
+jest.unstable_mockModule('../../util/logger.js', () => ({
+  default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
 }));
 
 // =====================================================================

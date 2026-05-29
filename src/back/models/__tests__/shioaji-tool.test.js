@@ -57,7 +57,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   RELEASE: 'release',
   DEV: 'dev',
   USERDB: 'user',
-  VERIFYDB: 'verify',
+ 
   STORAGEDB: 'storage',
   STOCKDB: 'stock',
   PASSWORDDB: 'password',

@@ -13,7 +13,6 @@ export const STORAGEDB = 'storage'
 export const STOCKDB = 'stock'
 export const PASSWORDDB = 'password'
 export const DOCDB = 'docUpdate'
-export const VERIFYDB = 'verify'
 export const TOTALDB = 'total'
 
 //basic set

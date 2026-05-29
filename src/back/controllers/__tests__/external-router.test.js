@@ -107,7 +107,7 @@ jest.unstable_mockModule('../../config.js', () => ({
 
 // --- constants.js ---
 jest.unstable_mockModule('../../constants.js', () => ({
-  USERDB: 'user', VERIFYDB: 'verify', STORAGEDB: 'storage',
+  USERDB: 'user', STORAGEDB: 'storage',
   STATIC_PATH: '/static', NOISE_TIME: 7200,
   UNACTIVE_DAY: 5, UNACTIVE_HIT: 10,
   // Must include optional url: prefix — matches real constants.js pattern

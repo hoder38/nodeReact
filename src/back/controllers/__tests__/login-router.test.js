@@ -2,8 +2,8 @@
  * login-router.test.js — Comprehensive tests for src/back/controllers/login-router.js
  *
  * Covers:
- *   Passport LocalStrategy: username validation, password validation, 2FA verify flow,
- *     MD5 password check, DB lookup, expired verify cleanup, all error branches
+ *   Passport LocalStrategy: username validation, password validation,
+ *     MD5 password check, DB lookup, all error branches
  *   Passport serialize/deserialize: user._id round-trip, DB error propagation
  *   GET /api/logout: authenticated with session destroy, unauthenticated passthrough,
  *     with/without URL parameter
@@ -86,7 +86,6 @@ jest.unstable_mockModule('../../config.js', () => ({
 // --- constants.js ---
 jest.unstable_mockModule('../../constants.js', () => ({
   USERDB: 'user',
-  VERIFYDB: 'verify',
   STORAGEDB: 'storage',
   STOCKDB: 'stock',
   PASSWORDDB: 'password',
@@ -258,7 +257,7 @@ describe('login-router.js', () => {
       });
     });
 
-    test('rejects invalid password that also fails verify format (not 4 digits)', async () => {
+    test('rejects invalid short password', async () => {
       await expect(
         callStrategy('validuser', 'abc')
       ).rejects.toMatchObject({
@@ -292,46 +291,6 @@ describe('login-router.js', () => {
       mockMongo.mockResolvedValueOnce([TEST_USER]);
       const user = await callStrategy('testuser', TEST_PASSWORD);
       expect(user).toEqual(TEST_USER);
-    });
-
-    // --- 2FA verify flow ---
-    test('accepts 4-digit verify code and authenticates on match', async () => {
-      const verifyCode = '1234';
-      // First: find user
-      mockMongo.mockResolvedValueOnce([TEST_USER]);
-      // Second: deleteMany expired verifies
-      mockMongo.mockResolvedValueOnce({});
-      // Third: find verify for user
-      mockMongo.mockResolvedValueOnce([{ uid: TEST_USER._id, verify: verifyCode }]);
-
-      const user = await callStrategy('testuser', verifyCode);
-      expect(user).toEqual(TEST_USER);
-      // Verify deleteMany was called to clean expired codes (185s)
-      expect(mockMongo).toHaveBeenCalledWith(
-        'deleteMany',
-        'verify',
-        expect.objectContaining({ utime: expect.any(Object) })
-      );
-    });
-
-    test('rejects when verify code does not match', async () => {
-      mockMongo.mockResolvedValueOnce([TEST_USER]);
-      mockMongo.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce([{ uid: TEST_USER._id, verify: '9999' }]);
-
-      await expect(callStrategy('testuser', '1234')).rejects.toMatchObject({
-        code: 401,
-      });
-    });
-
-    test('rejects when no verify record found for user', async () => {
-      mockMongo.mockResolvedValueOnce([TEST_USER]);
-      mockMongo.mockResolvedValueOnce({});
-      mockMongo.mockResolvedValueOnce([]); // no verify records
-
-      await expect(callStrategy('testuser', '5678')).rejects.toMatchObject({
-        code: 401,
-      });
     });
 
     // --- DB error ---

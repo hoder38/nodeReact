@@ -175,7 +175,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
   STATIC_PATH: '/static',
   NOISE_SIZE: 1000,
   __dirname: '/app/src/back/models',
-  USERDB: 'user', VERIFYDB: 'verify',
+  USERDB: 'user',
   STOCKDB: 'stock', PASSWORDDB: 'password',
   DEFAULT_TAGS: [], STORAGE_PARENT: [], PASSWORD_PARENT: [], STOCK_PARENT: [], HANDLE_TIME: 7200,
   RE_WEBURL: /^https?:\/\//, RELEASE: 'release', DEV: 'dev',
