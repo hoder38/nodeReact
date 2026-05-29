@@ -137,7 +137,7 @@
 1. `body-parser` (URL-encoded + JSON)
 2. `express-session` (Redis-backed, 3-day secure cookie)
 3. `passport` (local strategy)
-4. Request logger (`showLog`)
+4. Request logger (`showLog` — per-request console trace, separate from the pino structured logging; see §3.6)
 
 **File Server (`file-server.js`)**:
 1. `body-parser` (URL-encoded + JSON)
@@ -206,8 +206,31 @@
 | `utility.js` | Validation (`isValidString`), auth middleware (`checkLogin`, `checkAdmin`), error handling (`HoError`), data formatters, file path helpers, crypto utilities |
 | `mime.js` | File type detection (23+ media, 10+ archive, 8+ doc, 6+ subtitle types), MIME mapping, extension utilities |
 | `sendWs.js` | WebSocket broadcast, TCP inter-process communication, Discord forwarding |
+| `logger.js` | Structured logging via **pino**; exports `createLogger(module)` factory that returns a child logger with `{ module }` bound to every entry |
 | `twse.py` | Taiwan stock exchange Python helpers; Shioaji enum values are normalized with `str()` before comparisons/concatenation |
 | `myuzip.py` | Python ZIP/archive utilities |
+
+### 3.6 Logging
+
+The project uses **pino** for structured JSON logging via `src/back/util/logger.js`.
+
+```javascript
+import createLogger from '../util/logger.js';
+const log = createLogger('module-name');   // e.g. 'stock', 'bitfinex'
+
+log.debug({ item }, 'stock status item');
+log.info({ str }, 'trade suggestion');
+log.warn({ shiftedCount, total }, 'emergency stop triggered');
+```
+
+| Environment | Output | Transport |
+|-------------|--------|-----------|
+| Development (`ENV_TYPE !== 'release'`) | Human-readable, colorized | `pino-pretty` (`HH:MM:ss`, no pid/hostname) |
+| Production (`ENV_TYPE === 'release'`) | JSON to stdout | None (Docker captures timestamps) |
+
+**Log level**: Controlled by `LOG_LEVEL` env var, defaults to `debug`.
+
+**Migration status**: `stock-tool.js` and `bitfinex-tool.js` use structured pino logging exclusively. Other modules (controllers, `password-tool.js`) still use `console.log` for request/debug tracing — these are migration candidates.
 
 ---
 

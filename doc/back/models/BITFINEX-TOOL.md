@@ -72,6 +72,7 @@ import Redis from '../models/redis-tool.js'            // Redis wrapper
 import Api from './api-tool.js'                        // HTTP API client
 import { handleError, HoError, isValidString, findTag } from '../util/utility.js'
 import sendWs from '../util/sendWs.js'                 // WebSocket notification system
+import createLogger from '../../util/logger.js'        // Structured logging (pino)
 ```
 
 ### Constants (from `constants.js`)
@@ -82,6 +83,20 @@ import sendWs from '../util/sendWs.js'                 // WebSocket notification
 - **Thresholds**: `EXTREM_RATE_NUMBER`, `EXTREM_DURATION`, `OFFER_MAX`, `RISK_MAX`
 - **Merge Tolerance**: `MERGE_RATE_TOLERANCE` (tolerance multiplier for merge-offer rate matching)
 - **Database Names**: `USERDB`, `TOTALDB`, `BITNIFEX_PARENT`
+
+### Logging
+
+`bitfinex-tool.js` uses structured logging via the project's **pino**-based logger (see `src/back/util/logger.js` and [OUTLINE.md §3.6](../../OUTLINE.md)):
+
+```javascript
+const log = createLogger('bitfinex');
+
+log.debug({ currency, rate }, 'calculated final rate');
+log.debug({ uid, offer }, 'submitting funding offer');
+```
+
+- All runtime output uses structured pino logging — **no `console.log` calls exist** in the module.
+- Log level is controlled by the `LOG_LEVEL` environment variable (default: `debug`).
 
 ---
 
@@ -917,7 +932,7 @@ Establishes and manages a persistent WebSocket connection for a specific user to
 3. **WebSocket Event Handlers**
    ```javascript
    userWsInstance.on('open', () => {
-     console.log(`WebSocket opened for user ${uid}`);
+     console.log(`WebSocket opened for user ${uid}`);  // actual code uses: log.debug({ uid }, 'ws opened')
      userOk[uid] = true;
      
      // Authenticate
@@ -1026,7 +1041,7 @@ Establishes and manages a persistent WebSocket connection for a specific user to
    ```javascript
    userWsInstance.on('close', () => {
      userOk[uid] = false;
-     console.log(`WebSocket closed for user ${uid}`);
+     console.log(`WebSocket closed for user ${uid}`);  // actual code uses: log.debug({ uid }, 'ws closed')
      
      // Automatic reconnection after 5 seconds
      setTimeout(() => {
@@ -2824,7 +2839,7 @@ if (!closeCredit[id]) {
 } else {
   closeCredit[id].push(cId);
 }
-console.log(closeCredit);
+log.debug({ closeCredit }, 'close credit updated');  // was: console.log(closeCredit)
 return Promise.resolve();
 ```
 
@@ -3510,6 +3525,7 @@ npm test -- bitfinex-tool.test.js --watch
 - 2026-05-19: Updated imports to include `resolveNewMidStack`, `scaleWebArr` from stock-tool.js. `startStatus` newMid pop/push logic now uses shared helper functions instead of inline duplication.
 - 2026-05-26: Documented conviction-weighted `newOrder` sorting, Kelly-based `startStatus()` count boost, volatility-normalized `mul` calculation, `mcList.extrem`, shared-row `metrics`, and the new-item `mul = 1 + volValue` initialization path.
 - 2026-05-27: Emergency stop (§6d) now excludes clearing (`current.clear`) and deleting (`ing = 2`) items from the shifted count and from being forced to fake order.
+- 2026-05-28: Added Logging subsection to Architecture & Dependencies; updated console.log references in code examples to reflect actual pino logger usage.
 - Future updates should include:
   - New test scenarios as edge cases discovered
   - Updated snapshot data when data structures change

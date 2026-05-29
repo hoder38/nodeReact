@@ -127,6 +127,22 @@ const suggestionData = {           // Auto-complete cache
 let stringSent = 0;                // WebSocket message counter
 ```
 
+### 2.5 Logging
+
+`stock-tool.js` uses structured logging via the project's **pino**-based logger (see `src/back/util/logger.js` and [OUTLINE.md §3.6](../../OUTLINE.md)):
+
+```javascript
+import createLogger from '../../util/logger.js';
+const log = createLogger('stock');
+
+log.debug({ item }, 'stock status item');
+log.info({ str }, 'trade suggestion');
+log.warn({ shiftedCount, total }, 'emergency stop triggered');
+```
+
+- All runtime output is structured JSON (release) or colorized text (dev) — **no `console.log` calls exist** in the module.
+- Log level is controlled by the `LOG_LEVEL` environment variable (default: `debug`).
+
 ---
 
 ## 3. Exported Functions - Default Object
@@ -2355,5 +2371,5 @@ RETRY_DELAY = 60000        // 60 seconds
 **END OF DOCUMENTATION**
 
 *Generated for stock-tool.js (~4,620 lines)*  
-*Last Updated: 2026-05-27*
+*Last Updated: 2026-05-28*
 
