@@ -8,7 +8,6 @@
  *   PUT  /del/:uid    — delete user (admin only, cannot delete owner)
  */
 import { jest, describe, test, expect, beforeEach } from '@jest/globals';
-import { createHash } from 'crypto';
 
 // =====================================================================
 // MOCK SETUP
@@ -37,7 +36,8 @@ jest.unstable_mockModule('fs', () => ({
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
-  ENV_TYPE: 'test', CA: '/t', CERT: '/t', PKEY: '/t',
+  ENV_TYPE: 'test', PASSWORD_SALT: 'test_salt_',
+  CA: '/t', CERT: '/t', PKEY: '/t',
   SESS_SECRET: 'test', SESS_PWD: 'test',
 }));
 
@@ -82,6 +82,19 @@ jest.unstable_mockModule('../../util/mime.js', () => ({
   getOptionTag: jest.fn(() => []),
 }));
 
+// --- bcrypt mock ---
+const mockBcryptCompare = jest.fn(() => Promise.resolve(true));
+const mockBcryptHash = jest.fn(() => Promise.resolve('$2b$10$hashed'));
+jest.unstable_mockModule('bcrypt', () => ({
+  default: { compare: mockBcryptCompare, hash: mockBcryptHash },
+}));
+
+// --- redis-tool.js mock (for utility.js userPWCheck) ---
+const mockRedis = jest.fn(() => Promise.resolve(null));
+jest.unstable_mockModule('../../models/redis-tool.js', () => ({
+  default: mockRedis,
+}));
+
 // =====================================================================
 // IMPORTS
 // =====================================================================
@@ -93,27 +106,27 @@ const { default: UserRouter } = await import('../user-router.js');
 // HELPERS
 // =====================================================================
 const TEST_PW = 'Test123';
-const TEST_PW_MD5 = createHash('md5').update(TEST_PW).digest('hex');
+const TEST_BCRYPT_HASH = '$2b$10$somebcrypthashforTesting';
 
 const ADMIN = {
   _id: 'aabbccddeeff001122334455',
-  username: 'admin', password: TEST_PW_MD5, perm: 1,
+  username: 'admin', password: TEST_BCRYPT_HASH, perm: 1,
   auto: 'folder123', kindle: 'admin', unDay: 5, unHit: 10, desc: 'owner',
 };
-// Separate admin IDs for wrong-password tests — avoids pwCheck 70s cache pollution
+// Separate admin IDs for wrong-password tests — avoids pwCheck cache pollution
 const ADMIN_POST = {
   _id: 'aabbccddeeff001122330011',
-  username: 'admin', password: TEST_PW_MD5, perm: 1,
+  username: 'admin', password: TEST_BCRYPT_HASH, perm: 1,
   auto: '', kindle: '', unDay: 5, unHit: 10, desc: 'owner',
 };
 const ADMIN_DEL = {
   _id: 'aabbccddeeff001122330022',
-  username: 'admin', password: TEST_PW_MD5, perm: 1,
+  username: 'admin', password: TEST_BCRYPT_HASH, perm: 1,
   auto: '', kindle: '', unDay: 5, unHit: 10, desc: 'owner',
 };
 const REGULAR = {
   _id: 'aabbccddeeff001122334466',
-  username: 'user1', password: TEST_PW_MD5, perm: 3,
+  username: 'user1', password: TEST_BCRYPT_HASH, perm: 3,
   auto: '', kindle: '', desc: 'regular user',
 };
 const USER2 = {
@@ -169,6 +182,12 @@ describe('user-router.js', () => {
     app = buildApp();
     mockMongo.mockReset();
     mockObjectID.mockImplementation((id) => id);
+    mockBcryptCompare.mockReset();
+    mockBcryptCompare.mockImplementation(() => Promise.resolve(true));
+    mockBcryptHash.mockReset();
+    mockBcryptHash.mockImplementation(() => Promise.resolve('$2b$10$hashed'));
+    mockRedis.mockReset();
+    mockRedis.mockImplementation(() => Promise.resolve(null));
   });
 
   // ---------------------------------------------------------------
@@ -286,6 +305,7 @@ describe('user-router.js', () => {
     });
 
     test('rejects wrong password (userPWCheck fails)', async () => {
+      mockBcryptCompare.mockResolvedValueOnce(false);
       const res = await request(app).put(`/act/${REGULAR._id}`)
         .set('x-test-user', u(ADMIN))
         .send({ userPW: 'Wrong1', kindle: 'a@kindle.com' });
@@ -581,7 +601,7 @@ describe('user-router.js', () => {
     });
 
     test('rejects wrong admin password', async () => {
-      // Use ADMIN_POST (unique _id) to avoid pwCheck cache from earlier tests
+      mockBcryptCompare.mockResolvedValueOnce(false);
       const res = await request(app).post('/act')
         .set('x-test-user', u(ADMIN_POST))
         .send({ userPW: 'Wrong1', name: 'new', newPwd: 'Pass12', conPwd: 'Pass12', desc: 'x', perm: '3' });
@@ -701,7 +721,7 @@ describe('user-router.js', () => {
     });
 
     test('rejects wrong admin password', async () => {
-      // Use ADMIN_DEL (unique _id) to avoid pwCheck cache from earlier tests
+      mockBcryptCompare.mockResolvedValueOnce(false);
       const res = await request(app).put(`/del/${USER2._id}`)
         .set('x-test-user', u(ADMIN_DEL)).send({ userPW: 'Wrong1' });
       expect(res.status).toBe(400);

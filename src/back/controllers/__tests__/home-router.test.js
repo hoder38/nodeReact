@@ -39,6 +39,7 @@ jest.unstable_mockModule('fs', () => ({
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
+  PASSWORD_SALT: 'test_salt_',
   ENV_TYPE: 'test', CA: '/test/ca.pem', CERT: '/test/cert.pem',
   PKEY: '/test/key.pem', SESS_SECRET: 'test', SESS_PWD: 'test',
 }));

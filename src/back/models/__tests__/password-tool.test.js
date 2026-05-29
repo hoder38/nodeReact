@@ -40,7 +40,7 @@ jest.unstable_mockModule('../../models/mongo-tool.js', () => ({
 mockIsValidString = jest.fn((v) => v);
 mockHandleError = jest.fn((err) => Promise.reject(err));
 mockHoError = class extends Error { constructor(m) { super(m); this.name = 'HoError'; } };
-mockUserPWCheck = jest.fn(() => true);
+mockUserPWCheck = jest.fn(() => Promise.resolve(true));
 jest.unstable_mockModule('../../util/utility.js', () => ({
     isValidString: mockIsValidString,
     handleError: mockHandleError,
@@ -80,7 +80,7 @@ describe('password-tool.js', () => {
         jest.clearAllMocks();
         mockIsValidString.mockImplementation((v) => v);
         mockHandleError.mockImplementation((err) => Promise.reject(err));
-        mockUserPWCheck.mockReturnValue(true);
+        mockUserPWCheck.mockResolvedValue(true);
         mockIsDefaultTag.mockReturnValue(false);
         mockNormalize.mockImplementation((v) => v.toLowerCase());
         mockMongo.mockResolvedValue([{ _id: 'mock-oid' }]);
@@ -168,7 +168,7 @@ describe('password-tool.js', () => {
         });
 
         test('important=1 userPWCheck fails → permission denied', async () => {
-            mockUserPWCheck.mockReturnValue(false);
+            mockUserPWCheck.mockResolvedValue(false);
             await expect(PasswordTool.newRow({ ...baseData(), important: true }, USER)).rejects.toThrow('permission denied');
         });
 
@@ -293,7 +293,7 @@ describe('password-tool.js', () => {
         });
 
         test('existing important row + userPWCheck fails → permission denied', async () => {
-            mockUserPWCheck.mockReturnValue(false);
+            mockUserPWCheck.mockResolvedValue(false);
             mockMongo.mockResolvedValueOnce([{ ...existingRow, important: 1 }]);
             await expect(PasswordTool.editRow('row1', {}, USER, 's')).rejects.toThrow('permission denied');
         });
@@ -369,13 +369,13 @@ describe('password-tool.js', () => {
         });
 
         test('important row + userPWCheck fails → permission denied', async () => {
-            mockUserPWCheck.mockReturnValue(false);
+            mockUserPWCheck.mockResolvedValue(false);
             mockMongo.mockResolvedValueOnce([{ ...existingRow, important: 1 }]);
             await expect(PasswordTool.delRow('row1', '', USER)).rejects.toThrow('permission denied');
         });
 
         test('important row + null userPW → userPWCheck with empty string', async () => {
-            mockUserPWCheck.mockReturnValue(false);
+            mockUserPWCheck.mockResolvedValue(false);
             mockMongo.mockResolvedValueOnce([{ ...existingRow, important: 1 }]);
             await expect(PasswordTool.delRow('row1', null, USER)).rejects.toThrow('permission denied');
             expect(mockUserPWCheck).toHaveBeenCalledWith(USER, '');
@@ -461,7 +461,7 @@ describe('password-tool.js', () => {
         });
 
         test('important row + userPWCheck fails → permission denied', async () => {
-            mockUserPWCheck.mockReturnValue(false);
+            mockUserPWCheck.mockResolvedValue(false);
             mockMongo.mockResolvedValue([{ important: 1, password: 'x:y' }]);
             await expect(PasswordTool.getPassword('row1', '', USER, 's')).rejects.toThrow('permission denied');
         });

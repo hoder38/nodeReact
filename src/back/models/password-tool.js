@@ -13,7 +13,7 @@ const log = createLogger('password');
 const PasswordTagTool = TagTool(PASSWORDDB);
 
 export default {
-    newRow: function(data, user) {
+    newRow: async function(data, user) {
         if (!data['username'] || !data['password'] || !data['conpassword'] || !data['name']) {
             return handleError(new HoError('parameter lost!!!'));
         }
@@ -60,7 +60,7 @@ export default {
                     return handleError(new HoError('passwd not vaild!!!'));
                 }
             }
-            if (!userPWCheck(user, userPW)) {
+            if (!await userPWCheck(user, userPW)) {
                 return handleError(new HoError('permission denied'))
             }
         }
@@ -148,7 +148,7 @@ export default {
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
-        }, {limit: 1}).then(pws => {
+        }, {limit: 1}).then(async pws => {
             if (pws.length < 1) {
                 return handleError(new HoError('password row does not exist!!!'));
             }
@@ -161,7 +161,7 @@ export default {
                         return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
-                if (!userPWCheck(user, userPW)) {
+                if (!await userPWCheck(user, userPW)) {
                     return handleError(new HoError('permission denied'))
                 }
             }
@@ -209,7 +209,7 @@ export default {
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
-        }, {limit: 1}).then(pws => {
+        }, {limit: 1}).then(async pws => {
             if (pws.length < 1) {
                 return handleError(new HoError('password row does not exist!!!'));
             }
@@ -221,7 +221,7 @@ export default {
                         return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
-                if (!userPWCheck(user, validUserPW)) {
+                if (!await userPWCheck(user, validUserPW)) {
                     return handleError(new HoError('permission denied'))
                 }
             }
@@ -245,7 +245,7 @@ export default {
                 important: 1,
             }, (type === 'pre') ? {prePassword: 1} : {password: 1}),
             limit: 1,
-        }).then(items => {
+        }).then(async items => {
             if (items.length < 1) {
                 return handleError(new HoError('can not find password object!!!'));
             }
@@ -257,7 +257,7 @@ export default {
                         return handleError(new HoError('passwd not vaild!!!'));
                     }
                 }
-                if (!userPWCheck(user, validUserPW)) {
+                if (!await userPWCheck(user, validUserPW)) {
                     return handleError(new HoError('permission denied'))
                 }
             }

@@ -39,7 +39,7 @@ const mkText = data => ({ type: 'text', data });
 // ---------------------------------------------------------------------------
 
 // --- ver.js ---
-jest.unstable_mockModule('../../../../ver.js', () => ({ ENV_TYPE: 'dev' }));
+jest.unstable_mockModule('../../../../ver.js', () => ({ ENV_TYPE: 'dev', PASSWORD_SALT: 'test_salt_' }));
 
 // --- config.js ---
 const mockConfigFn = () => false;

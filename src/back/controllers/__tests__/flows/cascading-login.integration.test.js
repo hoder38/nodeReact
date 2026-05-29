@@ -18,7 +18,8 @@
  *     --forceExit --no-cache
  */
 import { jest, describe, test, expect, beforeAll, afterAll } from '@jest/globals';
-import { createHash } from 'crypto';
+import bcryptModule from 'bcrypt';
+import { PASSWORD_SALT } from '../../../../../ver.js';
 
 // =====================================================================
 // DYNAMIC IMPORTS — real modules, no mocks
@@ -46,7 +47,7 @@ const { handleError, HoError } = await import('../../../util/utility.js');
 const UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36';
 const TEST_USERNAME = '__integ_cascade_user';
 const TEST_PASSWORD = 'CascPass321';
-const TEST_PASSWORD_HASH = createHash('md5').update(TEST_PASSWORD).digest('hex');
+const TEST_PASSWORD_HASH = await bcryptModule.hash(PASSWORD_SALT + TEST_PASSWORD, 10);
 const TEST_USER_DOC = {
     username: TEST_USERNAME,
     password: TEST_PASSWORD_HASH,

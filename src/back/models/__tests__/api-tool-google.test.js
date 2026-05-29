@@ -32,6 +32,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     ENV_TYPE: TEST_CONFIG.ENV_TYPE, GOOGLE_ID: TEST_CONFIG.GOOGLE_ID,
     GOOGLE_SECRET: TEST_CONFIG.GOOGLE_SECRET, GOOGLE_REDIRECT: TEST_CONFIG.GOOGLE_REDIRECT,
     ROOT_USER: TEST_CONFIG.ROOT_USER,

@@ -79,7 +79,7 @@ Both `password-tool.js` and `password-router.js` use `console.log` to dump objec
 
 ---
 
-## 3. Critical — User Password Hashing (MD5 → bcrypt/argon2)
+## 3. Critical — User Password Hashing (MD5 → bcrypt/argon2) ✅ IMPLEMENTED
 
 ### Problem
 
@@ -425,7 +425,7 @@ If it's rarely used, consider deprecating it in favor of simpler CRUD. The curre
 
 ---
 
-## 11. Low — userPWCheck Timing & Session Scope
+## 11. Low — userPWCheck Timing & Session Scope ✅ IMPLEMENTED
 
 ### Current Implementation
 
@@ -490,12 +490,17 @@ Upgrading the encryption (§4, §5) and hashing (§3) requires careful migration
 3. ✅ Removed deprecated `createDecipher` — `updatePasswordCipher` now validates that no legacy records remain instead of migrating (§6)
 4. ✅ Removed 2FA verification mechanism entirely (§9) — deleted `VERIFYDB`, `/api/user/verify`, frontend verify button, login verify fallback
 
-### Phase 2: User password hashing upgrade
+### Phase 2: User password hashing upgrade — ✅ IMPLEMENTED
 
-1. Add `hashVersion` field to user schema (default `1` for MD5).
-2. Deploy upgraded `userPWCheck` with dual-path verification.
-3. As users log in, their hashes are transparently upgraded to bcrypt.
-4. After sufficient time, force remaining users to reset passwords.
+1. ✅ Replaced MD5 with bcrypt + server-side pepper (`PASSWORD_SALT`) across all auth paths (§3)
+   - `login-router.js`: `bcrypt.compare(PASSWORD_SALT + pw, hash)` instead of MD5
+   - `user-router.js`: `bcrypt.hash(PASSWORD_SALT + pw, 10)` for create/edit user
+   - `mongo-tool.js`: root user seeding uses bcrypt
+2. ✅ `userPWCheck` rewritten as async with Redis cache (70s TTL) + `crypto.timingSafeEqual` (§11)
+   - Hash-versioned cache key auto-invalidates on password change
+   - Redis failures handled gracefully (fall back to bcrypt)
+3. ✅ Added `resetpassword <pw>` command to `cmd.js` — resets ALL users to bcrypt hash
+4. ✅ Removed `randomSend` and `checkdoc` commands from `cmd.js`
 
 ### Phase 3: Password manager encryption upgrade
 

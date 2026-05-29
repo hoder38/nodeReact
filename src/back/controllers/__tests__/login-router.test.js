@@ -3,7 +3,7 @@
  *
  * Covers:
  *   Passport LocalStrategy: username validation, password validation,
- *     MD5 password check, DB lookup, all error branches
+ *     bcrypt password check, DB lookup, all error branches
  *   Passport serialize/deserialize: user._id round-trip, DB error propagation
  *   GET /api/logout: authenticated with session destroy, unauthenticated passthrough,
  *     with/without URL parameter
@@ -14,7 +14,6 @@
  *   use Express+supertest for route-level integration tests.
  */
 import { jest, describe, test, expect, beforeAll, beforeEach, afterAll } from '@jest/globals';
-import { createHash } from 'crypto';
 
 // =====================================================================
 // 1. MOCK SETUP
@@ -53,6 +52,7 @@ jest.unstable_mockModule('fs', () => ({
 // --- ver.js ---
 jest.unstable_mockModule('../../../../ver.js', () => ({
   ENV_TYPE: 'test',
+  PASSWORD_SALT: 'test_salt_',
   CA: '/test/ca.pem',
   CERT: '/test/cert.pem',
   PKEY: '/test/key.pem',
@@ -102,6 +102,18 @@ const mockObjectID = jest.fn((id) => id);
 jest.unstable_mockModule('../../models/mongo-tool.js', () => ({
   default: mockMongo,
   objectID: mockObjectID,
+}));
+
+// --- bcrypt mock ---
+const mockBcryptCompare = jest.fn(() => Promise.resolve(false));
+const mockBcryptHash = jest.fn(() => Promise.resolve('$2b$10$hashed'));
+jest.unstable_mockModule('bcrypt', () => ({
+  default: { compare: mockBcryptCompare, hash: mockBcryptHash },
+}));
+
+// --- redis-tool.js mock (for utility.js userPWCheck) ---
+jest.unstable_mockModule('../../models/redis-tool.js', () => ({
+  default: jest.fn(() => Promise.resolve(null)),
 }));
 
 // =====================================================================
@@ -183,11 +195,11 @@ function buildApp(url = null) {
 // 5. TEST DATA
 // =====================================================================
 const TEST_PASSWORD = 'Test123';
-const TEST_PASSWORD_MD5 = createHash('md5').update(TEST_PASSWORD).digest('hex');
+const TEST_BCRYPT_HASH = '$2b$10$somebcrypthashforTesting';
 const TEST_USER = {
   _id: 'aabbccddeeff001122334455',
   username: 'testuser',
-  password: TEST_PASSWORD_MD5,
+  password: TEST_BCRYPT_HASH,
   perm: 1,
   auto: false,
   unDay: 5,
@@ -200,6 +212,8 @@ const TEST_USER = {
 describe('login-router.js', () => {
   beforeEach(() => {
     mockMongo.mockReset();
+    mockBcryptCompare.mockReset();
+    mockBcryptCompare.mockResolvedValue(false);
   });
 
   // ---------------------------------------------------------------
@@ -278,8 +292,9 @@ describe('login-router.js', () => {
     });
 
     // --- Wrong password ---
-    test('rejects when password MD5 does not match', async () => {
-      mockMongo.mockResolvedValueOnce([{ ...TEST_USER, password: 'wronghash' }]);
+    test('rejects when bcrypt compare returns false', async () => {
+      mockMongo.mockResolvedValueOnce([TEST_USER]);
+      mockBcryptCompare.mockResolvedValueOnce(false);
       await expect(callStrategy('testuser', TEST_PASSWORD)).rejects.toMatchObject({
         code: 401,
         message: expect.stringContaining('Incorrect'),
@@ -289,8 +304,10 @@ describe('login-router.js', () => {
     // --- Correct password → success ---
     test('resolves with user on correct password', async () => {
       mockMongo.mockResolvedValueOnce([TEST_USER]);
+      mockBcryptCompare.mockResolvedValueOnce(true);
       const user = await callStrategy('testuser', TEST_PASSWORD);
       expect(user).toEqual(TEST_USER);
+      expect(mockBcryptCompare).toHaveBeenCalledWith('test_salt_' + TEST_PASSWORD, TEST_BCRYPT_HASH);
     });
 
     // --- DB error ---
@@ -425,6 +442,7 @@ describe('login-router.js', () => {
     test('success handler responds with loginOK and username (covers L74-76)', async () => {
       // Set up mockMongo so the Passport strategy finds the user and password matches
       mockMongo.mockResolvedValueOnce([TEST_USER]);
+      mockBcryptCompare.mockResolvedValueOnce(true);
       const app = buildApp(null);
       const res = await request(app)
         .post('/api/login')

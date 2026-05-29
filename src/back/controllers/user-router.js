@@ -1,7 +1,7 @@
 import { USERDB, UNACTIVE_DAY, UNACTIVE_HIT } from '../constants.js'
+import { PASSWORD_SALT } from '../../../ver.js'
 import Express from 'express'
-import crypto from 'crypto'
-const { createHash } = crypto;
+import bcryptModule from 'bcrypt'
 import { checkAdmin, checkLogin, HoError, handleError, isValidString, userPWCheck } from '../util/utility.js'
 import Mongo from '../models/mongo-tool.js'
 import { isDefaultTag, normalize } from '../models/tag-tool.js'
@@ -46,7 +46,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
     } : {
         delable: true,
     }))]})).catch(err => handleError(err, next))
-}).put(function(req, res, next) {
+}).put(async function(req, res, next) {
     console.log('user edit');
     let userPW = '';
     if (req.body.userPW) {
@@ -55,7 +55,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
             return handleError(new HoError('passwd is not valid'), next);
         }
     }
-    if (!userPWCheck(req.user, userPW)) {
+    if (!await userPWCheck(req.user, userPW)) {
         return handleError(new HoError('permission denied'), next);
     }
     let ret = {}
@@ -147,7 +147,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         if (newPwd !== conPwd) {
             return handleError(new HoError('confirm password must equal!!!'), next);
         }
-        data['password'] = createHash('md5').update(newPwd).digest('hex')
+        data['password'] = await bcryptModule.hash(PASSWORD_SALT + newPwd, 10)
     }
     let id = false;
     if (checkAdmin(1, req.user)) {
@@ -192,7 +192,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
         console.log(id);
         Mongo('update', USERDB, {_id: id}, {$set: data}).then(user => Object.getOwnPropertyNames(ret).length === 0 ? res.json({apiOK: true}) : res.json(ret)).catch(err => handleError(err, next));
     }
-}).post(function(req, res, next) {
+}).post(async function(req, res, next) {
     console.log('add user');
     if (!checkAdmin(1, req.user)) {
         return handleError(new HoError('unknown type in edituser', {code: 403}), next);
@@ -204,7 +204,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
             return handleError(new HoError('passwd is not valid'), next);
         }
     }
-    if (!userPWCheck(req.user, userPW)) {
+    if (!await userPWCheck(req.user, userPW)) {
         return handleError(new HoError('permission denied'), next);
     }
     const name = isValidString(req.body.name, 'name');
@@ -217,7 +217,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
             _id: 0,
         },
         limit: 1,
-    }).then(users => {
+    }).then(async users => {
         if (users.length > 0) {
             console.log(users);
             return handleError(new HoError('already has one!!!'));
@@ -245,7 +245,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
             username: name,
             desc,
             perm,
-            password: createHash('md5').update(newPwd).digest('hex'),
+            password: await bcryptModule.hash(PASSWORD_SALT + newPwd, 10),
         });
     }).then(user => res.json(Object.assign({
         name: user[0].username,
@@ -263,7 +263,7 @@ router.route('/act/:uid?').get(function(req, res, next) {
     } : {delable: true}))).catch(err => handleError(err, next));
 });
 
-router.put('/del/:uid', function(req, res, next) {
+router.put('/del/:uid', async function(req, res, next) {
     console.log('deluser');
     if (!checkAdmin(1, req.user)) {
         return handleError(new HoError('unknown type in edituser', {code: 403}), next);
@@ -275,7 +275,7 @@ router.put('/del/:uid', function(req, res, next) {
             return handleError(new HoError('passwd is not valid'), next);
         }
     }
-    if (!userPWCheck(req.user, userPW)) {
+    if (!await userPWCheck(req.user, userPW)) {
         return handleError(new HoError('permission denied'), next);
     }
     const id = isValidString(req.params.uid, 'uid');

@@ -41,6 +41,7 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     TDAMERITRADE_KEY: 'test-key',
     GOOGLE_REDIRECT: 'http://localhost/callback',
     TDAMERITRADE_SECRET: 'test-secret',

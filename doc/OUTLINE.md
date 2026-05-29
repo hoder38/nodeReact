@@ -411,7 +411,7 @@ Browser                    Main Server              File Server
    │  {username, password} ──►│                         │
    │                          │  passport.authenticate  │
    │                          │  (local strategy)       │
-   │                          │  MD5 hash compare       │
+   │                          │  bcrypt hash compare     │
    │  ◄── {loginOK, url} ────│                         │
    │                          │                         │
    │  POST /f/api/login       │                         │
@@ -433,7 +433,8 @@ Browser                    Main Server              File Server
 ### 7.3 Security Mechanisms
 
 - **Session**: Redis-backed, 3-day HTTPS-only secure cookies
-- **Password storage**: MD5 hash (user auth), AES-256-CTR (password manager)
+- **Password storage**: bcrypt with server-side pepper (user auth), AES-256-CTR (password manager)
+- **userPWCheck**: async, Redis-cached (70s TTL) with `crypto.timingSafeEqual`, bcrypt fallback
 - **Nginx auth sub-request**: `/auth` endpoint for file download authorization
 - **CORS**: Explicit `Access-Control-Allow-Credentials` on file server
 - **SSL/TLS**: Let's Encrypt certificates, TLSv1/1.1/1.2
@@ -524,7 +525,7 @@ File Server (WSS /f)
 | Module | File(s) | Test Focus | Priority |
 |--------|---------|-----------|----------|
 | **Validation** | `util/utility.js` | `isValidString()` for all types (name, passwd, url, email, int, perm, uid, desc) | 🔴 Critical |
-| **Auth Helpers** | `util/utility.js` | `checkAdmin()`, `userPWCheck()`, `checkLogin()` | 🔴 Critical |
+| **Auth Helpers** | `util/utility.js` | `checkAdmin()`, `userPWCheck()` (async, bcrypt+Redis), `checkLogin()` | 🔴 Critical |
 | **Error Handling** | `util/utility.js` | `HoError` construction, `handleError()` behavior | 🟡 High |
 | **File Type Detection** | `util/mime.js` | `extType()` for all 60+ extensions, edge cases | 🔴 Critical |
 | **MIME Utilities** | `util/mime.js` | `isVideo()`, `isImage()`, `isMusic()`, `isZip()`, `isSub()`, etc. | 🟡 High |

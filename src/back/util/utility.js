@@ -1,9 +1,11 @@
 import { RE_WEBURL } from '../constants.js'
-import { ENV_TYPE } from '../../../ver.js'
+import { ENV_TYPE, PASSWORD_SALT } from '../../../ver.js'
 import { NAS_PREFIX } from '../config.js'
 import { objectID } from '../models/mongo-tool.js'
+import Redis from '../models/redis-tool.js'
 import MobileDetect from 'mobile-detect'
-import { createHash } from 'crypto'
+import { createHash, timingSafeEqual } from 'crypto'
+import bcryptModule from 'bcrypt'
 import iconvLite from 'iconv-lite'
 const { encode: IconvEncode, decode: IconvDecode } = iconvLite;
 import pathModule from 'path'
@@ -13,7 +15,6 @@ const { existsSync: FsExistsSync, readdirSync: FsReaddirSync, lstatSync: FsLstat
 import jsCharDet from 'jschardet'
 import Ass2vtt from 'ass-to-vtt'
 
-let pwCheck = {}
 
 export function isValidString(str, type) {
     if (typeof str === 'string' || typeof str === 'number') {
@@ -101,16 +102,24 @@ export function toValidName(str) {
     return str.replace(/[\\\/\|\*\?"<>:]+/g, ',').slice(0, 255);
 }
 
-export function userPWCheck (user, pw) {
-    if (user.password === createHash('md5').update(pw).digest('hex')) {
-        pwCheck[user._id] = 1
-        setTimeout(() => pwCheck[user._id] = 0, 70000)
+export async function userPWCheck (user, pw) {
+    const keyBase = `pwcheck:${String(user._id)}:${createHash('sha256').update(user.password).digest('hex').slice(0, 16)}`
+    try {
+        const cached = await Redis('get', keyBase)
+        if (cached !== null) {
+            const a = Buffer.from('1')
+            const b = Buffer.from(String(cached))
+            if (a.length === b.length && timingSafeEqual(a, b)) {
+                return true
+            }
+        }
+    } catch (_) {}
+    const match = await bcryptModule.compare(PASSWORD_SALT + pw, user.password)
+    if (match) {
+        try { await Redis('set', keyBase, '1', 'EX', 70) } catch (_) {}
         return true
-    } else if (pwCheck[user._id] === 1) {
-        return true
-    } else {
-        return false
     }
+    return false
 }
 
 export const checkAdmin = (perm, user) => (user.perm > 0 && user.perm <= perm) ? true : false

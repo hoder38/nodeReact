@@ -1,9 +1,8 @@
-import { ENV_TYPE, DB_USERNAME, DB_PWD, ROOT_USER, DEFAULT_PASS } from '../../../ver.js'
+import { ENV_TYPE, DB_USERNAME, DB_PWD, ROOT_USER, DEFAULT_PASS, PASSWORD_SALT } from '../../../ver.js'
 import { DB_IP, DB_PORT, DB_NAME } from '../config.js'
 import mongodb from 'mongodb'
 const { MongoClient, ObjectId } = mongodb;
-import crypto from 'crypto'
-const { createHash } = crypto;
+import bcryptModule from 'bcrypt'
 import { handleError, HoError } from '../util/utility.js'
 
 let mongo = null;
@@ -41,12 +40,14 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                     }
                     console.log(count);
                     if (count === 0) {
-                        collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
-                            if (err) {
-                                return handleError(err, 'DB connect');
-                            }
-                            console.log(user);
-                        });
+                        bcryptModule.hash(PASSWORD_SALT + DEFAULT_PASS, 10).then(hash => {
+                            collection.insertOne(Object.assign({}, ROOT_USER, {password: hash}), (err, user) => {
+                                if (err) {
+                                    return handleError(err, 'DB connect');
+                                }
+                                console.log(user);
+                            });
+                        }).catch(err => handleError(err, 'DB connect'));
                     }
                 });
             });
@@ -72,12 +73,14 @@ MongoClient.connect(`mongodb://${DB_USERNAME}:${DB_PWD}@${DB_IP(ENV_TYPE)}:${DB_
                 }
                 console.log(count);
                 if (count === 0) {
-                    collection.insertOne(Object.assign({}, ROOT_USER, {password: createHash('md5').update(DEFAULT_PASS).digest('hex')}), (err, user) => {
-                        if (err) {
-                            return handleError(err, 'DB connect');
-                        }
-                        console.log(user);
-                    });
+                    bcryptModule.hash(PASSWORD_SALT + DEFAULT_PASS, 10).then(hash => {
+                        collection.insertOne(Object.assign({}, ROOT_USER, {password: hash}), (err, user) => {
+                            if (err) {
+                                return handleError(err, 'DB connect');
+                            }
+                            console.log(user);
+                        });
+                    }).catch(err => handleError(err, 'DB connect'));
                 }
             });
         });

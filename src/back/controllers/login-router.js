@@ -1,34 +1,39 @@
 import { USERDB } from '../constants.js'
+import { PASSWORD_SALT } from '../../../ver.js'
 import Express from 'express'
 import Passport from 'passport'
 import passportLocal from 'passport-local'
 const { Strategy } = passportLocal;
-import { createHash } from 'crypto'
+import bcryptModule from 'bcrypt'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { handleError, HoError, isValidString } from '../util/utility.js'
 
 const router = Express.Router()
 
 //passport
-Passport.use(new Strategy(function(username, password, done){
+Passport.use(new Strategy(async function(username, password, done){
     console.log('login');
-    const validUsername = isValidString(username, 'name');
-    if (!validUsername) {
-        return handleError(new HoError('username is not valid', {code: 401}), done);
-    }
-    const validPassword = isValidString(password, 'passwd');
-    if (!validPassword) {
-        return handleError(new HoError('passwd is not valid', {code: 401}), done);
-    }
-    Mongo('find', USERDB, {username: validUsername}, {limit: 1}).then(users => {
+    try {
+        const validUsername = isValidString(username, 'name');
+        if (!validUsername) {
+            return handleError(new HoError('username is not valid', {code: 401}), done);
+        }
+        const validPassword = isValidString(password, 'passwd');
+        if (!validPassword) {
+            return handleError(new HoError('passwd is not valid', {code: 401}), done);
+        }
+        const users = await Mongo('find', USERDB, {username: validUsername}, {limit: 1});
         if (users.length < 1) {
             return handleError(new HoError('Incorrect username or password', {code: 401}), done)
         }
-        if (createHash('md5').update(validPassword).digest('hex') !== users[0].password) {
+        const match = await bcryptModule.compare(PASSWORD_SALT + validPassword, users[0].password);
+        if (!match) {
             return handleError(new HoError('Incorrect username or password', {code: 401}), done)
         }
         done(null, users[0])
-    }).catch(err => handleError(err, done))
+    } catch (err) {
+        handleError(err, done)
+    }
 }))
 Passport.serializeUser(function(user, done) {
     done(null, user._id)

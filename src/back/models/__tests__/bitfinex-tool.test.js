@@ -96,6 +96,7 @@ jest.unstable_mockModule('bfx-api-node-models', () => ({
 
 // ── ver.js mock ─────────────────────────────────────────────
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     BITFINEX_KEY: 'sys-key',
     BITFINEX_SECRET: 'sys-secret',
 }));

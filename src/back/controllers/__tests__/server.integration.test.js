@@ -20,7 +20,8 @@
  *         --forceExit --no-cache
  */
 import { jest, describe, test, expect, beforeAll, afterAll } from '@jest/globals';
-import { createHash } from 'crypto';
+import bcryptModule from 'bcrypt';
+import { PASSWORD_SALT } from '../../../../ver.js';
 
 // =====================================================================
 // 1. DYNAMIC IMPORTS — real modules, no mocks
@@ -45,7 +46,7 @@ const { handleError } = await import('../../util/utility.js');
 // =====================================================================
 const TEST_USERNAME = '__integ_test_user';
 const TEST_PASSWORD = 'TestPass123';
-const TEST_PASSWORD_HASH = createHash('md5').update(TEST_PASSWORD).digest('hex');
+const TEST_PASSWORD_HASH = await bcryptModule.hash(PASSWORD_SALT + TEST_PASSWORD, 10);
 const TEST_USER_DOC = {
     username: TEST_USERNAME,
     password: TEST_PASSWORD_HASH,
@@ -59,7 +60,7 @@ const TEST_USER_DOC = {
 
 const ADMIN_USERNAME = '__integ_test_admin';
 const ADMIN_PASSWORD = 'AdminPass456';
-const ADMIN_PASSWORD_HASH = createHash('md5').update(ADMIN_PASSWORD).digest('hex');
+const ADMIN_PASSWORD_HASH = await bcryptModule.hash(PASSWORD_SALT + ADMIN_PASSWORD, 10);
 const ADMIN_USER_DOC = {
     username: ADMIN_USERNAME,
     password: ADMIN_PASSWORD_HASH,

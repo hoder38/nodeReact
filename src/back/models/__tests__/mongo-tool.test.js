@@ -31,7 +31,7 @@ let mockConnect;
 let mockObjectIdConstructor;
 let mockHandleError;
 let mockHoError;
-let mockCreateHash;
+let mockBcryptHash;
 
 // ─── Setup mocks BEFORE importing the module under test ─────────────────────
 
@@ -52,6 +52,7 @@ jest.unstable_mockModule('../../../../ver.js', () => ({
     DB_PWD: 'testpass',
     ROOT_USER: { username: 'root', role: 'admin' },
     DEFAULT_PASS: 'defaultpass123',
+    PASSWORD_SALT: 'test_salt_',
 }));
 
 // Mock config.js
@@ -74,15 +75,11 @@ jest.unstable_mockModule('../../util/utility.js', () => ({
     HoError: mockHoError,
 }));
 
-// Mock crypto
-mockCreateHash = jest.fn(() => ({
-    update: jest.fn(() => ({
-        digest: jest.fn(() => 'hashedpassword'),
-    })),
-}));
-jest.unstable_mockModule('crypto', () => ({
+// Mock bcrypt
+mockBcryptHash = jest.fn(() => Promise.resolve('hashedpassword'));
+jest.unstable_mockModule('bcrypt', () => ({
     default: {
-        createHash: mockCreateHash,
+        hash: mockBcryptHash,
     },
 }));
 
@@ -157,12 +154,10 @@ function resetAllMocks() {
     mockDb.mockReset().mockReturnValue({ collection: mockCollectionFn });
     mockHandleError.mockReset();
     mockConnect.mockClear();
-    mockCreateHash.mockReset().mockReturnValue({
-        update: jest.fn(() => ({
-            digest: jest.fn(() => 'hashedpassword'),
-        })),
-    });
+    mockBcryptHash.mockReset().mockResolvedValue('hashedpassword');
 }
+
+const flushPromises = () => new Promise(r => setTimeout(r, 0));
 
 // ─── Test Suite ─────────────────────────────────────────────────────────────
 
@@ -185,7 +180,7 @@ describe('mongo-tool.js', () => {
             expect(typeof initialConnectArgs[2]).toBe('function');
         });
 
-        test('first connect succeeds → sets mongo, seeds root user if count=0', () => {
+        test('first connect succeeds → sets mongo, seeds root user if count=0', async () => {
             // Simulate successful connection
             mockCountDocuments.mockImplementation((cb) => {
                 cb(null, 0); // count = 0, should seed user
@@ -195,10 +190,12 @@ describe('mongo-tool.js', () => {
             });
 
             primaryConnectCallback(null, mockClient);
+            await flushPromises();
 
             expect(mockDb).toHaveBeenCalledWith('testdb');
             expect(mockCollectionFn).toHaveBeenCalledWith('user', expect.any(Function));
             expect(mockCountDocuments).toHaveBeenCalled();
+            expect(mockBcryptHash).toHaveBeenCalledWith('test_salt_defaultpass123', 10);
             expect(mockInsertOne).toHaveBeenCalledWith(
                 expect.objectContaining({
                     username: 'root',
@@ -238,7 +235,7 @@ describe('mongo-tool.js', () => {
             );
         });
 
-        test('retry succeeds → sets mongo and seeds user', () => {
+        test('retry succeeds → sets mongo and seeds user', async () => {
             const firstError = new Error('Auth failed');
             
             mockCountDocuments.mockImplementation((cb) => {
@@ -256,6 +253,7 @@ describe('mongo-tool.js', () => {
             
             // Trigger retry success
             retryCallback(null, mockClient);
+            await flushPromises();
 
             expect(mockDb).toHaveBeenCalledWith('testdb');
             expect(mockInsertOne).toHaveBeenCalled();
@@ -323,7 +321,7 @@ describe('mongo-tool.js', () => {
             );
         });
 
-        test('insertOne error during seeding → calls handleError', () => {
+        test('insertOne error during seeding → calls handleError', async () => {
             mockCountDocuments.mockImplementation((cb) => {
                 cb(null, 0); // Trigger insert
             });
@@ -332,6 +330,7 @@ describe('mongo-tool.js', () => {
             });
 
             primaryConnectCallback(null, mockClient);
+            await flushPromises();
 
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Insert error' }),
@@ -386,7 +385,7 @@ describe('mongo-tool.js', () => {
             );
         });
 
-        test('retry insertOne error → handleError (L44)', () => {
+        test('retry insertOne error → handleError (L44)', async () => {
             mockCountDocuments.mockImplementation((cb) => { cb(null, 0); });
             mockInsertOne.mockImplementation((doc, cb) => {
                 cb(new Error('Ins err'), null);
@@ -394,6 +393,7 @@ describe('mongo-tool.js', () => {
             primaryConnectCallback(new Error('first fail'), null);
             const retryCallback = mockConnect.mock.calls[0][2];
             retryCallback(null, mockClient);
+            await flushPromises();
             expect(mockHandleError).toHaveBeenCalledWith(
                 expect.objectContaining({ message: 'Ins err' }),
                 'DB connect'

@@ -47,6 +47,7 @@ jest.unstable_mockModule('fs', () => ({
 
 // --- ver.js ---
 jest.unstable_mockModule('../../../../ver.js', () => ({
+  PASSWORD_SALT: 'test_salt_',
   ENV_TYPE: 'release',
   DEVICE_PATH: '/dev/sda',
   CA: '/t', CERT: '/t', PKEY: '/t',

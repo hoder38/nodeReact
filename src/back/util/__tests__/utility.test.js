@@ -37,6 +37,19 @@ jest.unstable_mockModule('../../constants.js', () => ({
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
     ENV_TYPE: 'test',
+    PASSWORD_SALT: 'test_salt_',
+}));
+
+// ─── Redis mock ─────────────────────────────────────────────────────
+const mockRedis = jest.fn(() => Promise.resolve(null));
+jest.unstable_mockModule('../../models/redis-tool.js', () => ({
+    default: mockRedis,
+}));
+
+// ─── bcrypt mock ────────────────────────────────────────────────────
+const mockBcryptCompare = jest.fn(() => Promise.resolve(false));
+jest.unstable_mockModule('bcrypt', () => ({
+    default: { compare: mockBcryptCompare, hash: jest.fn() },
 }));
 
 mockNasPrefix = jest.fn(() => '/nas');
@@ -419,37 +432,50 @@ describe('toValidName', () => {
 // userPWCheck
 // =====================================================================
 describe('userPWCheck', () => {
+    const bcryptHash = '$2b$10$somebcrypthashvalue';
+    const user = { _id: 'u1', password: bcryptHash };
+
     beforeEach(() => {
-        jest.useFakeTimers();
-    });
-    afterEach(() => {
-        jest.useRealTimers();
+        mockRedis.mockReset();
+        mockBcryptCompare.mockReset();
     });
 
-    test('correct password returns true', () => {
-        const hash = cryptoModule.createHash('md5').update('secret').digest('hex');
-        const user = { _id: 'u1', password: hash };
-        expect(userPWCheck(user, 'secret')).toBe(true);
+    test('correct password returns true (cache miss)', async () => {
+        mockRedis.mockResolvedValueOnce(null); // cache miss
+        mockBcryptCompare.mockResolvedValueOnce(true);
+        mockRedis.mockResolvedValueOnce('OK'); // cache set
+        expect(await userPWCheck(user, 'secret')).toBe(true);
+        expect(mockBcryptCompare).toHaveBeenCalledWith('test_salt_secret', bcryptHash);
     });
 
-    test('wrong password without cache returns false', () => {
-        const user = { _id: 'u2', password: 'wronghash' };
-        expect(userPWCheck(user, 'bad')).toBe(false);
+    test('wrong password without cache returns false', async () => {
+        mockRedis.mockResolvedValueOnce(null);
+        mockBcryptCompare.mockResolvedValueOnce(false);
+        expect(await userPWCheck({ _id: 'u2', password: bcryptHash }, 'bad')).toBe(false);
     });
 
-    test('wrong password with cache returns true', () => {
-        const hash = cryptoModule.createHash('md5').update('secret').digest('hex');
-        const user = { _id: 'u3', password: hash };
-        userPWCheck(user, 'secret');
-        expect(userPWCheck(user, 'wrong')).toBe(true);
+    test('cached verification returns true without bcrypt', async () => {
+        mockRedis.mockResolvedValueOnce('1'); // cache hit
+        expect(await userPWCheck(user, 'wrong')).toBe(true);
+        expect(mockBcryptCompare).not.toHaveBeenCalled();
     });
 
-    test('cache expires after 70 seconds', () => {
-        const hash = cryptoModule.createHash('md5').update('secret').digest('hex');
-        const user = { _id: 'u4', password: hash };
-        userPWCheck(user, 'secret');
-        jest.advanceTimersByTime(70001);
-        expect(userPWCheck(user, 'wrong')).toBe(false);
+    test('Redis cache failure falls through to bcrypt', async () => {
+        mockRedis.mockRejectedValueOnce(new Error('redis down'));
+        mockBcryptCompare.mockResolvedValueOnce(true);
+        mockRedis.mockRejectedValueOnce(new Error('redis down')); // cache set fails
+        expect(await userPWCheck(user, 'secret')).toBe(true);
+    });
+
+    test('sets Redis cache with 70s TTL on success', async () => {
+        mockRedis.mockResolvedValueOnce(null);
+        mockBcryptCompare.mockResolvedValueOnce(true);
+        mockRedis.mockResolvedValueOnce('OK');
+        await userPWCheck(user, 'secret');
+        const setCall = mockRedis.mock.calls.find(c => c[0] === 'set');
+        expect(setCall).toBeTruthy();
+        expect(setCall[3]).toBe('EX');
+        expect(setCall[4]).toBe(70);
     });
 });
 

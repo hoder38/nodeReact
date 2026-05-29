@@ -24,6 +24,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
 }));
 
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     DISCORD_TOKEN,
     DISCORD_CHANNEL,
 }));

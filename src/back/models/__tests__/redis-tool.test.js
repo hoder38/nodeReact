@@ -53,6 +53,7 @@ jest.unstable_mockModule('redis', () => ({
 
 // Mock dependencies
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     ENV_TYPE: 'test',
     SESS_PWD: 'testpass123',
 }));

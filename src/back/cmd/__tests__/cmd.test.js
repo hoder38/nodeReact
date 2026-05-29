@@ -2,14 +2,14 @@
  * cmd.test.js — Comprehensive tests for src/back/cmd/cmd.js
  *
  * cmd.js is an interactive CLI that reads from process.stdin via readline.
- * It provides 12 admin commands dispatched via a switch on the first word.
+ * It provides admin commands dispatched via a switch on the first word.
  *
  * Exported: dbDump (named export) — tested directly
  * Internal: All CLI commands — tested by capturing the readline 'line' callback
  *
  * Commands tested:
- *   stock, stocklist, testdata, cleanstock, doc, checkdoc,
- *   complete, dbdump, dbrestore, randomsend, resettotal, updatepassword,
+ *   stock, stocklist, testdata, cleanstock, doc,
+ *   complete, dbdump, dbrestore, resettotal, resetpassword, updatepassword,
  *   default (help)
  */
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
@@ -63,6 +63,7 @@ jest.unstable_mockModule('fs', () => ({
 // --- ver.js ---
 jest.unstable_mockModule('../../../../ver.js', () => ({
   ENV_TYPE: 'test',
+  PASSWORD_SALT: 'test_salt_',
   DEVICE_PATH: '/dev/sda',
   CA: '/t', CERT: '/t', PKEY: '/t',
   SESS_SECRET: 'test', SESS_PWD: 'test',
@@ -90,12 +91,6 @@ jest.unstable_mockModule('../../constants.js', () => ({
   PASSWORDDB: 'password',
   TOTALDB: 'total',
   BACKUP_LIMIT: 1000,
-  RANDOM_EMAIL: [
-    { name: 'Alice', mail: 'alice@test.com' },
-    { name: 'Bob', mail: 'bob@test.com' },
-    { name: 'Charlie', mail: 'charlie@test.com' },
-    { name: 'Diana', mail: 'diana@test.com' },
-  ],
   // Other constants utility.js needs
   RE_WEBURL: /^(url:)?(?:https?:\/\/).+/,
   STATIC_PATH: '/p', RELEASE: 'release', DEV: 'dev',
@@ -133,12 +128,10 @@ jest.unstable_mockModule('../../models/stock-tool.js', () => ({
 
 // --- api-tool-google.js ---
 const mockUserDrive = jest.fn(() => Promise.resolve());
-const mockSendPresentName = jest.fn(() => Promise.resolve());
 
 jest.unstable_mockModule('../../models/api-tool-google.js', () => ({
   default: jest.fn(),
   userDrive: mockUserDrive,
-  sendPresentName: mockSendPresentName,
 }));
 
 // --- tag-tool.js ---
@@ -154,6 +147,12 @@ jest.unstable_mockModule('../../models/tag-tool.js', () => ({
 const mockUpdatePasswordCipher = jest.fn(() => Promise.resolve());
 jest.unstable_mockModule('../../models/password-tool.js', () => ({
   updatePasswordCipher: mockUpdatePasswordCipher,
+}));
+
+// --- bcrypt ---
+const mockBcryptHash = jest.fn(() => Promise.resolve('$2b$10$hashed'));
+jest.unstable_mockModule('bcrypt', () => ({
+  default: { hash: mockBcryptHash, compare: jest.fn() },
 }));
 
 // --- mkdirp ---
@@ -195,6 +194,7 @@ describe('cmd.js', () => {
     mockGetStockListV2.mockResolvedValue([]);
     mockCompleteMimeTag.mockResolvedValue();
     mockUpdatePasswordCipher.mockResolvedValue();
+    mockBcryptHash.mockResolvedValue('$2b$10$hashed');
     mockMkdirp.mockResolvedValue();
     mockFsWriteFile.mockImplementation((p, d, e, cb) => cb(null));
     mockFsExistsSync.mockReturnValue(false);
@@ -378,36 +378,6 @@ describe('cmd.js', () => {
       mockCleanUseless.mockRejectedValueOnce(new Error('fail'));
       await runCmd('cleanstock remove');
       expect(mockCleanUseless).toHaveBeenCalled();
-    });
-  });
-
-  // =================================================================
-  // checkdoc command
-  // =================================================================
-  describe('checkdoc command', () => {
-    test('queries docUpdate collection, logs result', async () => {
-      const docs = [{ _id: 'd1', type: 'am' }];
-      mockMongo.mockResolvedValueOnce(docs);
-      const consoleSpy = jest.spyOn(console, 'log');
-      await runCmd('checkdoc');
-      await flushPromises();
-      expect(mockMongo).toHaveBeenCalledWith('find', 'docUpdate');
-      expect(consoleSpy).toHaveBeenCalledWith(docs);
-      consoleSpy.mockRestore();
-    });
-
-    test('empty collection → logs []', async () => {
-      mockMongo.mockResolvedValueOnce([]);
-      const consoleSpy = jest.spyOn(console, 'log');
-      await runCmd('checkdoc');
-      await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith([]);
-      consoleSpy.mockRestore();
-    });
-
-    test('DB error → handleError catches', async () => {
-      mockMongo.mockRejectedValueOnce(new Error('fail'));
-      await runCmd('checkdoc');
     });
   });
 
@@ -694,116 +664,6 @@ describe('cmd.js', () => {
   });
 
   // =================================================================
-  // randomsend command
-  // =================================================================
-  describe('randomsend command', () => {
-    test('list → logs sendList', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
-      await runCmd('randomsend list');
-      await flushPromises();
-      // Should log the RANDOM_EMAIL array
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'Alice' }),
-        ]),
-      );
-      consoleSpy.mockRestore();
-    });
-
-    test('edit with name:email → adds participant', async () => {
-      const consoleSpy = jest.spyOn(console, 'log');
-      await runCmd('randomsend edit Eve:eve@test.com');
-      await flushPromises();
-      // Should log updated list containing Eve
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'Eve', mail: 'eve@test.com' }),
-        ]),
-      );
-      consoleSpy.mockRestore();
-    });
-
-    test('edit with existing name → removes participant', async () => {
-      // First add someone, then remove them
-      await runCmd('randomsend edit TestRemove:test@t.com');
-      await flushPromises();
-      const consoleSpy = jest.spyOn(console, 'log');
-      await runCmd('randomsend edit TestRemove');
-      await flushPromises();
-      // The removed person's list should not contain TestRemove
-      const logCalls = consoleSpy.mock.calls.flat();
-      // Verify removal happened (no crash)
-      consoleSpy.mockRestore();
-    });
-
-    test('edit without joiner → error', async () => {
-      // cmd[2] is undefined
-      await runCmd('randomsend edit');
-      // handleError catches — no crash
-    });
-
-    test('edit — name not found + no email part → error', async () => {
-      await runCmd('randomsend edit UnknownPerson');
-      // 'UnknownPerson' not in list, split has length 1 → error
-    });
-
-    test('send → shuffles and sends emails', async () => {
-      // sendList should have >= 3 participants (4 from RANDOM_EMAIL + any we added)
-      await runCmd('randomsend send');
-      await flushPromises();
-      // sendPresentName should have been called for each participant
-      expect(mockSendPresentName).toHaveBeenCalled();
-    });
-
-    test('send with append param', async () => {
-      await runCmd('randomsend send 2026');
-      await flushPromises();
-      // joiner='2026' passed as third arg to sendPresentName
-      if (mockSendPresentName.mock.calls.length > 0) {
-        expect(mockSendPresentName.mock.calls[0][2]).toBe('2026');
-      }
-    });
-
-    test('unknown action → error', async () => {
-      await runCmd('randomsend foo');
-      // handleError with 'Action unknown!!!'
-    });
-
-    // Cover line 121: sendList.length < 3 → handleError
-    test('send with fewer than 3 participants → error', async () => {
-      // After prior tests, sendList has [Alice, Bob, Charlie, Diana, Eve]
-      // Remove until fewer than 3 remain
-      await runCmd('randomsend edit Alice');
-      await runCmd('randomsend edit Bob');
-      await runCmd('randomsend edit Charlie');
-      // Now sendList = [Diana, Eve] (2 entries)
-      jest.clearAllMocks();
-      await runCmd('randomsend send');
-      await flushPromises();
-      expect(mockSendPresentName).not.toHaveBeenCalled();
-    });
-
-    // Cover lines 157-158: out of limit (shuffle fails testArr 100 times)
-    test('send → "out of limit" when shuffle always produces identity', async () => {
-      // Add entries back to get >= 3
-      await runCmd('randomsend edit Alpha:alpha@test.com');
-      // Now sendList = [Diana, Eve, Alpha] (3 entries)
-      const originalRandom = Math.random;
-      // Math.random() = 0.99 → shuffle always produces identity [0,1,2]
-      // testArr fails immediately (arr[0]===0) → 100 iterations exhausted
-      Math.random = () => 0.99;
-      const consoleSpy = jest.spyOn(console, 'log');
-      jest.clearAllMocks();
-      await runCmd('randomsend send');
-      await flushPromises();
-      expect(consoleSpy).toHaveBeenCalledWith('out of limit');
-      expect(mockSendPresentName).not.toHaveBeenCalled();
-      consoleSpy.mockRestore();
-      Math.random = originalRandom;
-    });
-  });
-
-  // =================================================================
   // resettotal command
   // =================================================================
   describe('resettotal command', () => {
@@ -894,6 +754,47 @@ describe('cmd.js', () => {
   });
 
   // =================================================================
+  // resetpassword command
+  // =================================================================
+  describe('resetpassword command', () => {
+    test('hashes password with bcrypt and updates all users', async () => {
+      mockMongo.mockResolvedValueOnce(3);
+      const consoleSpy = jest.spyOn(console, 'log');
+      await runCmd('resetpassword myNewPass');
+      await flushPromises();
+      expect(mockBcryptHash).toHaveBeenCalledWith('test_salt_myNewPass', 10);
+      expect(mockMongo).toHaveBeenCalledWith(
+        'updateMany', 'user', {}, { $set: { password: '$2b$10$hashed' } },
+      );
+      expect(consoleSpy).toHaveBeenCalledWith('resetpassword');
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Reset'));
+      consoleSpy.mockRestore();
+    });
+
+    test('missing password → handleError', async () => {
+      await runCmd('resetpassword');
+      // Should not call bcrypt or mongo
+      expect(mockBcryptHash).not.toHaveBeenCalled();
+      expect(mockMongo).not.toHaveBeenCalled();
+    });
+
+    test('bcrypt error → handleError catches', async () => {
+      mockBcryptHash.mockRejectedValueOnce(new Error('bcrypt fail'));
+      await runCmd('resetpassword test123');
+      await flushPromises();
+      expect(mockMongo).not.toHaveBeenCalledWith(
+        'updateMany', expect.anything(), expect.anything(), expect.anything(),
+      );
+    });
+
+    test('mongo error → handleError catches', async () => {
+      mockMongo.mockRejectedValueOnce(new Error('db fail'));
+      await runCmd('resetpassword test123');
+      await flushPromises();
+    });
+  });
+
+  // =================================================================
   // default (help) command
   // =================================================================
   describe('default (help)', () => {
@@ -934,6 +835,7 @@ describe('cmd.js', () => {
       expect(consoleSpy).toHaveBeenCalledWith('stocklist type');
       expect(consoleSpy).toHaveBeenCalledWith('dbdump collection');
       expect(consoleSpy).toHaveBeenCalledWith('dbrestore collection');
+      expect(consoleSpy).toHaveBeenCalledWith('resetpassword <newPassword>');
       expect(consoleSpy).toHaveBeenCalledWith('updatepassword');
       consoleSpy.mockRestore();
     });

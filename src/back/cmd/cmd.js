@@ -1,22 +1,20 @@
-import { USERDB, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, RANDOM_EMAIL, BACKUP_LIMIT, TOTALDB } from '../constants.js'
-import { ENV_TYPE } from '../../../ver.js'
+import { USERDB, DOCDB, STORAGEDB, STOCKDB, PASSWORDDB, BACKUP_LIMIT, TOTALDB } from '../constants.js'
+import { ENV_TYPE, PASSWORD_SALT } from '../../../ver.js'
 import { BACKUP_PATH } from '../config.js'
 import readline from 'readline'
 const { createInterface } = readline;
 import fsModule from 'fs'
 const { writeFile: FsWriteFile, createReadStream: FsCreateReadStream, existsSync: FsExistsSync } = fsModule;
 import Mkdirp from 'mkdirp'
-import { sendPresentName } from '../models/api-tool-google.js'
 import { completeMimeTag } from '../models/tag-tool.js'
 //import External from '../models/external-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import StockTool, { getStockListV2 } from '../models/stock-tool.js'
 import { updatePasswordCipher } from '../models/password-tool.js'
 import { handleError, HoError, completeZero } from '../util/utility.js'
+import bcryptModule from 'bcrypt'
 
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-
-const sendList = RANDOM_EMAIL;
 
 export const dbDump = (collection, backupDate=null) => {
     if (collection !== 'accessToken' && collection !== TOTALDB && collection !== USERDB && collection !== STORAGEDB && collection !== STOCKDB && collection !== PASSWORDDB && collection !== DOCDB && collection !== `${STORAGEDB}User` && collection !== `${STOCKDB}User` && collection !== `${PASSWORDDB}User` && collection !== `${STORAGEDB}Dir` && collection !== `${STOCKDB}Dir` && collection !== `${PASSWORDDB}Dir`) {
@@ -73,78 +71,6 @@ const dbRestore = collection => {
         }).then(store => recur_insert(0, store)).then(() => recur_restore(index + 1));
     }
     return recur_restore(0);
-}
-
-const randomSend = (action, joiner=null) => {
-    switch (action) {
-        case 'list':
-        console.log(sendList);
-        return Promise.resolve();
-        case 'edit':
-        if (!joiner) {
-            return handleError(new HoError('Joiner unknown!!!'));
-        }
-        const result = joiner.split(':');
-        for (let i in sendList) {
-            if (result[0] === sendList[i].name) {
-                sendList.splice(i, 1);
-                console.log(sendList);
-                return Promise.resolve();
-            }
-        }
-        if (result.length < 2) {
-            return handleError(new HoError('Joiner infomation valid!!!'));
-        }
-        sendList.push({
-            name: result[0],
-            mail: result[1],
-        });
-        console.log(sendList);
-        return Promise.resolve();
-        case 'send':
-        console.log(sendList);
-        if (sendList.length < 3) {
-            return handleError(new HoError('Send list too short!!!'));
-        }
-        const orig = sendList.map((v, i) => i);
-        //console.log(orig);
-        const shuffle = arr => {
-            let currentIndex = arr.length;
-            while (currentIndex > 0) {
-                const randomIndex = Math.floor(Math.random() * currentIndex);
-                currentIndex--;
-                const temporaryValue = arr[currentIndex];
-                arr[currentIndex] = arr[randomIndex];
-                arr[randomIndex] = temporaryValue;
-            }
-            return arr;
-        }
-        const testArr = arr => {
-            for (let i = 0; i < arr.length; i++) {
-                if (arr[i] === i) {
-                    return false;
-                }
-                if (arr[arr[i]] === i) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        let limit = 100;
-        while (limit > 0) {
-            const ran = shuffle(orig);
-            //console.log(ran);
-            if (testArr(ran)) {
-                const recur_send = index => (index >= ran.length) ? Promise.resolve() : sendPresentName(Buffer.from(sendList[ran[index]].name).toString('base64'), sendList[index].mail, joiner).then(() => recur_send(index + 1));
-                return recur_send(0);
-            }
-            limit--;
-        }
-        console.log('out of limit');
-        return Promise.resolve();
-        default:
-        return handleError(new HoError('Action unknown!!!'));
-    }
 }
 
 const resetTotal = (type, se) => {
@@ -227,9 +153,6 @@ rl.on('line', line => {
         /*case 'drive':
         console.log('drive');
         return cmdUpdateDrive(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD drive'));*/
-        case 'checkdoc':
-        console.log('checkdoc');
-        return Mongo('find', DOCDB).then(doclist => console.log(doclist)).catch(err => handleError(err, 'CMD checkdoc'));
         /*case 'external':
         console.log('external');
         return External.getList(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'CMD external'));*/
@@ -242,11 +165,19 @@ rl.on('line', line => {
         case 'dbrestore':
         console.log('dbrestore');
         return dbRestore(cmd[1]).then(() => console.log('done')).catch(err => handleError(err, 'CMD dbrestore'));
-        case 'randomsend':
-        console.log('randomsend');
-        return randomSend(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Random send'));
         case 'resettotal':
         return resetTotal(cmd[1], cmd[2]).then(() => console.log('done')).catch(err => handleError(err, 'Reset total'));
+        case 'resetpassword':
+        console.log('resetpassword');
+        if (!cmd[1]) {
+            return handleError(new HoError('password is required'), 'CMD resetpassword');
+        }
+        return bcryptModule.hash(PASSWORD_SALT + cmd[1], 10).then(hash =>
+            Mongo('updateMany', USERDB, {}, {$set: {password: hash}})
+        ).then(count => {
+            console.log(`Reset ${count} user(s)`);
+            console.log('done');
+        }).catch(err => handleError(err, 'CMD resetpassword'));
         case 'updatepassword':
         return updatePasswordCipher().then(() => console.log('done')).catch(err => handleError(err, 'CMD Update password'));
         default:
@@ -255,14 +186,13 @@ rl.on('line', line => {
         console.log('stocklist type');
         //console.log('drive batchNumber [single username]');
         console.log('doc am|jp|tw [time]');
-        console.log('checkdoc');
         console.log('complete [add]');
         console.log('dbdump collection');
         console.log('dbrestore collection');
-        console.log('randomsend list|edit|send [name:email|append]');
         console.log('testdata');
         console.log('cleanstock [remove]');
         console.log('resettotal newmid|profit bfx|twse|usse');
+        console.log('resetpassword <newPassword>');
         console.log('updatepassword');
     }
 });

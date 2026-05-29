@@ -21,6 +21,7 @@ let consoleSpy;
 // Mock ver.js
 mockEnvType = 'test';
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     ENV_TYPE: mockEnvType,
 }));
 

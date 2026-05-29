@@ -78,6 +78,7 @@ jest.unstable_mockModule('../../constants.js', () => ({
 
 // ── ver.js mock ──
 jest.unstable_mockModule('../../../../ver.js', () => ({
+  PASSWORD_SALT: 'test_salt_',
   ENV_TYPE: 'test',
   SHIOAJI_APIKEY: 'test-key',
   SHIOAJI_APISECRET: 'test-secret',

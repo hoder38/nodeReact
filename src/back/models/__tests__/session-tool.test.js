@@ -43,6 +43,7 @@ jest.unstable_mockModule('connect-redis', () => ({
 
 // Mock ver.js module
 jest.unstable_mockModule('../../../../ver.js', () => ({
+    PASSWORD_SALT: 'test_salt_',
     ENV_TYPE: 'test',
     SESS_SECRET: 'test-secret',
     SESS_PWD: 'testpass',

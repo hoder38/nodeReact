@@ -84,6 +84,7 @@ jest.unstable_mockModule('readline', () => ({
 
 // --- ver.js ---
 jest.unstable_mockModule('../../../../ver.js', () => ({
+  PASSWORD_SALT: 'test_salt_',
   ENV_TYPE: 'test', CA: '/t', CERT: '/t', PKEY: '/t',
   SESS_SECRET: 'test', SESS_PWD: 'test',
   OPENSUBTITLES_KEY: 'test-key',
