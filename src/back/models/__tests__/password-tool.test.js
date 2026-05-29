@@ -65,7 +65,7 @@ jest.unstable_mockModule('password-generator', () => ({
 }));
 
 jest.unstable_mockModule('../../util/logger.js', () => ({
-    default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn() }),
+    default: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));
 
 const mod = await import('../../models/password-tool.js');
@@ -564,7 +564,6 @@ describe('password-tool.js', () => {
         });
 
         test('CTR items (2-part) → migrates to GCM', async () => {
-            // Create real CTR-encrypted data for migration
             const { createCipheriv, randomBytes } = await import('crypto');
             const key = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
             const iv = randomBytes(16);
@@ -609,32 +608,101 @@ describe('password-tool.js', () => {
             expect(updateCall[3].$set).not.toHaveProperty('prePassword');
         });
 
-        test('legacy 1-part record → rejects with error listing IDs', async () => {
+        test('v1 records (1-part hex) → migrates using createDecipher', async () => {
+            // Create real v1-encrypted data: createCipher('aes-256-ctr', key) + 4-char padding
+            const cryptoMod = (await import('crypto')).default;
+            const plaintext = 'myPassword1234'; // 10 chars + 4 padding chars = 14 total
+            const depr = cryptoMod.createCipher('aes-256-ctr', PASSWORD_PRIVATE_KEY);
+            let enc = depr.update(plaintext + 'salt', 'utf8', 'hex');
+            enc += depr.final('hex');
+            // enc is v1 format: single hex blob (no colon)
+
+            mockMongo
+                .mockResolvedValueOnce([
+                    { _id: 'r1', password: enc, prePassword: enc },
+                ])
+                .mockResolvedValue(1);
+            await updatePasswordCipher();
+            // find + 1 update
+            expect(mockMongo).toHaveBeenCalledTimes(2);
+            expect(mockMongo).toHaveBeenCalledWith('update', PASSWORDDB, { _id: 'r1' }, expect.objectContaining({
+                $set: expect.objectContaining({
+                    password: expect.stringMatching(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/),
+                    prePassword: expect.stringMatching(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/),
+                }),
+            }));
+        });
+
+        test('mixed v1 password + v2 prePassword → migrates both fields independently', async () => {
+            const cryptoMod = (await import('crypto')).default;
+            // v1 password
+            const depr = cryptoMod.createCipher('aes-256-ctr', PASSWORD_PRIVATE_KEY);
+            let v1enc = depr.update('secret' + 'pad4', 'utf8', 'hex');
+            v1enc += depr.final('hex');
+            // v2 prePassword
+            const key = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
+            const iv = cryptoMod.randomBytes(16);
+            const cipher = cryptoMod.createCipheriv('aes-256-ctr', key, iv);
+            let enc = cipher.update('oldpw', 'utf8');
+            enc = Buffer.concat([enc, cipher.final()]);
+            const v2enc = iv.toString('hex') + ':' + enc.toString('hex');
+
+            mockMongo
+                .mockResolvedValueOnce([
+                    { _id: 'r1', password: v1enc, prePassword: v2enc },
+                ])
+                .mockResolvedValue(1);
+            await updatePasswordCipher();
+            const updateCall = mockMongo.mock.calls[1];
+            expect(updateCall[3].$set.password).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
+            expect(updateCall[3].$set.prePassword).toMatch(/^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/);
+        });
+
+        test('truly malformed (non-hex, empty) → rejects with failure summary', async () => {
             mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'deadbeef', prePassword: 'cc:dd:ee' },
+                { _id: 'r1', password: 'not-hex-zzzz', prePassword: 'aa:bb:cc' },
+            ]);
+            await expect(updatePasswordCipher()).rejects.toMatchObject({
+                message: expect.stringContaining('1 failure'),
+            });
+        });
+
+        test('record with empty password field → treated as malformed', async () => {
+            mockMongo.mockResolvedValue([
+                { _id: 'r1', password: '', prePassword: 'aa:bb:cc' },
             ]);
             await expect(updatePasswordCipher()).rejects.toMatchObject({
                 message: expect.stringContaining('r1'),
             });
         });
 
-        test('legacy prePassword field (no colon) → rejects with error listing IDs', async () => {
-            mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'aa:bb:cc', prePassword: 'deadbeef' },
-            ]);
-            await expect(updatePasswordCipher()).rejects.toMatchObject({
-                message: expect.stringContaining('r1'),
-            });
-        });
+        test('v1 decrypt fails (too short) → failure collected, other records still migrate', async () => {
+            const cryptoMod = (await import('crypto')).default;
+            // Create valid v2 record
+            const key = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
+            const iv = cryptoMod.randomBytes(16);
+            const cipher = cryptoMod.createCipheriv('aes-256-ctr', key, iv);
+            let enc = cipher.update('goodpw', 'utf8');
+            enc = Buffer.concat([enc, cipher.final()]);
+            const v2enc = iv.toString('hex') + ':' + enc.toString('hex');
 
-        test('mixed: one legacy + one CTR → rejects listing legacy ID only', async () => {
-            mockMongo.mockResolvedValue([
-                { _id: 'r1', password: 'deadbeef', prePassword: 'deadbeef' },
-                { _id: 'r2', password: 'aa:bb', prePassword: 'cc:dd' },
-            ]);
+            // Create v1 record that decrypts to <= 4 chars (will fail strip)
+            const depr = cryptoMod.createCipher('aes-256-ctr', PASSWORD_PRIVATE_KEY);
+            let v1short = depr.update('ab', 'utf8', 'hex'); // 2 chars, less than 4 padding
+            v1short += depr.final('hex');
+
+            mockMongo
+                .mockResolvedValueOnce([
+                    { _id: 'bad1', password: v1short, prePassword: v1short },
+                    { _id: 'good1', password: v2enc, prePassword: v2enc },
+                ])
+                .mockResolvedValue(1);
+            // Should still reject because bad1 failed, but good1 migrated
             await expect(updatePasswordCipher()).rejects.toMatchObject({
-                message: expect.stringContaining('1 malformed'),
+                message: expect.stringContaining('1 failure'),
             });
+            // Verify good1 was still migrated (update called for good1)
+            expect(mockMongo).toHaveBeenCalledWith('update', PASSWORDDB, { _id: 'good1' }, expect.anything());
         });
     });
 });

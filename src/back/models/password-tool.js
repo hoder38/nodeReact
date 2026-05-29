@@ -4,7 +4,7 @@ import TagTool, { isDefaultTag, normalize } from '../models/tag-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import { isValidString, handleError, HoError, userPWCheck } from '../util/utility.js'
 import crypto from 'crypto'
-const { createCipheriv, createDecipheriv, randomBytes } = crypto;
+const { createCipheriv, createDecipheriv, randomBytes, createDecipher } = crypto;
 import PasswordGenerator from 'password-generator'
 import createLogger from '../util/logger.js'
 
@@ -13,6 +13,14 @@ const log = createLogger('password');
 const PasswordTagTool = TagTool(PASSWORDDB);
 
 export default {
+    /**
+     * Create a new password entry.
+     * Validates all fields, checks userPW for important entries, auto-generates tags,
+     * encrypts password with AES-256-GCM, and inserts into MongoDB.
+     * @param {Object} data - { name, username, password, conpassword, url?, email?, important?, userPW? }
+     * @param {Object} user - Authenticated user object with _id
+     * @returns {Promise<{id: string}>} Created record's _id
+     */
     newRow: async function(data, user) {
         if (!data['username'] || !data['password'] || !data['conpassword'] || !data['name']) {
             return handleError(new HoError('parameter lost!!!'));
@@ -78,6 +86,7 @@ export default {
                 setArr.push(s);
             }
         });
+        log.info({ name, username, important }, 'creating new password entry');
         return Mongo('insert', PASSWORDDB, {
             _id: objectID(),
             name,
@@ -91,10 +100,21 @@ export default {
             tags: setArr,
             important,
         }).then(item => {
-            log.debug({ id: item[0]._id }, 'password row saved');
+            log.info({ id: item[0]._id }, 'password entry created');
             return {id: item[0]._id};
         });
     },
+
+    /**
+     * Edit an existing password entry.
+     * Validates fields, checks userPW for important entries, updates tags, rotates
+     * password (moves current to prePassword) if password field is changed.
+     * @param {string} uid - Record _id
+     * @param {Object} data - Fields to update
+     * @param {Object} user - Authenticated user
+     * @param {Object} session - Express session for tag tracking
+     * @returns {Promise<void>}
+     */
     editRow: function(uid, data, user, session) {
         let password = '';
         if (data['password']) {
@@ -145,6 +165,7 @@ export default {
         if (!id) {
             return handleError(new HoError('uid not vaild!!!'));
         }
+        log.debug({ id, hasPassword: !!password }, 'editing password entry');
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
@@ -193,7 +214,7 @@ export default {
                 prePassword: pws[0].password,
                 utime: Math.round(new Date().getTime() / 1000),
             } : {});
-            log.debug({ id: pws[0]._id, fields: Object.keys(update_data) }, 'password row updated');
+            log.info({ id: pws[0]._id, fields: Object.keys(update_data) }, 'password entry updated');
             PasswordTagTool.setLatest(pws[0]._id, session).catch(err => handleError(err, 'Set latest'));
             return Mongo('update', PASSWORDDB, {
                 _id: pws[0]._id,
@@ -201,11 +222,20 @@ export default {
             }, {$set: update_data});
         });
     },
+
+    /**
+     * Delete a password entry. Requires userPW verification for important entries.
+     * @param {string} uid - Record _id
+     * @param {string} userPW - User password for verification (if important)
+     * @param {Object} user - Authenticated user
+     * @returns {Promise<void>}
+     */
     delRow: function(uid, userPW, user) {
         const id = isValidString(uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid not vaild!!!'));
         }
+        log.debug({ id }, 'deleting password entry');
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
@@ -225,17 +255,30 @@ export default {
                     return handleError(new HoError('permission denied'))
                 }
             }
+            log.info({ id: pws[0]._id }, 'password entry deleted');
             return Mongo('deleteMany', PASSWORDDB, {
                 _id: pws[0]._id,
                 owner: user._id,
             });
         });
     },
+
+    /**
+     * Decrypt and return a stored password (or prePassword).
+     * Requires userPW verification for important entries.
+     * @param {string} uid - Record _id
+     * @param {string} userPW - User password for verification
+     * @param {Object} user - Authenticated user
+     * @param {Object} session - Express session for tag tracking
+     * @param {string|null} type - 'pre' for prePassword, null for password
+     * @returns {Promise<{password: string}>} Decrypted password
+     */
     getPassword: function(uid, userPW, user, session, type=null) {
         const id = isValidString(uid, 'uid');
         if (!id) {
             return handleError(new HoError('uid not vaild!!!'));
         }
+        log.debug({ id, type: type || 'current' }, 'retrieving password');
         return Mongo('find', PASSWORDDB, {
             _id: id,
             owner: user._id,
@@ -261,17 +304,35 @@ export default {
                     return handleError(new HoError('permission denied'))
                 }
             }
+            log.debug({ id }, 'password decrypted successfully');
             PasswordTagTool.setLatest(id, session).catch(err => handleError(err, 'Set latest'));
             return {password: (type === 'pre') ? decrypt(items[0].prePassword) : decrypt(items[0].password)};
         });
     },
+
+    /**
+     * Generate a random password using PasswordGenerator library.
+     * @param {number} type - Character class: 3=digits, 2=alphanumeric, other=alphanumeric+special
+     * @returns {string} 16-character random password
+     */
     generatePW: function(type) {
+        log.debug({ type }, 'generating password');
         return (type === 3) ? PasswordGenerator(16, false, /[0-9]/) : (type === 2) ? PasswordGenerator(16, false, /[0-9a-zA-Z]/) : PasswordGenerator(16, false, /[0-9a-zA-Z!@#$%]/);
     },
 }
 
+/**
+ * AES-256 key buffer derived from PASSWORD_PRIVATE_KEY.
+ * Takes the hex-decoded key bytes, pads/truncates to exactly 32 bytes.
+ */
 const keyBuffer = Buffer.from(Buffer.concat([Buffer.from(PASSWORD_PRIVATE_KEY), Buffer.alloc(32)], 32), 'hex');
 
+/**
+ * Encrypt plaintext using AES-256-GCM.
+ * Produces format: `ivHex(24):authTagHex(32):ciphertextHex`
+ * @param {string} text - Plaintext to encrypt
+ * @returns {string} Encrypted string in 3-part colon-separated hex format
+ */
 function encrypt(text) {
     const iv = randomBytes(12);
     const cipher = createCipheriv(ALGORITHM, keyBuffer, iv);
@@ -281,9 +342,18 @@ function encrypt(text) {
     return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted.toString('hex');
 }
 
+/**
+ * Decrypt ciphertext. Auto-detects format:
+ * - 3-part (iv:authTag:ciphertext) → AES-256-GCM decryption
+ * - 2-part (iv:ciphertext) → legacy AES-256-CTR decryption
+ * @param {string} text - Encrypted string
+ * @returns {string} Decrypted plaintext
+ * @throws {Error} If auth tag verification fails (GCM) or format invalid
+ */
 function decrypt(text) {
     const parts = text.split(':');
     if (parts.length === 3) {
+        // GCM format: iv(12 bytes) : authTag(16 bytes) : ciphertext
         const iv = Buffer.from(parts[0], 'hex');
         const authTag = Buffer.from(parts[1], 'hex');
         const encryptedText = Buffer.from(parts[2], 'hex');
@@ -293,7 +363,7 @@ function decrypt(text) {
         decrypted = Buffer.concat([decrypted, decipher.final()]);
         return decrypted.toString('utf8');
     }
-    // Legacy CTR format: iv:ciphertext
+    // Legacy CTR format: iv(16 bytes) : ciphertext
     const iv = Buffer.from(parts[0], 'hex');
     const encryptedText = Buffer.from(parts[1], 'hex');
     const decipher = createDecipheriv(ALGORITHM_LEGACY, keyBuffer, iv);
@@ -302,36 +372,12 @@ function decrypt(text) {
     return decrypted.toString();
 }
 
-export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(items => {
-    const malformed = items.filter(item =>
-        item.password.split(':').length === 1 || item.prePassword.split(':').length === 1
-    );
-    if (malformed.length > 0) {
-        return handleError(new HoError(`found ${malformed.length} malformed record(s): ${malformed.map(i => i._id).join(', ')}`));
-    }
-    const toMigrate = items.filter(item =>
-        item.password.split(':').length === 2 || item.prePassword.split(':').length === 2
-    );
-    if (toMigrate.length === 0) {
-        log.info({ count: items.length }, 'all password records use GCM format');
-        console.log(`0 records migrated (${items.length} already GCM)`);
-        return Promise.resolve();
-    }
-    return toMigrate.reduce((chain, item) => chain.then(() => {
-        const update = {};
-        if (item.password.split(':').length === 2) {
-            update.password = encrypt(decryptLegacyCTR(item.password));
-        }
-        if (item.prePassword.split(':').length === 2) {
-            update.prePassword = encrypt(decryptLegacyCTR(item.prePassword));
-        }
-        return Mongo('update', PASSWORDDB, { _id: item._id }, { $set: update });
-    }), Promise.resolve()).then(() => {
-        log.info({ migrated: toMigrate.length, total: items.length }, 'CTR→GCM migration complete');
-        console.log(`${toMigrate.length} record(s) migrated to GCM (${items.length} total)`);
-    });
-});
-
+/**
+ * Decrypt legacy CTR format (v2): `iv:ciphertext`
+ * Used by migration to convert v2 records to GCM.
+ * @param {string} text - Encrypted string in `ivHex:ciphertextHex` format
+ * @returns {string} Decrypted plaintext
+ */
 function decryptLegacyCTR(text) {
     const parts = text.split(':');
     const iv = Buffer.from(parts[0], 'hex');
@@ -341,3 +387,136 @@ function decryptLegacyCTR(text) {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
 }
+
+/**
+ * Decrypt v1 legacy format (oldest): single hex blob with no IV.
+ * Uses deprecated crypto.createDecipher with PASSWORD_PRIVATE_KEY as passphrase.
+ * Strips last 4 characters (legacy padding) from decrypted output.
+ * @param {string} text - Single hex blob (no colon separator)
+ * @returns {string} Decrypted plaintext with legacy padding removed
+ * @throws {Error} If decryption fails or result too short
+ */
+function decryptV1Legacy(text) {
+    const decipher = createDecipher(ALGORITHM_LEGACY, PASSWORD_PRIVATE_KEY);
+    let dec = decipher.update(text, 'hex', 'utf8');
+    dec += decipher.final('utf8');
+    if (dec.length <= 4) {
+        throw new Error(`v1 decryption produced result too short (${dec.length} chars) to strip padding`);
+    }
+    return dec.substring(0, dec.length - 4);
+}
+
+/**
+ * Detect the encryption format version of a stored value.
+ * @param {string} value - Encrypted field value
+ * @returns {number} 1=v1 (no IV), 2=v2 (CTR with IV), 3=v3 (GCM)
+ */
+function detectVersion(value) {
+    if (!value || typeof value !== 'string') return 0;
+    const parts = value.split(':');
+    if (parts.length === 3) return 3;
+    if (parts.length === 2) return 2;
+    if (parts.length === 1 && /^[0-9a-fA-F]+$/.test(value)) return 1;
+    return 0; // truly malformed
+}
+
+/**
+ * Batch migration: converts all password records to GCM (v3) format.
+ * Handles three source formats per-field independently:
+ * - v1 (1-part hex): decrypt with deprecated createDecipher, strip 4-char padding, re-encrypt GCM
+ * - v2 (2-part iv:ciphertext): decrypt CTR, re-encrypt GCM
+ * - v3 (3-part iv:authTag:ciphertext): already GCM, skip
+ *
+ * Continues processing on per-record failure but rejects at end with aggregate error.
+ * @returns {Promise<void>} Resolves if all records migrated; rejects with summary if any failed
+ */
+export const updatePasswordCipher = () => Mongo('find', PASSWORDDB, {}).then(items => {
+    log.info({ total: items.length }, 'updatePasswordCipher: scanning all records');
+
+    const failures = [];
+    const toMigrate = [];
+
+    for (const item of items) {
+        const pwVer = detectVersion(item.password);
+        const preVer = detectVersion(item.prePassword);
+
+        // Skip fully migrated records
+        if (pwVer === 3 && preVer === 3) continue;
+
+        // Truly malformed (not hex, empty, or unknown format)
+        if (pwVer === 0 || preVer === 0) {
+            const msg = `record ${item._id}: malformed format (password:v${pwVer}, prePassword:v${preVer})`;
+            log.error({ id: item._id, pwVer, preVer }, msg);
+            failures.push(msg);
+            continue;
+        }
+
+        toMigrate.push({ item, pwVer, preVer });
+    }
+
+    if (toMigrate.length === 0 && failures.length === 0) {
+        log.info({ count: items.length }, 'all records already GCM — nothing to migrate');
+        console.log(`0 records migrated (${items.length} already GCM)`);
+        return Promise.resolve();
+    }
+
+    log.info({ toMigrate: toMigrate.length, failures: failures.length }, 'migration starting');
+
+    let migratedCount = 0;
+    let v1Count = 0;
+    let v2Count = 0;
+
+    return toMigrate.reduce((chain, { item, pwVer, preVer }) => chain.then(() => {
+        try {
+            const update = {};
+
+            // Migrate password field
+            if (pwVer === 1) {
+                const plain = decryptV1Legacy(item.password);
+                update.password = encrypt(plain);
+                v1Count++;
+                log.debug({ id: item._id, field: 'password', from: 'v1' }, 'migrating field');
+            } else if (pwVer === 2) {
+                const plain = decryptLegacyCTR(item.password);
+                update.password = encrypt(plain);
+                v2Count++;
+                log.debug({ id: item._id, field: 'password', from: 'v2' }, 'migrating field');
+            }
+
+            // Migrate prePassword field
+            if (preVer === 1) {
+                const plain = decryptV1Legacy(item.prePassword);
+                update.prePassword = encrypt(plain);
+                if (pwVer !== 1) v1Count++;
+                log.debug({ id: item._id, field: 'prePassword', from: 'v1' }, 'migrating field');
+            } else if (preVer === 2) {
+                const plain = decryptLegacyCTR(item.prePassword);
+                update.prePassword = encrypt(plain);
+                if (pwVer !== 2) v2Count++;
+                log.debug({ id: item._id, field: 'prePassword', from: 'v2' }, 'migrating field');
+            }
+
+            if (Object.keys(update).length === 0) return Promise.resolve();
+
+            return Mongo('update', PASSWORDDB, { _id: item._id }, { $set: update }).then(() => {
+                migratedCount++;
+                log.debug({ id: item._id }, 'record migrated');
+            });
+        } catch (err) {
+            const msg = `record ${item._id}: ${err.message}`;
+            log.error({ id: item._id, err: err.message }, 'migration failed for record');
+            failures.push(msg);
+            return Promise.resolve();
+        }
+    }), Promise.resolve()).then(() => {
+        const summary = `${migratedCount} record(s) migrated (v1:${v1Count}, v2:${v2Count}), ${items.length - migratedCount - failures.length} already GCM, ${failures.length} failed`;
+        console.log(summary);
+        log.info({ migratedCount, v1Count, v2Count, total: items.length, failures: failures.length }, 'migration complete');
+
+        if (failures.length > 0) {
+            const errMsg = `migration completed with ${failures.length} failure(s):\n${failures.join('\n')}`;
+            log.error({ failures }, errMsg);
+            return handleError(new HoError(errMsg));
+        }
+    });
+});
