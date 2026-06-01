@@ -39,10 +39,7 @@ print(acc_settle)
 if len(acc_settle) < 3 and len(sys.argv) != 3:
     raise ValueError('Miss settle')
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
-retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
-acc_order = api.list_trades()
 now = datetime.datetime.now()
-
 if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
         current_cash = (acc_balance.acc_balance + acc_settle[0].amount + acc_settle[1].amount + acc_settle[2].amount) / 10
@@ -57,6 +54,8 @@ if len(sys.argv) == 3:
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
+    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
+    acc_order = api.list_trades()
     for o in acc_order:
         status = str(o.status.status)
         action = str(o.order.action)
