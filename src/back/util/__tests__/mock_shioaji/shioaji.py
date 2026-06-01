@@ -51,6 +51,18 @@ Unit = _Unit
 
 
 # ---------------------------------------------------------------------------
+# OrderState type markers for order_deal_records()
+# ---------------------------------------------------------------------------
+class _StockOrderState:
+    def __str__(self):
+        return 'StockOrder'
+
+class _StockDealState:
+    def __str__(self):
+        return 'StockDeal'
+
+
+# ---------------------------------------------------------------------------
 # Data object builders
 # ---------------------------------------------------------------------------
 class _Balance:
@@ -92,13 +104,14 @@ class _OrderStatus:
 
 
 class _OrderDetail:
-    def __init__(self, action, quantity, price, price_type, order_lot, id='ORD001', order_type='ROD'):
+    def __init__(self, action, quantity, price, price_type, order_lot, id='ORD000', ordno='ORD000', order_type='ROD'):
         self.action = action
         self.quantity = quantity
         self.price = price
         self.price_type = price_type
         self.order_lot = order_lot
         self.id = id
+        self.ordno = ordno
         self.order_type = order_type
 
 
@@ -121,19 +134,21 @@ def _build_orders():
     """Build order/trade objects from MOCK_SJ_ORDERS env var."""
     raw = _env_json('MOCK_SJ_ORDERS', [])
     trades = []
-    for o in raw:
+    for i, o in enumerate(raw):
         deals = []
         for d in o.get('deals', []):
             deals.append(_Deal(d['price'], d['ts'], d['quantity']))
         dt = datetime.datetime.fromtimestamp(o.get('order_datetime', 1700000000))
         status = _OrderStatus(o['status'], dt, deals)
+        ordno = o.get('id', f'ORD{i:03d}')
         order = _OrderDetail(
             action=o.get('action', 'Buy'),
             quantity=o.get('quantity', 1),
             price=o.get('price', 100),
             price_type=o.get('price_type', 'LMT'),
             order_lot=o.get('order_lot', 'Common'),
-            id=o.get('id', 'ORD001'),
+            id=ordno,
+            ordno=ordno,
         )
         contract = _Contract(o.get('code', '2330'))
         trades.append(_Trade(contract, order, status))
@@ -192,6 +207,61 @@ class Shioaji:
 
     def list_trades(self):
         return _build_orders()
+
+    def order_deal_records(self, account=None, timeout=None):
+        """Convert MOCK_SJ_ORDERS to (state, event) tuples like real shioaji."""
+        raw = _env_json('MOCK_SJ_ORDERS', [])
+        records = []
+        for i, o in enumerate(raw):
+            ordno = o.get('id', f'ORD{i:03d}')
+            order_qty = o.get('quantity', 1)
+            status = o['status']
+            action = o.get('action', 'Buy')
+            code = o.get('code', '2330')
+            order_lot = o.get('order_lot', 'Common')
+            price_type = o.get('price_type', 'LMT')
+            price = o.get('price', 100)
+            exchange_ts = float(o.get('order_datetime', 1700000000))
+            new_event = {
+                'operation': {'op_type': 'New', 'op_code': '00'},
+                'order': {
+                    'id': ordno, 'ordno': ordno,
+                    'action': action, 'price': price,
+                    'quantity': order_qty, 'price_type': price_type,
+                    'order_lot': order_lot,
+                },
+                'status': {
+                    'exchange_ts': exchange_ts,
+                    'cancel_quantity': 0,
+                    'order_quantity': order_qty,
+                },
+                'contract': {'code': code},
+            }
+            records.append((_StockOrderState(), new_event))
+            if status == 'Cancelled':
+                cancel_event = {
+                    'operation': {'op_type': 'Cancel', 'op_code': '00'},
+                    'order': {'ordno': ordno},
+                    'status': {
+                        'exchange_ts': exchange_ts,
+                        'cancel_quantity': order_qty,
+                        'order_quantity': order_qty,
+                    },
+                    'contract': {'code': code},
+                }
+                records.append((_StockOrderState(), cancel_event))
+            for d in o.get('deals', []):
+                deal_event = {
+                    'ordno': ordno,
+                    'price': d['price'],
+                    'quantity': d['quantity'],
+                    'ts': d['ts'],
+                    'action': action,
+                    'code': code,
+                    'order_lot': order_lot,
+                }
+                records.append((_StockDealState(), deal_event))
+        return records
 
     def activate_ca(self, ca_path=None, ca_passwd=None, person_id=None):
         return None

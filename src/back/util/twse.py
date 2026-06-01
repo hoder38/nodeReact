@@ -54,42 +54,64 @@ if len(sys.argv) == 3:
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
-    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
-    acc_order = api.list_trades()
-    for o in acc_order:
-        status = str(o.status.status)
-        action = str(o.order.action)
-        price_type = str(o.order.price_type)
-        order_lot = str(o.order.order_lot)
-        if status == 'PendingSubmit' or status == 'PreSubmitted' or status == 'Submitted' or status == 'Filling':
-            print(o)
+    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
+    new_events = {}
+    fill_qtys = {}
+    cancel_qtys = {}
+    deal_events = {}
+    for state, event in records:
+        if 'StockDeal' in str(state):
+            ordno = event['ordno']
+            deal_events.setdefault(ordno, []).append(event)
+            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
+        else:
+            op_type = event['operation']['op_type']
+            op_code = event['operation']['op_code']
+            ordno = event['order']['ordno']
+            if op_type == 'New' and op_code == '00':
+                new_events[ordno] = event
+            elif op_type == 'Cancel' and op_code == '00':
+                cancel_qtys[ordno] = event['status']['cancel_quantity']
+    for ordno, ev in new_events.items():
+        order_qty = ev['status']['order_quantity']
+        fill_qty = fill_qtys.get(ordno, 0)
+        cancel_qty = cancel_qtys.get(ordno, 0)
+        action = ev['order']['action']
+        price_type = ev['order']['price_type']
+        order_lot = ev['order']['order_lot']
+        code = ev['contract']['code']
+        ts = ev['status']['exchange_ts']
+        if fill_qty + cancel_qty < order_qty:
+            print(ev)
+            qty = ev['order']['quantity']
+            p = ev['order']['price']
             if action == 'Buy':
-                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
-            else :
-                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(-o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
-        if status == 'Filled' or status == 'Filling':
-            price = 0
-            time = 0
+                order.append('{\"symbol\":\"' + code + '\",\"amount\":' + str(qty) + ',\"price\":' + str(p) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(ts) + '}')
+            else:
+                order.append('{\"symbol\":\"' + code + '\",\"amount\":' + str(-qty) + ',\"price\":' + str(p) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(ts) + '}')
+        if ordno in deal_events:
+            order_id = ev['order']['id']
+            deal_price = 0
+            deal_ts = 0
             ptime = ''
             profit = ''
-            quantity = 0
-            quantitystr = ''
-            for d in o.status.deals:
-                price = d.price
-                time = d.ts
-                ptime = ptime + str(d.ts) + 't'
-                quantity = quantity + d.quantity
+            deal_qty = 0
+            for d in deal_events[ordno]:
+                deal_price = d['price']
+                deal_ts = d['ts']
+                ptime = ptime + str(d['ts']) + 't'
+                deal_qty = deal_qty + d['quantity']
                 if order_lot == 'IntradayOdd':
-                    profit = profit + str(d.price * d.quantity / 10) + 'p'
-                else :
-                    profit = profit + str(d.price * d.quantity * 100) + 'p'
+                    profit = profit + str(d['price'] * d['quantity'] / 10) + 'p'
+                else:
+                    profit = profit + str(d['price'] * d['quantity'] * 100) + 'p'
             if order_lot == 'IntradayOdd':
-                quantity = (o.order.quantity - quantity) // 10
-                quantitystr = '\"oddquantity\":' + str(quantity)
-            else :
-                quantity = (o.order.quantity - quantity) * 100
-                quantitystr = '\"quantity\":' + str(quantity)
-            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + action + '\",\"time\":' + str(time) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+                rem_qty = (order_qty - deal_qty) // 10
+                quantitystr = '\"oddquantity\":' + str(rem_qty)
+            else:
+                rem_qty = (order_qty - deal_qty) * 100
+                quantitystr = '\"quantity\":' + str(rem_qty)
+            fill_order.append('{\"symbol\":\"' + code + '\",\"id\":\"' + order_id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(deal_price) + ',\"type\":\"' + action + '\",\"time\":' + str(deal_ts) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(ts) + '}')
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
     print("start result")
@@ -110,11 +132,34 @@ elif sys.argv[3] == 'submit':
             ca_passwd = capw,
             person_id = person_info[0].person_id,
         )
+    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
+    new_events = {}
+    fill_qtys = {}
+    cancel_qtys = {}
+    for state, event in records:
+        if 'StockDeal' in str(state):
+            ordno = event['ordno']
+            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
+        else:
+            op_type = event['operation']['op_type']
+            op_code = event['operation']['op_code']
+            ordno = event['order']['ordno']
+            if op_type == 'New' and op_code == '00':
+                new_events[ordno] = event
+            elif op_type == 'Cancel' and op_code == '00':
+                cancel_qtys[ordno] = event['status']['cancel_quantity']
+    pending_lmt_ordnos = set()
+    for ordno, ev in new_events.items():
+        order_qty = ev['status']['order_quantity']
+        if (fill_qtys.get(ordno, 0) + cancel_qtys.get(ordno, 0) < order_qty
+                and ev['order']['price_type'] == 'LMT'):
+            pending_lmt_ordnos.add(ordno)
     retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
     acc_order = api.list_trades()
-    for o in acc_order:
-        if str(o.order.price_type) == 'LMT' and (str(o.status.status) == 'PendingSubmit' or str(o.status.status) == 'PreSubmitted' or str(o.status.status) == 'Submitted' or str(o.status.status) == 'Filling'):
-            api.cancel_order(o, timeout=10000)
+    trade_by_ordno = {t.order.ordno: t for t in acc_order}
+    for ordno in pending_lmt_ordnos:
+        if ordno in trade_by_ordno:
+            api.cancel_order(trade_by_ordno[ordno], timeout=10000)
     fee = float(sys.argv[6])
     current_cash = current_cash - 10000
     for a in sys.argv:
@@ -220,11 +265,37 @@ elif sys.argv[3] == 'sellall':
         )
     index = sys.argv[6]
     print(index)
+    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
+    new_events = {}
+    fill_qtys = {}
+    cancel_qtys = {}
+    for state, event in records:
+        if 'StockDeal' in str(state):
+            ordno = event['ordno']
+            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
+        else:
+            op_type = event['operation']['op_type']
+            op_code = event['operation']['op_code']
+            ordno = event['order']['ordno']
+            if op_type == 'New' and op_code == '00':
+                new_events[ordno] = event
+            elif op_type == 'Cancel' and op_code == '00':
+                cancel_qtys[ordno] = event['status']['cancel_quantity']
+    pending_lmt_ordnos = set()
+    for ordno, ev in new_events.items():
+        order_qty = ev['status']['order_quantity']
+        fill_qty = fill_qtys.get(ordno, 0)
+        if (fill_qty + cancel_qtys.get(ordno, 0) < order_qty
+                and ev['order']['price_type'] == 'LMT'
+                and ev['contract']['code'] == index
+                and fill_qty == 0):
+            pending_lmt_ordnos.add(ordno)
     retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
     acc_order = api.list_trades()
-    for o in acc_order:
-        if o.contract.code == index and str(o.order.price_type) == 'LMT' and (str(o.status.status) == 'PendingSubmit' or str(o.status.status) == 'PreSubmitted' or str(o.status.status) == 'Submitted'):
-            api.cancel_order(o, timeout=10000)
+    trade_by_ordno = {t.order.ordno: t for t in acc_order}
+    for ordno in pending_lmt_ordnos:
+        if ordno in trade_by_ordno:
+            api.cancel_order(trade_by_ordno[ordno], timeout=10000)
     q = 0
     for p in acc_position:
         if p.code == index:
