@@ -46,6 +46,10 @@ class constant:
     Unit = _Unit
 
 
+# Module-level Unit alias so `sj.Unit.Share` works (twse.py uses this form)
+Unit = _Unit
+
+
 # ---------------------------------------------------------------------------
 # Data object builders
 # ---------------------------------------------------------------------------
@@ -183,7 +187,7 @@ class Shioaji:
         raw = _env_json('MOCK_SJ_POSITIONS', [])
         return [_Position(p['code'], p['quantity'], p['price']) for p in raw]
 
-    def update_status(self, timeout=None):
+    def update_status(self, account=None, timeout=None):
         return None
 
     def list_trades(self):

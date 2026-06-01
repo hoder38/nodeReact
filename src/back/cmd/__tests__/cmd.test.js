@@ -9,7 +9,7 @@
  *
  * Commands tested:
  *   stock, stocklist, testdata, cleanstock, doc,
- *   complete, dbdump, dbrestore, resettotal, resetpassword, updatepassword,
+ *   complete, dbdump, dbrestore, resettotal, resetpassword,
  *   default (help)
  */
 import { jest, describe, test, expect, beforeEach, afterEach } from '@jest/globals';
@@ -804,7 +804,6 @@ describe('cmd.js', () => {
       expect(consoleSpy).toHaveBeenCalledWith('dbdump collection');
       expect(consoleSpy).toHaveBeenCalledWith('dbrestore collection');
       expect(consoleSpy).toHaveBeenCalledWith('resetpassword <newPassword>');
-      expect(consoleSpy).toHaveBeenCalledWith('updatepassword');
       consoleSpy.mockRestore();
     });
   });

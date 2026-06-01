@@ -38,7 +38,7 @@ acc_settle = retryApi(lambda: api.settlements(api.stock_account, timeout=10000))
 print(acc_settle)
 if len(acc_settle) < 3 and len(sys.argv) != 3:
     raise ValueError('Miss settle')
-acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
+acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.Unit.Share, timeout=10000))
 now = datetime.datetime.now()
 if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
     if int(now.hour) < 10:
