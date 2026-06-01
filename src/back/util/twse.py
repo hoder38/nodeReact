@@ -39,7 +39,7 @@ print(acc_settle)
 if len(acc_settle) < 3 and len(sys.argv) != 3:
     raise ValueError('Miss settle')
 acc_position = retryApi(lambda: api.list_positions(api.stock_account, unit=sj.constant.Unit.Share, timeout=10000))
-retryApi(lambda: api.update_status(timeout=10000))
+retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
 acc_order = api.list_trades()
 now = datetime.datetime.now()
 
@@ -111,10 +111,11 @@ elif sys.argv[3] == 'submit':
             ca_passwd = capw,
             person_id = person_info[0].person_id,
         )
+    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
+    acc_order = api.list_trades()
     for o in acc_order:
         if str(o.order.price_type) == 'LMT' and (str(o.status.status) == 'PendingSubmit' or str(o.status.status) == 'PreSubmitted' or str(o.status.status) == 'Submitted' or str(o.status.status) == 'Filling'):
             api.cancel_order(o, timeout=10000)
-    retryApi(lambda: api.update_status(timeout=10000))
     fee = float(sys.argv[6])
     current_cash = current_cash - 10000
     for a in sys.argv:
@@ -220,10 +221,11 @@ elif sys.argv[3] == 'sellall':
         )
     index = sys.argv[6]
     print(index)
+    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
+    acc_order = api.list_trades()
     for o in acc_order:
         if o.contract.code == index and str(o.order.price_type) == 'LMT' and (str(o.status.status) == 'PendingSubmit' or str(o.status.status) == 'PreSubmitted' or str(o.status.status) == 'Submitted'):
             api.cancel_order(o, timeout=10000)
-    retryApi(lambda: api.update_status(timeout=10000))
     q = 0
     for p in acc_position:
         if p.code == index:

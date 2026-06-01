@@ -10,7 +10,6 @@ import { completeMimeTag } from '../models/tag-tool.js'
 //import External from '../models/external-tool.js'
 import Mongo, { objectID } from '../models/mongo-tool.js'
 import StockTool, { getStockListV2 } from '../models/stock-tool.js'
-import { updatePasswordCipher } from '../models/password-tool.js'
 import { handleError, HoError, completeZero } from '../util/utility.js'
 import bcryptModule from 'bcrypt'
 
@@ -178,8 +177,7 @@ rl.on('line', line => {
             console.log(`Reset ${count} user(s)`);
             console.log('done');
         }).catch(err => handleError(err, 'CMD resetpassword'));
-        case 'updatepassword':
-        return updatePasswordCipher().then(() => console.log('done')).catch(err => handleError(err, 'CMD Update password'));
+
         default:
         console.log('help:');
         console.log('stock type index mode');
@@ -191,6 +189,5 @@ rl.on('line', line => {
         console.log('cleanstock [remove]');
         console.log('resettotal newmid|profit bfx|twse|usse');
         console.log('resetpassword <newPassword>');
-        console.log('updatepassword');
     }
 });

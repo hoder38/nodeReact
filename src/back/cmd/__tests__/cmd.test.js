@@ -143,10 +143,7 @@ jest.unstable_mockModule('../../models/tag-tool.js', () => ({
 }));
 
 // --- password-tool.js ---
-const mockUpdatePasswordCipher = jest.fn(() => Promise.resolve());
-jest.unstable_mockModule('../../models/password-tool.js', () => ({
-  updatePasswordCipher: mockUpdatePasswordCipher,
-}));
+jest.unstable_mockModule('../../models/password-tool.js', () => ({}));
 
 // --- bcrypt ---
 const mockBcryptHash = jest.fn(() => Promise.resolve('$2b$10$hashed'));
@@ -192,7 +189,6 @@ describe('cmd.js', () => {
     mockCleanUseless.mockResolvedValue();
     mockGetStockListV2.mockResolvedValue([]);
     mockCompleteMimeTag.mockResolvedValue();
-    mockUpdatePasswordCipher.mockResolvedValue();
     mockBcryptHash.mockResolvedValue('$2b$10$hashed');
     mockMkdirp.mockResolvedValue();
     mockFsWriteFile.mockImplementation((p, d, e, cb) => cb(null));
@@ -722,27 +718,6 @@ describe('cmd.js', () => {
 
     test('missing both params → error', async () => {
       await runCmd('resettotal');
-    });
-  });
-
-  // =================================================================
-  // updatepassword command
-  // =================================================================
-  describe('updatepassword command', () => {
-    test('calls updatePasswordCipher()', async () => {
-      await runCmd('updatepassword');
-      expect(mockUpdatePasswordCipher).toHaveBeenCalled();
-    });
-
-    test('extra args ignored', async () => {
-      await runCmd('updatepassword foo bar');
-      expect(mockUpdatePasswordCipher).toHaveBeenCalled();
-    });
-
-    test('cipher error → handleError catches', async () => {
-      mockUpdatePasswordCipher.mockRejectedValueOnce(new Error('cipher fail'));
-      await runCmd('updatepassword');
-      expect(mockUpdatePasswordCipher).toHaveBeenCalled();
     });
   });
 
