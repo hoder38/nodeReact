@@ -3803,13 +3803,15 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         for (; startI > scanLimit; startI--) {
             if (checkweb > resetWeb - 1) {
                 checkweb = 0;
-                web = calStair(his_arr, loga, min, startI, fee, calStairLen);
+                const newStair0 = calStair(his_arr, loga, min, startI, fee, calStairLen);
+                if (!newStair0) return 'data miss';
+                web = newStair0;
                 maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
                 amount = maxAmount;
             } else {
                 checkweb++;
             }
-            if (his_arr[startI].h < web.mid) {
+            if (web && his_arr[startI].h < web.mid) {
                 privious = his_arr[startI + 1];
                 if (!his_arr[startI + 1] || his_arr[startI + 1].h === null) {
                     return 'data miss';
@@ -3836,7 +3838,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
         for (; startI < his_arr.length - len - 1; startI++) {
             if (checkweb > resetWeb - 1) {
                 checkweb = 0;
-                web = calStair(his_arr, loga, min, startI, fee, calStairLen);
+                const newStair1 = calStair(his_arr, loga, min, startI, fee, calStairLen);
+                if (!newStair1) return 'data miss';
+                web = newStair1;
                 maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
                 amount = maxAmount;
             } else {
@@ -4027,13 +4031,16 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     for (let i = startI; i > tlength; i--) {
         if (checkweb > resetWeb - 1) {
             checkweb = 0;
-            web = calStair(his_arr, loga, min, i, fee, calStairLen);
-            const newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
-            web.arr = newWeb.arr;
-            web.mid = newWeb.mid;
-            web.times = newWeb.times;
-            maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-            newMid = [];
+            const newStair2 = calStair(his_arr, loga, min, i, fee, calStairLen);
+            if (newStair2) {
+                web = newStair2;
+                const newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
+                web.arr = newWeb.arr;
+                web.mid = newWeb.mid;
+                web.times = newWeb.times;
+                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                newMid = [];
+            }
         } else {
             checkweb++;
         }
