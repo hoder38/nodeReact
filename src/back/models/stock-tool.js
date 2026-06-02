@@ -1285,7 +1285,10 @@ export default {
                             return: "object"
                         }).then(stockData => {
                             const timestamps = stockData.timestamp;
-                            const quotes = stockData.indicators.quote[0];
+                            const quotes = stockData.indicators?.quote?.[0];
+                            if (!timestamps || !timestamps.length || !quotes) {
+                                throw new HoError('Yahoo Finance returned no chart data');
+                            }
 
                             // Extract adjustment events from Yahoo response
                             const newAdjustments = extractUsseAdjustments(stockData, timestamps, quotes);
@@ -2629,7 +2632,7 @@ export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
     };
 
     if (stockData.events.dividends) {
-        for (const ev of stockData.events.dividends) {
+        for (const ev of Object.values(stockData.events.dividends)) {
             const closeBefore = findCloseBefore(ev.date);
             if (closeBefore && ev.amount > 0) {
                 const d = convertTimestampToDate(ev.date);
@@ -2645,7 +2648,7 @@ export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
     // Yahoo split events already provide the share conversion, so convert directly to
     // the backward price ratio applied to pre-split data points.
     if (stockData.events.splits) {
-        for (const ev of stockData.events.splits) {
+        for (const ev of Object.values(stockData.events.splits)) {
             if (ev.numerator && ev.denominator) {
                 const d = convertTimestampToDate(ev.date);
                 adjustments.push({
@@ -2658,7 +2661,7 @@ export const extractUsseAdjustments = (stockData, timestamps, quotes) => {
     }
 
     if (stockData.events.capitalGains) {
-        for (const ev of stockData.events.capitalGains) {
+        for (const ev of Object.values(stockData.events.capitalGains)) {
             const closeBefore = findCloseBefore(ev.date);
             if (closeBefore && ev.amount > 0) {
                 const d = convertTimestampToDate(ev.date);
@@ -3808,8 +3811,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             }
             if (his_arr[startI].h < web.mid) {
                 privious = his_arr[startI + 1];
-                if (his_arr[startI + 1].h === null) {
-                    log.debug({ startI, nextCandle: his_arr[startI + 1] }, 'backtest sell walk start');
+                if (!his_arr[startI + 1] || his_arr[startI + 1].h === null) {
                     return 'data miss';
                 }
                 break;
@@ -3846,7 +3848,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
             if ((!next && his_arr[startI].h < web.mid) || (next === 2 && his_arr[startI].h > web.mid)) {
                 startI++;
                 privious = his_arr[startI + 1];
-                if (his_arr[startI + 1].h === null) {
+                if (!his_arr[startI + 1] || his_arr[startI + 1].h === null) {
                     log.debug({ startI, nextCandle: his_arr[startI + 1] }, 'backtest buy walk start');
                     return 'data miss';
                 }
