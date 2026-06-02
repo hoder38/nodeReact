@@ -4293,16 +4293,19 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
             }
             return arr;
         };
-        // Preserve the observed σ spacing instead of forcing symmetric layer widths.
+        // Use the innermost σ band width uniformly for all three layers so the web
+        // extends outward with equal step density regardless of the actual outer-σ data.
+        const upUnit = nd[4] - nd[3];
+        const downUnit = nd[3] - nd[2];
         const upLayers = [
-            buildSteps(nd[4] - nd[3]), // mid → 1σ
-            buildSteps(nd[5] - nd[4]), // 1σ → 2σ
-            buildSteps(nd[6] - nd[5]), // 2σ → 3σ
+            buildSteps(upUnit), // mid → 1σ
+            buildSteps(upUnit), // 1σ → 2σ
+            buildSteps(upUnit), // 2σ → 3σ
         ];
         const downLayers = [
-            buildSteps(nd[3] - nd[2]), // mid → 1σ
-            buildSteps(nd[2] - nd[1]), // 1σ → 2σ
-            buildSteps(nd[1] - nd[0]), // 2σ → 3σ
+            buildSteps(downUnit), // mid → 1σ
+            buildSteps(downUnit), // 1σ → 2σ
+            buildSteps(downUnit), // 2σ → 3σ
         ];
         const result = [-web.mid];
         let temp = web.mid;
