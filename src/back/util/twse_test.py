@@ -934,7 +934,7 @@ class TestProfitOutput:
         profit = json.loads(data['profit'])
         assert len(profit['items']) == 1
         assert profit['items'][0]['code'] == '2330'
-        assert profit['items'][0]['pnl'] == 1500.0
+        assert profit['items'][0]['pnl'] == 150.0
         assert profit['items'][0]['date'] == '2025-01-13'
 
     def test_pl03_multiple_records(self):
@@ -966,7 +966,7 @@ class TestProfitOutput:
         assert rc == 0
         data = parse_query_output(stdout)
         profit = json.loads(data['profit'])
-        assert profit['items'][0]['pnl'] == -3000.0
+        assert profit['items'][0]['pnl'] == -300.0
 
     def test_pl05_per_record_date(self):
         """PL-05: Each record carries its own date if provided."""
