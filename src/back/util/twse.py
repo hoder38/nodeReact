@@ -120,34 +120,10 @@ elif sys.argv[3] == 'submit':
             ca_passwd = capw,
             person_id = person_info[0].person_id,
         )
-    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
-    new_events = {}
-    fill_qtys = {}
-    cancel_qtys = {}
-    for state, event in records:
-        if 'StockDeal' in str(state):
-            ordno = event['ordno']
-            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
-        else:
-            op_type = event['operation']['op_type']
-            op_code = event['operation']['op_code']
-            ordno = event['order']['ordno']
-            if op_type == 'New' and op_code == '00':
-                new_events[ordno] = event
-            elif op_type == 'Cancel' and op_code == '00':
-                cancel_qtys[ordno] = event['status']['cancel_quantity']
-    pending_lmt_ordnos = set()
-    for ordno, ev in new_events.items():
-        order_qty = ev['status']['order_quantity']
-        if (fill_qtys.get(ordno, 0) + cancel_qtys.get(ordno, 0) < order_qty
-                and ev['order']['price_type'] == 'LMT'):
-            pending_lmt_ordnos.add(ordno)
-    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
-    acc_order = api.list_trades()
-    trade_by_ordno = {t.order.ordno: t for t in acc_order}
-    for ordno in pending_lmt_ordnos:
-        if ordno in trade_by_ordno:
-            api.cancel_order(trade_by_ordno[ordno], timeout=10000)
+    for o in acc_order:
+        if (str(o.status.status) in ('OrderStatus.PendingSubmit', 'OrderStatus.PreSubmitted', 'OrderStatus.Submitted', 'OrderStatus.Filling')
+                and str(o.order.price_type) == 'PriceType.LMT'):
+            api.cancel_order(o, timeout=10000)
     fee = float(sys.argv[6])
     current_cash = current_cash - 10000
     for a in sys.argv:
@@ -253,37 +229,12 @@ elif sys.argv[3] == 'sellall':
         )
     index = sys.argv[6]
     print(index)
-    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
-    new_events = {}
-    fill_qtys = {}
-    cancel_qtys = {}
-    for state, event in records:
-        if 'StockDeal' in str(state):
-            ordno = event['ordno']
-            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
-        else:
-            op_type = event['operation']['op_type']
-            op_code = event['operation']['op_code']
-            ordno = event['order']['ordno']
-            if op_type == 'New' and op_code == '00':
-                new_events[ordno] = event
-            elif op_type == 'Cancel' and op_code == '00':
-                cancel_qtys[ordno] = event['status']['cancel_quantity']
-    pending_lmt_ordnos = set()
-    for ordno, ev in new_events.items():
-        order_qty = ev['status']['order_quantity']
-        fill_qty = fill_qtys.get(ordno, 0)
-        if (fill_qty + cancel_qtys.get(ordno, 0) < order_qty
-                and ev['order']['price_type'] == 'LMT'
-                and ev['contract']['code'] == index
-                and fill_qty == 0):
-            pending_lmt_ordnos.add(ordno)
-    retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
-    acc_order = api.list_trades()
-    trade_by_ordno = {t.order.ordno: t for t in acc_order}
-    for ordno in pending_lmt_ordnos:
-        if ordno in trade_by_ordno:
-            api.cancel_order(trade_by_ordno[ordno], timeout=10000)
+    for o in acc_order:
+        if (str(o.status.status) in ('OrderStatus.PendingSubmit', 'OrderStatus.PreSubmitted', 'OrderStatus.Submitted')
+                and str(o.order.price_type) == 'PriceType.LMT'
+                and o.contract.code == index
+                and sum(d.quantity for d in o.status.deals) == 0):
+            api.cancel_order(o, timeout=10000)
     q = 0
     for p in acc_position:
         if p.code == index:
