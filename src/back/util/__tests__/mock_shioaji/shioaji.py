@@ -103,20 +103,53 @@ class _ProfitLoss:
         self.date = date
 
 
+class _StatusEnum:
+    def __init__(self, value):
+        self._value = value
+    def __str__(self):
+        return f'OrderStatus.{self._value}'
+    def __repr__(self):
+        return f'OrderStatus.{self._value}'
+
+class _ActionEnum:
+    def __init__(self, value):
+        self._value = value
+    def __str__(self):
+        return f'Action.{self._value}'
+    def __repr__(self):
+        return f'Action.{self._value}'
+
+class _PriceTypeEnum:
+    def __init__(self, value):
+        self._value = value
+    def __str__(self):
+        return f'PriceType.{self._value}'
+    def __repr__(self):
+        return f'PriceType.{self._value}'
+
+class _OrderLotEnum:
+    def __init__(self, value):
+        self._value = value
+    def __str__(self):
+        return f'StockOrderLot.{self._value}'
+    def __repr__(self):
+        return f'StockOrderLot.{self._value}'
+
+
 class _OrderStatus:
     def __init__(self, status, order_datetime, deals=None):
-        self.status = status
+        self.status = _StatusEnum(status)
         self.order_datetime = order_datetime
         self.deals = deals or []
 
 
 class _OrderDetail:
     def __init__(self, action, quantity, price, price_type, order_lot, id='ORD000', ordno='ORD000', order_type='ROD'):
-        self.action = action
+        self.action = _ActionEnum(action)
         self.quantity = quantity
         self.price = price
-        self.price_type = price_type
-        self.order_lot = order_lot
+        self.price_type = _PriceTypeEnum(price_type)
+        self.order_lot = _OrderLotEnum(order_lot)
         self.id = id
         self.ordno = ordno
         self.order_type = order_type

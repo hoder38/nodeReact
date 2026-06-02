@@ -48,6 +48,11 @@ if len(acc_settle) >= 3 and acc_balance.acc_balance > 0:
         current_cash = (acc_balance.acc_balance + acc_settle[1].amount + acc_settle[2].amount) / 10
 else:
     current_cash = 'same'
+
+retryApi(lambda: api.update_status(api.stock_account, timeout=10000))
+acc_order = retryApi(lambda: api.list_trades())
+print(acc_order)
+print('ok')
 if len(sys.argv) == 3:
     position = []
     for p in acc_position:
@@ -55,64 +60,41 @@ if len(sys.argv) == 3:
     position = '[' + ','.join(position) + ']'
     order = []
     fill_order = []
-    records = retryApi(lambda: api.order_deal_records(api.stock_account, timeout=10000))
-    new_events = {}
-    fill_qtys = {}
-    cancel_qtys = {}
-    deal_events = {}
-    for state, event in records:
-        if 'StockDeal' in str(state):
-            ordno = event['ordno']
-            deal_events.setdefault(ordno, []).append(event)
-            fill_qtys[ordno] = fill_qtys.get(ordno, 0) + event['quantity']
-        else:
-            op_type = event['operation']['op_type']
-            op_code = event['operation']['op_code']
-            ordno = event['order']['ordno']
-            if op_type == 'New' and op_code == '00':
-                new_events[ordno] = event
-            elif op_type == 'Cancel' and op_code == '00':
-                cancel_qtys[ordno] = event['status']['cancel_quantity']
-    for ordno, ev in new_events.items():
-        order_qty = ev['status']['order_quantity']
-        fill_qty = fill_qtys.get(ordno, 0)
-        cancel_qty = cancel_qtys.get(ordno, 0)
-        action = ev['order']['action']
-        price_type = ev['order']['price_type']
-        order_lot = ev['order']['order_lot']
-        code = ev['contract']['code']
-        ts = ev['status']['exchange_ts']
-        if fill_qty + cancel_qty < order_qty:
-            print(ev)
-            qty = ev['order']['quantity']
-            p = ev['order']['price']
+    for o in acc_order:
+        status = str(o.status.status)
+        action = str(o.order.action).split('.')[-1]
+        price_type = str(o.order.price_type)
+        order_lot = str(o.order.order_lot)
+        if status == 'OrderStatus.PendingSubmit' or status == 'OrderStatus.PreSubmitted' or status == 'OrderStatus.Submitted' or status == 'OrderStatus.Filling':
+            print(o)
             if action == 'Buy':
-                order.append('{\"symbol\":\"' + code + '\",\"amount\":' + str(qty) + ',\"price\":' + str(p) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(ts) + '}')
+                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
             else:
-                order.append('{\"symbol\":\"' + code + '\",\"amount\":' + str(-qty) + ',\"price\":' + str(p) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(ts) + '}')
-        if ordno in deal_events:
-            order_id = ev['order']['id']
-            deal_price = 0
-            deal_ts = 0
+                order.append('{\"symbol\":\"' + o.contract.code + '\",\"amount\":' + str(-o.order.quantity) + ',\"price\":' + str(o.order.price) + ',\"type\":\"' + price_type + order_lot + '\",\"time\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+        if status == 'OrderStatus.Filled' or status == 'OrderStatus.Filling':
+            price = 0
+            ts = 0
             ptime = ''
             profit = ''
-            deal_qty = 0
-            for d in deal_events[ordno]:
-                deal_price = d['price']
-                deal_ts = d['ts']
-                ptime = ptime + str(d['ts']) + 't'
-                deal_qty = deal_qty + d['quantity']
-                if order_lot == 'IntradayOdd':
-                    profit = profit + str(d['price'] * d['quantity'] / 10) + 'p'
+            quantity = 0
+            quantitystr = ''
+            for d in o.status.deals:
+                price = d.price
+                ts = d.ts
+                ptime = ptime + str(d.ts) + 't'
+                quantity = quantity + d.quantity
+                if order_lot == 'StockOrderLot.IntradayOdd':
+                    profit = profit + str(d.price * d.quantity / 10) + 'p'
                 else:
-                    profit = profit + str(d['price'] * d['quantity'] * 100) + 'p'
-            if order_lot == 'IntradayOdd':
-                rem_qty = (order_qty - deal_qty) // 10
-                quantitystr = '\"oddquantity\":' + str(rem_qty)
+                    profit = profit + str(d.price * d.quantity * 100) + 'p'
+            if order_lot == 'StockOrderLot.IntradayOdd':
+                quantity = (o.order.quantity - quantity) // 10
+                quantitystr = '\"oddquantity\":' + str(quantity)
             else:
-                rem_qty = (order_qty - deal_qty) * 100
-                quantitystr = '\"quantity\":' + str(rem_qty)
-            fill_order.append('{\"symbol\":\"' + code + '\",\"id\":\"' + order_id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(deal_price) + ',\"type\":\"' + action + '\",\"time\":' + str(deal_ts) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(ts) + '}')
+                quantity = (o.order.quantity - quantity) * 100
+                quantitystr = '\"quantity\":' + str(quantity)
+            fill_order.append('{\"symbol\":\"' + o.contract.code + '\",\"id\":\"' + o.order.id + '\",\"profit\":\"' + profit + '\",\"price\":' + str(price) + ',\"type\":\"' + action + '\",\"time\":' + str(ts) + ',\"ptime\":\"' + ptime + '\",' + quantitystr + ',\"starttime\":' + str(datetime.datetime.timestamp(o.status.order_datetime)) + '}')
+    print(order)
     order = '[' + ','.join(order) + ']'
     fill_order = '[' + ','.join(fill_order) + ']'
     begin_date = (datetime.date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
