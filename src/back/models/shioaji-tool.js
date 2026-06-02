@@ -92,7 +92,6 @@ export const twseShioajiInit = (force = false) => {
                         if (o.price <= 0) {
                             return fill_order_recur(index + 1);
                         }
-                        let profit = 0;
                         return Mongo('find', TOTALDB, {setype: 'twse', index: o.symbol}).then(items => {
                             if (items.length < 1) {
                                 console.log(`miss ${o.symbol}`);
@@ -197,65 +196,9 @@ export const twseShioajiInit = (force = false) => {
                                     console.log(Math.round(new Date().getTime() / 1000));
                                     item.previous.sell = item.previous.sell.filter(v => (o.time - v.time < RANGE_INTERVAL) ? true : false);
                                 }
-                                //calculate profit
-                                console.log(ret.position);
-                                console.log(position);
-                                if (!o.fake && ret.position.length > 0) {
-                                    let pp = 0;
-                                    let cp = 0;
-                                    let pa = 0;
-                                    let peq = false;
-                                    for (let i = 0; i < ret.position.length; i++) {
-                                        if (ret.position[i].symbol === item.index) {
-                                            pa = ret.position[i].amount;
-                                            pp = ret.position[i].amount * ret.position[i].price;
-                                            break;
-                                        }
-                                    }
-                                    if (pp !== 0) {
-                                        for (let i = 0; i < position.length; i++) {
-                                            if (position[i].symbol === item.index) {
-                                                if (pa === position[i].amount) {
-                                                    peq = true;
-                                                }
-                                                cp = position[i].amount * position[i].price;
-                                                break;
-                                            }
-                                        }
-                                        console.log(pp);
-                                        console.log(cp);
-                                        if (!peq) {
-                                            const this_profit = o.profit.split('p').filter(i => i);
-                                            const this_time = o.ptime.split('t').filter(i => i);
-                                            let matchCount = 0;
-                                            for (let i = this_profit.length - 1; i >= 0; i--) {
-                                                const p = Number(this_profit[i]);
-                                                const t = Number(this_time[i]);
-                                                for (let k = 0; k < item.previous.sell.length; k++) {
-                                                    if (item.previous.sell[k].time === t) {
-                                                        matchCount++;
-                                                        break;
-                                                    }
-                                                }
-                                                if (matchCount < 2) {
-                                                    profit = profit + p * (1 - TRADE_FEE);
-                                                    while (Number(this_time[i - 1]) === t) {
-                                                        profit = profit + Number(this_profit[i - 1]) * (1 - TRADE_FEE);
-                                                        i--;
-                                                    }
-                                                } else {
-                                                    break;
-                                                }
-                                            }
-                                            profit = profit - pp + cp;
-                                        }
-                                        console.log(profit);
-                                    }
-                                }
                             }
-                            item.profit = item.profit ? item.profit + profit : profit;
                             console.log(item.previous);
-                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous, profit: item.profit}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
+                            return Mongo('update', TOTALDB, {_id: item._id}, {$set: Object.assign({previous: item.previous}, o.hasOwnProperty("quantity") ? (o.type === 'Buy') ? {bquantity: o.quantity} : {squantity: o.quantity} : (o.type === 'Buy') ? {boddquantity: o.oddquantity} : {soddquantity: o.oddquantity})}).then(() => fill_order_recur(index + 1));
                         });
                     }
                 }
