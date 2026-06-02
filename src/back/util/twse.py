@@ -100,7 +100,7 @@ if len(sys.argv) == 3:
     begin_date = (datetime.date.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
     end_date = datetime.date.today().strftime('%Y-%m-%d')
     acc_profit = retryApi(lambda: api.list_profit_loss(api.stock_account, begin_date=begin_date, end_date=end_date, unit=sj.Unit.Share, timeout=10000))
-    profit_items = [{'code': p.code, 'pnl': p.pnl, 'date': p.date} for p in acc_profit]
+    profit_items = [{'code': p.code, 'pnl': p.pnl//10, 'date': p.date} for p in acc_profit]
     print("start result")
     print(current_cash)
     print(position)
