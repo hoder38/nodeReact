@@ -96,6 +96,13 @@ class _Deal:
         self.quantity = quantity
 
 
+class _ProfitLoss:
+    def __init__(self, code, pnl, date):
+        self.code = code
+        self.pnl = pnl
+        self.date = date
+
+
 class _OrderStatus:
     def __init__(self, status, order_datetime, deals=None):
         self.status = status
@@ -201,6 +208,15 @@ class Shioaji:
     def list_positions(self, account=None, unit=None, timeout=None):
         raw = _env_json('MOCK_SJ_POSITIONS', [])
         return [_Position(p['code'], p['quantity'], p['price']) for p in raw]
+
+    def list_profit_loss(self, account=None, begin_date='', end_date='', unit=None, timeout=None):
+        default_date = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+        raw = _env_json('MOCK_SJ_PROFIT_LOSS', [])
+        result = []
+        for p in raw:
+            date = p.get('date', _env('MOCK_SJ_PROFIT_DATE', default_date))
+            result.append(_ProfitLoss(p['code'], p['pnl'], date))
+        return result
 
     def update_status(self, account=None, timeout=None):
         return None
