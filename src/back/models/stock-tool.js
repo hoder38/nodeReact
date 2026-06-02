@@ -2478,7 +2478,7 @@ export const parseStockCsv = (raw_data, year, month_str) => {
     const low = [];
     const vol = [];
     const day = [];
-    if (raw_data.length <= 200) {
+    if (!raw_data || raw_data.length <= 200) {
         return { high, low, vol, day, isStop: true };
     }
     const year_str = year - 1911;
@@ -3858,6 +3858,15 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 next = 1;
             }
         }
+    }
+
+    // Reverse scan may leave startI beyond his_arr bounds when the array is shorter
+    // than (len * 2). Cap it so phase-2 candle accesses never go out of range.
+    if (startI >= his_arr.length - 1) {
+        startI = his_arr.length - 2;
+    }
+    if (startI < 0) {
+        return 'data miss';
     }
 
     const newPrevious = (tradeType, tradePrice, time = Math.round(_dateFactory().getTime() / 1000)) => {
