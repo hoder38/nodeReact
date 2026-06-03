@@ -780,6 +780,7 @@ export default {
                                             raw_list: false,
                                             ret_obj: 0,
                                             etime: -1,
+                                            adjustments: [],
                                     }).catch(err => handleError(err, 'Redis'));
                                     isnull = true;
                                     break;
