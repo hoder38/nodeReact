@@ -7488,6 +7488,49 @@ describe('getIntervalV2', () => {
         const r = await StockTool.getIntervalV2('idu', {});
         expect(Array.isArray(r)).toBe(true);
     }, 60000);
+
+    test('usse adjClose drift → discards stale cache and re-fetches full history', async () => {
+        mockMongo.mockImplementation((op, coll) => {
+            if (op === 'find') return Promise.resolve([{ _id: 'idu', type: 'usse', index: 'AAPL' }]);
+            return Promise.resolve({});
+        });
+        // Cache: overlap month has h=100 (based on old adjClose ratios)
+        const yr = new Date().getFullYear();
+        const mo = String(new Date().getMonth() + 1).padStart(2, '0');
+        const raw_list = {};
+        raw_list[yr] = {};
+        raw_list[yr][mo] = { raw: [{ h: 100, l: 90, v: 1000, d: 1 }], max: 100, min: 90 };
+        mockRedis.mockResolvedValue({
+            raw_list: JSON.stringify(raw_list),
+            ret_obj: 0,
+            etime: 0,
+        });
+        // First Yahoo call: overlap month h=80 (>0.5% drift from cached 100) → triggers full re-fetch
+        // Second Yahoo call: full 5-year fetch with more data
+        const baseTs = Math.round(new Date(yr, new Date().getMonth(), 1).getTime() / 1000);
+        const day = 86400;
+        const mkData = (count, hVal) => {
+            const timestamps = [];
+            const high = []; const low = []; const close = []; const volume = []; const adjclose = [];
+            for (let i = 0; i < count; i++) {
+                timestamps.push(baseTs + i * day);
+                high.push(hVal); low.push(hVal * 0.9); close.push(hVal * 0.95);
+                volume.push(1000); adjclose.push(hVal * 0.95);
+            }
+            return { timestamp: timestamps, indicators: { quote: [{ high, low, close, volume }], adjclose: [{ adjclose }] } };
+        };
+        let callCount = 0;
+        mockYahooFinance.chart.mockImplementation(() => {
+            callCount++;
+            // First call: partial fetch — h=80 for the overlap month triggers drift
+            // Second call: full re-fetch
+            return Promise.resolve(mkData(callCount === 1 ? 2 : 200, callCount === 1 ? 80 : 100));
+        });
+        mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 100 });
+        const r = await StockTool.getIntervalV2('idu', {});
+        expect(callCount).toBe(2); // drift detected → second full fetch
+        expect(Array.isArray(r)).toBe(true);
+    }, 60000);
 });
 
 // ===========================================================================

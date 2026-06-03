@@ -1121,12 +1121,18 @@ export default {
                     let interval_data = null;
                     let start_get = new Date(year, month - 1, day, 12).getTime() / 1000;
                     let end_get = new Date(year - 5, month - 1, day, 12).getTime() / 1000;
+                    const originalEndGet = end_get;
                     let start_month = `${year}${month_str}`;
                     let max = 0;
                     let min = 0;
                     let raw_arr = [];
                     let min_vol = 0;
                     let latestAdjustments = cached_adjustments;
+                    // Drift detection state: saved when first cached month is loaded in get_mi.
+                    let overlapY = null;
+                    let overlapM = null;
+                    let overlapH = 0;
+                    let fullRefetchDone = false;
                     const rest_interval = () => {
                         log.debug({ max, min }, 'price range');
                         // Track the recent liquidity floor for the debug output below.
@@ -1251,6 +1257,10 @@ export default {
                                     if (!isEnd) {
                                         isEnd = true;
                                         end_get = new Date(year, month - 1, 1, 12).getTime() / 1000;
+                                        // Save this month as the overlap boundary for drift detection.
+                                        overlapY = String(year);
+                                        overlapM = month_str;
+                                        overlapH = raw_list[year][month_str]?.raw?.[0]?.h || 0;
                                     }
                                     if (!interval_data) {
                                         interval_data = {};
@@ -1354,6 +1364,20 @@ export default {
                                     max: tmp_max,
                                     min: tmp_min,
                                 };
+                            }
+
+                            // Drift check: if Yahoo's fresh adjClose ratio for the overlap month
+                            // differs from the cached price by >0.5%, a split/dividend since the
+                            // last full fetch has back-adjusted all historical ratios.  Discard the
+                            // stale cached months and re-fetch the full 5-year window once.
+                            if (!fullRefetchDone && overlapY && overlapH) {
+                                const newH = interval_data?.[overlapY]?.[overlapM]?.raw?.[0]?.h || 0;
+                                if (newH && Math.abs(newH - overlapH) / overlapH > 0.005) {
+                                    fullRefetchDone = true;
+                                    interval_data = null;
+                                    end_get = originalEndGet;
+                                    return getFinance();
+                                }
                             }
 
                             // Flatten interval_data → raw_arr (latestAdjustments is [] so no price changes)
