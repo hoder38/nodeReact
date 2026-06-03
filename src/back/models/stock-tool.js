@@ -3802,12 +3802,15 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     if (!reverse) {
         for (; startI > scanLimit; startI--) {
             if (checkweb > resetWeb - 1) {
-                checkweb = 0;
                 const newStair0 = calStair(his_arr, loga, min, startI, fee, calStairLen);
-                if (!newStair0) return 'data miss';
-                web = newStair0;
-                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-                amount = maxAmount;
+                if (newStair0) {
+                    checkweb = 0;
+                    web = newStair0;
+                    maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                    amount = maxAmount;
+                }
+                // if false (spread too tight for current window), keep checkweb high
+                // so the next iteration retries immediately as startI-- widens the window
             } else {
                 checkweb++;
             }
