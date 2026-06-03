@@ -1290,13 +1290,14 @@ export default {
                                 throw new HoError('Yahoo Finance returned no chart data');
                             }
 
-                            // Use Yahoo's pre-computed adjClose to build per-candle adjustment
-                            // ratios (adjClose / rawClose). Applying these to H and L gives
-                            // fully split- and dividend-adjusted prices without manual event parsing.
-                            const adjcloseArr = stockData.indicators?.adjclose?.[0]?.adjclose;
-                            latestAdjustments = []; // adjustments are baked in; no post-processing needed
+                            // Extract adjustment events from Yahoo response
+                            const newAdjustments = extractUsseAdjustments(stockData, timestamps, quotes);
+                            if (newAdjustments.length > 0 || cached_adjustments.length > 0) {
+                                // Merge: use new events (they are authoritative for the fetched range)
+                                latestAdjustments = newAdjustments;
+                            }
 
-                            // Store adjClose-adjusted data with day field
+                            // Store RAW unadjusted data with day field
                             let y = '';
                             let m = '';
                             let tmp_interval = [];
@@ -1324,22 +1325,19 @@ export default {
                                     y = sDate.year;
                                     m = sDate.month;
                                 }
-                                const rawClose = (quotes.close && quotes.close[i] != null) ? Number(quotes.close[i]) : 0;
-                                const adjClose = adjcloseArr ? Number(adjcloseArr[i]) : 0;
-                                const ratio = (adjClose && rawClose) ? adjClose / rawClose : 1;
-                                const adjH = Number(quotes.high[i]) * ratio;
-                                const adjL = Number(quotes.low[i]) * ratio;
+                                const rawHigh = Number(quotes.high[i]);
+                                const rawLow = Number(quotes.low[i]);
                                 tmp_interval.push({
-                                    h: adjH,
-                                    l: adjL,
+                                    h: rawHigh,
+                                    l: rawLow,
                                     v: Number(quotes.volume[i]),
                                     d: Number(sDate.day),
                                 });
-                                if (adjH > tmp_max) {
-                                    tmp_max = adjH;
+                                if (rawHigh > tmp_max) {
+                                    tmp_max = rawHigh;
                                 }
-                                if (!tmp_min || adjL < tmp_min) {
-                                    tmp_min = adjL;
+                                if (!tmp_min || rawLow < tmp_min) {
+                                    tmp_min = rawLow;
                                 }
                             }
                             if (y && m) {
@@ -1356,7 +1354,7 @@ export default {
                                 };
                             }
 
-                            // Flatten interval_data → raw_arr (latestAdjustments is [] so no price changes)
+                            // Apply adjustments to raw data
                             const { raw_arr: adjArr, max: adjMax, min: adjMin } = applyAdjustments(interval_data, latestAdjustments);
                             raw_arr = adjArr;
                             max = adjMax;
@@ -3804,15 +3802,12 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     if (!reverse) {
         for (; startI > scanLimit; startI--) {
             if (checkweb > resetWeb - 1) {
+                checkweb = 0;
                 const newStair0 = calStair(his_arr, loga, min, startI, fee, calStairLen);
-                if (newStair0) {
-                    checkweb = 0;
-                    web = newStair0;
-                    maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
-                    amount = maxAmount;
-                }
-                // if false (spread too tight for current window), keep checkweb high
-                // so the next iteration retries immediately as startI-- widens the window
+                if (!newStair0) return 'data miss';
+                web = newStair0;
+                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                amount = maxAmount;
             } else {
                 checkweb++;
             }
