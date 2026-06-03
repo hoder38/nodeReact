@@ -1544,6 +1544,180 @@ describe('adjustWeb branches', () => {
 });
 
 // ===========================================================================
+// adjustWeb — uniform calStair compatibility (exact buy-side sum formula)
+// ===========================================================================
+describe('adjustWeb exact buy-side sum maxAmount', () => {
+    // 7-boundary web matching calStair uniform output format:
+    // [-3σ_up, outer_up_steps..., -2σ_up, mid_up_steps..., -1σ_up, inner_up_steps...,
+    //  -mid, inner_down_steps..., -1σ_down, mid_down_steps..., -2σ_down, outer_down_steps..., -3σ_down]
+    // buy-side (below mid): layers[4]=[190,185], [5]=[160,155], [6]=[130,125]
+    // buyAmount = 190+185+160+155+130+125 = 945, webMid=200
+    const makeItemsWith7BoundaryWeb = () => [
+        { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+        { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+        {
+            _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+            price: 200, count: 0, amount: 10000, orig: 10000,
+            web: [-300, 290, 285, -270, 260, 255, -240, 230, 225, -200, 190, 185, -170, 160, 155, -140, 130, 125, -110],
+            mid: 200, times: 1,
+            mul: 0, clear: false, ing: 0, str: '', order: null,
+            previous: { buy: [], sell: [] },
+        },
+    ];
+
+    test('amount = exact buy-side sum → times not set (count=1)', async () => {
+        // buyAmount = 945, amount=945 → count=floor(945/945)=1 → times not set
+        const items = makeItemsWith7BoundaryWeb();
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 945 amount'], false);
+        expect(items[2].times).toBeUndefined();
+    });
+
+    test('amount = 2× buy-side sum → times=2', async () => {
+        // buyAmount = 945, amount=1890 → count=floor(1890/945)=2 → times=2
+        const items = makeItemsWith7BoundaryWeb();
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 1890 amount'], false);
+        expect(items[2].times).toBe(2);
+    });
+
+    test('amount < buy-side sum / 2 → rejects Amount error', async () => {
+        // buyAmount=945, maxAmount/2=472.5, amount=100 < 472.5 → returns false
+        const items = makeItemsWith7BoundaryWeb();
+        mockMongo.mockResolvedValue(items);
+        await expect(StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 100 amount'], false))
+            .rejects.toMatchObject({ message: expect.stringContaining('Amount need large than') });
+    });
+
+    test('amount between maxAmount/2 and maxAmount → web is thinned, arr preserved', async () => {
+        // buyAmount=945, amount=600 → maxAmount/2=472.5 < 600 < 945 → thinning path
+        const items = makeItemsWith7BoundaryWeb();
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, ['twse2330 600 amount'], false);
+        // Web arr was thinned: should have fewer positive steps than original (18 steps)
+        // but boundaries (7) preserved; times not set
+        expect(items[2].times).toBeUndefined();
+        const arr = items[2].web;
+        const posCount = arr.filter(v => v > 0).length;
+        const negCount = arr.filter(v => v < 0).length;
+        expect(negCount).toBe(7); // all 7 boundaries preserved
+        expect(posCount).toBeLessThan(18); // fewer than original 18 steps
+    });
+});
+
+// ===========================================================================
+// adjustWeb — end-to-end with real calStair uniform-band web
+// ===========================================================================
+// calStair now applies the innermost σ-band width uniformly to all 3 up-layers
+// and all 3 down-layers.  With non-uniform data the old formula:
+//   maxAmount = webMid * (webArr.length - 1) / 3 * 2
+// overestimates maxAmount because it was calibrated for the old non-uniform
+// bands where outer layers had 2-3× more steps than inner layers.
+//
+// Concrete counter-example (trending data, narrow candles, fee=0.003):
+//   real buyAmount ≈ 2974   (exact sum of 3×11 buy-side step prices)
+//   old formula    ≈ 4986   (68 % too high → treats full capital as "not enough")
+//   → old code would thin the web even when the user provides exactly enough capital
+//
+// The new webMaxAmount() helper uses the exact buy-side price sum and is immune
+// to the uniform/non-uniform distinction.
+describe('adjustWeb — real calStair uniform-band end-to-end', () => {
+    // Trending price series 90→120, very narrow candles (±0.3), fee=0.003.
+    // calStair sees volume spread across the full range → wide σ bands (up=down=24 bins).
+    // Candle height ≈ 0.7 % → stair=2 → buildSteps(24) gives 11 step prices per layer.
+    // All 3 up-layers share the same 11-step pattern; same for all 3 down-layers → UNIFORM.
+    const trendRaw = Array.from({ length: 300 }, (_, i) => ({
+        h: 90 + i / 10 + 0.3,
+        l: 90 + i / 10 - 0.3,
+        v: 5000 + (i % 20) * 200,
+    }));
+
+    let realWeb;
+    beforeAll(() => {
+        const loga = logArray(132, 88);
+        realWeb = calStair(trendRaw, loga, 88, 0, 0.003);
+    });
+
+    // Inline mirror of the private webMaxAmount() helper.
+    const getBuyAmount = (arr) => {
+        const layers = []; let cur = []; let bCount = 0;
+        for (const v of arr) {
+            if (v < 0) { layers.push(cur); cur = []; bCount++; } else { cur.push(v); }
+        }
+        layers.push(cur);
+        if (bCount === 0) return null;
+        const midIdx = Math.min(3, bCount - 1);
+        return layers.slice(midIdx + 1).flat().reduce((s, p) => s + p, 0);
+    };
+
+    test('calStair produces 7 boundaries with equal step counts per up-band and per down-band', () => {
+        if (!realWeb) return;
+        const layers = []; let cur = [];
+        for (const v of realWeb.arr) {
+            if (v < 0) { layers.push(cur); cur = []; } else { cur.push(v); }
+        }
+        layers.push(cur);
+        expect(layers.length).toBe(8); // 7 boundaries → 8 segments
+        // Uniform: all 3 up-layers (1,2,3) identical step count
+        expect(layers[1].length).toBe(layers[2].length);
+        expect(layers[2].length).toBe(layers[3].length);
+        // Uniform: all 3 down-layers (4,5,6) identical step count
+        expect(layers[4].length).toBe(layers[5].length);
+        expect(layers[5].length).toBe(layers[6].length);
+        // Each inner layer must have at least one step for this data set
+        expect(layers[1].length).toBeGreaterThan(0);
+        expect(layers[4].length).toBeGreaterThan(0);
+    });
+
+    test('old formula overestimates maxAmount on a uniform web (documents the fixed bug)', () => {
+        if (!realWeb) return;
+        const buyAmount = getBuyAmount(realWeb.arr);
+        const oldMax = realWeb.mid * (realWeb.arr.length - 1) / 3 * 2;
+        // Old formula is larger than exact buy-side sum → treated as "not enough capital"
+        expect(oldMax).toBeGreaterThan(buyAmount);
+    });
+
+    test('amount = exact buy-side sum → full web accepted, times not set', async () => {
+        if (!realWeb) return;
+        const ba = getBuyAmount(realWeb.arr);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: realWeb.mid, count: 0, amount: 10000, orig: 10000,
+                web: [...realWeb.arr], mid: realWeb.mid, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        await StockTool.updateStockTotal({ _id: 'u1' }, [`twse2330 ${Math.floor(ba)} amount`], false);
+        expect(items[2].times).toBeUndefined(); // count=1 → times not set
+    });
+
+    test('amount = 2× buy-side sum → times=2', async () => {
+        if (!realWeb) return;
+        const ba = getBuyAmount(realWeb.arr);
+        const items = [
+            { _id: 'ttw', type: 'total', setype: 'twse', amount: 1000000 },
+            { _id: 'tus', type: 'total', setype: 'usse', amount: 500000 },
+            {
+                _id: 'st1', type: 'Tech', setype: 'twse', index: '2330', name: 'tsmc',
+                price: realWeb.mid, count: 0, amount: 10000, orig: 10000,
+                web: [...realWeb.arr], mid: realWeb.mid, times: 1,
+                mul: 0, clear: false, ing: 0, str: '', order: null,
+                previous: { buy: [], sell: [] },
+            },
+        ];
+        mockMongo.mockResolvedValue(items);
+        // Use ceil to ensure amount is strictly ≥ 2×maxAmount despite fractional prices.
+        await StockTool.updateStockTotal({ _id: 'u1' }, [`twse2330 ${Math.ceil(ba * 2)} amount`], false);
+        expect(items[2].times).toBe(2);
+    });
+});
+
+// ===========================================================================
 // updateStockTotal real=true — covers recurUpdate → Mongo('update', ...)
 // ===========================================================================
 describe('updateStockTotal real=true path', () => {

@@ -2088,7 +2088,7 @@ export default {
                                     // the web grid around the new target budget.
                                     const newWeb = adjustWeb(items[i].web, items[i].mid, +cmd[2]);
                                     if (!newWeb) {
-                                        return handleError(new HoError(`Amount need large than ${Math.ceil(items[i].mid * (items[i].web.length - 1) / 3)}`));
+                                        return handleError(new HoError(`Amount need large than ${Math.ceil(webMaxAmount(items[i].web, items[i].mid) / 2)}`));
                                     }
                                     items[i].web = newWeb.arr;
                                     items[i].mid = newWeb.mid;
@@ -2242,7 +2242,7 @@ export default {
                                     }
                                     const newWeb = adjustWeb(item[0].web.arr, item[0].web.mid, +cmd[2]);
                                     if (!newWeb) {
-                                        return handleError(new HoError(`Amount need large than ${Math.ceil(item[0].web.mid * (item[0].web.arr.length - 1) / 3)}`));
+                                        return handleError(new HoError(`Amount need large than ${Math.ceil(webMaxAmount(item[0].web.arr, item[0].web.mid) / 2)}`));
                                     }
                                     return getBasicStockData(setype, index).then(basic => getStockPrice(setype, basic.stock_index).then(price => {
                                         log.debug({ basic }, 'basic stock data');
@@ -3835,7 +3835,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 if (newStair0) {
                     checkweb = 0;
                     web = newStair0;
-                    maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                    maxAmount = webMaxAmount(web.arr, web.mid);
                     amount = maxAmount;
                 }
                 // if false (spread too tight for current window), keep checkweb high
@@ -3873,7 +3873,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 const newStair1 = calStair(his_arr, loga, min, startI, fee, calStairLen);
                 if (!newStair1) return 'data miss';
                 web = newStair1;
-                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                maxAmount = webMaxAmount(web.arr, web.mid);
                 amount = maxAmount;
             } else {
                 checkweb++;
@@ -3969,7 +3969,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 }
                 if (recalcWeb) {
                     web = recalcWeb;
-                    maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                    maxAmount = webMaxAmount(web.arr, web.mid);
                     newMid = [];
                     newArr = web.arr;
                 } else {
@@ -4070,7 +4070,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
                 web.arr = newWeb.arr;
                 web.mid = newWeb.mid;
                 web.times = newWeb.times;
-                maxAmount = web.mid * (web.arr.length - 1) / 3 * 2;
+                maxAmount = webMaxAmount(web.arr, web.mid);
                 newMid = [];
             }
         } else {
@@ -4366,6 +4366,22 @@ export const calStair = (raw_arr, loga, min, stair_start = 0, fee = TRADE_FEE, l
     return web;
 }
 
+// Capital baseline for a web: exact sum of all buy-side (below-mid) prices.
+// This stays correct for both uniform and non-uniform σ band widths from calStair.
+const webMaxAmount = (webArr, webMid) => {
+    const layers = [];
+    let cur = [];
+    let bCount = 0;
+    for (const val of webArr) {
+        if (val < 0) { layers.push(cur); cur = []; bCount++; } else { cur.push(val); }
+    }
+    layers.push(cur);
+    if (bCount === 0) return webMid;
+    const midIdx = Math.min(3, bCount - 1);
+    const buyAmount = layers.slice(midIdx + 1).flat().reduce((s, p) => s + p, 0);
+    return buyAmount > 0 ? buyAmount : webMid;
+};
+
 // Resize the web when capital changes so step density still matches available position size.
 const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
     if (amount === 0) {
@@ -4374,7 +4390,30 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
             mid: webMid,
         };
     }
-    const maxAmount = webMid * (webArr.length - 1) / 3 * 2;
+
+    // Parse boundaries and layers first so maxAmount uses the exact buy-side price sum
+    // rather than a webArr.length proxy (which breaks when calStair uses uniform band widths).
+    const boundaries = [];
+    const layers = [];
+    let current = [];
+    for (const val of webArr) {
+        if (val < 0) {
+            layers.push(current);
+            boundaries.push(val);
+            current = [];
+        } else {
+            current.push(val);
+        }
+    }
+    layers.push(current);
+    if (boundaries.length === 0) {
+        return { arr: webArr, mid: webMid };
+    }
+
+    const midIdx = Math.min(3, boundaries.length - 1);
+    const buyAmount = layers.slice(midIdx + 1).flat().reduce((s, p) => s + p, 0);
+    const maxAmount = buyAmount > 0 ? buyAmount : webMid;
+
     if (amount >= maxAmount) {
         const count = Math.floor(amount / maxAmount);
         const newWeb = {
@@ -4394,25 +4433,6 @@ const adjustWeb = (webArr, webMid, amount = 0, force = false) => {
         }
     }
 
-    // Negative entries mark σ boundaries; positive entries are tradable steps inside each band.
-    const boundaries = [];
-    const layers = [];
-    let current = [];
-    for (const val of webArr) {
-        if (val < 0) {
-            layers.push(current);
-            boundaries.push(val);
-            current = [];
-        } else {
-            current.push(val);
-        }
-    }
-    layers.push(current);
-    if (boundaries.length === 0) {
-        return { arr: webArr, mid: webMid };
-    }
-
-    const midIdx = Math.min(3, boundaries.length - 1);
     const sigmaProbs = [34.13, 13.59, 2.15];
     // Keep more steps near the midpoint because those σ bands carry most of the distribution mass.
     const weights = layers.map((_, i) => {
