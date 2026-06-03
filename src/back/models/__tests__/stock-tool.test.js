@@ -7416,17 +7416,21 @@ describe('getIntervalV2', () => {
         const timestamps = [];
         const high = [];
         const low = [];
+        const close = [];
         const volume = [];
+        const adjclose = [];
         // 300 days of data (need enough for reverse stockTest with len=200)
         for (let i = 0; i < 300; i++) {
             timestamps.push(baseTs - (299 - i) * day);
             high.push(100 + (i % 30));
             low.push(95 + (i % 30));
+            close.push(97 + (i % 30));
             volume.push(1000 + i * 10);
+            adjclose.push((97 + (i % 30)) * 0.95); // simulate 5% cumulative dividend adjustment
         }
         mockYahooFinance.chart.mockResolvedValue({
             timestamp: timestamps,
-            indicators: { quote: [{ high, low, volume }] },
+            indicators: { quote: [{ high, low, close, volume }], adjclose: [{ adjclose }] },
         });
         // For getStockPrice('usse','AAPL') in restTest:
         mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 110 });
@@ -7452,7 +7456,7 @@ describe('getIntervalV2', () => {
         }
         mockYahooFinance.chart.mockResolvedValue({
             timestamp: timestamps,
-            indicators: { quote: [{ high, low, volume }] },
+            indicators: { quote: [{ high, low, close: Array(10).fill(95), volume }] },
             events: { splits: [{ date: baseTs }] },
         });
         mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 95 });
@@ -8272,18 +8276,22 @@ describe('getIntervalV2 usse with deep data', () => {
         const timestamps = [];
         const high = [];
         const low = [];
+        const close = [];
         const volume = [];
+        const adjclose = [];
         // 1500 days with sinusoidal price oscillation for variety
         for (let i = 0; i < 1500; i++) {
             timestamps.push(baseTs - (1499 - i) * day);
             const base = 100 + 30 * Math.sin(i / 30);
             high.push(base + 5);
             low.push(base - 5);
+            close.push(base);
             volume.push(1000 + i % 100);
+            adjclose.push(base * 0.97); // simulate 3% cumulative adjustment
         }
         mockYahooFinance.chart.mockResolvedValue({
             timestamp: timestamps,
-            indicators: { quote: [{ high, low, volume }] },
+            indicators: { quote: [{ high, low, close, volume }], adjclose: [{ adjclose }] },
         });
         mockYahooFinance.quote.mockResolvedValue({ regularMarketPrice: 100 });
         const r = await StockTool.getIntervalV2('idu', {});
