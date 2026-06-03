@@ -1002,6 +1002,7 @@ export default {
                                             wType: type,
                                             extrem: web.extrem,
                                             metrics: web.metrics || null,
+                                            newMid: [],
                                         }}).then(() => recur_web(index + 1));
                                     }
                                 }
@@ -1238,7 +1239,8 @@ export default {
                                             wType: type,
                                             extrem: web.extrem,
                                             metrics: web.metrics || null,
-                                        }}).then(() => recur_web(index + 1));
+                                           newMid: [],
+                                       }}).then(() => recur_web(index + 1));
                                     }
                                 }
                                 return restTest().then(([result, index, type, metrics]) => {
