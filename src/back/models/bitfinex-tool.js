@@ -392,6 +392,7 @@ export const calWeb = curArr => {
                                     extrem: web.extrem,
                                     metrics: bestMetrics,
                                     times: Math.floor(item[i].orig / maxAmount * 10000) / 10000,
+                                    newMid: [],
                                 }});
                                 log.debug({ items }, 'sell fill update result');
                             }
