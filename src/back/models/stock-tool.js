@@ -4058,6 +4058,10 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
     const tlength = fullRun ? 1 : Math.max(startI - len + 1, 1);
     const lastNode = his_arr[tlength];
     peakEquity = maxAmount;
+    // Capture starting capital before web recalculations change maxAmount.
+    // returnPct must measure performance against the capital we actually started with,
+    // not the final web size (which inflates with price for strongly trending stocks).
+    const initialMaxAmount = maxAmount;
     let prevClose = privious.h || privious.l || 0;
 
     for (let i = startI; i > tlength; i--) {
@@ -4140,11 +4144,14 @@ export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = fa
 
     // Phase 4: derive summary performance metrics from the simulated equity curve.
     const tradeDays = equityCurve.length;
-    const returnPct = maxAmount > 0 ? Math.round((amount / maxAmount - 1) * 10000) / 100 : 0;
+    // Use initialMaxAmount (capital at simulation start) so returnPct reflects actual P&L.
+    // Using the final maxAmount would understate performance for uptrending stocks because
+    // periodic web recalculations inflate maxAmount with price, while amount stays fixed.
+    const returnPct = initialMaxAmount > 0 ? Math.round((amount / initialMaxAmount - 1) * 10000) / 100 : 0;
     const buyHoldPct = his_arr[startI].l ? (Math.round((lastNode.h / his_arr[startI].l - 1) * 10000) / 100) : 0;
 
     const years = tradeDays / 250;
-    const returnAnnualPct = years > 0 ? Math.round(((amount / maxAmount) ** (1 / years) - 1) * 10000) / 100 : 0;
+    const returnAnnualPct = years > 0 ? Math.round(((amount / initialMaxAmount) ** (1 / years) - 1) * 10000) / 100 : 0;
     const tradesPerYear = years > 0 ? Math.round(sellTrade / years * 100) / 100 : 0;
 
     let sharpe = 0;

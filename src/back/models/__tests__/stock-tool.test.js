@@ -806,6 +806,26 @@ describe('stockTest', () => {
             expect(result.metrics.maxAmount).toBeGreaterThanOrEqual(0);
         }
     });
+
+    test('returnPct is near 0 for strongly uptrending stock where strategy never trades (regression: maxAmount recalc inflated denominator)', () => {
+        // Simulate a stock that appreciates ~8x (similar to TWSE 2454 over 4 years).
+        // The strategy buy levels stay far below market price so no trades fire.
+        // Before the fix, periodic web recalculation inflated maxAmount while amount
+        // stayed at its initial value, producing returnPct ≈ -90% despite zero trades.
+        const n = 400;
+        const trendArr = Array.from({ length: n }, (_, i) => {
+            const base = 100 * (1 + i / n * 7); // price rises from ~100 to ~800
+            return { h: base * 1.01, l: base * 0.99, v: 1000 };
+        });
+        // loga calibrated to the starting price range
+        const trendLoga = logArray(120, 80);
+        const result = stockTest(trendArr, trendLoga, 80, 0, 0, false, 0);
+        if (result !== 'data miss' && result.metrics) {
+            // With no trades the strategy neither gains nor loses; returnPct must be
+            // close to 0 (allow a small tolerance for fee drag on any edge-case trades).
+            expect(result.metrics.returnPct).toBeGreaterThan(-5);
+        }
+    });
 });
 
 // ===========================================================================
