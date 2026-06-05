@@ -1088,7 +1088,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ?*/ recur_mi(1, 0)/* : Promise.resolve([null, ret_obj]);*/
+                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -1370,7 +1370,7 @@ export default {
                         });
                         return getFinance();
                     }
-                    const exGet = () => /*(etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? */get_mi() /*: Promise.resolve([null, ret_obj]);*/
+                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -3909,6 +3909,10 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
         const firstCandle = his_arr[tradedHi - 1];
         const referencePrice = firstCandle
             ? ((firstCandle.h + firstCandle.l) / 2 || firstCandle.h || firstCandle.l) : 0;
+        // initialValue: fractional (dollar-value) position when one whole share cannot be
+        // afforded with 25% of FIXED_MAX_AMOUNT.  It tracks 1/4 buy-hold return without
+        // interacting with the integer buy/sell logic.
+        let initialValue = 0;
         if (referencePrice > 0) {
             const count0 = Math.floor(FIXED_MAX_AMOUNT * 0.25 / referencePrice);
             if (count0 > 0) {
@@ -3917,6 +3921,12 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
                 count = count0;
                 // Seed buyLog so FIFO round-trip attribution starts correctly.
                 buyLog.push({ price: buyPrice, count: count0, idx: -1 });
+            } else {
+                // Price too high for even one share at 25% of capital base.
+                // Deploy a virtual dollar-value position so the group captures
+                // 1/4 of buy-hold return even when no integer trades fire.
+                initialValue = FIXED_MAX_AMOUNT * 0.25;
+                amount = FIXED_MAX_AMOUNT - initialValue;
             }
         }
 
@@ -4095,7 +4105,10 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
             prevClose = l || h || prevClose;
 
             // Mark-to-market at candle low (conservative for drawdown tracking).
-            const equity = amount + ((his_arr[i].l || 0) * count * (1 - fee));
+            const virtualMtm = (initialValue > 0 && referencePrice > 0)
+                ? initialValue * ((his_arr[i].l || referencePrice) / referencePrice) * (1 - fee)
+                : 0;
+            const equity = amount + ((his_arr[i].l || 0) * count * (1 - fee)) + virtualMtm;
             equityCurve.push(equity);
             if (equity > peakEquity) {
                 peakEquity = equity;
@@ -4121,6 +4134,11 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
             recordSell(lastNode.l, count, tradedLo);
         }
         count = 0;
+        // Liquidate virtual fractional position (1/4 buy-hold when no whole share was affordable).
+        if (initialValue > 0 && referencePrice > 0) {
+            const finalPrice = lastNode && lastNode.l ? lastNode.l : referencePrice;
+            amount += initialValue * (finalPrice / referencePrice) * (1 - fee);
+        }
 
         // §4.1 Per-group metrics — all formulas match the existing single-run stockTest.
         const tradeDays = equityCurve.length;
