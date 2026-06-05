@@ -1088,7 +1088,7 @@ export default {
                             });
                         }
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? recur_mi(1, 0) : Promise.resolve([null, ret_obj]);
+                    const exGet = () => /*(etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ?*/ recur_mi(1, 0)/* : Promise.resolve([null, ret_obj]);*/
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -1370,7 +1370,7 @@ export default {
                         });
                         return getFinance();
                     }
-                    const exGet = () => (etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? get_mi() : Promise.resolve([null, ret_obj]);
+                    const exGet = () => /*(etime === -1 || !etime || etime < (_dateFactory().getTime()/1000)) ? */get_mi() /*: Promise.resolve([null, ret_obj]);*/
                     return exGet().then(([raw_list, ret_obj]) => {
                         if (raw_list) {
                             Redis('hmset', `interval: ${items[0].type}${items[0].index}`, {
@@ -3813,16 +3813,14 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
     if (!web0) {
         return { start: 0, metrics: ZERO_METRICS, groups: [], summary: ZERO_SUMMARY };
     }
-    // Frozen capital base computed once from S1 web — never recomputed.
-    // Recomputing as price rises inflates the return denominator and distorts return rate.
-    const FIXED_MAX_AMOUNT = webMaxAmount(web0.arr, web0.mid);
-
     // ── §2.2 Build cumulative web snapshots ──────────────────────────────────
     // webStates[k] = web snapshot after all candles through Sk have been walked:
     //   webStates[1] = S1 only (= web0)
     //   webStates[2] = S1+S2
     //   webStates[3] = S1+S2+S3
     //   webStates[4] = S1+S2+S3+S4
+    // webStates evolve naturally (no adjustWeb scaling) so that
+    // webMaxAmount(webStates[k]) reflects the true capital implied by k segments.
     const cloneWeb = w => ({ ...w, arr: [...w.arr] });
 
     // Walk a segment in chronological order (hi-1 → lo inclusive), rebuilding the web
@@ -3836,8 +3834,7 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
                 checkweb = 0;
                 const nw = calStair(his_arr, loga, min, i, fee, N - i);
                 if (nw) {
-                    const adj = adjustWeb(nw.arr, nw.mid, FIXED_MAX_AMOUNT, true);
-                    web = { ...nw, arr: adj.arr, mid: adj.mid };
+                    web = cloneWeb(nw);
                 }
             }
         }
@@ -3849,6 +3846,18 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
     webStates[2] = cloneWeb(walkSegment(webStates[1], s2Lo, s2Hi));
     webStates[3] = cloneWeb(walkSegment(webStates[2], s3Lo, s3Hi));
     webStates[4] = cloneWeb(walkSegment(webStates[3], s4Lo, s4Hi));
+
+    // ── §1.3 Per-seed max amounts ─────────────────────────────────────────────
+    // Each seed's capital base = webMaxAmount of the web at the end of its history window.
+    //   seedIdx=1 → S1 history only
+    //   seedIdx=2 → S1+S2 cumulative history
+    //   seedIdx=3 → S1+S2+S3
+    //   seedIdx=4 → S1+S2+S3+S4
+    // This is frozen for each group at the moment simulation begins.
+    const maxAmountBySeed = [0]; // 1-indexed
+    for (let k = 1; k <= 4; k++) {
+        maxAmountBySeed.push(webMaxAmount(webStates[k].arr, webStates[k].mid));
+    }
 
     // ── §2.1 10-Group definitions ─────────────────────────────────────────────
     // Each entry: { seedIdx, tradedLo, tradedHi, segCount }
@@ -3869,6 +3878,9 @@ export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTER
     // ── §2.3 runGroup: single-group trading simulation ────────────────────────
     const runGroup = ({ seedIdx, tradedLo, tradedHi, segCount }) => {
         if (tradedHi - tradedLo < 2) return null;
+
+        // Freeze capital at the seed-derived max amount for this group.
+        const FIXED_MAX_AMOUNT = maxAmountBySeed[seedIdx];
 
         let web = cloneWeb(webStates[seedIdx]);
         let newMid = [];

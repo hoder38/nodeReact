@@ -806,7 +806,7 @@ describe('stockTest', () => {
         expect(result.metrics.winRate).toBeLessThanOrEqual(100);
     });
 
-    test('metrics.maxAmount is the FIXED_MAX_AMOUNT (same across all groups)', () => {
+    test('metrics.maxAmount grows with seedIdx (more history → larger capital base)', () => {
         const swingArr = Array.from({ length: 300 }, (_, i) => ({
             h: 110 + Math.sin(i * 0.1) * 20,
             l: 90 + Math.sin(i * 0.1) * 20,
@@ -815,11 +815,19 @@ describe('stockTest', () => {
         const swingLoga = logArray(130, 70);
         const result = stockTest(swingArr, swingLoga, 70, 0);
         const validGroups = result.groups.filter(g => g !== null);
-        if (validGroups.length > 1) {
-            // All groups share the same FIXED_MAX_AMOUNT (frozen at S1).
-            const amounts = validGroups.map(g => g.maxAmount);
-            expect(amounts.every(a => a === amounts[0])).toBe(true);
-        }
+        // Groups with same seedIdx must share the same maxAmount.
+        const bySeed = {};
+        result.groups.forEach((g, i) => {
+            if (!g) return;
+            const defs = [
+                {seedIdx:1},{seedIdx:2},{seedIdx:3},{seedIdx:4},
+                {seedIdx:1},{seedIdx:2},{seedIdx:3},
+                {seedIdx:1},{seedIdx:2},{seedIdx:1},
+            ];
+            const si = defs[i].seedIdx;
+            if (!bySeed[si]) bySeed[si] = g.maxAmount;
+            else expect(g.maxAmount).toBe(bySeed[si]);
+        });
     });
 
     test('uptrending stock: avgReturnAnnualPct is near 0 when strategy never trades (regression: denominator inflation)', () => {
@@ -2490,13 +2498,16 @@ describe('stockTest comprehensive', () => {
         expect(result.groups.length).toBe(10);
     });
 
-    test('FIXED_MAX_AMOUNT invariant: all valid groups share the same maxAmount', () => {
+    test('per-seed capital: groups with same seedIdx share maxAmount; different seedIdx may differ', () => {
         const result = stockTest(raw500, loga500, 70, 0);
-        const validGroups = result.groups.filter(g => g !== null);
-        if (validGroups.length > 1) {
-            const amounts = validGroups.map(g => g.maxAmount);
-            expect(amounts.every(a => a === amounts[0])).toBe(true);
-        }
+        const seedIdxOf = [1, 2, 3, 4, 1, 2, 3, 1, 2, 1]; // G1..G10
+        const bySeed = {};
+        result.groups.forEach((g, i) => {
+            if (!g) return;
+            const si = seedIdxOf[i];
+            if (!bySeed[si]) bySeed[si] = g.maxAmount;
+            else expect(g.maxAmount).toBe(bySeed[si]);
+        });
     });
 });
 

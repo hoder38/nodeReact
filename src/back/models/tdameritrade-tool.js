@@ -534,8 +534,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                         }
                     } else {
                         const negBounds = item.web.filter(v => v < 0);
-                        const sigma2Up = negBounds.length >= 2 ? -negBounds[1] : item.mid * 2;
-                        if (price < sigma2Up) {
+                        const sigma1Up = negBounds.length >= 3 ? -negBounds[2] : item.mid * 2;
+                        if (price < sigma1Up) {
                             return Mongo('update', TOTALDB, {_id: item._id}, {$set : {ing: 1}}).then(result => {
                                 if (price) {
                                     return startStatus();
@@ -544,8 +544,8 @@ export const usseTDInit = () => checkOauth().then(() => {
                                 }
                             });
                         } else {
-                            console.log('enter_mid: price above 2σ');
-                            console.log(`price=${price} sigma2Up=${sigma2Up} mid=${item.mid}`);
+                            console.log('enter_mid: price above 1σ');
+                            console.log(`price=${price} sigma1Up=${sigma1Up} mid=${item.mid}`);
                             return recur_status(index + 1);
                         }
                     }

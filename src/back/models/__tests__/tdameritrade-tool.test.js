@@ -2457,25 +2457,22 @@ describe('usseTDInit', () => {
             await alignTradeCounter();
             await runTradeLogic(
                 [{ _id: 'mul1', index: 'MUL', setype: 'usse', ing: 0, amount: 1000, orig: 500, mid: 100, times: 5, mul: 2, web: [-130, -120, -110, -100, -91, -83, -76] }],
-                { MUL: { price: 250 } } // price=250 > sigma2Up=120 → enter_mid fail
+                { MUL: { price: 250 } } // price=250 > sigma1Up=110 → enter_mid fail
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 2σ');
-        });
-
-        test('recur_status: ing === 0, enter_mid not met → skip', async () => {
+            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 1σ');
             await alignTradeCounter();
             await runTradeLogic(
                 [{ _id: 'ent0', index: 'ENT', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
-                { ENT: { price: 250 } } // price=250 > sigma2Up=120 → skip
+                { ENT: { price: 250 } } // price=250 > sigma1Up=110 → skip
             );
-            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 2σ');
+            expect(consoleSpy).toHaveBeenCalledWith('enter_mid: price above 1σ');
         });
 
         test('recur_status: ing === 0, enter_mid met, price exists → startStatus', async () => {
             await alignTradeCounter();
             await runTradeLogic(
                 [{ _id: 'ent1', index: 'ENT2', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
-                { ENT2: { price: 115, buy: 140, sell: 160, bCount: 2, sCount: 1 } } // price=115 < sigma2Up=120 → met
+                { ENT2: { price: 105, buy: 140, sell: 160, bCount: 2, sCount: 1 } } // price=105 < sigma1Up=110 → met
             );
             // Should have called Mongo update to set ing=1
             expect(mockMongo).toHaveBeenCalledWith('update', 'total',
@@ -2486,7 +2483,7 @@ describe('usseTDInit', () => {
             await alignTradeCounter();
             await runTradeLogic(
                 [{ _id: 'ent3', index: 'ENT3', setype: 'usse', ing: 0, amount: 1000, orig: 1000, mid: 100, times: 10, web: [-130, -120, -110, -100, -91, -83, -76] }],
-                { ENT3: { price: 0, buy: 0, sell: 0, bCount: 0, sCount: 0 } } // price=0 < sigma2Up=120 → met, but price falsy
+                { ENT3: { price: 0, buy: 0, sell: 0, bCount: 0, sCount: 0 } } // price=0 < sigma1Up=110 → met, but price falsy
             );
         });
 

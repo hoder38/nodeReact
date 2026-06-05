@@ -1523,8 +1523,8 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // 2σ upper boundary from web array: -negBounds[1] = 120
-      // price=90 < 120 → enter
+      // 1σ upper boundary from web array: -negBounds[2] = 110
+      // price=90 < 110 → enter
       const suggestion = { price: 90, bCount: 1, buy: 89, sCount: 0, sell: 0 };
       mockGetSuggestionData.mockReturnValue({ '2330': suggestion });
 
@@ -1560,8 +1560,8 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // 2σ upper boundary from web array: -negBounds[1] = 120
-      // price=125 > 120 → skip (above 2σ)
+      // 1σ upper boundary from web array: -negBounds[2] = 110
+      // price=125 > 110 → skip (above 1σ)
       mockGetSuggestionData.mockReturnValue({ '2330': { price: 125 } });
 
       mockMongo.mockResolvedValue([{
@@ -1587,7 +1587,7 @@ describe('shioaji-tool.js', () => {
       };
       global.Date = mockDate;
 
-      // 2σ upper boundary = 120, price=0 < 120 → threshold met, but price is falsy
+      // 1σ upper boundary = 110, price=0 < 110 → threshold met, but price is falsy
       mockGetSuggestionData.mockReturnValue({ '2330': { price: 0 } });
 
       mockMongo.mockImplementation((method) => {
