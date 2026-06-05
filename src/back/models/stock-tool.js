@@ -927,51 +927,39 @@ export default {
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
-                            // Re-run the backtest summary so STOCKDB and TOTALDB stay aligned on the
+                            // Re-run the segmented backtest so STOCKDB and TOTALDB stay aligned on the
                             // ladder type and metrics persisted for this symbol.
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const results = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
+                                // pricePct = live distance to mid (field 1); not aggregated over groups.
                                 const pricePct = Math.round((+price - web.mid) / web.mid * 10000) / 100;
-                                // Build the display string from a full-history backtest, then re-test from the
-                                // latest bar to decide which ladder type should be persisted for updates.
+                                // One segmented backtest per pType. lastest_type is chosen from the same result
+                                // (G10 returnPct); a second pass is no longer needed since start/reverse/len
+                                // are superseded and both calls would return identical results.
                                 const resultShow = type => {
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0)).then(temp => {
-                                        if (temp === 'data miss') {
-                                            return Promise.resolve(true);
-                                        }
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type)).then(temp => {
                                         const m = temp.metrics;
-                                        if (!m || (m.returnPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
+                                        const s = temp.summary;
+                                        if (!s || (s.avgReturnAnnualPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
                                             results.push({ type, str: 'no less than mid point', metrics: null, rate: -Infinity });
                                             return;
                                         }
-                                        const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
-                                        const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
-                                        results.push({ type, str, metrics: m, rate: m.returnPct });
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true)).then(rtemp => {
-                                            if (rtemp === 'data miss') {
-                                                return;
+                                        // 6-field string: pricePct% avgReturnAnnualPct% avgBuyHoldPct% avgSortino avgProfitFactor maxDrawdownPct%
+                                        const str = `${pricePct}% ${s.avgReturnAnnualPct}% ${s.avgBuyHoldPct}% ${s.avgSortino} ${s.avgProfitFactor} ${s.maxDrawdownPct}%`;
+                                        results.push({ type, str, metrics: m, rate: s.avgReturnAnnualPct });
+                                        if (m.returnPct !== 0 || m.sellTrade !== 0 || m.stopLoss !== 0) {
+                                            if (!lastest_rate || m.returnPct > lastest_rate) {
+                                                lastest_rate = m.returnPct;
+                                                lastest_type = type;
                                             }
-                                            const rm = rtemp.metrics;
-                                            if (rm && (rm.returnPct !== 0 || rm.sellTrade !== 0 || rm.stopLoss !== 0)) {
-                                                if (!lastest_rate || rm.returnPct > lastest_rate) {
-                                                    lastest_rate = rm.returnPct;
-                                                    lastest_type = type;
-                                                }
-                                            }
-                                        });
+                                        }
                                     });
                                 }
                                 const loopShow = index => {
                                     if (index >= 0) {
-                                        return resultShow(index).then(result => {
-                                            if (result) {
-                                                return handleError(new HoError(`${items[0].index} data miss!!!`));
-                                            } else {
-                                                return loopShow(index - 1);
-                                            }
-                                        });
+                                        return resultShow(index).then(() => loopShow(index - 1));
                                     } else {
                                         return Promise.resolve();
                                     }
@@ -1164,51 +1152,39 @@ export default {
                             if (!web) {
                                 return [interval_data, 'no profit'];
                             }
-                            // Re-run the backtest summary so STOCKDB and TOTALDB stay aligned on the
+                            // Re-run the segmented backtest so STOCKDB and TOTALDB stay aligned on the
                             // ladder type and metrics persisted for this symbol.
                             const restTest = () => getStockPrice(items[0].type, items[0].index).then(price => {
                                 const results = [];
                                 let lastest_type = 0;
                                 let lastest_rate = 0;
+                                // pricePct = live distance to mid (field 1); not aggregated over groups.
                                 const pricePct = Math.round((+price - web.mid) / web.mid * 10000) / 100;
-                                // First pass builds the UI label; the second pass picks the best
-                                // continuation type from the latest bar for future updates.
+                                // One segmented backtest per pType. lastest_type is chosen from the same result
+                                // (G10 returnPct); a second pass is no longer needed since start/reverse/len
+                                // are superseded and both calls would return identical results.
                                 const resultShow = type => {
-                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0, RANGE_INTERVAL, USSE_FEE)).then(temp => {
-                                        if (temp === 'data miss') {
-                                            return Promise.resolve(true);
-                                        }
+                                    return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, RANGE_INTERVAL, USSE_FEE)).then(temp => {
                                         const m = temp.metrics;
-                                        if (!m || (m.returnPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
+                                        const s = temp.summary;
+                                        if (!s || (s.avgReturnAnnualPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
                                             results.push({ type, str: 'no less than mid point', metrics: null, rate: -Infinity });
                                             return;
                                         }
-                                        const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
-                                        const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
-                                        results.push({ type, str, metrics: m, rate: m.returnPct });
-                                        return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 200, RANGE_INTERVAL, USSE_FEE)).then(rtemp => {
-                                            if (rtemp === 'data miss') {
-                                                return;
+                                        // 6-field string: pricePct% avgReturnAnnualPct% avgBuyHoldPct% avgSortino avgProfitFactor maxDrawdownPct%
+                                        const str = `${pricePct}% ${s.avgReturnAnnualPct}% ${s.avgBuyHoldPct}% ${s.avgSortino} ${s.avgProfitFactor} ${s.maxDrawdownPct}%`;
+                                        results.push({ type, str, metrics: m, rate: s.avgReturnAnnualPct });
+                                        if (m.returnPct !== 0 || m.sellTrade !== 0 || m.stopLoss !== 0) {
+                                            if (!lastest_rate || m.returnPct > lastest_rate) {
+                                                lastest_rate = m.returnPct;
+                                                lastest_type = type;
                                             }
-                                            const rm = rtemp.metrics;
-                                            if (rm && (rm.returnPct !== 0 || rm.sellTrade !== 0 || rm.stopLoss !== 0)) {
-                                                if (!lastest_rate || rm.returnPct > lastest_rate) {
-                                                    lastest_rate = rm.returnPct;
-                                                    lastest_type = type;
-                                                }
-                                            }
-                                        });
+                                        }
                                     });
                                 }
                                 const loopShow = index => {
                                     if (index >= 0) {
-                                        return resultShow(index).then(result => {
-                                            if (result) {
-                                                return handleError(new HoError(`${items[0].index} data miss!!!`));
-                                            } else {
-                                                return loopShow(index - 1);
-                                            }
-                                        });
+                                        return resultShow(index).then(() => loopShow(index - 1));
                                     } else {
                                         return Promise.resolve();
                                     }
@@ -3790,420 +3766,440 @@ export const stockProcess = (price, priceArray, priceTimes = 1, previous = {buy:
     };
 }
 
-// Backtest the web strategy against historical candles with adaptive web resets,
-// intra-candle path simulation, and portfolio-level performance metrics.
-export const stockTest = (his_arr, loga, min, pType = 0, start = 0, reverse = false, len = 200, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, resetWeb = 5, sType = 0) => {
+// Segmented walk-forward backtest of the web strategy against full historical candles.
+// Splits his_arr into 5 chronological segments, builds 10 out-of-sample test groups,
+// and aggregates per-group metrics into a summary. Parameters start/reverse/len are
+// superseded (kept only for call-site backward compat) — all calls run the full dataset.
+export const stockTest = (his_arr, loga, min, pType = 0, rinterval = RANGE_INTERVAL, fee = TRADE_FEE, ttime = TRADE_TIME, tinterval = TRADE_INTERVAL, sType = 0) => {
     const now = Math.round(_dateFactory().getTime() / 1000);
-    const fullRun = len <= 0;
-    let count = 0;
-    let privious = {};
-    let priviousTrade = {buy:[], sell:[]};
-    let buyTrade = 0;
-    let sellTrade = 0;
-    let stopLoss = 0;
-    let newMid = [];
-    let price = 0;
-    let startI = fullRun
-        ? Math.min(start, his_arr.length - 2)
-        : ((start < (his_arr.length - len - 1)) ? start : (his_arr.length - len - 1));
-    let checkweb = resetWeb;
-    let web = null;
-    let maxAmount = 0;
-    let amount = 0;
-    const equityCurve = [];
-    const buyLog = [];   // FIFO inventory for round-trip attribution.
-    const sellLog = [];  // Completed sell legs with realized profit snapshots.
-    let peakEquity = 0;
-    let maxDrawdown = 0;
-    let drawdownStart = 0;
-    let maxDrawdownDuration = 0;
-    let currentDrawdownStart = -1;
-    let grossProfit = 0;
-    let grossLoss = 0;
-    let winCount = 0;
-    let lossCount = 0;
-    let totalWin = 0;
-    let totalLoss = 0;
+    const N = his_arr.length;
 
-    // Phase 1: locate the first candle that places price back inside the computed web.
-    const scanLimit = fullRun ? 0 : (len - 1);
-    const calStairLen = sType === 0 ? false : (fullRun ? false : (len * 3));
-    if (!reverse) {
-        for (; startI > scanLimit; startI--) {
-            if (checkweb > resetWeb - 1) {
-                const newStair0 = calStair(his_arr, loga, min, startI, fee, calStairLen);
-                if (newStair0) {
-                    checkweb = 0;
-                    web = newStair0;
-                    maxAmount = webMaxAmount(web.arr, web.mid);
-                    amount = maxAmount;
-                }
-                // if false (spread too tight for current window), keep checkweb high
-                // so the next iteration retries immediately as startI-- widens the window
-            } else {
-                checkweb++;
-            }
-            if (web && his_arr[startI].h < web.mid) {
-                privious = his_arr[startI + 1];
-                if (!his_arr[startI + 1] || his_arr[startI + 1].h === null) {
-                    return 'data miss';
-                }
-                break;
-            }
-        }
-        if (startI <= scanLimit) {
-            return {
-                start: 0,
-                metrics: {
-                    maxAmount: 0, returnPct: 0, returnAnnualPct: 0,
-                    buyHoldPct: 0, sharpe: 0, sortino: 0, calmar: 0,
-                    maxDrawdownPct: 0, maxDrawdownDuration: 0,
-                    winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
-                    buyTrade: 0, sellTrade: 0, stopLoss: 0, tradeDays: 0,
-                    tradesPerYear: 0,
-                },
-            }
-        }
-    } else {
-        let next = 0;
-        startI = start + len - 1;
-        for (; startI < his_arr.length - len - 1; startI++) {
-            if (checkweb > resetWeb - 1) {
-                checkweb = 0;
-                const newStair1 = calStair(his_arr, loga, min, startI, fee, calStairLen);
-                if (!newStair1) return 'data miss';
-                web = newStair1;
-                maxAmount = webMaxAmount(web.arr, web.mid);
-                amount = maxAmount;
-            } else {
-                checkweb++;
-            }
-            if (next && his_arr[startI].h < web.mid) {
-                next = 2;
-            }
-            if ((!next && his_arr[startI].h < web.mid) || (next === 2 && his_arr[startI].h > web.mid)) {
-                startI++;
-                privious = his_arr[startI + 1];
-                if (!his_arr[startI + 1] || his_arr[startI + 1].h === null) {
-                    log.debug({ startI, nextCandle: his_arr[startI + 1] }, 'backtest buy walk start');
-                    return 'data miss';
-                }
-                break;
-            }
-            if (!next) {
-                next = 1;
-            }
-        }
-    }
-
-    // Reverse scan may leave startI beyond his_arr bounds when the array is shorter
-    // than (len * 2). Cap it so phase-2 candle accesses never go out of range.
-    if (startI >= his_arr.length - 1) {
-        startI = his_arr.length - 2;
-    }
-    if (startI < 0) {
-        return 'data miss';
-    }
-
-    const newPrevious = (tradeType, tradePrice, time = Math.round(_dateFactory().getTime() / 1000)) => {
-        // Keep recent trades sorted by best price so stockProcess can enforce its cooldown bands.
-        if (tradeType === 'buy') {
-            let is_insert = false;
-            for (let k = 0; k < priviousTrade.buy.length; k++) {
-                if (tradePrice < priviousTrade.buy[k].price) {
-                    priviousTrade.buy.splice(k, 0, {price: tradePrice, time});
-                    is_insert = true;
-                    break;
-                }
-            }
-            if (!is_insert) {
-                priviousTrade.buy.push({price: tradePrice, time});
-            }
-            priviousTrade = {
-                price: tradePrice, time, type: 'buy',
-                buy: priviousTrade.buy.filter(v => (time - v.time < rinterval)),
-                sell: priviousTrade.sell,
-            }
-        } else if (tradeType === 'sell') {
-            let is_insert = false;
-            for (let k = 0; k < priviousTrade.sell.length; k++) {
-                if (tradePrice > priviousTrade.sell[k].price) {
-                    priviousTrade.sell.splice(k, 0, {price: tradePrice, time});
-                    is_insert = true;
-                    break;
-                }
-            }
-            if (!is_insert) {
-                priviousTrade.sell.push({price: tradePrice, time});
-            }
-            priviousTrade = {
-                price: tradePrice, time, type: 'sell',
-                sell: priviousTrade.sell.filter(v => (time - v.time < rinterval)),
-                buy: priviousTrade.buy,
-            }
-        }
-    }
-
-    const runSignal = (p, i, newArr) => {
-        let suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
-        let recalcCount = 0;
-        while (suggest.resetWeb) {
-            if (suggest.resetWeb === 1) stopLoss++;
-            newMid.push(suggest.newMid);
-            // Once the temporary midpoint stack grows too deep, rebuild a fresh web from broader history.
-            if (newMid.length >= MAX_NEWMID_STACK) {
-                recalcCount++;
-                if (recalcCount > 2) {
-                    // Hard stop prevents pathological reset loops on malformed or ultra-volatile data.
-                    newMid = [];
-                    newArr = web.arr;
-                    break;
-                }
-                let fraction = 2;
-                let recalcWeb = null;
-                while (fraction <= 8) {
-                    const halfLen = Math.max(Math.floor(his_arr.length / fraction), 20);
-                    recalcWeb = calStair(his_arr, loga, min, 0, fee, halfLen);
-                    if (recalcWeb) break;
-                    fraction *= 2;
-                }
-                if (recalcWeb) {
-                    web = recalcWeb;
-                    maxAmount = webMaxAmount(web.arr, web.mid);
-                    newMid = [];
-                    newArr = web.arr;
-                } else {
-                    newMid = [];
-                    newArr = web.arr;
-                    break;
-                }
-            } else {
-                newArr = scaleWebArr(newMid, web.mid, web.arr);
-            }
-            suggest = stockProcess(p, newArr, web.times, priviousTrade, maxAmount, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
-        }
-        return { suggest, newArr };
+    const ZERO_METRICS = {
+        maxAmount: 0, returnPct: 0, returnAnnualPct: 0,
+        buyHoldPct: 0, sharpe: 0, sortino: 0, calmar: 0,
+        maxDrawdownPct: 0, maxDrawdownDuration: 0,
+        winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
+        buyTrade: 0, sellTrade: 0, stopLoss: 0, tradeDays: 0, tradesPerYear: 0,
+    };
+    const ZERO_SUMMARY = {
+        avgReturnAnnualPct: 0, avgBuyHoldPct: 0,
+        avgSortino: 0, avgProfitFactor: 0, maxDrawdownPct: 0,
     };
 
-    const tryExecute = (suggest, i, candle) => {
-        const tradeTime = now - (i * tinterval) + ttime / 6;
-        const prevCount = count;
-        if (newMid.length <= 0 || newMid[newMid.length - 1] <= web.mid) {
-            if (suggest.buy > 0 && suggest.buy && candle.l <= suggest.buy) {
-                if (suggest.bCount === 0 && suggest.buy) newPrevious('buy', suggest.buy, tradeTime);
-                const r = executeBuy(suggest, amount, maxAmount, count, fee);
+    // ── §1.1 Split into 5 chronological segments ─────────────────────────────
+    // his_arr is newest-first: index 0 = most recent, index N-1 = oldest.
+    // S1 (oldest) occupies the high-index end; S5 (newest) the low-index end.
+    // Remainder candles are appended to S5 so no data is dropped.
+    const segLen = Math.floor(N / 5);
+    if (segLen < 5) {
+        // Too few candles for meaningful segmentation; return all-zero early result.
+        return { start: 0, metrics: ZERO_METRICS, groups: [], summary: ZERO_SUMMARY };
+    }
+
+    // Segment bounds [lo, hi) in newest-first his_arr (high index = older):
+    //   S1 (oldest):  [N-segLen, N)
+    //   S2:           [N-2*segLen, N-segLen)
+    //   S3:           [N-3*segLen, N-2*segLen)
+    //   S4:           [N-4*segLen, N-3*segLen)
+    //   S5 (newest):  [0, N-4*segLen)   — includes the floor() remainder
+    const s1Lo = N - segLen,    s1Hi = N;
+    const s2Lo = N - 2*segLen,  s2Hi = s1Lo;
+    const s3Lo = N - 3*segLen,  s3Hi = s2Lo;
+    const s4Lo = N - 4*segLen,  s4Hi = s3Lo;
+    const s5Lo = 0,              s5Hi = s4Lo;
+
+    // ── §1.2–1.3 Initial web from S1; freeze max amount once ─────────────────
+    const web0 = calStair(his_arr, loga, min, s1Lo, fee, segLen);
+    if (!web0) {
+        return { start: 0, metrics: ZERO_METRICS, groups: [], summary: ZERO_SUMMARY };
+    }
+    // Frozen capital base computed once from S1 web — never recomputed.
+    // Recomputing as price rises inflates the return denominator and distorts return rate.
+    const FIXED_MAX_AMOUNT = webMaxAmount(web0.arr, web0.mid);
+
+    // ── §2.2 Build cumulative web snapshots ──────────────────────────────────
+    // webStates[k] = web snapshot after all candles through Sk have been walked:
+    //   webStates[1] = S1 only (= web0)
+    //   webStates[2] = S1+S2
+    //   webStates[3] = S1+S2+S3
+    //   webStates[4] = S1+S2+S3+S4
+    const cloneWeb = w => ({ ...w, arr: [...w.arr] });
+
+    // Walk a segment in chronological order (hi-1 → lo inclusive), rebuilding the web
+    // every 5 candles using the accumulating window his_arr[i .. N).
+    const walkSegment = (prevWeb, segLo, segHi) => {
+        let web = cloneWeb(prevWeb);
+        let checkweb = 0;
+        for (let i = segHi - 1; i >= segLo; i--) {
+            checkweb++;
+            if (checkweb >= 5) {
+                checkweb = 0;
+                const nw = calStair(his_arr, loga, min, i, fee, N - i);
+                if (nw) {
+                    const adj = adjustWeb(nw.arr, nw.mid, FIXED_MAX_AMOUNT, true);
+                    web = { ...nw, arr: adj.arr, mid: adj.mid };
+                }
+            }
+        }
+        return web;
+    };
+
+    const webStates = [null]; // 1-indexed; webStates[0] unused
+    webStates[1] = cloneWeb(web0);
+    webStates[2] = cloneWeb(walkSegment(webStates[1], s2Lo, s2Hi));
+    webStates[3] = cloneWeb(walkSegment(webStates[2], s3Lo, s3Hi));
+    webStates[4] = cloneWeb(walkSegment(webStates[3], s4Lo, s4Hi));
+
+    // ── §2.1 10-Group definitions ─────────────────────────────────────────────
+    // Each entry: { seedIdx, tradedLo, tradedHi, segCount }
+    // tradedLo..tradedHi is the range traded; seedIdx → webStates[seedIdx].
+    const groupDefs = [
+        { seedIdx: 1, tradedLo: s2Lo, tradedHi: s2Hi, segCount: 1 }, // G1:  S2
+        { seedIdx: 2, tradedLo: s3Lo, tradedHi: s3Hi, segCount: 1 }, // G2:  S3
+        { seedIdx: 3, tradedLo: s4Lo, tradedHi: s4Hi, segCount: 1 }, // G3:  S4
+        { seedIdx: 4, tradedLo: s5Lo, tradedHi: s5Hi, segCount: 1 }, // G4:  S5
+        { seedIdx: 1, tradedLo: s3Lo, tradedHi: s2Hi, segCount: 2 }, // G5:  S2+S3
+        { seedIdx: 2, tradedLo: s4Lo, tradedHi: s3Hi, segCount: 2 }, // G6:  S3+S4
+        { seedIdx: 3, tradedLo: s5Lo, tradedHi: s4Hi, segCount: 2 }, // G7:  S4+S5
+        { seedIdx: 1, tradedLo: s4Lo, tradedHi: s2Hi, segCount: 3 }, // G8:  S2+S3+S4
+        { seedIdx: 2, tradedLo: s5Lo, tradedHi: s3Hi, segCount: 3 }, // G9:  S3+S4+S5
+        { seedIdx: 1, tradedLo: s5Lo, tradedHi: s2Hi, segCount: 4 }, // G10: S2+S3+S4+S5
+    ];
+
+    // ── §2.3 runGroup: single-group trading simulation ────────────────────────
+    const runGroup = ({ seedIdx, tradedLo, tradedHi, segCount }) => {
+        if (tradedHi - tradedLo < 2) return null;
+
+        let web = cloneWeb(webStates[seedIdx]);
+        let newMid = [];
+        let count = 0;
+        let amount = FIXED_MAX_AMOUNT;
+        let priviousTrade = { buy: [], sell: [] };
+        let buyTrade = 0;
+        let sellTrade = 0;
+        let stopLoss = 0;
+        const equityCurve = [];
+        const buyLog = [];
+        const sellLog = []; // kept for future use
+        let peakEquity = FIXED_MAX_AMOUNT;
+        let maxDrawdown = 0;
+        let currentDrawdownStart = -1;
+        let maxDrawdownDuration = 0;
+        let grossProfit = 0;
+        let grossLoss = 0;
+        let winCount = 0;
+        let lossCount = 0;
+        let totalWin = 0;
+        let totalLoss = 0;
+
+        // §3.1 Initial position: 25% of FIXED_MAX_AMOUNT deployed, 75% held as cash.
+        // referencePrice = midpoint of the oldest (first traded) candle.
+        const firstCandle = his_arr[tradedHi - 1];
+        const referencePrice = firstCandle
+            ? ((firstCandle.h + firstCandle.l) / 2 || firstCandle.h || firstCandle.l) : 0;
+        if (referencePrice > 0) {
+            const count0 = Math.floor(FIXED_MAX_AMOUNT * 0.25 / referencePrice);
+            if (count0 > 0) {
+                const buyPrice = referencePrice * (1 + fee);
+                amount = FIXED_MAX_AMOUNT - count0 * buyPrice;
+                count = count0;
+                // Seed buyLog so FIFO round-trip attribution starts correctly.
+                buyLog.push({ price: buyPrice, count: count0, idx: -1 });
+            }
+        }
+
+        // §3.4 Hold & Buy baseline: deploy 100% at first candle, hold until last.
+        const bhFirstPrice = firstCandle ? (firstCandle.l || firstCandle.h || 0) : 0;
+        const holdCount = bhFirstPrice > 0 ? Math.floor(FIXED_MAX_AMOUNT / bhFirstPrice) : 0;
+        const holdCash = FIXED_MAX_AMOUNT - holdCount * bhFirstPrice * (1 + fee);
+
+        const lastNode = his_arr[tradedLo];
+        let prevClose = firstCandle ? (firstCandle.h || firstCandle.l || 0) : 0;
+        let checkweb = 0;
+
+        const recordSell = (sellPrice, soldCount, idx) => {
+            let remaining = soldCount;
+            const netSell = sellPrice * (1 - fee);
+            while (remaining > 0 && buyLog.length > 0) {
+                const oldest = buyLog[0];
+                const matched = Math.min(remaining, oldest.count);
+                const profit = (netSell - oldest.price) * matched;
+                if (profit >= 0) { grossProfit += profit; winCount++; totalWin += profit; }
+                else { grossLoss += Math.abs(profit); lossCount++; totalLoss += Math.abs(profit); }
+                sellLog.push({ price: sellPrice, count: matched, idx, profit });
+                oldest.count -= matched;
+                remaining -= matched;
+                if (oldest.count <= 0) buyLog.shift();
+            }
+        };
+
+        const newPreviousFn = (tradeType, tradePrice, tradeTime) => {
+            if (tradeType === 'buy') {
+                let inserted = false;
+                for (let k = 0; k < priviousTrade.buy.length; k++) {
+                    if (tradePrice < priviousTrade.buy[k].price) {
+                        priviousTrade.buy.splice(k, 0, { price: tradePrice, time: tradeTime });
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) priviousTrade.buy.push({ price: tradePrice, time: tradeTime });
+                priviousTrade = {
+                    price: tradePrice, time: tradeTime, type: 'buy',
+                    buy: priviousTrade.buy.filter(v => tradeTime - v.time < rinterval),
+                    sell: priviousTrade.sell,
+                };
+            } else if (tradeType === 'sell') {
+                let inserted = false;
+                for (let k = 0; k < priviousTrade.sell.length; k++) {
+                    if (tradePrice > priviousTrade.sell[k].price) {
+                        priviousTrade.sell.splice(k, 0, { price: tradePrice, time: tradeTime });
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) priviousTrade.sell.push({ price: tradePrice, time: tradeTime });
+                priviousTrade = {
+                    price: tradePrice, time: tradeTime, type: 'sell',
+                    sell: priviousTrade.sell.filter(v => tradeTime - v.time < rinterval),
+                    buy: priviousTrade.buy,
+                };
+            }
+        };
+
+        const runSignalFn = (p, i, newArr) => {
+            // §3.2 Mirror live-engine signal generation, preserving newMid/resetWeb handling.
+            let suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
+            let recalcCount = 0;
+            while (suggest.resetWeb) {
+                if (suggest.resetWeb === 1) stopLoss++;
+                newMid.push(suggest.newMid);
+                if (newMid.length >= MAX_NEWMID_STACK) {
+                    recalcCount++;
+                    if (recalcCount > 2) { newMid = []; newArr = web.arr; break; }
+                    let fraction = 2;
+                    let recalcWeb = null;
+                    while (fraction <= 8) {
+                        const halfLen = Math.max(Math.floor(N / fraction), 20);
+                        recalcWeb = calStair(his_arr, loga, min, 0, fee, halfLen);
+                        if (recalcWeb) break;
+                        fraction *= 2;
+                    }
+                    if (recalcWeb) { web = recalcWeb; newMid = []; newArr = web.arr; }
+                    else { newMid = []; newArr = web.arr; break; }
+                } else {
+                    newArr = scaleWebArr(newMid, web.mid, web.arr);
+                }
+                suggest = stockProcess(p, newArr, web.times, priviousTrade, FIXED_MAX_AMOUNT, amount, count, 0, 0, Math.abs(web.arr[0]), pType, sType, fee, ttime, tinterval, now - (i * tinterval), newMid.length);
+            }
+            return { suggest, newArr };
+        };
+
+        const tryExecuteFn = (suggest, i, candle) => {
+            // §3.3 Order fills against the execution candle's High/Low.
+            const tradeTime = now - (i * tinterval) + ttime / 6;
+            if (newMid.length <= 0 || newMid[newMid.length - 1] <= web.mid) {
+                if (suggest.buy > 0 && candle.l <= suggest.buy) {
+                    if (suggest.bCount === 0) newPreviousFn('buy', suggest.buy, tradeTime);
+                    const r = executeBuy(suggest, amount, FIXED_MAX_AMOUNT, count, fee);
+                    if (r.didBuy) {
+                        buyLog.push({ price: suggest.buy, count: r.count - count, idx: i });
+                        newPreviousFn('buy', suggest.buy, tradeTime);
+                    }
+                    amount = r.amount; count = r.count; buyTrade += r.buyTrade;
+                }
+            } else if (suggest.buy && candle.l <= suggest.buy) {
+                if (suggest.bCount === 0) newPreviousFn('buy', suggest.buy, tradeTime);
+                const r = executeBuy({ ...suggest, type: 0 }, amount, FIXED_MAX_AMOUNT, count, fee);
                 if (r.didBuy) {
-                    const bought = r.count - count;
-                    buyLog.push({ price: suggest.buy, count: bought, idx: i });
-                    newPrevious('buy', suggest.buy, tradeTime);
+                    buyLog.push({ price: suggest.buy, count: r.count - count, idx: i });
+                    newPreviousFn('buy', suggest.buy, tradeTime);
                 }
                 amount = r.amount; count = r.count; buyTrade += r.buyTrade;
             }
-        } else if (suggest.buy && candle.l <= suggest.buy) {
-            // Above a shifted midpoint, execute the price trigger but drop directional type bias.
-            if (suggest.bCount === 0 && suggest.buy) newPrevious('buy', suggest.buy, tradeTime);
-            const r = executeBuy({ ...suggest, type: 0 }, amount, maxAmount, count, fee);
-            if (r.didBuy) {
-                const bought = r.count - count;
-                buyLog.push({ price: suggest.buy, count: bought, idx: i });
-                newPrevious('buy', suggest.buy, tradeTime);
-            }
-            amount = r.amount; count = r.count; buyTrade += r.buyTrade;
-        }
-
-        if (newMid.length <= 0 || newMid[newMid.length - 1] >= web.mid) {
-            if (suggest.sell > 0 && count > 0 && suggest.sell && candle.h >= suggest.sell) {
+            if (newMid.length <= 0 || newMid[newMid.length - 1] >= web.mid) {
+                if (suggest.sell > 0 && count > 0 && candle.h >= suggest.sell) {
+                    const prevC = count;
+                    const r = executeSell(suggest, amount, FIXED_MAX_AMOUNT, count, fee);
+                    const sold = prevC - r.count;
+                    if (sold > 0) recordSell(suggest.sell, sold, i);
+                    amount = r.amount; count = r.count; sellTrade += r.sellTrade;
+                    newPreviousFn('sell', suggest.sell, tradeTime);
+                }
+            } else if (count > 0 && suggest.sell && candle.h >= suggest.sell) {
                 const prevC = count;
-                const r = executeSell(suggest, amount, maxAmount, count, fee);
+                const r = executeSell({ ...suggest, type: 0 }, amount, FIXED_MAX_AMOUNT, count, fee);
                 const sold = prevC - r.count;
                 if (sold > 0) recordSell(suggest.sell, sold, i);
                 amount = r.amount; count = r.count; sellTrade += r.sellTrade;
-                newPrevious('sell', suggest.sell, tradeTime);
+                newPreviousFn('sell', suggest.sell, tradeTime);
             }
-        } else if (count > 0 && suggest.sell && candle.h >= suggest.sell) {
-            const prevC = count;
-            const r = executeSell({ ...suggest, type: 0 }, amount, maxAmount, count, fee);
-            const sold = prevC - r.count;
-            if (sold > 0) recordSell(suggest.sell, sold, i);
-            amount = r.amount; count = r.count; sellTrade += r.sellTrade;
-            newPrevious('sell', suggest.sell, tradeTime);
-        }
-    };
+        };
 
-    const recordSell = (sellPrice, soldCount, idx) => {
-        // Match sells against the oldest buys so win/loss metrics reflect full round trips.
-        let remaining = soldCount;
-        const netSell = sellPrice * (1 - fee);
-        while (remaining > 0 && buyLog.length > 0) {
-            const oldest = buyLog[0];
-            const matched = Math.min(remaining, oldest.count);
-            const profit = (netSell - oldest.price) * matched;
-            if (profit >= 0) {
-                grossProfit += profit;
-                winCount++;
-                totalWin += profit;
-            } else {
-                grossLoss += Math.abs(profit);
-                lossCount++;
-                totalLoss += Math.abs(profit);
-            }
-            sellLog.push({ price: sellPrice, count: matched, idx, profit });
-            oldest.count -= matched;
-            remaining -= matched;
-            if (oldest.count <= 0) buyLog.shift();
-        }
-    };
-
-    // Phase 2: simulate each candle as a two-step path through its extremes.
-    const tlength = fullRun ? 1 : Math.max(startI - len + 1, 1);
-    const lastNode = his_arr[tlength];
-    peakEquity = maxAmount;
-    // Capture starting capital before web recalculations change maxAmount.
-    // returnPct must measure performance against the capital we actually started with,
-    // not the final web size (which inflates with price for strongly trending stocks).
-    const initialMaxAmount = maxAmount;
-    let prevClose = privious.h || privious.l || 0;
-
-    for (let i = startI; i > tlength; i--) {
-        if (checkweb > resetWeb - 1) {
-            checkweb = 0;
-            const newStair2 = calStair(his_arr, loga, min, i, fee, calStairLen);
-            if (newStair2) {
-                web = newStair2;
-                const newWeb = adjustWeb(web.arr, web.mid, maxAmount, true);
-                web.arr = newWeb.arr;
-                web.mid = newWeb.mid;
-                web.times = newWeb.times;
-                maxAmount = webMaxAmount(web.arr, web.mid);
-                newMid = [];
-            }
-        } else {
+        // §1.4 Candle loop — chronological (high-index → low-index in newest-first array).
+        // Every 5 candles: calStair over the growing window his_arr[i..N) appends traded candles
+        // to the seed history without rebuilding from scratch.
+        for (let i = tradedHi - 1; i > tradedLo; i--) {
             checkweb++;
-        }
-        if (his_arr[i].h === null || his_arr[i].l === null) {
-            log.debug({ i, candle: his_arr[i] }, 'backtest candle');
-            return 'data miss';
-        }
-
-        const h = his_arr[i].h;
-        const l = his_arr[i].l;
-        const candle = his_arr[i - 1] || his_arr[i];
-        let prices;
-        if (h && l) {
-            // Approximate the intraday path by touching the closer extreme first.
-            const distH = Math.abs(prevClose - h);
-            const distL = Math.abs(prevClose - l);
-            prices = (distH <= distL) ? [h, l] : [l, h];
-        } else if (h) {
-            prices = [h];
-        } else if (l) {
-            prices = [l];
-        } else {
-            prices = prevClose ? [prevClose] : [];
-        }
-
-        for (const p of prices) {
-            price = p;
-            let newArr = resolveNewMidStack(newMid, price, web.mid, web.arr, () => {
-                stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
-            });
-            const { suggest, newArr: updatedArr } = runSignal(price, i, newArr);
-            tryExecute(suggest, i, candle);
-        }
-
-        prevClose = l || h || prevClose;
-        privious = his_arr[i];
-
-        // Mark-to-market uses the candle low so drawdown stats stay conservative.
-        const equity = amount + ((his_arr[i].l || 0) * count * (1 - fee));
-        equityCurve.push(equity);
-        if (equity > peakEquity) {
-            peakEquity = equity;
-            if (currentDrawdownStart >= 0) {
-                const ddDuration = equityCurve.length - 1 - currentDrawdownStart;
-                if (ddDuration > maxDrawdownDuration) maxDrawdownDuration = ddDuration;
-                currentDrawdownStart = -1;
+            if (checkweb >= 5) {
+                checkweb = 0;
+                const nw = calStair(his_arr, loga, min, i, fee, N - i);
+                if (nw) {
+                    const adj = adjustWeb(nw.arr, nw.mid, FIXED_MAX_AMOUNT, true);
+                    web = { ...nw, arr: adj.arr, mid: adj.mid };
+                    newMid = [];
+                }
             }
+
+            if (his_arr[i].h === null || his_arr[i].l === null) {
+                log.debug({ i }, 'backtest candle null in group');
+                return null; // data miss for this group; caller skips it
+            }
+
+            const h = his_arr[i].h;
+            const l = his_arr[i].l;
+            const candle = his_arr[i - 1] || his_arr[i];
+            let prices;
+            if (h && l) {
+                const distH = Math.abs(prevClose - h);
+                const distL = Math.abs(prevClose - l);
+                prices = distH <= distL ? [h, l] : [l, h];
+            } else if (h) {
+                prices = [h];
+            } else if (l) {
+                prices = [l];
+            } else {
+                prices = prevClose ? [prevClose] : [];
+            }
+
+            for (const p of prices) {
+                let newArr = resolveNewMidStack(newMid, p, web.mid, web.arr, () => {
+                    stopLoss = stopLoss > 0 ? stopLoss - 1 : 0;
+                });
+                const { suggest } = runSignalFn(p, i, newArr);
+                tryExecuteFn(suggest, i, candle);
+            }
+
+            prevClose = l || h || prevClose;
+
+            // Mark-to-market at candle low (conservative for drawdown tracking).
+            const equity = amount + ((his_arr[i].l || 0) * count * (1 - fee));
+            equityCurve.push(equity);
+            if (equity > peakEquity) {
+                peakEquity = equity;
+                if (currentDrawdownStart >= 0) {
+                    const ddDur = equityCurve.length - 1 - currentDrawdownStart;
+                    if (ddDur > maxDrawdownDuration) maxDrawdownDuration = ddDur;
+                    currentDrawdownStart = -1;
+                }
+            } else {
+                const dd = (peakEquity - equity) / peakEquity;
+                if (dd > maxDrawdown) maxDrawdown = dd;
+                if (currentDrawdownStart < 0) currentDrawdownStart = equityCurve.length - 1;
+            }
+        }
+        if (currentDrawdownStart >= 0) {
+            const ddDur = equityCurve.length - currentDrawdownStart;
+            if (ddDur > maxDrawdownDuration) maxDrawdownDuration = ddDur;
+        }
+
+        // Phase 3: liquidate remaining position at last candle's low.
+        amount += (lastNode && lastNode.l ? lastNode.l : 0) * count * (1 - fee);
+        if (count > 0 && lastNode && lastNode.l) {
+            recordSell(lastNode.l, count, tradedLo);
+        }
+        count = 0;
+
+        // §4.1 Per-group metrics — all formulas match the existing single-run stockTest.
+        const tradeDays = equityCurve.length;
+        const returnPct = FIXED_MAX_AMOUNT > 0 ? Math.round((amount / FIXED_MAX_AMOUNT - 1) * 10000) / 100 : 0;
+
+        // §3.4 Hold & Buy final value using same fee model and FIXED_MAX_AMOUNT basis.
+        const bhLastPrice = lastNode ? (lastNode.h || lastNode.l || 0) : 0;
+        const holdFinalValue = holdCount * bhLastPrice * (1 - fee) + holdCash;
+        const rawBuyHoldPct = FIXED_MAX_AMOUNT > 0 ? (holdFinalValue / FIXED_MAX_AMOUNT - 1) * 100 : 0;
+
+        // §4.2 Annualization: single-segment groups use raw return; multi-segment use CAGR.
+        // tradeDays/250 is consistent with the project's existing annual-return convention.
+        let returnAnnualPct, buyHoldPct;
+        if (segCount === 1) {
+            returnAnnualPct = returnPct;
+            buyHoldPct = Math.round(rawBuyHoldPct * 100) / 100;
         } else {
-            const dd = (peakEquity - equity) / peakEquity;
-            if (dd > maxDrawdown) maxDrawdown = dd;
-            if (currentDrawdownStart < 0) currentDrawdownStart = equityCurve.length - 1;
+            const years = tradeDays > 0 ? tradeDays / 250 : 0;
+            returnAnnualPct = years > 0
+                ? Math.round(((amount / FIXED_MAX_AMOUNT) ** (1 / years) - 1) * 10000) / 100
+                : returnPct;
+            const holdRatio = FIXED_MAX_AMOUNT > 0 ? holdFinalValue / FIXED_MAX_AMOUNT : 1;
+            buyHoldPct = years > 0
+                ? Math.round((holdRatio ** (1 / years) - 1) * 10000) / 100
+                : Math.round(rawBuyHoldPct * 100) / 100;
         }
-    }
-    if (currentDrawdownStart >= 0) {
-        const ddDuration = equityCurve.length - currentDrawdownStart;
-        if (ddDuration > maxDrawdownDuration) maxDrawdownDuration = ddDuration;
-    }
 
-    // Phase 3: liquidate anything left so the report closes all open risk.
-    amount += (lastNode.l * count * (1 - fee));
-    if (count > 0 && lastNode.l) {
-        recordSell(lastNode.l, count, tlength);
-    }
-    count = 0;
-
-    // Phase 4: derive summary performance metrics from the simulated equity curve.
-    const tradeDays = equityCurve.length;
-    // Use initialMaxAmount (capital at simulation start) so returnPct reflects actual P&L.
-    // Using the final maxAmount would understate performance for uptrending stocks because
-    // periodic web recalculations inflate maxAmount with price, while amount stays fixed.
-    const returnPct = initialMaxAmount > 0 ? Math.round((amount / initialMaxAmount - 1) * 10000) / 100 : 0;
-    const buyHoldPct = his_arr[startI].l ? (Math.round((lastNode.h / his_arr[startI].l - 1) * 10000) / 100) : 0;
-
-    const years = tradeDays / 250;
-    const returnAnnualPct = years > 0 ? Math.round(((amount / initialMaxAmount) ** (1 / years) - 1) * 10000) / 100 : 0;
-    const tradesPerYear = years > 0 ? Math.round(sellTrade / years * 100) / 100 : 0;
-
-    let sharpe = 0;
-    let sortino = 0;
-    if (equityCurve.length > 1) {
-        const dailyReturns = [];
-        for (let k = 1; k < equityCurve.length; k++) {
-            dailyReturns.push(equityCurve[k] / equityCurve[k - 1] - 1);
+        let sharpe = 0, sortino = 0;
+        if (equityCurve.length > 1) {
+            const dr = [];
+            for (let k = 1; k < equityCurve.length; k++) dr.push(equityCurve[k] / equityCurve[k - 1] - 1);
+            const mean = dr.reduce((s, r) => s + r, 0) / dr.length;
+            const variance = dr.reduce((s, r) => s + (r - mean) ** 2, 0) / dr.length;
+            const stdDev = Math.sqrt(variance);
+            const downVariance = dr.reduce((s, r) => s + (r < 0 ? r ** 2 : 0), 0) / dr.length;
+            const downDev = Math.sqrt(downVariance);
+            sharpe = stdDev > 0 ? Math.round(mean / stdDev * Math.sqrt(250) * 100) / 100 : 0;
+            sortino = downDev > 0 ? Math.round(mean / downDev * Math.sqrt(250) * 100) / 100 : 0;
         }
-        const meanReturn = dailyReturns.reduce((s, r) => s + r, 0) / dailyReturns.length;
-        const variance = dailyReturns.reduce((s, r) => s + (r - meanReturn) ** 2, 0) / dailyReturns.length;
-        const stdDev = Math.sqrt(variance);
-        const downVariance = dailyReturns.reduce((s, r) => s + (r < 0 ? r ** 2 : 0), 0) / dailyReturns.length;
-        const downDev = Math.sqrt(downVariance);
-        sharpe = stdDev > 0 ? Math.round(meanReturn / stdDev * Math.sqrt(250) * 100) / 100 : 0;
-        sortino = downDev > 0 ? Math.round(meanReturn / downDev * Math.sqrt(250) * 100) / 100 : 0;
-    }
 
-    const maxDrawdownPct = Math.round(maxDrawdown * 10000) / 100;
-    const calmar = maxDrawdown > 0 ? Math.round(returnAnnualPct / maxDrawdownPct * 100) / 100 : 0;
+        const maxDrawdownPct = Math.round(maxDrawdown * 10000) / 100;
+        const calmar = maxDrawdown > 0 ? Math.round(returnAnnualPct / maxDrawdownPct * 100) / 100 : 0;
+        const totalRoundTrips = winCount + lossCount;
+        const winRate = totalRoundTrips > 0 ? Math.round(winCount / totalRoundTrips * 10000) / 100 : 0;
+        const avgWin = winCount > 0 ? Math.round(totalWin / winCount * 100) / 100 : 0;
+        const avgLoss = lossCount > 0 ? Math.round(totalLoss / lossCount * 100) / 100 : 0;
+        const profitFactor = grossLoss > 0
+            ? Math.round(grossProfit / grossLoss * 100) / 100
+            : (grossProfit > 0 ? Infinity : 0);
+        const tradesPerYear = tradeDays > 0 ? Math.round(sellTrade / (tradeDays / 250) * 100) / 100 : 0;
 
-    const totalRoundTrips = winCount + lossCount;
-    const winRate = totalRoundTrips > 0 ? Math.round(winCount / totalRoundTrips * 10000) / 100 : 0;
-    const avgWin = winCount > 0 ? Math.round(totalWin / winCount * 100) / 100 : 0;
-    const avgLoss = lossCount > 0 ? Math.round(totalLoss / lossCount * 100) / 100 : 0;
-    const profitFactor = grossLoss > 0 ? Math.round(grossProfit / grossLoss * 100) / 100 : (grossProfit > 0 ? Infinity : 0);
-
-    const metrics = {
-        maxAmount: Math.ceil(maxAmount),
-        returnPct,
-        returnAnnualPct,
-        buyHoldPct,
-        sharpe,
-        sortino,
-        calmar,
-        maxDrawdownPct,
-        maxDrawdownDuration,
-        winRate,
-        avgWin,
-        avgLoss,
-        profitFactor,
-        buyTrade,
-        sellTrade,
-        stopLoss,
-        tradeDays,
-        tradesPerYear,
+        return {
+            maxAmount: Math.ceil(FIXED_MAX_AMOUNT),
+            returnPct, returnAnnualPct, buyHoldPct,
+            sharpe, sortino, calmar,
+            maxDrawdownPct, maxDrawdownDuration,
+            winRate, avgWin, avgLoss, profitFactor,
+            buyTrade, sellTrade, stopLoss, tradeDays, tradesPerYear,
+        };
     };
 
-    return {
-        start: fullRun ? 0 : (startI - len + 1),
-        metrics,
-    };
+    // ── §4.3 Run all 10 groups, then aggregate ────────────────────────────────
+    const groups = groupDefs.map(runGroup);
+    const validGroups = groups.filter(g => g !== null);
+
+    if (validGroups.length === 0) {
+        return { start: 0, metrics: ZERO_METRICS, groups, summary: ZERO_SUMMARY };
+    }
+
+    const n = validGroups.length;
+    const avgReturnAnnualPct = Math.round(validGroups.reduce((s, g) => s + g.returnAnnualPct, 0) / n * 100) / 100;
+    const avgBuyHoldPct = Math.round(validGroups.reduce((s, g) => s + g.buyHoldPct, 0) / n * 100) / 100;
+    const avgSortino = Math.round(validGroups.reduce((s, g) => s + g.sortino, 0) / n * 100) / 100;
+
+    // Profit factor guard: Infinity/NaN values are excluded from the average.
+    // If ALL groups are Infinity (zero total loss across all groups), report Infinity.
+    const finitePFs = validGroups.map(g => g.profitFactor).filter(pf => isFinite(pf) && !isNaN(pf));
+    const avgProfitFactor = finitePFs.length > 0
+        ? Math.round(finitePFs.reduce((s, pf) => s + pf, 0) / finitePFs.length * 100) / 100
+        : (validGroups.every(g => g.profitFactor === Infinity) ? Infinity : 0);
+
+    // MDD = worst single-group drawdown (§0 field 6: max, not average).
+    const maxDrawdownPct = Math.max(...validGroups.map(g => g.maxDrawdownPct));
+
+    const summary = { avgReturnAnnualPct, avgBuyHoldPct, avgSortino, avgProfitFactor, maxDrawdownPct };
+
+    // Primary `metrics` = widest available group (G10 or last valid group).
+    // Existing consumers of { start, metrics } keep working; groups/summary are additive.
+    const primaryMetrics = validGroups[validGroups.length - 1];
+
+    return { start: 0, metrics: primaryMetrics, groups, summary };
 }
 
 // Choose a histogram size with the Freedman–Diaconis rule so the stair adapts to data density.

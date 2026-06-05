@@ -114,6 +114,9 @@ const mockStockTest = jest.fn(() => Promise.resolve({
         winRate: 50, avgWin: 10, avgLoss: 5, profitFactor: 2,
         buyTrade: 1, sellTrade: 1, stopLoss: 0, tradeDays: 200, tradesPerYear: 12,
     },
+    summary: {
+        avgReturnAnnualPct: 5, avgBuyHoldPct: 5, avgSortino: 1, avgProfitFactor: 2, maxDrawdownPct: 2,
+    },
 }));
 const mockLogArray = jest.fn(() => [1, 2, 3, 4, 5]);
 const mockComputeBinCount = jest.fn(() => 100);
@@ -1482,13 +1485,18 @@ describe('calWeb', () => {
         mockRedis.mockResolvedValue({});
         await calRate(['fUSD']).catch(() => {});
 
-        // stockTest returns string that doesn't satisfy regex condition
-        mockStockTest.mockResolvedValue({ start: 0, metrics: {
-            maxAmount: 0, returnPct: 0, returnAnnualPct: 0, buyHoldPct: 0,
-            sharpe: 0, sortino: 0, calmar: 0, maxDrawdownPct: 0, maxDrawdownDuration: 0,
-            winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
-            buyTrade: 0, sellTrade: 0, stopLoss: 0, tradeDays: 0, tradesPerYear: 0,
-        } });
+        // stockTest returns zero metrics that fail the summary guard
+        mockStockTest.mockResolvedValue({ start: 0,
+            metrics: {
+                maxAmount: 0, returnPct: 0, returnAnnualPct: 0, buyHoldPct: 0,
+                sharpe: 0, sortino: 0, calmar: 0, maxDrawdownPct: 0, maxDrawdownDuration: 0,
+                winRate: 0, avgWin: 0, avgLoss: 0, profitFactor: 0,
+                buyTrade: 0, sellTrade: 0, stopLoss: 0, tradeDays: 0, tradesPerYear: 0,
+            },
+            summary: {
+                avgReturnAnnualPct: 0, avgBuyHoldPct: 0, avgSortino: 0, avgProfitFactor: 0, maxDrawdownPct: 0,
+            },
+        });
         const candleArr = Array.from({ length: 1000 }, () => ({
             high: 110, low: 90, volume: 1000,
         }));

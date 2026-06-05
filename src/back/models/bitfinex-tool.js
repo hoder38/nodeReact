@@ -309,32 +309,29 @@ export const calWeb = curArr => {
         let lastest_type = 0;
         let lastest_rate = 0;
         const pricePct = Math.round((+priceData[curType].lastPrice - web.mid) / web.mid * 10000) / 100;
+        // One segmented backtest per pType. lastest_type is chosen from the same result
+        // (G10 returnPct); a second pass is no longer needed since start/reverse/len
+        // are superseded and both calls would return identical results.
         const resultShow = type => {
-            // First score the full history, then rerun on the latest window to pick the live-facing type.
-            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, raw_arr.length - 1, false, 0, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(temp => {
+            return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 1)).then(temp => {
                 if (temp === 'data miss') {
                     return;
                 }
                 const m = temp.metrics;
-                if (!m || (m.returnPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
+                const s = temp.summary;
+                if (!s || (s.avgReturnAnnualPct === 0 && m.sellTrade === 0 && m.stopLoss === 0)) {
                     results.push({ type, str: 'no less than mid point', metrics: null, rate: -Infinity });
                     return;
                 }
-                const winLoss = m.avgLoss > 0 ? Math.round(m.avgWin / m.avgLoss * 100) / 100 : 0;
-                const str = `${pricePct}% ${m.returnPct}% ${m.sortino} ${m.profitFactor}`;
-                results.push({ type, str, metrics: m, rate: m.returnPct });
-                return new Promise((resolve, reject) => setTimeout(() => resolve(), 0)).then(() => stockTest(raw_arr, loga, min, type, 0, true, 240, RANGE_BITFINEX_INTERVAL, BITFINEX_FEE, BITFINEX_INTERVAL, BITFINEX_INTERVAL, 24, 1)).then(rtemp => {
-                    if (rtemp === 'data miss') {
-                        return;
+                // 6-field string: pricePct% avgReturnAnnualPct% avgBuyHoldPct% avgSortino avgProfitFactor maxDrawdownPct%
+                const str = `${pricePct}% ${s.avgReturnAnnualPct}% ${s.avgBuyHoldPct}% ${s.avgSortino} ${s.avgProfitFactor} ${s.maxDrawdownPct}%`;
+                results.push({ type, str, metrics: m, rate: s.avgReturnAnnualPct });
+                if (m.returnPct !== 0 || m.sellTrade !== 0 || m.stopLoss !== 0) {
+                    if (!lastest_rate || m.returnPct > lastest_rate) {
+                        lastest_rate = m.returnPct;
+                        lastest_type = type;
                     }
-                    const rm = rtemp.metrics;
-                    if (rm && (rm.returnPct !== 0 || rm.sellTrade !== 0 || rm.stopLoss !== 0)) {
-                        if (!lastest_rate || rm.returnPct > lastest_rate) {
-                            lastest_rate = rm.returnPct;
-                            lastest_type = type;
-                        }
-                    }
-                });
+                }
             });
         }
         const loopShow = index => {
