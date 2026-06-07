@@ -50,7 +50,7 @@ services:
     container_name: nginx-proxy-release
     ports:
       - "443:443" # Map host 8080 to Nginx container 8080
-      - "80:80"
+      #- "80:80"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /mnt/release/storage:/mnt/release/storage:ro
