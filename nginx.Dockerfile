@@ -5,3 +5,4 @@ COPY config/nginx-release.conf /etc/nginx/conf.d/default.conf
 COPY ./public/. /app/public/.
 
 EXPOSE 443
+EXPOSE 80

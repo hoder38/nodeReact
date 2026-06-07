@@ -26,7 +26,7 @@ docker exec -it reactnode-file-server node ./src/back/cmd/googledrive.js
 
 外部更新憑證定並設定重啟nginx 掛載/etc/letsencrypt
 sudo crontab -e
-0 0 * * * certbot renew --deploy-hook "docker exec nginx-proxy-release nginx -s reload"
+0 12 * * * sudo /usr/bin/certbot renew --standalone --pre-hook "docker stop nginx-proxy-release" --post-hook "docker restart nginx-proxy-release"
 
 還沒做
 services:
