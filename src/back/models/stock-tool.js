@@ -1633,6 +1633,23 @@ export default {
                         totalTwseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
                     }
                 }
+                totalTwseMarketcapList.sort((a, b) => {
+                    if (a.extrem > b.extrem) {
+                        return 1;
+                    } else if (a.extrem < b.extrem) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalTwseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalTwseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        if (!totalTwseMarketcapList[i].mc || totalTwseMarketcapList[i].mc < 2) {
+                            totalTwseMarketcapList[i].mc = 2;
+                        }
+                    }
+                }
                 totalUsseMarketcapList.sort((a, b) => {
                     if (a.mc < b.mc) {
                         return 1;
@@ -1649,18 +1666,29 @@ export default {
                         totalUsseMarketcapList[i].mul = (mul > 5) ? 5 : mul;
                     }
                 }
+                totalUsseMarketcapList.sort((a, b) => {
+                    if (a.extrem > b.extrem) {
+                        return 1;
+                    } else if (a.extrem < b.extrem) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                if (totalUsseMarketcapList.length > 2) {
+                    const mcMiddle = Math.round(totalUsseMarketcapList.length / 5);
+                    for (let i = 0; i < mcMiddle; i++) {
+                        if (!totalUsseMarketcapList[i].mc || totalUsseMarketcapList[i].mc < 2) {
+                            totalUsseMarketcapList[i].mc = 2;
+                        }
+                    }
+                }
                 log.debug({ twseList: totalTwseMarketcapList, usseList: totalUsseMarketcapList }, 'marketcap lists');
-                // §9b Volatility-normalized position size: mul = mcMul + volMul, cap at 5, default = 1
-                const calcFinalMul = (item) => {
-                    const volValue = 1 + Math.max(0, 1 - (item.extrem || 0) / 0.4);
-                    const mcMul = item.mul || 1;
-                    return (mcMul > volValue) ? mcMul : volValue;
-                };
-                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalTwseMarketcapList[mIndex])}}).then(mitems => {
+                const updmulTwse = mIndex => (mIndex < totalTwseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalTwseMarketcapList[mIndex]._id}, {$set: {mul: totalTwseMarketcapList[mIndex].mul}}).then(mitems => {
                     log.debug({ mitems }, 'twse mul update');
                     return updmulTwse(mIndex + 1);
                 }) : Promise.resolve();
-                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: calcFinalMul(totalUsseMarketcapList[mIndex])}}).then(mitems => {
+                const updmulUsse = mIndex => (mIndex < totalUsseMarketcapList.length) ? Mongo('update', TOTALDB, {_id: totalUsseMarketcapList[mIndex]._id}, {$set: {mul: totalUsseMarketcapList[mIndex].mul}}).then(mitems => {
                     log.debug({ mitems }, 'usse mul update');
                     return updmulUsse(mIndex + 1);
                 }) : Promise.resolve();
@@ -2907,7 +2935,6 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         return handleError(new HoError(`miss ${items[index].index}`));
                     }
                     const item = sitems[0];
-                    let change_previous = false;
                     // Some entries store scaled fundamentals; normalize them before computing suggestions.
                     if (item.mul) {
                         item.orig = item.orig * item.mul;
@@ -3214,9 +3241,7 @@ export const stockStatus = newStr => Mongo('find', TOTALDB, {sType: {$exists: fa
                         count: item.count,
                         amount: item.amount,
                         order: item.order,
-                    }, change_previous ? {
-                        previous: item.previous,
-                    } : {})});
+                    })});
                     });
                 });
             }).then(() => new Promise((resolve, reject) => setTimeout(() => resolve(recur_price(index + 1)), _statusDelay)))
